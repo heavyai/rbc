@@ -10,12 +10,12 @@ intermediate representation (IR) that contains language independent
 instructions (in the case of LLVM these are
 [SSA](https://en.wikipedia.org/wiki/Static_single_assignment_form)
 instructions). One can apply various optimizations (e.g. eliminating
-of redundant instructions, symbolic tranformations, etc) to the
-program in IR form. Finally, the backend will transform IR to machine
-code (that can be represented in
-[asm](https://en.wikipedia.org/wiki/Assembly_language) language) that
-will be specific to the computer architecture on which the program
-instructions will be executed. The following schema summarizes the
+of redundant instructions, symbolic transformations, etc) to the
+program in IR form. Finally, the backend will transform the IR to machine
+code (represented in
+[asm](https://en.wikipedia.org/wiki/Assembly_language) language, for instance)
+that will be specific to the computer architecture on which the program
+instructions will be executed. The following schema summarizes this
 compilation process:
 ```
        +----------+       +-----------+       +----------+
