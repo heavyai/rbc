@@ -54,6 +54,7 @@ def setup_package():
         install_requires=[
             "numba",
             "llvmlite",
+            "tblib",
         ],
         packages=['rbc'],
         setup_requires=['pytest-runner'],

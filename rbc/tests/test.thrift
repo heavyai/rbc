@@ -1,0 +1,20 @@
+include "../thrift/info.thrift"
+include "../thrift/types.thrift"
+
+
+service test {
+    Buffer test_buffer_transport(1: Buffer buf),
+    NDArray test_ndarray_transport(1: NDArray arr),
+    string test_str_transport(1: string s),
+    byte test_byte_transport(1: byte s),
+    i16 test_int16_transport(1: i16 s),
+    i32 test_int32_transport(1: i32 s),
+    i64 test_int64_transport(1: i64 s),
+    bool test_bool_transport(1: bool s),
+    double test_double_transport(1: double s),
+    map<i32,string> test_map_transport(1: map<i32,string> s),
+    set<string> test_set_transport(1: set<string> s),
+    list<i32> test_list_transport(1: list<i32> s),
+    void test_void(),
+    void test_exception() throws (1: Exception e),
+}
