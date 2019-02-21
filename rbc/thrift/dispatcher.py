@@ -5,10 +5,12 @@ server.
 # Created: February 2019
 
 import os
+import sys
 import numpy as np
 import subprocess
 
 from .utils import resolve_includes
+from ..target_info import runcommand
 
 class Dispatcher(object):
     """Default implementation of a dispatcher.
@@ -23,5 +25,24 @@ class Dispatcher(object):
                                 [os.path.dirname(self.server.thrift_file)])
 
     def nvidia_smi_query(self):
-        result = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE)
-        return result.stdout
+        return runcommand('nvidia-smi', '-q')
+
+class DispatcherTargets(Dispatcher):
+
+    def get_triplet(self, target):
+        if target=='host':
+            return runcommand('llvm-config', '--host-target')
+        if target=='cuda32':
+            return 'nvptx-nvidia-cuda'
+        if target in ['cuda', 'cuda64']:
+            return 'nvptx64-nvidia-cuda'
+        raise NotImplementedError('get triplet for target=`%s`' % (target))
+
+    def get_processor_info(self, target):
+        """Return information dictionary about processor target.
+        """
+        if target=='host':
+            return open('/proc/cpuinfo').read()
+        if target.startswith('cuda'):
+            return runcommand('nvidia-smi', '-q')
+        raise NotImplementedError('get processor info for target=`%s`' % (target))
