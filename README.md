@@ -1,5 +1,7 @@
 # RBC - Remote Backend Compiler
 
+[![Documentation Status](https://readthedocs.org/projects/rbc/badge/?version=latest)](https://rbc.readthedocs.io/en/latest/?badge=latest)
+
 ## Introduction
 
 A [LLVM](http://www.llvm.org/)-based compilation contains three
