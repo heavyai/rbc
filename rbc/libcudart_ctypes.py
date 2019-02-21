@@ -106,8 +106,9 @@ def get_cuda_struct(headerfile, name):
     """Return membername:type mapping of a struct definition.
     """
     def process_struct(line, last_value):
-        typ, decl = line.split()
-        t = getattr(ctypes, 'c_' + typ)
+        typ, decl = line.rsplit(' ', 1)
+        typ = typ.strip()
+        t = get_ctype(typ)
         i = decl.find('[')
         if i != -1:
             dim = int(decl[i+1:-1])
@@ -117,6 +118,19 @@ def get_cuda_struct(headerfile, name):
             n = decl
         return n, t
     return read_cuda_header(headerfile, 'struct', name, process_struct)
+
+
+def get_ctype(tstr):
+    t = getattr(ctypes, 'c_' + tstr, None)
+    if t is not None:
+        return t
+    t = {'cudaUUID_t':cudaUUID_t,
+         'unsigned int':ctypes.c_uint,
+    }.get(tstr)
+    if t is not None:
+        return t
+    raise NotImplementedError('get ctypes version of `%s`' % (tstr))
+
 
 #
 # CUDA enum definitions
@@ -137,6 +151,9 @@ exec(s)
 #
 # CUDA struct definitions
 #
+
+class cudaUUID_t(ctypes.Structure):
+    _fields_ = [('bytes', ctypes.c_char * 16)]
 
 class cudaDeviceProp(ctypes.Structure):
     _fields_ = list(get_cuda_struct('driver_types.h', 'cudaDeviceProp').items())
