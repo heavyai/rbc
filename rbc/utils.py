@@ -7,7 +7,7 @@ def runcommand(*cmd):
     """
     if cmd not in runcommand.cache:
         result = subprocess.run(cmd, stdout=subprocess.PIPE)
-        runcommand.cache[cmd] = result.stdout
+        runcommand.cache[cmd] = result.stdout.decode()
     return runcommand.cache[cmd]
 
 runcommand.cache = {}

@@ -55,6 +55,7 @@ def setup_package():
             "numba",
             "llvmlite",
             "tblib",
+            "thriftpy2",
         ],
         packages=['rbc'],
         setup_requires=['pytest-runner'],

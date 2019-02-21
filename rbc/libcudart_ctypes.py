@@ -5,7 +5,9 @@ import re
 from enum import IntEnum
 from .utils import runcommand
 
-
+#
+# Import CUDA RT library
+#
 
 if os.name == 'nt':
     lib = ctypes.util.find_library('libcudart')
@@ -31,6 +33,10 @@ includedir = os.path.join(os.path.dirname(libdir), 'include')
 
 libcudart = ctypes.cdll.LoadLibrary(lib)
 
+#
+# Auxiliary functions for reading CUDA header files
+#
+
 def get_cuda_header(headername, _cache={}):
     content = _cache.get(headername)
     if content is None:
@@ -38,51 +44,83 @@ def get_cuda_header(headername, _cache={}):
         _cache[headername] = content
     return content
 
-def get_cuda_enum(name, _cache={}):
-    """Return reverse map of enum definition.
-    """
-    content = get_cuda_header('driver_types.h')
+
+def read_cuda_header(headername, kind, name, process_func):
+    content = get_cuda_header(headername)
     flag = False
     d = {}
-    last_value = -1
-
+    key = -1
     for line in content.splitlines():
         line = line.strip()
-        if not flag and line.startswith('enum') and line.endswith(name):
+        if not flag and line.startswith(kind) and line.endswith(name):
             flag = True
             comment = False
         elif flag:
             if line.startswith('}'):
                 break
-            i = line.find('/*')
-            if i != -1:
-                line = line[:i]
-                comment = True
             if comment:
                 j = line.find('*/')
                 if j != -1:
                     comment = False
-                    if i != -1:
-                        line = line[i:j+1]
-                    else:
-                        continue
+                    line = line[j+2:]
                 else:
                     continue
-            line = line.strip()            
-            if line.endswith(','):
-                line = line[:-1].rstrip()
-            if not line:
-                continue
-            if '=' in line:
-                n, v = line.split('=')
-                n = n.strip()
-                v = int(v.strip())
             else:
-                n = line
-                v = last_value + 1
-            last_value = v
-            d[v] = n
+                i = line.find('/*')
+                if i != -1:
+                    j = line.find('*/')
+                    if j != -1:
+                        line = line[:i] + line[j+2:]
+                    else:
+                        comment = True
+                        continue
+
+            line = line.strip()
+            if line.endswith(',') or line.endswith(';'):
+                line = line[:-1].rstrip()
+            if not line or line=='{':
+                continue
+            key, value = process_func(line, key)
+            if value is None:
+                continue
+            d[key] = value
     return d
+
+        
+def get_cuda_enum(headerfile, name):
+    """Return value:name mapping of a enum definition.
+    """
+    def process_enum(line, last_value):
+        if '=' in line:
+            n, v = line.split('=')
+            n = n.strip()
+            v = eval(v.strip(), {}, {})
+        else:
+            n = line
+            v = last_value + 1
+        return v, n
+    return read_cuda_header(headerfile, 'enum', name, process_enum)
+
+
+def get_cuda_struct(headerfile, name):
+    """Return membername:type mapping of a struct definition.
+    """
+    def process_struct(line, last_value):
+        typ, decl = line.split()
+        t = getattr(ctypes, 'c_' + typ)
+        i = decl.find('[')
+        if i != -1:
+            dim = int(decl[i+1:-1])
+            t = t * dim
+            n = decl[:i]
+        else:
+            n = decl
+        return n, t
+    return read_cuda_header(headerfile, 'struct', name, process_struct)
+
+#
+# CUDA enum definitions
+#
 
 class CTypesEnum(IntEnum):
     # See https://www.chriskrycho.com/2015/ctypes-structures-and-dll-exports.html
@@ -90,18 +128,38 @@ class CTypesEnum(IntEnum):
     def from_param(cls, obj):
         return int(obj)
 
-cudaError_value_name_map = get_cuda_enum('cudaError')
+cudaError_value_name_map = get_cuda_enum('driver_types.h', 'cudaError')
 s = 'class cudaError(CTypesEnum):\n'
 for v, n in cudaError_value_name_map.items():
     s += '    {} = {}\n'.format(n, v)
 exec(s)
 
+#
+# CUDA struct definitions
+#
+
+class cudaDeviceProp(ctypes.Structure):
+    _fields_ = list(get_cuda_struct('driver_types.h', 'cudaDeviceProp').items())
+
+#
+# CUDA functions
+#
 
 libcudart.cudaDriverGetVersion.argtypes = [ctypes.POINTER(ctypes.c_int)]
 libcudart.cudaDriverGetVersion.restype = cudaError
 
 libcudart.cudaRuntimeGetVersion.argtypes = [ctypes.POINTER(ctypes.c_int)]
 libcudart.cudaRuntimeGetVersion.restype = cudaError
+
+libcudart.cudaGetDeviceProperties.argtypes = [ctypes.POINTER(cudaDeviceProp), ctypes.c_int]
+libcudart.cudaGetDeviceProperties.restype = cudaError
+
+libcudart.cudaGetDeviceCount.argtypes = [ctypes.POINTER(ctypes.c_int)]
+libcudart.cudaGetDeviceCount.restype = cudaError
+
+#
+# Convinience functions
+#
 
 def get_cuda_versions():
     """Return CUDA driver and runtime versions.
@@ -116,4 +174,31 @@ def get_cuda_versions():
         assert r == cudaError.cudaSuccess, repr(r)
     return dr.value, rt.value
 
-print(get_cuda_versions())
+
+def get_cuda_device_properties(device):
+    """Return CUDA device properties as a dictionary. 
+
+    The value types in the dictionary will be int, bytes, or list.
+    """
+    v = cudaDeviceProp()
+    d = ctypes.c_int(0)
+    r = libcudart.cudaGetDeviceProperties(ctypes.byref(v), d)
+    assert r == cudaError.cudaSuccess, repr(r)
+    d = {}
+    for (n, t) in cudaDeviceProp._fields_:
+        a = getattr(v, n)
+        if isinstance(a, ctypes.Array):
+            a = list(a)
+        d[n] = a
+    return d
+
+
+def get_device_count():
+    """Return the number of CUDA devices.
+    """
+    c = ctypes.c_int(0)
+    r = libcudart.cudaGetDeviceCount(ctypes.byref(c))
+    assert r == cudaError.cudaSuccess, repr(r)
+    return c.value
+
+
