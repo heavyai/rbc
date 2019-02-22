@@ -54,6 +54,10 @@ class MultiplexedProcessor(thr.thrift.TMultiplexedProcessor):
             exc = exc_type(exc_kind, '%s: %s' % (et.__name__, ev))
         return thr.thrift.TProcessor.handle_exception(self, exc, result)
 
+    def process_in(self, iprot):
+        api, seqid, result, call = thr.thrift.TMultiplexedProcessor.process_in(self, iprot)
+        return api, seqid, result, call
+
 
 class Server(object):
     """Multiplex thrift server

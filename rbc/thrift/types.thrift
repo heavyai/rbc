@@ -10,11 +10,16 @@ exception Exception {
     2: string message;
 }
 
-exception PythonException {
-    1: string type;
-    2: string message;
-    3: list<string> arguments;
-    4: string traceback;
+enum DataKind {
+    DATA_RAW,       // data contains a raw data as bytes
+    DATA_ENCODED,   // data contains encoded string
+    DATA_PICKLED,    // data contains a Python pickled object
+}
+
+struct Data {
+    1: DataKind kind;
+    2: string info;  // any information needed for interpretting the data with given kind
+    3: binary data;
 }
 
 struct Buffer {
@@ -26,4 +31,3 @@ struct NDArray {
     2: string typestr;
     3: binary data;
 }
-

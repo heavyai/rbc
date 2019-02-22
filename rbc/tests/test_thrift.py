@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 import rbc
 
-from rbc.thrift import Server, Client, Dispatcher, Buffer, NDArray, dispatchermethod
+from rbc.thrift import Server, Client, Dispatcher, Buffer, NDArray, dispatchermethod, Data
 
 
 
@@ -19,8 +19,23 @@ class DispatcherTest(Dispatcher):
 
     @dispatchermethod
     def test_ndarray_transport(self, arr : np.ndarray) -> NDArray:
-        assert isinstance(arr, np.ndarray)
+        assert isinstance(arr, np.ndarray), repr(type(arr))
         return arr
+
+    @dispatchermethod
+    def test_ndarray_transport2(self, arr):
+        assert isinstance(arr, np.ndarray), repr(type(arr))
+        return arr
+
+    @dispatchermethod
+    def test_Data_transport(self, data : dict) -> Data:
+        assert isinstance(data, dict), repr(type(data))
+        return data
+
+    @dispatchermethod
+    def test_Data_transport2(self, data) -> Data:
+        assert isinstance(data, dict), repr(type(data))
+        return data
 
     def test_str_transport(self, s):
         assert isinstance(s, str), repr(type(s))
@@ -46,6 +61,12 @@ class DispatcherTest(Dispatcher):
         return s
 
     def test_int64_transport(self, s):
+        assert isinstance(s, int), repr(type(s))
+        assert s == 64
+        return s
+
+    @dispatchermethod
+    def test_int64_transport2(self, s):
         assert isinstance(s, int), repr(type(s))
         assert s == 64
         return s
@@ -104,6 +125,24 @@ def test_ndarray_transport(server):
     r = conn(test = dict(test_ndarray_transport=(arr,)))
     np.testing.assert_equal(r['test']['test_ndarray_transport'], arr)
 
+def test_ndarray_transport2(server):
+    conn = Client(**socket_options)
+    arr = np.array([1,2,3,4], dtype=np.int64)
+    r = conn(test = dict(test_ndarray_transport2=(arr,)))
+    np.testing.assert_equal(r['test']['test_ndarray_transport2'], arr)
+
+def test_Data_transport(server):
+    conn = Client(**socket_options)
+    data = dict(a = 1, b = [1,2,3], c=dict(d=13.4))
+    r = conn(test = dict(test_Data_transport=(data,)))
+    assert r['test']['test_Data_transport'] == data
+
+def test_Data_transport2(server):
+    conn = Client(**socket_options)
+    data = dict(a = 1, b = [1,2,3], c=dict(d=13.4))
+    r = conn(test = dict(test_Data_transport2=(data,)))
+    assert r['test']['test_Data_transport2'] == data
+
 
 def test_str_transport(server):
     conn = Client(**socket_options)
@@ -149,6 +188,12 @@ def test_int64_transport(server):
     s = 64
     r = conn(test = dict(test_int64_transport=(s,)))
     assert r['test']['test_int64_transport'] == s
+
+def test_int64_transport2(server):
+    conn = Client(**socket_options)
+    s = 64
+    r = conn(test = dict(test_int64_transport2=(s,)))
+    assert r['test']['test_int64_transport2'] == s
 
 def test_double_transport(server):
     conn = Client(**socket_options)

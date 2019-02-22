@@ -41,13 +41,20 @@ def dispatchermethod(mth):
         for arg, (argname, sig) in zip(args, signature.parameters.items()):
             cls = sig.annotation
             if cls == sig.empty:
-                cls = type(arg)
+                if isinstance(arg, thrift.Data):
+                    cls = None
+                else:
+                    cls = type(arg)
             arg = types.toobject(thrift, arg, cls=cls)
             new_args.append(arg)
         r = mth(*new_args)
         tcls = signature.return_annotation
         if tcls == sig.empty:
-            tcls = type(r)
+            if isinstance(r, (int,float,list,set,dict,str,bytes)):
+                # types supported by thriftpy2
+                tcls = type(r)
+            else:
+                tcls = thrift.Data
         return types.fromobject(thrift, tcls, r)
     wrapper.signature = signature
     return wrapper
