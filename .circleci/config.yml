@@ -1,0 +1,55 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: debian:stretch
+    steps:
+      - run:
+          name: Set up environment variables
+          command: |
+            echo 'export MINICONDA=$HOME/miniconda' >> $BASH_ENV
+            echo 'export PROJECT=$HOME/project' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Update and install system packages
+          command: |
+            apt-get update --assume-yes
+            apt-get install --assume-yes wget git bzip2 libc6-dbg binutils
+      - checkout
+      - run:
+          name: Install miniconda
+          command: |
+            cd $HOME
+            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+            bash miniconda.sh -b -f -p $MINICONDA
+            source $MINICONDA/etc/profile.d/conda.sh
+            conda update --quiet --yes conda
+            conda env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
+            conda info -a
+      - run:
+          name: Install dependencies from PYPI
+          command: |
+            source $MINICONDA/etc/profile.d/conda.sh
+            conda activate rbc-circleci
+            pip install thriftpy2
+      - run:
+          name: Install dependencies from GitHUB
+          command: |
+            source $MINICONDA/etc/profile.d/conda.sh
+            conda activate base
+            git clone https://github.com/numba/numba.git
+            GIT_DESCRIBE_NUMBER=2000 conda build numba/buildscripts/condarecipe.local/
+            conda activate rbc-circleci
+            conda install numba -c local
+      - run:
+          name: Build
+          command: |
+            source $MINICONDA/etc/profile.d/conda.sh
+            conda activate rbc-circleci
+            python setup.py develop
+      - run:
+          name: Run tests
+          command: |
+            source $MINICONDA/etc/profile.d/conda.sh
+            conda activate rbc-circleci
+            pytest -v -r s rbc/
