@@ -1,0 +1,11 @@
+name: rbc
+channels:
+  - conda-forge
+dependencies:
+  - setuptools
+  - pip
+  - llvmlite>=0.27
+  # - numba # enable it after it uses the latest llvmlite
+  - pytest
+  - tblib
+  - cudatoolkit-dev

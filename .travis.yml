@@ -1,0 +1,29 @@
+language: python
+python:
+  - 3.6  # actually, in Travis CI, Python 3.7 from conda environment is used for rbc
+
+before_install:
+  - sudo apt-get install -y git wget
+
+install:
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - export MINICONDA=$HOME/miniconda
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - hash -r
+  - source $MINICONDA/etc/profile.d/conda.sh
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update --quiet --yes conda
+  - conda info -a
+  - conda env create --quiet --name rbc-ci --file .conda/environment.yml
+  - conda activate rbc-ci
+  - export PREFIX=$CONDA_PREFIX
+  - pip install thriftpy2
+  - git clone https://github.com/numba/numba.git
+  - GIT_DESCRIBE_NUMBER=2000 conda build numba/buildscripts/condarecipe.local/
+  - conda install numba -c local
+
+before_script:
+  - python setup.py develop
+
+script:
+  - pytest -v -r s rbc/
