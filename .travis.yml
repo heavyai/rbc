@@ -17,10 +17,11 @@ install:
   - conda env create --quiet --name rbc-ci --file .conda/environment.yml
   - conda activate rbc-ci
   - export PREFIX=$CONDA_PREFIX
-  - pip install thriftpy2
+  - conda install conda-build
   - git clone https://github.com/numba/numba.git
   - GIT_DESCRIBE_NUMBER=2000 conda build numba/buildscripts/condarecipe.local/
   - conda install numba -c local
+  - pip install thriftpy2
 
 before_script:
   - python setup.py develop

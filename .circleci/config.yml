@@ -27,11 +27,11 @@ jobs:
             conda env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
             conda info -a
       - run:
-          name: Install dependencies from PYPI
+          name: Install conda build
           command: |
             source $MINICONDA/etc/profile.d/conda.sh
             conda activate rbc-circleci
-            pip install thriftpy2
+            conda install conda-build
       - run:
           name: Install dependencies from GitHUB
           command: |
@@ -42,13 +42,19 @@ jobs:
             conda activate rbc-circleci
             conda install numba -c local
       - run:
-          name: Build
+          name: Install dependencies from PYPI
+          command: |
+            source $MINICONDA/etc/profile.d/conda.sh
+            conda activate rbc-circleci
+            pip install thriftpy2
+      - run:
+          name: Build RBC
           command: |
             source $MINICONDA/etc/profile.d/conda.sh
             conda activate rbc-circleci
             python setup.py develop
       - run:
-          name: Run tests
+          name: Run RBC tests
           command: |
             source $MINICONDA/etc/profile.d/conda.sh
             conda activate rbc-circleci

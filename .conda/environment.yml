@@ -8,4 +8,4 @@ dependencies:
   # - numba # enable it after it uses the latest llvmlite
   - pytest
   - tblib
-  - cudatoolkit-dev
+  # - cudatoolkit-dev   # disable temporary
