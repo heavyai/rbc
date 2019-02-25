@@ -17,7 +17,7 @@ install:
   - conda env create --quiet --name rbc-ci --file .conda/environment.yml
   - conda activate rbc-ci
   - export PREFIX=$CONDA_PREFIX
-  - conda install -c pearu numba
+  - conda list
   - pip install thriftpy2
 
 before_script:
