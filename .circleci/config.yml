@@ -27,21 +27,6 @@ jobs:
             conda env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
             conda info -a
       - run:
-          name: Install conda build
-          command: |
-            source $MINICONDA/etc/profile.d/conda.sh
-            conda activate rbc-circleci
-            conda install conda-build
-      - run:
-          name: Install dependencies from GitHUB
-          command: |
-            source $MINICONDA/etc/profile.d/conda.sh
-            conda activate base
-            git clone https://github.com/numba/numba.git
-            GIT_DESCRIBE_NUMBER=2000 conda build numba/buildscripts/condarecipe.local/
-            conda activate rbc-circleci
-            conda install numba -c local
-      - run:
           name: Install dependencies from PYPI
           command: |
             source $MINICONDA/etc/profile.d/conda.sh
