@@ -5,6 +5,12 @@
 
 
 import re
+import ctypes
+try:
+    import numba as nb
+except ImportError as msg:
+    nb = None
+    nb_NA_message = str(msg)
 
 
 class TypeParseError(Exception):
@@ -55,13 +61,67 @@ def _commasplit(s):
     raise TypeParseError('failed to comma-split `%s`' % s)
 
 
-_bool_match = re.compile(r'\A(bool|b)\Z').match
+_bool_match = re.compile(r'\A(boolean|bool|b)\Z').match
+_char_match = re.compile(r'\A(char)\s*(8|16|32|)\Z').match
 _string_match = re.compile(r'\A(string|str)\Z').match
 _int_match = re.compile(r'\A(int|i)\s*(\d*)\Z').match
 _uint_match = re.compile(r'\A(uint|u|unsigned\s*int)\s*(\d*)\Z').match
 _float_match = re.compile(r'\A(float|f)\s*(16|32|64|128|256|)\Z').match
 _double_match = re.compile(r'\A(double|d)\Z').match
 _complex_match = re.compile(r'\A(complex|c)\s*(16|32|64|128|256|512|)\Z').match
+
+# Initialize type maps
+_ctypes_imap = {ctypes.c_void_p: 'void*', None: 'void', ctypes.c_bool: 'bool',
+                ctypes.c_char_p: 'char8*', ctypes.c_wchar_p: 'char32*'}
+_ctypes_char_map = {}
+_ctypes_int_map = {}
+_ctypes_uint_map = {}
+_ctypes_float_map = {}
+_ctypes_complex_map = {}
+for _k, _m, _lst in [
+        ('char', _ctypes_char_map, ['c_char', 'c_wchar']),
+        ('int', _ctypes_int_map,
+         ['c_int8', 'c_int16', 'c_int32', 'c_int64', 'c_int',
+          'c_long', 'c_longlong', 'c_byte', 'c_short', 'c_ssize_t']),
+        ('uint', _ctypes_uint_map,
+         ['c_uint8', 'c_uint16', 'c_uint32', 'c_uint64', 'c_uint',
+          'c_ulong', 'c_ulonglong', 'c_ubyte', 'c_ushort', 'c_size_t']),
+        ('float', _ctypes_float_map,
+         ['c_float', 'c_double', 'c_longdouble'])
+]:
+    for _n in _lst:
+        _t = getattr(ctypes, _n, None)
+        if _t is not None:
+            _b = ctypes.sizeof(_t) * 8
+            if _b not in _m:
+                _m[_b] = _t
+            _ctypes_imap[_t] = _k + str(_b)
+
+if nb is not None:
+    _numba_imap = {nb.void: 'void', nb.boolean: 'bool'}
+    _numba_char_map = {}
+    _numba_int_map = {}
+    _numba_uint_map = {}
+    _numba_float_map = {}
+    _numba_complex_map = {}
+    for _k, _m, _lst in [
+            ('int', _numba_int_map,
+             ['int8', 'int16', 'int32', 'int64', 'intc', 'int_', 'intp',
+              'long_', 'longlong', 'short', 'char']),
+            ('uint', _numba_uint_map,
+             ['uint8', 'uint16', 'uint32', 'uint64', 'uintc', 'uint',
+              'uintp', 'ulong', 'ulonglong', 'ushort']),
+            ('float', _numba_float_map,
+             ['float32', 'float64', 'float_', 'double']),
+            ('complex', _numba_complex_map, ['complex64', 'complex128']),
+    ]:
+        for _n in _lst:
+            _t = getattr(nb, _n, None)
+            if _t is not None:
+                _b = _t.bitwidth
+                if _b not in _m:
+                    _m[_b] = _t
+                _numba_imap[_t] = _k + str(_b)
 
 
 class Type(tuple):
@@ -87,8 +147,11 @@ class Type(tuple):
     such as provided in numpy or numba, the following atomic types are
     defined (the first name corresponds to normalized name):
 
-      no type:                    void
-      bool:                       bool
+      no type:                    void, none
+      bool:                       bool, boolean, b
+      8-bit char:                 char8, char
+      16-bit char:                char16
+      32-bit char:                char32, wchar
       8-bit signed integer:       int8, i8, byte
       16-bit signed integer:      int16, i16
       32-bit signed integer:      int32, i32, int
@@ -134,6 +197,34 @@ class Type(tuple):
         return len(self) == 1 and isinstance(self[0], str)
 
     @property
+    def is_int(self):
+        return self.is_atomic and self[0].startswith('int')
+
+    @property
+    def is_uint(self):
+        return self.is_atomic and self[0].startswith('uint')
+
+    @property
+    def is_float(self):
+        return self.is_atomic and self[0].startswith('float')
+
+    @property
+    def is_complex(self):
+        return self.is_atomic and self[0].startswith('complex')
+
+    @property
+    def is_string(self):
+        return self.is_atomic and self[0] == 'string'
+
+    @property
+    def is_bool(self):
+        return self.is_atomic and self[0] == 'bool'
+
+    @property
+    def is_char(self):
+        return self.is_atomic and self[0].startswith('char')
+
+    @property
     def is_pointer(self):
         return len(self) == 2 and isinstance(self[0], Type) \
             and isinstance(self[1], str) and self[1] == '*'
@@ -168,6 +259,63 @@ class Type(tuple):
                 a.tostring() for a in self[1]) + ')'
         raise NotImplementedError(repr(self))
 
+    def tonumba(self):
+        if self.is_void:
+            return nb.void
+        if self.is_int:
+            return _numba_int_map.get(int(self[0][3:]))
+        if self.is_uint:
+            return _numba_uint_map.get(int(self[0][4:]))
+        if self.is_float:
+            return _numba_float_map.get(int(self[0][5:]))
+        if self.is_complex:
+            return _numba_complex_map.get(int(self[0][7:]))
+        if self.is_bool:
+            return nb.boolean
+        if self.is_pointer:
+            return nb.types.CPointer(self[0].tonumba())
+        if self.is_struct:
+            return nb.typing.ctypes_utils.from_ctypes(self.toctypes())
+        if self.is_function:
+            rtype = self[0].tonumba()
+            atypes = [t.tonumba() for t in self[1]]
+            return rtype(*atypes)
+        raise NotImplementedError(repr(self))
+
+    def toctypes(self):
+        if self.is_void:
+            return None
+        if self.is_int:
+            return _ctypes_int_map.get(int(self[0][3:]))
+        if self.is_uint:
+            return _ctypes_uint_map.get(int(self[0][4:]))
+        if self.is_float:
+            return _ctypes_float_map.get(int(self[0][5:]))
+        if self.is_complex:
+            return _ctypes_complex_map.get(int(self[0][7:]))
+        if self.is_bool:
+            return ctypes.c_bool
+        if self.is_char:
+            return _ctypes_char_map.get(int(self[0][4:]))
+        if self.is_pointer:
+            if self[0].is_void:
+                return ctypes.c_void_p
+            if self[0].is_char:
+                return getattr(ctypes,
+                               _ctypes_char_map.get(
+                                   int(self[0][0][4:])).__name__ + '_p')
+            return ctypes.POINTER(self[0].toctypes())
+        if self.is_struct:
+            fields = [('f%s' % i, t.toctypes()) for i, t in enumerate(self)]
+            return type('struct%s' % (id(self)),
+                        (ctypes.Structure, ),
+                        dict(_fields_=fields))
+        if self.is_function:
+            rtype = self[0].toctypes()
+            atypes = [t.toctypes() for t in self[1]]
+            return ctypes.CFUNCTYPE(rtype, *atypes)
+        raise NotImplementedError(repr(self))
+
     @classmethod
     def _fromstring(cls, s):
         """Parse type from a string.
@@ -189,7 +337,7 @@ class Type(tuple):
             atypes = tuple(map(cls._fromstring,
                                _commasplit(s[i+1:-1].strip())))
             return cls(rtype, atypes)
-        if s == 'void' or not s:  # void
+        if s == 'void' or s == 'none' or not s:  # void
             return cls()
         # atomic
         return cls(s)
@@ -197,11 +345,40 @@ class Type(tuple):
     @classmethod
     def fromstring(cls, s):
         try:
-            return cls._fromstring(s)
+            return cls._fromstring(s)._normalize()
         except TypeParseError as msg:
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
 
-    def normalize(self):
+    @classmethod
+    def fromnumba(cls, t):
+        if nb is None:
+            raise RuntimeError('importing numba failed: %s' % (nb_NA_message))
+        n = _numba_imap.get(t)
+        if n is not None:
+            return cls.fromstring(n)
+        if isinstance(t, nb.typing.templates.Signature):
+            atypes = map(cls.fromnumba, t.args)
+            rtype = cls.fromnumba(t.return_type)
+            return cls(rtype, tuple(atypes))
+        if isinstance(t, nb.types.misc.CPointer):
+            return cls(cls.fromnumba(t.dtype), '*')
+        raise NotImplementedError(repr(t))
+
+    @classmethod
+    def fromctypes(cls, t):
+        n = _ctypes_imap.get(t)
+        if n is not None:
+            return cls.fromstring(n)
+        if issubclass(t, ctypes.Structure):
+            return cls(*(cls.fromctypes(_t) for _f, _t in t._fields_))
+        if issubclass(t, ctypes._Pointer):
+            return cls(cls.fromctypes(t._type_), '*')
+        if issubclass(t, ctypes._CFuncPtr):
+            return cls(cls.fromctypes(t._restype_),
+                       tuple(map(cls.fromctypes, t._argtypes_)))
+        raise NotImplementedError(repr(t))
+
+    def _normalize(self):
         """Return new type instance with atomic types normalized.
         """
         if self.is_void:
@@ -241,16 +418,25 @@ class Type(tuple):
             m = _bool_match(s)
             if m is not None:
                 return self.__class__('bool')
+            m = _char_match(s)
+            if m is not None:
+                bits = m.group(2)
+                if not bits:
+                    bits = '8'
+                return self.__class__('char' + bits)
             if s == 'byte':
                 return self.__class__('int8')
             if s == 'ubyte':
                 return self.__class__('uint8')
+            if s == 'wchar':
+                bits = str(ctypes.sizeof(ctypes.c_wchar) * 8)
+                return self.__class__('char' + bits)
             return self
         if self.is_pointer:
-            return self.__class__(self[0].normalize(), self[1])
+            return self.__class__(self[0]._normalize(), self[1])
         if self.is_struct:
-            return self.__class__(*(t.normalize() for t in self))
+            return self.__class__(*(t._normalize() for t in self))
         if self.is_function:
-            return self.__class__(self[0].normalize(),
-                                  tuple(t.normalize() for t in self[1]))
+            return self.__class__(self[0]._normalize(),
+                                  tuple(t._normalize() for t in self[1]))
         raise NotImplementedError(repr(self))
