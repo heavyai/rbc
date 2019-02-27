@@ -245,6 +245,30 @@ class Type(tuple):
             isinstance(self[1], tuple) and not isinstance(self[1], Type)
 
     @property
+    def is_complete(self):
+        """Return True when the Type instance does not contain unknown types.
+        """
+        if self.is_atomic:
+            return not self[0].startswith('<type of')
+        elif self.is_pointer:
+            return self[0].is_complete
+        elif self.is_struct:
+            for m in self:
+                if not m.complete:
+                    return False
+        elif self.is_function:
+            if not self[0].is_complete:
+                return False
+            for a in self[1]:
+                if not a.is_complete:
+                    return False
+        elif self.is_void:
+            pass
+        else:
+            raise NotImplementedError(repr(self))
+        return True
+    
+    @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct or (self.is_function and len(self[1]) > 0)
@@ -429,10 +453,13 @@ class Type(tuple):
                 atypes.append(cls.fromobject(annot))
         return cls(rtype, tuple(atypes) or (Type(),))
 
+    
     @classmethod
     def fromobject(cls, obj):
         """Return new Type instance from any object.
         """
+        if isinstance(obj, cls):
+            return obj
         if isinstance(obj, str):
             return cls.fromstring(obj)
         n = _python_imap.get(obj)
