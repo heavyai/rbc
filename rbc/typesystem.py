@@ -6,6 +6,7 @@
 
 import re
 import ctypes
+import inspect
 try:
     import numba as nb
 except ImportError as msg:
@@ -122,6 +123,9 @@ if nb is not None:
                 if _b not in _m:
                     _m[_b] = _t
                 _numba_imap[_t] = _k + str(_b)
+
+_python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
+                str: 'string', bytes: 'char*'}
 
 
 class Type(tuple):
@@ -243,7 +247,12 @@ class Type(tuple):
     @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
-            or self.is_struct or self.is_function
+            or self.is_struct or (self.is_function and len(self[1]) > 0)
+
+    def __str__(self):
+        if self._is_ok:
+            return self.tostring()
+        return tuple.__str__(self)
 
     def tostring(self):
         """Return string representation of a type.
@@ -367,7 +376,7 @@ class Type(tuple):
         if isinstance(t, nb.typing.templates.Signature):
             atypes = map(cls.fromnumba, t.args)
             rtype = cls.fromnumba(t.return_type)
-            return cls(rtype, tuple(atypes))
+            return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype), '*')
         raise NotImplementedError(repr(t))
@@ -385,8 +394,62 @@ class Type(tuple):
             return cls(cls.fromctypes(t._type_), '*')
         if issubclass(t, ctypes._CFuncPtr):
             return cls(cls.fromctypes(t._restype_),
-                       tuple(map(cls.fromctypes, t._argtypes_)))
+                       tuple(map(cls.fromctypes, t._argtypes_)) or (Type(),))
         raise NotImplementedError(repr(t))
+
+    @classmethod
+    def fromcallable(cls, func):
+        """Return new Type instance from a callable object.
+
+        The callable object must use annotations for specifying the
+        types of arguments and return value.
+        """
+        if func.__name__ == '<lambda>':
+            # lambda function cannot carry annotations, hence:
+            raise ValueError('constructing Type instance from '
+                             'a lambda function is not supported')
+        sig = inspect.signature(func)
+        annot = sig.return_annotation
+        if annot == sig.empty:
+            rtype = cls()  # void
+            # TODO: check that function does not return other than None
+        else:
+            rtype = cls.fromobject(annot)
+        atypes = []
+        for n, param in sig.parameters.items():
+            annot = param.annotation
+            if param.kind not in [inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                  inspect.Parameter.POSITIONAL_ONLY]:
+                raise ValueError(
+                    'callable argument kind must be positional,'
+                    ' `%s` has kind %s' % (param, param.kind))
+            if annot == sig.empty:
+                atypes.append(cls('<type of %s>' % n))
+            else:
+                atypes.append(cls.fromobject(annot))
+        return cls(rtype, tuple(atypes) or (Type(),))
+
+    @classmethod
+    def fromobject(cls, obj):
+        """Return new Type instance from any object.
+        """
+        if isinstance(obj, str):
+            return cls.fromstring(obj)
+        n = _python_imap.get(obj)
+        if n is not None:
+            return cls.fromstring(n)
+        if hasattr(obj, '__module__'):
+            if obj.__module__.startswith('numba'):
+                return cls.fromnumba(obj)
+            if obj.__module__.startswith('ctypes'):
+                return cls.fromctypes(obj)
+        if inspect.isclass(obj):
+            if obj is int:
+                return cls('int64')
+            return cls.fromstring(obj.__name__)
+        if callable(obj):
+            return cls.fromcallable(obj)
+        raise NotImplementedError(repr(type(obj)))
 
     def _normalize(self):
         """Return new Type instance with atomic types normalized.

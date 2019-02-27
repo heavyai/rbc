@@ -1,3 +1,8 @@
+try:
+    import numba as nb
+except ImportError:
+    nb = None
+
 import pytest
 from rbc.typesystem import Type
 
@@ -57,32 +62,32 @@ def test_fromstring():
 
 def test_is_properties():
     t = Type()
-    assert t.is_ok and t.is_void
+    assert t._is_ok and t.is_void
     t = Type('i')
-    assert t.is_ok and t.is_atomic
+    assert t._is_ok and t.is_atomic
     t = Type('ij')
-    assert t.is_ok and t.is_atomic
+    assert t._is_ok and t.is_atomic
     t = Type.fromstring('ij')
-    assert t.is_ok and t.is_atomic
+    assert t._is_ok and t.is_atomic
     t = Type.fromstring('i,j')
-    assert t.is_ok and t.is_atomic  # !
+    assert t._is_ok and t.is_atomic  # !
     t = Type.fromstring('i  *')
-    assert t.is_ok and t.is_pointer
+    assert t._is_ok and t.is_pointer
     t = Type.fromstring('*')
-    assert t.is_ok and t.is_pointer
+    assert t._is_ok and t.is_pointer
     t = Type.fromstring('i* * ')
-    assert t.is_ok and t.is_pointer
+    assert t._is_ok and t.is_pointer
     t = Type.fromstring('i(j)')
-    assert t.is_ok and t.is_function
+    assert t._is_ok and t.is_function
     t = Type.fromstring('(j)')
-    assert t.is_ok and t.is_function
+    assert t._is_ok and t.is_function
     t = Type.fromstring('()')
-    assert t.is_ok and t.is_function
+    assert t._is_ok and t.is_function
     t = Type.fromstring('{i, j}')
-    assert t.is_ok and t.is_struct
+    assert t._is_ok and t.is_struct
 
     with pytest.raises(ValueError,
-                       match=r'attempt to create an invalid type object from'):
+                       match=r'attempt to create an invalid Type object from'):
         Type('a', 'b')
 
 
@@ -206,9 +211,8 @@ def test_fromctypes():
         == fromstr('f(i)')
 
 
+@pytest.mark.skipif(nb is None, reason='numba is not available')
 def test_tonumba():
-    import numba as nb
-
     def tonumba(a):
         return Type.fromstring(a).tonumba()
 
@@ -232,6 +236,7 @@ def test_tonumba():
     # assert tonumba('{i,d}')  # numba does not support C struct
 
 
+@pytest.mark.skipif(nb is None, reason='numba is not available')
 def test_fromnumba():
     import numba as nb
 
@@ -257,3 +262,42 @@ def test_fromnumba():
     assert fromnumba(nb.complex128) == fromstr('complex128')
     assert fromnumba(nb.types.CPointer(nb.float64)) == fromstr('double*')
     assert fromnumba(nb.double(nb.int64, nb.float_)) == fromstr('d(i64, f)')
+
+
+def test_fromcallable():
+
+    def foo(a: int, b: float) -> int:
+        pass
+
+    assert Type.fromcallable(foo) == Type.fromstring('i64(i64,d)')
+
+    def foo(a: 'int32', b):  # noqa: F821
+        pass
+
+    assert Type.fromcallable(foo) == Type.fromstring('void(i32,<type of b>)')
+
+    with pytest.raises(
+            ValueError,
+            match=(r'constructing Type instance from'
+                   r' a lambda function is not supported')):
+        Type.fromcallable(lambda a: a)
+
+    with pytest.raises(
+            ValueError,
+            match=r'callable argument kind must be positional'):
+        def foo(*args): pass
+        Type.fromcallable(foo)
+
+
+def test_fromobject():
+    import ctypes
+    assert Type.fromobject('i8') == Type.fromstring('i8')
+    assert Type.fromobject(int) == Type.fromstring('i64')
+    assert Type.fromobject(ctypes.c_int16) == Type.fromstring('i16')
+    if nb is not None:
+        assert Type.fromobject(nb.int16) == Type.fromstring('i16')
+
+    def foo():
+        pass
+
+    assert Type.fromobject(foo) == Type.fromstring('void(void)')
