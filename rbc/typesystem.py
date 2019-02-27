@@ -135,17 +135,19 @@ class Type(tuple):
       struct      e.g. `{int32, int32}`
       function    e.g. `int32(int32, int32)`
 
-    Atomic types are types with names. All other types (except "no
-    type") are certain constructions of other types.
+    Atomic types are types with names (Type contains a single
+    string). All other types (except "no type") are certain
+    constructions of atomic types.
 
     The name content of an atomic type is arbitrary but it cannot be
     empty. For instance, all the following Type instances represent
-    atomic types: Type('a'), Type(('foo', )), Type(('foo', ))
+    atomic types: Type('a'), Type('a long name')
 
-    Parsing types from a string does not assume any particular type
-    system. However, converting the Type instances to concrete types
-    such as provided in numpy or numba, the following atomic types are
-    defined (the first name corresponds to normalized name):
+    Parsing types from a string is not fixed to any type system, the
+    names of types can be arbitrary.  However, converting the Type
+    instances to concrete types such as provided in numpy or numba,
+    the following atomic types are defined (the first name corresponds
+    to normalized name):
 
       no type:                    void, none
       bool:                       bool, boolean, b
@@ -183,9 +185,9 @@ class Type(tuple):
 
     def __new__(cls, *args):
         obj = tuple.__new__(cls, args)
-        if not obj.is_ok:
+        if not obj._is_ok:
             raise ValueError(
-                'attempt to create an invalid type object from `%s`' % (args,))
+                'attempt to create an invalid Type object from `%s`' % (args,))
         return obj
 
     @property
@@ -239,7 +241,7 @@ class Type(tuple):
             isinstance(self[1], tuple) and not isinstance(self[1], Type)
 
     @property
-    def is_ok(self):
+    def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct or self.is_function
 
@@ -260,6 +262,8 @@ class Type(tuple):
         raise NotImplementedError(repr(self))
 
     def tonumba(self):
+        """Convert Type instance to numba type object.
+        """
         if self.is_void:
             return nb.void
         if self.is_int:
@@ -283,6 +287,8 @@ class Type(tuple):
         raise NotImplementedError(repr(self))
 
     def toctypes(self):
+        """Convert Type instance to ctypes type object.
+        """
         if self.is_void:
             return None
         if self.is_int:
@@ -318,8 +324,6 @@ class Type(tuple):
 
     @classmethod
     def _fromstring(cls, s):
-        """Parse type from a string.
-        """
         s = s.strip()
         if s.endswith('*'):       # pointer
             return cls(cls._fromstring(s[:-1]), '*')
@@ -344,6 +348,8 @@ class Type(tuple):
 
     @classmethod
     def fromstring(cls, s):
+        """Return new Type instance from a string.
+        """
         try:
             return cls._fromstring(s)._normalize()
         except TypeParseError as msg:
@@ -351,6 +357,8 @@ class Type(tuple):
 
     @classmethod
     def fromnumba(cls, t):
+        """Return new Type instance from numba type object.
+        """
         if nb is None:
             raise RuntimeError('importing numba failed: %s' % (nb_NA_message))
         n = _numba_imap.get(t)
@@ -366,6 +374,8 @@ class Type(tuple):
 
     @classmethod
     def fromctypes(cls, t):
+        """Return new Type instance from ctypes type object.
+        """
         n = _ctypes_imap.get(t)
         if n is not None:
             return cls.fromstring(n)
@@ -379,7 +389,7 @@ class Type(tuple):
         raise NotImplementedError(repr(t))
 
     def _normalize(self):
-        """Return new type instance with atomic types normalized.
+        """Return new Type instance with atomic types normalized.
         """
         if self.is_void:
             return self
