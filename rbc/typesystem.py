@@ -127,6 +127,29 @@ if nb is not None:
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
                 str: 'string', bytes: 'char*'}
 
+# Data for the mangling algorithm, see mangle/demangle methods.
+#
+_mangling_suffices = '_V'
+_mangling_prefixes = 'PKaA'
+_mangling_map = dict(
+    void='v', bool='b',
+    char8='c', char16='z', char32='w',
+    int8='B', int16='s', int32='i', int64='l', int128='q',
+    uint8='U', uint16='S', uint32='I', uint64='L', uint128='Q',
+    float16='h', float32='f', float64='d', float128='x',
+    complex32='H', complex64='F', complex128='D', complex256='X',
+    string='t',
+)
+_mangling_imap = {}
+for _k, _v in _mangling_map.items():
+    assert _v not in _mangling_imap, repr((_k, _v))
+    assert len(_v) == 1, repr((_k, _v))
+    _mangling_imap[_v] = _k
+# make sure that mangling keys will not conflict with mangling
+# operators:
+_i = set(_mangling_imap).intersection(_mangling_suffices+_mangling_prefixes)
+assert not _i, repr(_i)
+
 
 class Type(tuple):
     """Represents a type.
@@ -267,7 +290,7 @@ class Type(tuple):
         else:
             raise NotImplementedError(repr(self))
         return True
-    
+
     @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
@@ -453,7 +476,6 @@ class Type(tuple):
                 atypes.append(cls.fromobject(annot))
         return cls(rtype, tuple(atypes) or (Type(),))
 
-    
     @classmethod
     def fromobject(cls, obj):
         """Return new Type instance from any object.
@@ -540,3 +562,81 @@ class Type(tuple):
             return self.__class__(self[0]._normalize(),
                                   tuple(t._normalize() for t in self[1]))
         raise NotImplementedError(repr(self))
+
+    def mangle(self):
+        """Return mangled type string.
+
+        Mangled type string is a string representation of the type
+        that can be used for extending the function name.
+        """
+        if self.is_void:
+            return 'v'
+        if self.is_pointer:
+            return '_' + self[0].mangle() + 'P'
+        if self.is_struct:
+            return '_' + ''.join(m.mangle() for m in self) + 'K'
+        if self.is_function:
+            r = self[0].mangle()
+            a = ''.join([a.mangle() for a in self[1]])
+            return '_' + r + 'a' + a + 'A'
+        if self.is_atomic:
+            n = _mangling_map.get(self[0])
+            if n is not None:
+                return n
+            n = self[0]
+            return 'V' + str(len(n)) + 'V' + n
+        raise NotImplementedError(repr(self))
+
+    @classmethod
+    def demangle(cls, s):
+        block, rest = _demangle(s)
+        assert not rest, repr(rest)
+        assert len(block) == 1, repr(block)
+        return block[0]
+
+
+def _demangle(s):
+    """Helper function to demangle the string of mangled Type.
+
+    Used internally.
+
+    Algorithm invented by Pearu Peterson, February 2019
+    """
+    if not s:
+        return (Type(),), ''
+    if s[0] == 'V':
+        i = s.find('V', 1)
+        assert i != -1, repr(s)
+        ln = int(s[1:i])
+        rest = s[i+ln+1:]
+        typ = Type(s[i+1:i+ln+1])
+    elif s[0] == '_':
+        block, rest = _demangle(s[1:])
+        kind, rest = rest[0], rest[1:]
+        assert kind in '_'+_mangling_suffices+_mangling_prefixes, repr(kind)
+        if kind == 'P':
+            assert len(block) == 1, repr(block)
+            typ = Type(block[0], '*')
+        elif kind == 'K':
+            typ = Type(*block)
+        elif kind == 'a':
+            assert len(block) == 1, repr(block)
+            rtype = block[0]
+            atypes, rest = _demangle('_' + rest)
+            typ = Type(rtype, atypes)
+        elif kind == 'A':
+            return block, rest
+        else:
+            raise NotImplementedError(repr((kind, s)))
+    else:
+        rest = s[1:]
+        t = _mangling_imap[s[0]]
+        if t == 'void':
+            typ = Type()
+        else:
+            typ = Type(t)
+    result = [typ]
+    if rest and rest[0] not in _mangling_prefixes:
+        r, rest = _demangle(rest)
+        result.extend(r)
+    return tuple(result), rest

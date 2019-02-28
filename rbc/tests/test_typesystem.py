@@ -301,3 +301,41 @@ def test_fromobject():
         pass
 
     assert Type.fromobject(foo) == Type.fromstring('void(void)')
+
+
+def test_mangling():
+    def check(s):
+        t1 = Type.fromstring(s)
+        m = t1.mangle()
+        try:
+            t2 = Type.demangle(m)
+        except Exception:
+            print('subject: s=`%s`, t1=`%s`, m=`%s`' % (s, t1, m))
+            raise
+        assert t1 == t2, repr((t1, m, t2))
+
+    atomic_types = ['void', 'bool', 'char8', 'char16', 'char32',
+                    'int8', 'int16', 'int32', 'int64', 'int128',
+                    'uint8', 'uint16', 'uint32', 'uint64', 'uint128',
+                    'f16', 'f32', 'f64', 'f128',
+                    'complex32', 'complex64', 'complex128', 'complex256']
+    random_types = ['i8', 'bool', 'f', 'd', '{f}', '{f,d}', '{{f},d}',
+                    '{f,{d}}', '{{f},{d}}', '{{{{f}}}}', '()', 'f(d)',
+                    'f(())', 'f(d(f))', 'f(d)()', 'f(d)(f(d,d))',
+                    '{f}()', '{f,d}({f},f(d,d,d))']
+    unknown_types = ['a', 'a*', 'a()', '(a)', 'a(a)', '{a}', '({a})', '{a,a}',
+                     'foo', 'bar123', 'V', 'VVV', '_abc_', '_', 'A', 'K', 'P']
+    for s in atomic_types + random_types + unknown_types:
+        check(s)
+        check(s+'*')
+        check('{'+s+'}')
+        check(s+'('+s+')')
+        check('{'+s+','+s+'}')
+        check('{'+s+'*,'+s+'}')
+        check(s+'('+s+','+s+')')
+        check('('+s+','+s+')')
+        check(s+'({'+s+'})')
+        check(s+'({'+s+'}, '+s+')')
+        check(s+'('+s+',{'+s+'})')
+        check(s+'('+s+',{'+s+'},'+s+')')
+    check('()')

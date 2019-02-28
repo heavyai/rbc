@@ -98,3 +98,17 @@ def test_construction():
         @rjit(int)
         def add(a, b):
             return a + b
+
+
+def test_llvmir():
+
+    rjit = RemoteJIT()
+
+    @rjit('i(i,i)', 'd(d,d)')
+    def add(a, b):
+        return a + b
+
+    add.target('host')
+    ir = add.compile_IR()
+
+    print(ir)

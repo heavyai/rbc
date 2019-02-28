@@ -4,6 +4,7 @@ import inspect
 import warnings
 
 from .typesystem import Type
+from . import irtools
 
 
 class Caller(object):
@@ -47,6 +48,12 @@ class Caller(object):
         if target is not None:
             self.current_target = target
         return old_target
+
+    def compile_IR(self):
+        """Return LLVM IR string of compiled function for the current target.
+        """
+        return irtools.compile_function_to_IR(self.func, self._signatures,
+                                              self.current_target, self.server)
 
     def __call__(self, *arguments):
         """Return the result of a remote JIT function call.
