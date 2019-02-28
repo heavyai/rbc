@@ -138,14 +138,11 @@ class Signature(object):
             t = Type.fromcallable(obj)
             if t.is_complete:
                 self.signatures.append(t)
-            elif not self.signatures:
-                raise TypeError('no signatures defined for `%s`'
-                                % (obj.__name__))
             signatures = self.signatures
             self.signatures = []  # allow reusing the Signature instance
             return Caller(self.remote, signatures, obj)  # finalized caller
         elif isinstance(obj, Caller):
-            signatures = obj.signatures + self.signatures
+            signatures = obj._signatures + self.signatures
             return Caller(self.remote, signatures, obj.func)
         elif isinstance(obj, type(self)):
             self.signatures.extend(obj.signatures)
