@@ -109,6 +109,9 @@ def test_llvmir():
         return a + b
 
     add.target('host')
-    ir = add.compile_IR()
 
-    print(ir)
+    assert isinstance(add(1, 2), int)
+    assert add(1, 2) == 3
+
+    assert isinstance(add(1, 2.0), float)
+    assert add(1, 2.0) == 3.0

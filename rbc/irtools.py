@@ -1,6 +1,7 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
+import re
 import inspect
 import numba as nb
 from llvmlite import ir
@@ -14,7 +15,9 @@ def initialize_llvm():
 
 
 def compile_function_to_IR(func, signatures, target, server=None):
-    """Parameters
+    """Return target specific LLVM IR of a function for given signatures.
+
+    Parameters
     ----------
     func : function
       Specify Python function.
@@ -32,6 +35,11 @@ def compile_function_to_IR(func, signatures, target, server=None):
     ir : str
       LLVM IR string for the given target.
 
+    Notes
+    -----
+    Signature specific function names in LLVM IR are in the form
+
+      "<function name><signature.mangle()>"
     """
     initialize_llvm()
     if server is None or server.host == 'localhost':
@@ -98,3 +106,43 @@ def compile_function_to_IR(func, signatures, target, server=None):
         main_mod.link_in(llvm.parse_assembly(llvmir), preserve=True)
 
     return str(main_mod)
+
+
+def compile_IR(ir):
+    """Return execution engine with IR compiled in.
+
+    Parameters
+    ----------
+    ir : str
+      Specify LLVM IR code as a string.
+
+    Returns
+    -------
+    engine :
+      Execution engine.
+
+    Usage on host
+    -------------
+
+    To get the address of the compiled functions, use
+
+      addr = engine.get_function_address("<function name>")
+    """
+    triple = re.search(
+        r'target\s+triple\s*=\s*"(?P<triple>[-\d\w\W_]+)"\s*$',
+        ir, re.M).group('triple')
+
+    # Create execution engine
+    target = llvm.Target.from_triple(triple)
+    target_machine = target.create_target_machine()
+    backing_mod = llvm.parse_assembly("")
+    engine = llvm.create_mcjit_compiler(backing_mod, target_machine)
+
+    # Create LLVM module and compile
+    mod = llvm.parse_assembly(ir)
+    mod.verify()
+    engine.add_module(mod)
+    engine.finalize_object()
+    engine.run_static_constructors()
+
+    return engine

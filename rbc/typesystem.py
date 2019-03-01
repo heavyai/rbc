@@ -124,6 +124,7 @@ if nb is not None:
                     _m[_b] = _t
                 _numba_imap[_t] = _k + str(_b)
 
+# python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
                 str: 'string', bytes: 'char*'}
 
@@ -477,6 +478,15 @@ class Type(tuple):
         return cls(rtype, tuple(atypes) or (Type(),))
 
     @classmethod
+    def fromvalue(cls, obj):
+        """Return Type instance that corresponds to given Python value.
+        """
+        n = _python_imap.get(type(obj))
+        if n is not None:
+            return cls.fromstring(n)
+        raise NotImplementedError(repr(type(obj)))
+
+    @classmethod
     def fromobject(cls, obj):
         """Return new Type instance from any object.
         """
@@ -593,6 +603,107 @@ class Type(tuple):
         assert not rest, repr(rest)
         assert len(block) == 1, repr(block)
         return block[0]
+
+    @property
+    def bits(self):
+        if self.is_void:
+            return 0
+        if self.is_int:
+            return int(self[0][3:])
+        if self.is_uint or self.is_char:
+            return int(self[0][4:])
+        if self.is_float:
+            return int(self[0][5:])
+        if self.is_complex:
+            return int(self[0][6:])
+        if self.is_struct:
+            return sum([m.bits for m in self])
+        return NotImplemented
+
+    def match(self, other):
+        """Return match penalty when other can be converted to self.
+        Otherwise, return None.
+
+        Parameters
+        ----------
+        other : {Type, tuple}
+          Specify other signature. If other is a tuple of signatures,
+          then it is interpreted as argument types of a function
+          signature.
+
+        Returns
+        -------
+        penalty : {int, None}
+          Penalty of a match. For a perfect match, penalty is 0.
+          If match is impossible, return None
+        """
+        if isinstance(other, Type):
+            if self == other:
+                return 0
+            if other.is_void:
+                return (0 if self.is_void else None)
+            elif other.is_pointer:
+                if not self.is_pointer:
+                    return
+                penalty = self[0].match(other)
+                if penalty is None:
+                    if self[0].is_void:
+                        penalty = 1
+                return penalty
+            elif other.is_struct:
+                if not self.is_struct:
+                    return
+                if len(self) != len(other):
+                    return
+                penalty = 0
+                for a, b in zip(self, other):
+                    p = a.match(b)
+                    if p is None:
+                        return
+                    penalty = penalty + p
+                return penalty
+            elif other.is_function:
+                if not self.is_function:
+                    return
+                if len(self[1]) != len(other[1]):
+                    return
+                penalty = self[0].match(other[0])
+                if penalty is None:
+                    return
+                for a, b in zip(self[1], other[1]):
+                    p = a.match(b)
+                    if p is None:
+                        return
+                    penalty = penalty + p
+                return penalty
+            if (
+                    (other.is_int and self.is_int)
+                    or (other.is_float and self.is_float)
+                    or (other.is_uint and self.is_uint)
+                    or (other.is_char and self.is_char)
+                    or (other.is_complex and self.is_complex)):
+                if self.bits >= other.bits:
+                    return 0
+                return other.bits - self.bits
+            if other.is_int and self.is_float:
+                return 1000
+            # TODO: lots of
+            return None
+            raise NotImplementedError(repr((self, other)))
+        elif isinstance(other, tuple):
+            if not self.is_function:
+                return
+            atypes = self[1]
+            if len(atypes) != len(other):
+                return
+            penalty = 0
+            for a, b in zip(atypes, other):
+                p = a.match(b)
+                if p is None:
+                    return
+                penalty = penalty + p
+            return penalty
+        raise NotImplementedError(repr(type(other)))
 
 
 def _demangle(s):

@@ -158,7 +158,7 @@ def compile(llvm_ir):
     engine = create_execution_engine(get_triple(llvm_ir))
     mod = compile_ir(engine, llvm_ir)
     return engine
-    
+
 if 0:
     from ctypes import CFUNCTYPE, c_double
     engine = create_execution_engine(get_triple(foo_ir))

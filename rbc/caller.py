@@ -17,9 +17,23 @@ class Caller(object):
         self.func = func
         self.current_target = 'host'
 
-        self.nargs = len(inspect.signature(self.func).parameters)
+        sig = inspect.signature(self.func)
+        self.nargs = len(sig.parameters)
+
+        # calculate unique id for function content
+        src = inspect.getsource(self.func)
+        i = src.find('def')
+        j = src.rfind('\n', 0, i)
+        tab = src[j:i]
+        src = src[j:]  # strip decorators
+        src = src.replace(tab, '\n')  # shift left
+        # TODO: strip annotations
+        # TODO: strip line-by-line the minimum whitespace
+
         for sig in signatures:
             self.add_signature(sig)
+
+        self.engine = None
 
     def add_signature(self, sig):
         """Update Caller with a new signature
@@ -36,6 +50,7 @@ class Caller(object):
                 ' function %s, signature %s (`%s`)'
                 % (nargs, len(sig[1]), sig))
         if sig not in self._signatures:
+            self.engine = None  # require new compile
             self._signatures.append(sig)
         else:
             warnings.warn('Caller.add_signature:'
@@ -49,11 +64,19 @@ class Caller(object):
             self.current_target = target
         return old_target
 
-    def compile_IR(self):
+    def get_IR(self):
         """Return LLVM IR string of compiled function for the current target.
         """
         return irtools.compile_function_to_IR(self.func, self._signatures,
                                               self.current_target, self.server)
+
+    def compile(self):
+        """Compile function and signatures to machine code.
+        """
+        if self.engine is not None:
+            return
+        ir = self.get_IR()
+        self.engine = irtools.compile_IR(ir)
 
     def __call__(self, *arguments):
         """Return the result of a remote JIT function call.
@@ -78,4 +101,22 @@ class Caller(object):
         eariler already), arguments are processed, and remote function
         will be called. The result will be returned in a response.
         """
-        pass
+        self.compile()
+
+        atypes = tuple(map(Type.fromvalue, arguments))
+        match_sig = None
+        match_penalty = None
+        for sig in self._signatures:
+            penalty = sig.match(atypes)
+            if penalty is not None:
+                if match_sig is None or penalty < match_penalty:
+                    match_sig = sig
+                    match_penalty = penalty
+        if match_sig is None:
+            raise TypeError(
+                'could not find matching function to given argument types')
+
+        addr = self.engine.get_function_address(
+            self.func.__name__ + match_sig.mangle())
+        cfunc = match_sig.toctypes()(addr)
+        return cfunc(*arguments)

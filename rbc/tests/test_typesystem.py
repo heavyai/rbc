@@ -289,6 +289,14 @@ def test_fromcallable():
         Type.fromcallable(foo)
 
 
+def test_fromvalue():
+    assert Type.fromvalue(1) == Type.fromstring('i64')
+    assert Type.fromvalue(1.0) == Type.fromstring('f64')
+    assert Type.fromvalue(1j) == Type.fromstring('c128')
+    assert Type.fromvalue("123".encode()) == Type.fromstring('char*')
+    assert Type.fromvalue("123") == Type.fromstring('string')
+
+
 def test_fromobject():
     import ctypes
     assert Type.fromobject('i8') == Type.fromstring('i8')
