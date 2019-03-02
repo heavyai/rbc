@@ -42,7 +42,7 @@ def compile_function_to_IR(func, signatures, target, server=None):
       "<function name><signature.mangle()>"
     """
     initialize_llvm()
-    if server is None or server.host == 'localhost':
+    if server is None or server.host in ['localhost', '127.0.0.1']:
         if target == 'host':
             # FYI, there is also get_process_triple()
             # triple = llvm.get_default_triple()

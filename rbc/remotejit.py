@@ -38,7 +38,7 @@ class RemoteJIT(object):
     where the sum will be evaluated in the remote host.
     """
 
-    def __init__(self, host='localhost', port=11530, **options):
+    def __init__(self, host='127.0.0.1', port=11530, **options):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
