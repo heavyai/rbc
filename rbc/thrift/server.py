@@ -16,6 +16,9 @@ import time
 import multiprocessing
 import sys
 import pickle
+from . import utils
+import thriftpy2 as thr
+import thriftpy2.rpc
 
 try:
     import tblib
@@ -26,17 +29,13 @@ except ImportError:
 if tblib is not None:
     tblib.pickling_support.install()
 
-import thriftpy2 as thr
-import thriftpy2.rpc
-
-from . import utils
 
 class MultiplexedProcessor(thr.thrift.TMultiplexedProcessor):
 
     def __init__(self, server):
         self.server = server
         thr.thrift.TMultiplexedProcessor.__init__(self)
-    
+
     def handle_exception(self, e, result):
         if thr.thrift.TProcessor.handle_exception(self, e, result):
             return True
@@ -55,7 +54,8 @@ class MultiplexedProcessor(thr.thrift.TMultiplexedProcessor):
         return thr.thrift.TProcessor.handle_exception(self, exc, result)
 
     def process_in(self, iprot):
-        api, seqid, result, call = thr.thrift.TMultiplexedProcessor.process_in(self, iprot)
+        api, seqid, result, call = thr.thrift.TMultiplexedProcessor.process_in(
+            self, iprot)
         return api, seqid, result, call
 
 
@@ -65,7 +65,8 @@ class Server(object):
 
     def __init__(self, dispatcher, thrift_file, **options):
         self.options = options
-        module_name = os.path.splitext(os.path.abspath(thrift_file))[0]+'_thrift'
+        module_name = os.path.splitext(
+            os.path.abspath(thrift_file))[0]+'_thrift'
         self._dispatcher = dispatcher
         self.thrift_file = thrift_file
         content = utils.resolve_includes(open(thrift_file).read(),
@@ -88,13 +89,15 @@ class Server(object):
         """Run server in background process.
         """
         ctx = multiprocessing.get_context('spawn')
-        p = ctx.Process(target=Server.run, args=(dispatcher, thrift_file, options))
+        p = ctx.Process(target=Server.run,
+                        args=(dispatcher, thrift_file, options))
         p.start()
         start = time.time()
         while time.time() < start + startup_time:
             try:
-                c = socket.create_connection((options['host'], options['port']), timeout=0.1)
-            except ConnectionRefusedError as msg:
+                socket.create_connection(
+                    (options['host'], options['port']), timeout=0.1)
+            except ConnectionRefusedError:
                 time.sleep(0.1)
             else:
                 break
@@ -103,14 +106,17 @@ class Server(object):
             if is_alive:
                 p.join(1)
                 p.terminate()
-            raise RuntimeError('failed to start up rpc_thrift server (was alive={}, startup_time={}s)'
-                               .format(is_alive, startup_time))
+            raise RuntimeError(
+                'failed to start up rpc_thrift server'
+                ' (was alive={}, startup_time={}s)'
+                .format(is_alive, startup_time))
         return p
 
     def _serve(self):
         """Create and run a Thrift server.
         """
-        service_names = [_n for _n in dir(self.thrift) if not _n.startswith('_')]        
+        service_names = [_n for _n in dir(self.thrift)
+                         if not _n.startswith('_')]
         mux_proc = MultiplexedProcessor(self)
         for service_name in service_names:
             service = getattr(self.thrift, service_name)

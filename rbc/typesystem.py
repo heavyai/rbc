@@ -71,6 +71,34 @@ _float_match = re.compile(r'\A(float|f)\s*(16|32|64|128|256|)\Z').match
 _double_match = re.compile(r'\A(double|d)\Z').match
 _complex_match = re.compile(r'\A(complex|c)\s*(16|32|64|128|256|512|)\Z').match
 
+
+class Complex64(ctypes.Structure):
+    _fields_ = [("real", ctypes.c_float), ("imag", ctypes.c_float)]
+
+    @classmethod
+    def from_param(cls, obj):
+        if isinstance(obj, complex):
+            return cls(obj.real, obj.imag)
+        if isinstance(obj, (int, float)):
+            return cls(obj.real, 0.0)
+        raise NotImplementedError(repr(type(obj)))
+
+
+class Complex128(ctypes.Structure):
+    _fields_ = [("real", ctypes.c_double), ("imag", ctypes.c_double)]
+
+    @classmethod
+    def from_param(cls, obj):
+        if isinstance(obj, complex):
+            return cls(obj.real, obj.imag)
+        if isinstance(obj, (int, float)):
+            return cls(obj.real, 0.0)
+        raise NotImplementedError(repr(type(obj)))
+
+    def topython(self):
+        return complex(self.real, self.imag)
+
+
 # Initialize type maps
 _ctypes_imap = {ctypes.c_void_p: 'void*', None: 'void', ctypes.c_bool: 'bool',
                 ctypes.c_char_p: 'char8*', ctypes.c_wchar_p: 'char32*'}
@@ -88,10 +116,15 @@ for _k, _m, _lst in [
          ['c_uint8', 'c_uint16', 'c_uint32', 'c_uint64', 'c_uint',
           'c_ulong', 'c_ulonglong', 'c_ubyte', 'c_ushort', 'c_size_t']),
         ('float', _ctypes_float_map,
-         ['c_float', 'c_double', 'c_longdouble'])
+         ['c_float', 'c_double', 'c_longdouble']),
+        ('complex', _ctypes_complex_map,
+         [Complex64, Complex128])
 ]:
     for _n in _lst:
-        _t = getattr(ctypes, _n, None)
+        if isinstance(_n, str):
+            _t = getattr(ctypes, _n, None)
+        else:
+            _t = _n
         if _t is not None:
             _b = ctypes.sizeof(_t) * 8
             if _b not in _m:
@@ -341,6 +374,11 @@ class Type(tuple):
             rtype = self[0].tonumba()
             atypes = [t.tonumba() for t in self[1]]
             return rtype(*atypes)
+        if self.is_string:
+            return nb.types.string
+        if self.is_char:
+            # in numba, char==int8
+            return _numba_int_map.get(int(self[0][4:]))
         raise NotImplementedError(repr(self))
 
     def toctypes(self):
@@ -349,17 +387,17 @@ class Type(tuple):
         if self.is_void:
             return None
         if self.is_int:
-            return _ctypes_int_map.get(int(self[0][3:]))
+            return _ctypes_int_map[int(self[0][3:])]
         if self.is_uint:
-            return _ctypes_uint_map.get(int(self[0][4:]))
+            return _ctypes_uint_map[int(self[0][4:])]
         if self.is_float:
-            return _ctypes_float_map.get(int(self[0][5:]))
+            return _ctypes_float_map[int(self[0][5:])]
         if self.is_complex:
-            return _ctypes_complex_map.get(int(self[0][7:]))
+            return _ctypes_complex_map[int(self[0][7:])]
         if self.is_bool:
             return ctypes.c_bool
         if self.is_char:
-            return _ctypes_char_map.get(int(self[0][4:]))
+            return _ctypes_char_map[int(self[0][4:])]
         if self.is_pointer:
             if self[0].is_void:
                 return ctypes.c_void_p
@@ -377,7 +415,9 @@ class Type(tuple):
             rtype = self[0].toctypes()
             atypes = [t.toctypes() for t in self[1]]
             return ctypes.CFUNCTYPE(rtype, *atypes)
-        raise NotImplementedError(repr(self))
+        if self.is_string:
+            return ctypes.c_wchar_p
+        raise NotImplementedError(repr((self, self.is_string)))
 
     @classmethod
     def _fromstring(cls, s):
@@ -685,7 +725,10 @@ class Type(tuple):
                 if self.bits >= other.bits:
                     return 0
                 return other.bits - self.bits
-            if other.is_int and self.is_float:
+            if self.is_complex and (other.is_float
+                                    or other.is_int or other.is_uint):
+                return 1000
+            if self.is_float and (other.is_int or other.is_uint):
                 return 1000
             # TODO: lots of
             return None

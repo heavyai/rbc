@@ -12,12 +12,15 @@ import numba as nb
 import numba.sigutils
 import numba.cuda
 
+
 def initialize_llvm():
     llvm.initialize()
     llvm.initialize_all_targets()
     llvm.initialize_all_asmprinters()
 
+
 initialize_llvm()
+
 
 def annotation_to_numba_type(a):
     """Return numba type from a signature annotation.
@@ -30,12 +33,18 @@ def annotation_to_numba_type(a):
             return t
     elif a is inspect.Signature.empty or a is None:
         return nb.types.void
-    elif a is int: return nb.types.int_                      # int64
-    elif a is float: return nb.types.double
-    elif a is complex: return nb.types.complex128
-    elif a is bytes: return nb.types.CPointer(nb.types.byte) #  uint8*
-    elif a is str: return nb.types.string                    # unicode_type
-    raise NotImplementedError(f'converting {a} of type {type(a)} to numba types')
+    elif a is int:
+        return nb.types.int_                      # int64
+    elif a is float:
+        return nb.types.double
+    elif a is complex:
+        return nb.types.complex128
+    elif a is bytes:
+        return nb.types.CPointer(nb.types.byte)   # uint8*
+    elif a is str:
+        return nb.types.string                    # unicode_type
+    raise NotImplementedError(
+        f'converting {a} of type {type(a)} to numba types')
 
 
 def get_numba_signature(func, return_type=None):
@@ -55,13 +64,14 @@ def get_numba_signature(func, return_type=None):
     else:
         rtype = return_type
     rtype = annotation_to_numba_type(rtype)
-    # TODO: warn if return annotation is missing but func contains return statement
+    # TODO: warn if return annotation is missing but func contains
+    # return statement
     return rtype(*argtypes)
 
 
 def get_llvm_ir(func, sig=None,
-           target = 'host',
-           locals={}, options={}):
+                target='host',
+                locals={}, options={}):
     """Return LLVM IR of a Python function.
 
     Parameters
@@ -77,12 +87,13 @@ def get_llvm_ir(func, sig=None,
         sig = get_numba_signature(func)
 
     if target == 'host':
-        triple = llvm.get_default_triple()  # there is also get_process_triple()
+        # triple = llvm.get_default_triple()
+        # there is also get_process_triple
         target_desc = nb.targets.registry.cpu_target
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     elif target == 'cuda':
-        triple = 'nvptx64-nvidia-cuda'
+        # triple = 'nvptx64-nvidia-cuda'
         target_desc = nb.cuda.descriptor.CUDATargetDesc
         typing_context = target_desc.typingctx
         target_context = target_desc.targetctx
@@ -91,13 +102,14 @@ def get_llvm_ir(func, sig=None,
     flags = nb.compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
-    
+
     if not isinstance(sig, dict):
         sig = {func.__name__: sig}
 
-    main_mod = llvm.parse_assembly('source_filename="{}"'.format(inspect.getsourcefile(func)))
+    main_mod = llvm.parse_assembly('source_filename="{}"'
+                                   .format(inspect.getsourcefile(func)))
     main_mod.name = func.__name__
-    
+
     for fname, _sig in sig.items():
         args, return_type = nb.sigutils.normalize_signature(_sig)
         cres = nb.compiler.compile_extra(typingctx=typing_context,
@@ -113,16 +125,16 @@ def get_llvm_ir(func, sig=None,
         context = cres.target_context
         ll_argtypes = [context.get_value_type(ty) for ty in args]
         ll_return_type = context.get_value_type(return_type)
-        
+
         wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
         wrapfn = module.add_function(wrapty, fname)
         builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
-        
+
         fnty = context.call_conv.get_function_type(return_type, args)
         fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, return_type, args, wrapfn.args)
-        builder.ret(out)    
+        builder.ret(out)
         cres.library.add_ir_module(module)
 
         cres.library._optimize_final_module()
@@ -130,7 +142,7 @@ def get_llvm_ir(func, sig=None,
         cres.library._finalized = True
         llvmir = cres.library.get_llvm_str()
         main_mod.link_in(llvm.parse_assembly(llvmir), preserve=True)
-    # todo: return AST as well 
+    # todo: return AST as well
     return str(main_mod)
 
 
@@ -138,12 +150,14 @@ def get_triple(llvm_ir):
     return re.search(r'target\s+triple\s*=\s*"(?P<triple>[-\d\w\W_]+)"\s*$',
                      llvm_ir, re.M).group('triple')
 
+
 def create_execution_engine(triple):
     target = llvm.Target.from_triple(triple)
     target_machine = target.create_target_machine()
     backing_mod = llvm.parse_assembly("")
     engine = llvm.create_mcjit_compiler(backing_mod, target_machine)
     return engine
+
 
 def compile_ir(engine, llvm_ir):
     # Create a LLVM module object from the IR
@@ -154,26 +168,8 @@ def compile_ir(engine, llvm_ir):
     engine.run_static_constructors()
     return mod
 
+
 def compile(llvm_ir):
     engine = create_execution_engine(get_triple(llvm_ir))
-    mod = compile_ir(engine, llvm_ir)
+    compile_ir(engine, llvm_ir)
     return engine
-
-if 0:
-    from ctypes import CFUNCTYPE, c_double
-    engine = create_execution_engine(get_triple(foo_ir))
-    mod = compile_ir(engine, foo_ir)
-    func_ptr = engine.get_function_address("dfoo")
-    cfunc = CFUNCTYPE(c_double, c_double, c_double)(func_ptr)
-
-
-    import timeit
-    print (timeit.timeit('cfunc(1.0, 3.5)', globals=dict(cfunc=cfunc)))
-    print (timeit.timeit('cfunc(1.0, 3.5)', globals=dict(cfunc=foo)))
-    
-    res = cfunc(1.0, 3.5)
-    print("dfoo(...) =", res)
-    
-
-    __import__('sys').exit()
-

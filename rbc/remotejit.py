@@ -1,10 +1,13 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
+import os
 import inspect
 
+from . import irtools
 from .caller import Caller
 from .typesystem import Type
+from .thrift import Server, Dispatcher, dispatchermethod, Data
 
 
 class RemoteJIT(object):
@@ -51,8 +54,7 @@ class RemoteJIT(object):
         self.host = host
         self.port = port
         self.options = options
-
-        self.functions = dict()  # not used?
+        self.server_process = None
 
     def __call__(self, *signatures):
         """Define a remote JIT function signatures and content.
@@ -101,6 +103,25 @@ class RemoteJIT(object):
             s = s(func)
         return s
 
+    def start_server(self, background=False):
+        thrift_file = os.path.join(os.path.dirname(__file__),
+                                   'remotejit.thrift')
+        print('staring rpc.thrift server: %s' % (thrift_file), end='')
+        if background:
+            ps = Server.run_bg(DispatcherRJIT, thrift_file,
+                               dict(host=self.host, port=self.port))
+            self.server_process = ps
+        else:
+            Server.run(DispatcherRJIT, thrift_file,
+                       dict(host=self.host, port=self.port))
+            print('... rpc.thrift server stopped')
+
+    def stop_server(self):
+        if self.server_process is not None and self.server_process.is_alive():
+            print('... stopping rpc.thrift server')
+            self.server_process.terminate()
+            self.server_process = None
+
 
 class Signature(object):
     """Signature decorator for Python functions.
@@ -123,6 +144,7 @@ class Signature(object):
       add(1, 2) -> 3
       sub(1, 2) -> -1
     """
+
     def __init__(self, remote):
         self.remote = remote   # RemoteJIT
         self.signatures = []
@@ -150,3 +172,55 @@ class Signature(object):
         else:
             self.signatures.append(Type.fromobject(obj))
             return self
+
+
+class DispatcherRJIT(Dispatcher):
+    """Implements remotejit service methods.
+    """
+
+    def __init__(self, server):
+        Dispatcher.__init__(self, server)
+        self.compiled_functions = dict()
+        self.engines = dict()
+
+    @dispatchermethod
+    def compile(self, name: str, signatures: str, ir: str) -> int:
+        """JIT compile function.
+
+        Parameters
+        ----------
+        name : str
+          Specify the function name.
+        signatures : str
+          Specify semi-colon separated list of mangled signatures.
+        ir : str
+          Specify LLVM IR representation of the function.
+        """
+        engine = irtools.compile_IR(ir)
+        for msig in signatures.split(';'):
+            sig = Type.demangle(msig)
+            fullname = name + msig
+            addr = engine.get_function_address(fullname)
+            # storing engine as the owner of function addresses
+            self.compiled_functions[fullname] = engine, sig.toctypes()(addr)
+        return True
+
+    @dispatchermethod
+    def call(self, fullname: str, arguments: tuple) -> Data:
+        """Call JIT compiled function
+
+        Parameters
+        ----------
+        fullname : str
+          Specify the full name of the function that is in form
+          "<name><mangled signature>"
+        arguments : tuple
+          Speficy the arguments to the function.
+        """
+        ef = self.compiled_functions.get(fullname)
+        if ef is None:
+            raise RuntimeError('no such compiled function `%s`' % (fullname))
+        r = ef[1](*arguments)
+        if hasattr(r, 'topython'):
+            return r.topython()
+        return r

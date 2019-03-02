@@ -1,8 +1,17 @@
-
+import atexit
 import pytest
 from rbc.remotejit import RemoteJIT, Signature
 from rbc.caller import Caller
 from rbc.typesystem import Type
+
+
+@pytest.fixture(scope="module")
+def rjit(request):
+    rjit = RemoteJIT()
+    rjit.start_server(background=True)
+    request.addfinalizer(rjit.stop_server)
+    atexit.register(rjit.stop_server)
+    return rjit
 
 
 def test_construction():
@@ -100,11 +109,9 @@ def test_construction():
             return a + b
 
 
-def test_llvmir():
+def test_rjit_add(rjit):
 
-    rjit = RemoteJIT()
-
-    @rjit('i(i,i)', 'd(d,d)')
+    @rjit('i64(i64,i64)')
     def add(a, b):
         return a + b
 
@@ -113,5 +120,27 @@ def test_llvmir():
     assert isinstance(add(1, 2), int)
     assert add(1, 2) == 3
 
-    assert isinstance(add(1, 2.0), float)
-    assert add(1, 2.0) == 3.0
+    with pytest.raises(
+            TypeError,
+            match=r'could not find matching function to given argument types'):
+        add(1, 2.5)
+
+    add.add_signature('d(d,d)')
+
+    assert isinstance(add(1, 2.5), float)
+    assert add(1, 2.5) == 3.5
+
+    assert isinstance(add(1.0, 2.5), float)
+    assert add(1.0, 2.5) == 3.5
+
+    with pytest.raises(
+            TypeError,
+            match=r'could not find matching function to given argument types'):
+        add(1j, 2)
+
+    add.add_signature('c128(c128,c128)')
+    r = add(1j, 2j)
+    assert isinstance(r, complex)
+    assert r == 3j
+
+    assert add(1j, 2) == 2+1j

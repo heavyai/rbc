@@ -1,5 +1,6 @@
 import subprocess
 
+
 def runcommand(*cmd):
     """Run a command with arguments and return stdout messages.
 
@@ -10,7 +11,9 @@ def runcommand(*cmd):
         runcommand.cache[cmd] = result.stdout
     return runcommand.cache[cmd]
 
+
 runcommand.cache = {}
+
 
 def parse_proc_cpuinfo(content):
     info = {}
@@ -21,13 +24,12 @@ def parse_proc_cpuinfo(content):
             continue
         key, value = line.split(':', 1)
         key = key.strip()
-        if key=='processor':
+        if key == 'processor':
             processor_count += 1
         else:
             if key in info:
-                assert info[key] == value, repr((key,info[key], value))
+                assert info[key] == value, repr((key, info[key], value))
             else:
                 info[key] = value
     info['processors'] = str(processor_count)
     return info
-

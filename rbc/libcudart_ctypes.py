@@ -1,7 +1,6 @@
 import os
 import ctypes
 import ctypes.util
-import re
 from enum import IntEnum
 from .utils import runcommand
 
@@ -17,7 +16,9 @@ else:
     lib = ctypes.util.find_library('cudart')
 
 if lib is None:
-    raise ImportError('Failed to find CUDA RT library. Make sure that the library is installed')
+    raise ImportError('Failed to find CUDA RT library.'
+                      ' Make sure that the library is installed')
+
 
 def get_cuda_libdir():
     for line in runcommand('ldconfig', '-p').splitlines():
@@ -25,10 +26,12 @@ def get_cuda_libdir():
             libpath = os.path.realpath(line.split('=>')[-1].strip())
             return os.path.dirname(libpath)
     return os.path.dirname(lib)
-        
+
+
 if not os.path.isfile(lib):
     lib = os.path.join(get_cuda_libdir(), lib)
-libdir = os.path.dirname(lib)    
+
+libdir = os.path.dirname(lib)
 includedir = os.path.join(os.path.dirname(libdir), 'include')
 
 libcudart = ctypes.cdll.LoadLibrary(lib)
@@ -36,6 +39,7 @@ libcudart = ctypes.cdll.LoadLibrary(lib)
 #
 # Auxiliary functions for reading CUDA header files
 #
+
 
 def get_cuda_header(headername, _cache={}):
     content = _cache.get(headername)
@@ -78,7 +82,7 @@ def read_cuda_header(headername, kind, name, process_func):
             line = line.strip()
             if line.endswith(',') or line.endswith(';'):
                 line = line[:-1].rstrip()
-            if not line or line=='{':
+            if not line or line == '{':
                 continue
             key, value = process_func(line, key)
             if value is None:
@@ -86,7 +90,7 @@ def read_cuda_header(headername, kind, name, process_func):
             d[key] = value
     return d
 
-        
+
 def get_cuda_enum(headerfile, name):
     """Return value:name mapping of a enum definition.
     """
@@ -124,9 +128,8 @@ def get_ctype(tstr):
     t = getattr(ctypes, 'c_' + tstr, None)
     if t is not None:
         return t
-    t = {'cudaUUID_t':cudaUUID_t,
-         'unsigned int':ctypes.c_uint,
-    }.get(tstr)
+    t = {'cudaUUID_t': cudaUUID_t,
+         'unsigned int': ctypes.c_uint}.get(tstr)
     if t is not None:
         return t
     raise NotImplementedError('get ctypes version of `%s`' % (tstr))
@@ -136,27 +139,37 @@ def get_ctype(tstr):
 # CUDA enum definitions
 #
 
+
 class CTypesEnum(IntEnum):
-    # See https://www.chriskrycho.com/2015/ctypes-structures-and-dll-exports.html
+    # See
+    #   https://www.chriskrycho.com/2015/ctypes-structures-and-dll-exports.html
     @classmethod
     def from_param(cls, obj):
         return int(obj)
 
+
 cudaError_value_name_map = get_cuda_enum('driver_types.h', 'cudaError')
-s = 'class cudaError(CTypesEnum):\n'
-for v, n in cudaError_value_name_map.items():
-    s += '    {} = {}\n'.format(n, v)
-exec(s)
+cudaError = type('cudaError', (CTypesEnum, ),
+                 dict([(n, v) for v, n in cudaError_value_name_map.items()]))
+
+# s = 'class cudaError(CTypesEnum):\n'
+# for v, n in cudaError_value_name_map.items():
+#     s += '    {} = {}\n'.format(n, v)
+# exec(s)
 
 #
 # CUDA struct definitions
 #
 
+
 class cudaUUID_t(ctypes.Structure):
     _fields_ = [('bytes', ctypes.c_char * 16)]
 
+
 class cudaDeviceProp(ctypes.Structure):
-    _fields_ = list(get_cuda_struct('driver_types.h', 'cudaDeviceProp').items())
+    _fields_ = list(get_cuda_struct('driver_types.h',
+                                    'cudaDeviceProp').items())
+
 
 #
 # CUDA functions
@@ -168,7 +181,8 @@ libcudart.cudaDriverGetVersion.restype = cudaError
 libcudart.cudaRuntimeGetVersion.argtypes = [ctypes.POINTER(ctypes.c_int)]
 libcudart.cudaRuntimeGetVersion.restype = cudaError
 
-libcudart.cudaGetDeviceProperties.argtypes = [ctypes.POINTER(cudaDeviceProp), ctypes.c_int]
+libcudart.cudaGetDeviceProperties.argtypes = [ctypes.POINTER(cudaDeviceProp),
+                                              ctypes.c_int]
 libcudart.cudaGetDeviceProperties.restype = cudaError
 
 libcudart.cudaGetDeviceCount.argtypes = [ctypes.POINTER(ctypes.c_int)]
@@ -177,6 +191,7 @@ libcudart.cudaGetDeviceCount.restype = cudaError
 #
 # Convinience functions
 #
+
 
 def get_cuda_versions():
     """Return CUDA driver and runtime versions.
@@ -193,7 +208,7 @@ def get_cuda_versions():
 
 
 def get_cuda_device_properties(device):
-    """Return CUDA device properties as a dictionary. 
+    """Return CUDA device properties as a dictionary.
 
     The value types in the dictionary will be int, bytes, or list.
     """
@@ -215,7 +230,5 @@ def get_device_count():
     """
     c = ctypes.c_int(0)
     r = libcudart.cudaGetDeviceCount(ctypes.byref(c))
-    assert r == cudaError.cudaSuccess, repr(r)
+    assert r == cudaError.cudaSuccess, repr(r)  # noqa: F821
     return c.value
-
-

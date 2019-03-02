@@ -12,6 +12,7 @@ dispatchermethod.
 import pickle
 import numpy as np
 
+
 def fromobject(thrift, tcls, obj):
     """Create thrift object with type `tcls` from a Python object.
     """
@@ -20,7 +21,7 @@ def fromobject(thrift, tcls, obj):
     return globals().get(tcls.__name__, tcls)(thrift, obj)
 
 
-def toobject(thrift, tobj, cls = None):
+def toobject(thrift, tobj, cls=None):
     """Convert thrift object `tobj` to Python object (with optional type
     `cls`).
     """
@@ -50,7 +51,7 @@ class Data(object):
             r.kind = thrift.DataKind.DATA_RAW
             r.info = ''
         else:
-            protocol = pickle.DEFAULT_PROTOCOL if info is None else int(info)
+            # protocol = pickle.DEFAULT_PROTOCOL if info is None else int(info)
             r.data = pickle.dumps(data)
             r.kind = thrift.DataKind.DATA_PICKLED
             r.info = str(info).encode()
@@ -61,11 +62,13 @@ class Data(object):
         kind = obj.kind
         if kind == thrift.DataKind.DATA_ENCODED:
             encoding = obj.info
+            if isinstance(obj.data, str):
+                return obj.data
             return obj.data.decode(encoding)
         if kind == thrift.DataKind.DATA_RAW:
             return obj.data
         if kind == thrift.DataKind.DATA_PICKLED:
-            #protocol = int(obj.info)  # pickle.loads detects protocol itself
+            # protocol = int(obj.info)  # pickle.loads detects protocol itself
             return pickle.loads(obj.data)
         raise NotImplementedError(repr(kind))
 
@@ -104,7 +107,7 @@ class NDArray(object):
     """Represents N-dimensional array that is mapped to/from numpy
     ndarray.
     """
-    
+
     def __new__(cls, thrift, data):
         r = thrift.NDArray()
         if isinstance(data, thrift.NDArray):

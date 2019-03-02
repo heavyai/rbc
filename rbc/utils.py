@@ -1,5 +1,6 @@
 import subprocess
 
+
 def runcommand(*cmd):
     """Run a command with arguments and return stdout messages.
 
@@ -9,5 +10,6 @@ def runcommand(*cmd):
         result = subprocess.run(cmd, stdout=subprocess.PIPE)
         runcommand.cache[cmd] = result.stdout.decode()
     return runcommand.cache[cmd]
+
 
 runcommand.cache = {}

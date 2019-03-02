@@ -1,5 +1,4 @@
-import sys, os, docutils
-
+import docutils
 
 extensions = [
     'sphinx.ext.intersphinx',
@@ -38,7 +37,8 @@ html_theme_options = {
 }
 
 html_context = {
-    "display_github": False, # Add 'Edit on Github' link instead of 'View page source'
+    "display_github": False,
+    # Add 'Edit on Github' link instead of 'View page source'
     "last_updated": True,
     "commit": False,
 }
@@ -58,5 +58,3 @@ def setup(app):
         'topic', 'topic', 'single: %s', docutils.nodes.strong
     )
     app.add_javascript("copybutton.js")
-
-

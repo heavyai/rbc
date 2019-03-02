@@ -13,9 +13,6 @@ import thriftpy2 as thr
 import thriftpy2.rpc
 import pickle
 import six
-import traceback
-import sys
-
 from . import types
 
 
@@ -29,10 +26,10 @@ class Client(object):
     def __init__(self, **options):
         self.options = options
         self._update_thrift()
-        
+
     def _update_thrift(self):
         """Update client thrift configuration from server.
-        
+
         The servers thrift configuration must contain at least
 
           service info { string thrift_content() }
@@ -119,12 +116,12 @@ class Client(object):
             assert isinstance(result, dict), repr(type(result))
             return result
         elif t[0] == thr.thrift.TType.STRUCT:
-            #_i, status, tcls, _b = t
+            # _i, status, tcls, _b = t
             assert t[1] == 'success', repr(t)
             assert isinstance(result, t[2]), repr(type(result))
             return types.toobject(self.thrift, result)
         raise NotImplementedError(repr((t, type(result))))
-        
+
     def __call__(self, **services):
         """Perform a RPC call to multiplex thrift server.
 
@@ -132,7 +129,7 @@ class Client(object):
         ----------
         services : dict
           Specify a service mapping with arguments to server methods.
-        
+
         Returns
         -------
         results : dict
@@ -143,7 +140,7 @@ class Client(object):
         -------
 
         1. Create a connection to thrift server:
-        
+
           conn = Client(host=.., port=..)
 
         2. Say, a server implements two services, Ping and King. Ping
@@ -161,13 +158,16 @@ class Client(object):
         results = {}
         for service_name, query_dict in services.items():
             binary_factory = thr.protocol.TBinaryProtocolFactory()
-            factory = thr.protocol.TMultiplexedProtocolFactory(binary_factory, service_name)
+            factory = thr.protocol.TMultiplexedProtocolFactory(binary_factory,
+                                                               service_name)
             service = getattr(self.thrift, service_name)
-            ctx = thr.rpc.client_context(service, proto_factory=factory, **self.options)
+            ctx = thr.rpc.client_context(service, proto_factory=factory,
+                                         **self.options)
             results[service_name] = {}
             with ctx as c:
                 for query_name, query_args in query_dict.items():
-                    query_args = self._args_to_thrift(getattr(service, query_name + '_args'), query_args)
+                    query_args = self._args_to_thrift(
+                        getattr(service, query_name + '_args'), query_args)
                     mth = getattr(c, query_name)
                     assert mth is not None
                     exc = None
@@ -187,6 +187,7 @@ class Client(object):
                             raise
                     if exc is not None:
                         six.reraise(*exc)   # RAISING SERVER EXCEPTION
-                    r = self._result_from_thrift(getattr(service, query_name + '_result'), r)
+                    r = self._result_from_thrift(
+                        getattr(service, query_name + '_result'), r)
                     results[service_name][query_name] = r
         return results

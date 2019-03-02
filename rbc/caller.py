@@ -1,39 +1,44 @@
 # Author: Pearu Peterson
 # Created: February 2019
+
 import inspect
 import warnings
-
 from .typesystem import Type
 from . import irtools
+from . import thrift
 
 
 class Caller(object):
     """Remote JIT caller
     """
 
-    def __init__(self, server, signatures, func):
-        self.server = server
+    def __init__(self, remotejit, signatures, func):
+        """Construct remote JIT caller instance.
+
+        Parameters
+        ----------
+        remotejit : RemoteJIT
+          Specify remote JIT instance that contains remote server host
+          and port information.
+        signatures : list
+          Specify a list of signatures (`Type` instances of function kind)
+        func : callable
+          Specify Python function as the template to remotely JIT
+          compiled functions.
+        """
+        self.remotejit = remotejit
         self._signatures = []
         self.func = func
         self.current_target = 'host'
 
-        sig = inspect.signature(self.func)
-        self.nargs = len(sig.parameters)
-
-        # calculate unique id for function content
-        src = inspect.getsource(self.func)
-        i = src.find('def')
-        j = src.rfind('\n', 0, i)
-        tab = src[j:i]
-        src = src[j:]  # strip decorators
-        src = src.replace(tab, '\n')  # shift left
-        # TODO: strip annotations
-        # TODO: strip line-by-line the minimum whitespace
+        signature = inspect.signature(self.func)
+        self.nargs = len(signature.parameters)
 
         for sig in signatures:
             self.add_signature(sig)
 
-        self.engine = None
+        self._client = None
+        self.ir_cache = {}
 
     def add_signature(self, sig):
         """Update Caller with a new signature
@@ -43,18 +48,17 @@ class Caller(object):
         nargs = self.nargs
         if not sig.is_function:
             raise ValueError(
-                'expected signature with function kind, got `%s`' % (sig))
+                'expected signature with function kind, got `%s`' % (sig,))
         if nargs != len(sig[1]) and not (nargs == 0 and sig[1][0].is_void):
             raise ValueError(
                 'mismatch of the number of arguments:'
                 ' function %s, signature %s (`%s`)'
                 % (nargs, len(sig[1]), sig))
         if sig not in self._signatures:
-            self.engine = None  # require new compile
             self._signatures.append(sig)
         else:
             warnings.warn('Caller.add_signature:'
-                          ' signature `%s` has been already added' % (sig))
+                          ' signature `%s` has been already added' % (sig,))
 
     def target(self, target=None):
         """Return current target. When specified, set a new target.
@@ -64,45 +68,44 @@ class Caller(object):
             self.current_target = target
         return old_target
 
-    def get_IR(self):
+    def get_IR(self, signatures=None):
         """Return LLVM IR string of compiled function for the current target.
         """
-        return irtools.compile_function_to_IR(self.func, self._signatures,
-                                              self.current_target, self.server)
+        if signatures is None:
+            signatures = self._signatures
+        return irtools.compile_function_to_IR(self.func, signatures,
+                                              self.current_target,
+                                              self.remotejit)
 
-    def compile(self):
-        """Compile function and signatures to machine code.
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = thrift.Client(host=self.remotejit.host,
+                                         port=self.remotejit.port)
+        return self._client
+
+    def remote_compile(self, sig):
+        """Compile function and signatures to machine code in remote JIT server.
         """
-        if self.engine is not None:
+        # compute LLVM IR module for the given signature
+        ir = self.ir_cache.get(sig)
+        if ir is not None:
             return
-        ir = self.get_IR()
-        self.engine = irtools.compile_IR(ir)
+        ir = self.get_IR([sig])
+        mangled_signatures = ';'.join([s.mangle() for s in [sig]])
+        response = self.client(remotejit=dict(
+            compile=(self.func.__name__, mangled_signatures, ir)))
+        assert response['remotejit']['compile']
+        self.ir_cache[sig] = ir
+
+    def remote_call(self, sig, arguments):
+        fullname = self.func.__name__ + sig.mangle()
+        response = self.client(remotejit=dict(call=(fullname, arguments)))
+        return response['remotejit']['call']
 
     def __call__(self, *arguments):
-        """Return the result of a remote JIT function call.
-
-        Design
-        ------
-        1. Establish a connection to server and ask if it supports
-        jitting the function for a particular target and if the
-        function (with local ID) has been compiled in the server. If
-        so, the server sends also any required parameters for
-        processing the Python function to a IR representation or the
-        remote ID of the function. Otherwise, raise an error.
-
-        2. Compile Python function into IR string representation.
-
-        3. Send the IR string together with signature information to
-        server where it will be cached. As a response, recieve the
-        remote ID of the function.
-
-        4. Send the arguments together with the remote ID to server
-        where the IR will be compiled to machine code (unless done
-        eariler already), arguments are processed, and remote function
-        will be called. The result will be returned in a response.
+        """Return the result of a remote JIT compiled function call.
         """
-        self.compile()
-
         atypes = tuple(map(Type.fromvalue, arguments))
         match_sig = None
         match_penalty = None
@@ -114,9 +117,7 @@ class Caller(object):
                     match_penalty = penalty
         if match_sig is None:
             raise TypeError(
-                'could not find matching function to given argument types')
-
-        addr = self.engine.get_function_address(
-            self.func.__name__ + match_sig.mangle())
-        cfunc = match_sig.toctypes()(addr)
-        return cfunc(*arguments)
+                'could not find matching function to given argument types:'
+                ' `%s`' % (', '.join(map(str, atypes))))
+        self.remote_compile(match_sig)
+        return self.remote_call(match_sig, arguments)
