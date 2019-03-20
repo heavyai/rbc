@@ -144,3 +144,58 @@ def test_rjit_add(rjit):
     assert r == 3j
 
     assert add(1j, 2) == 2+1j
+
+
+def test_options_local(rjit):
+
+    @rjit
+    def foo(x: int) -> int:
+        return x + 1
+
+    assert foo.local == False
+
+    @rjit(local=True)
+    def foo2(x: int) -> int:
+        return x + 1
+
+    assert foo.local == False
+    assert foo2.local == True
+
+    @rjit
+    def foo3(x: int) -> int:
+        return x + 1
+
+    assert foo.local == False
+    assert foo2.local == True
+    assert foo3.local == False
+
+    assert foo(1) == 2   # remote execution
+    assert foo2(1) == 2  # local execution
+    assert foo3(1) == 2  # remote execution
+
+
+def test_composition(rjit):
+    import numba as nb
+    import types
+
+    #@nb.cfunc('int64(int64)')
+    @nb.njit
+    def fun(x):
+        return x*x
+
+    print(fun)
+
+    @rjit(local=True)
+    def bar(x: int) -> int:
+        y = fun(x)
+        return y
+
+    #bar.func = types.FunctionType(bar.func.__code__, {})
+
+    #print(bar.func)
+
+    #print(bar.local)
+    print(bar.get_IR())
+    #r = bar(3)
+    #print(r)
+    #print(bar.func.__globals__.keys())

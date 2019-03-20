@@ -6,13 +6,14 @@ import warnings
 from .typesystem import Type
 from . import irtools
 from . import thrift
-
+from . import remotejit
 
 class Caller(object):
     """Remote JIT caller
     """
 
-    def __init__(self, remotejit, signatures, func):
+    def __init__(self, remotejit, signatures, func,
+                 local=False):
         """Construct remote JIT caller instance.
 
         Parameters
@@ -25,6 +26,9 @@ class Caller(object):
         func : callable
           Specify Python function as the template to remotely JIT
           compiled functions.
+        local : bool
+          When True, local process will be interpreted as
+          remote. Useful for debugging.
         """
         self.remotejit = remotejit
         self._signatures = []
@@ -39,6 +43,8 @@ class Caller(object):
 
         self._client = None
         self.ir_cache = {}
+
+        self.local = local
 
     def add_signature(self, sig):
         """Update Caller with a new signature
@@ -80,8 +86,11 @@ class Caller(object):
     @property
     def client(self):
         if self._client is None:
-            self._client = thrift.Client(host=self.remotejit.host,
-                                         port=self.remotejit.port)
+            if self.local:
+                self._client = remotejit.LocalClient()
+            else:
+                self._client = thrift.Client(host=self.remotejit.host,
+                                             port=self.remotejit.port)
         return self._client
 
     def remote_compile(self, sig):

@@ -49,14 +49,15 @@ class RemoteJIT(object):
           Specify the host name of IP of JIT server
         port : int
           Specify the service port of the JIT server
-
+        options : dict
+          Specify default options.
         """
         self.host = host
         self.port = port
         self.options = options
         self.server_process = None
 
-    def __call__(self, *signatures):
+    def __call__(self, *signatures, **options):
         """Define a remote JIT function signatures and content.
 
         Parameters
@@ -65,6 +66,8 @@ class RemoteJIT(object):
           Specify signatures of a remote JIT function, or a Python
           function as a content from which the remote JIT function
           will be compiled.
+        options : dict
+          Specify options that overwide the default options.
 
         Returns
         -------
@@ -87,7 +90,7 @@ class RemoteJIT(object):
         Python function that uses annotations for arguments and return
         value.
         """
-        s = Signature(self)
+        s = Signature(self, options=options)
         func = None
         for sig in signatures:
             if inspect.isfunction(sig):
@@ -100,7 +103,7 @@ class RemoteJIT(object):
         # s is Signature instance
         if func is not None:
             # s becomes Caller instance
-            s = s(func)
+            s = s(func, **(options or self.options))
         return s
 
     def start_server(self, background=False):
@@ -145,9 +148,12 @@ class Signature(object):
       sub(1, 2) -> -1
     """
 
-    def __init__(self, remote):
+    def __init__(self, remote, options=None):
         self.remote = remote   # RemoteJIT
         self.signatures = []
+        if options is None:
+            options = remote.options
+        self.options = options
 
     def __str__(self):
         lst = ["'%s'" % (s,) for s in self.signatures]
@@ -162,10 +168,10 @@ class Signature(object):
                 self.signatures.append(t)
             signatures = self.signatures
             self.signatures = []  # allow reusing the Signature instance
-            return Caller(self.remote, signatures, obj)  # finalized caller
+            return Caller(self.remote, signatures, obj, **self.options)  # finalized caller
         elif isinstance(obj, Caller):
             signatures = obj._signatures + self.signatures
-            return Caller(self.remote, signatures, obj.func)
+            return Caller(self.remote, signatures, obj.func, **self.options)
         elif isinstance(obj, type(self)):
             self.signatures.extend(obj.signatures)
             return self
@@ -224,3 +230,24 @@ class DispatcherRJIT(Dispatcher):
         if hasattr(r, 'topython'):
             return r.topython()
         return r
+
+
+class LocalClient(object):
+    """Pretender of thrift.Client.
+
+    All calls will be made in a local process. Useful for debbuging.
+    """
+
+    def __init__(self, **options):
+        self.options = options
+        self.dispatcher = DispatcherRJIT(None)
+
+    def __call__(self, **services):
+        results = {}
+        for service_name, query_dict in services.items():
+            results[service_name] = {}
+            for mthname, args in query_dict.items():
+                mth = getattr(self.dispatcher, mthname)
+                mth = inspect.unwrap(mth)
+                results[service_name][mthname] = mth(self.dispatcher, *args)
+        return results

@@ -1,6 +1,7 @@
 import inspect
 import os
 import re
+import functools
 from . import types
 
 include_match = re.compile(r'^\s*include\s+"(?P<filename>[\w./\\]+)"',
@@ -38,6 +39,7 @@ def dispatchermethod(mth):
     """
     signature = inspect.signature(mth)
 
+    @functools.wraps(mth)
     def wrapper(*args):
         thrift = args[0].thrift
         new_args = []

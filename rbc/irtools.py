@@ -71,6 +71,10 @@ def compile_function_to_IR(func, signatures, target, server=None):
                                    .format(inspect.getsourcefile(func)))
     main_mod.name = func.__name__
 
+    @nb.njit
+    def foo(x):
+        return x
+
     for sig in signatures:
         fname = func.__name__ + sig.mangle()
         args, return_type = nb.sigutils.normalize_signature(sig.tonumba())
@@ -105,6 +109,23 @@ def compile_function_to_IR(func, signatures, target, server=None):
         llvmir = cres.library.get_llvm_str()
         main_mod.link_in(llvm.parse_assembly(llvmir), preserve=True)
 
+    if 0:
+        print('Functions:')
+        for f in main_mod.functions:
+            print(f.name, f.is_declaration, f.type)
+            print(dir(f))
+        print('Global variables:')
+        for v in main_mod.global_variables:
+            print(v.name, v.is_declaration)
+        print('Struct types:')
+        for t in main_mod.struct_types:
+            print(t.name, t.is_pointer, str(t))
+
+    # foo = func.__closure__[0].cell_contents
+    # print(dir(foo))
+    # print(list(foo.inspect_llvm().values())[0])
+
+    main_mod.verify()
     return str(main_mod)
 
 

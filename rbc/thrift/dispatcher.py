@@ -15,7 +15,10 @@ class Dispatcher(object):
 
     def __init__(self, server):
         self.server = server
-        self.thrift = server.thrift
+
+    @property
+    def thrift(self):
+        return self.server.thrift
 
     def thrift_content(self):
         return resolve_includes(open(self.server.thrift_file).read(),
