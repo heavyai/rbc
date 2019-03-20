@@ -23,7 +23,10 @@ class Client(object):
     server.
     """
 
-    def __init__(self, **options):
+    def __init__(self, thrift_content=None, **options):
+        self.thrift_content = thrift_content
+        self.multiplexed = options.pop('multiplexed', True)
+        self.thrift_content_service = options.pop('thrift_content_service', 'info')
         self.options = options
         self._update_thrift()
 
@@ -36,22 +39,28 @@ class Client(object):
 
         and the server thrift must run in multiplexed mode.
         """
-        i, fn = tempfile.mkstemp(suffix='.thrift', prefix='rpc-client0-')
-        f = os.fdopen(i, mode='w')
-        f.write('service info { string thrift_content() }')
-        f.close()
-        tmp_thrift = thr.load(fn)
-        os.remove(fn)
-        factory = thr.protocol.TMultiplexedProtocolFactory(
-            thr.protocol.TBinaryProtocolFactory(), 'info')
-        ctx = thr.rpc.client_context(tmp_thrift.info,
-                                     proto_factory=factory,
-                                     **self.options)
-        with ctx as c:
-            thrift_content = c.thrift_content()
+        if self.thrift_content is None:
+            i, fn = tempfile.mkstemp(suffix='.thrift', prefix='rpc-client0-')
+            f = os.fdopen(i, mode='w')
+            f.write('service %s { string thrift_content() }'
+                    % (self.thrift_content_service))
+            f.close()
+            tmp_thrift = thr.load(fn)
+            os.remove(fn)
+            if not self.multiplexed:
+                factory = thr.protocol.TBinaryProtocolFactory()
+            else:
+                factory = thr.protocol.TMultiplexedProtocolFactory(
+                    thr.protocol.TBinaryProtocolFactory(), self.thrift_content_service)
+            service = getattr(tmp_thrift, self.thrift_content_service)
+            ctx = thr.rpc.client_context(service,
+                                         proto_factory=factory,
+                                         **self.options)
+            with ctx as c:
+                self.thrift_content = c.thrift_content()
         i, fn = tempfile.mkstemp(suffix='.thrift', prefix='rpc-client-')
         f = os.fdopen(i, mode='w')
-        f.write(thrift_content)
+        f.write(self.thrift_content)
         f.close()
         self.thrift = thr.load(fn)
         os.remove(fn)
@@ -123,7 +132,7 @@ class Client(object):
         raise NotImplementedError(repr((t, type(result))))
 
     def __call__(self, **services):
-        """Perform a RPC call to multiplex thrift server.
+        """Perform a RPC call to thrift server.
 
         Parameters
         ----------
@@ -157,9 +166,10 @@ class Client(object):
         """
         results = {}
         for service_name, query_dict in services.items():
-            binary_factory = thr.protocol.TBinaryProtocolFactory()
-            factory = thr.protocol.TMultiplexedProtocolFactory(binary_factory,
-                                                               service_name)
+            factory = thr.protocol.TBinaryProtocolFactory()
+            if self.multiplexed:
+                factory = thr.protocol.TMultiplexedProtocolFactory(
+                    factory, service_name)
             service = getattr(self.thrift, service_name)
             ctx = thr.rpc.client_context(service, proto_factory=factory,
                                          **self.options)
@@ -185,6 +195,9 @@ class Client(object):
                             exc = et, et(ev.lstrip()), None
                         else:
                             raise
+                    except Exception as msg:
+                        print(msg)
+                        raise
                     if exc is not None:
                         six.reraise(*exc)   # RAISING SERVER EXCEPTION
                     r = self._result_from_thrift(

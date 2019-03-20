@@ -1,7 +1,8 @@
+include "../thrift/info.thrift"
 include "../thrift/types.thrift"
 
+
 service test {
-    string thrift_content(),
     Buffer test_buffer_transport(1: Buffer buf),
     NDArray test_ndarray_transport(1: NDArray arr),
     Data test_ndarray_transport2(1: Data arr),

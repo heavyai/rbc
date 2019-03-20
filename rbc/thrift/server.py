@@ -30,6 +30,30 @@ if tblib is not None:
     tblib.pickling_support.install()
 
 
+class Processor(thr.thrift.TProcessor):
+
+    def __init__(self, server, service, handler):
+        self.server = server
+        thr.thrift.TProcessor.__init__(self, service, handler)
+
+    def handle_exception(self, e, result):
+        if thr.thrift.TProcessor.handle_exception(self, e, result):
+            return True
+        # map Python native exception to thrift Exception so that
+        # client can remap thrift Exception to Python
+
+        exc_type = self.server.thrift.Exception
+        if tblib is not None:
+            exc_kind = self.server.thrift.ExceptionKind.EXC_TBLIB
+            exc = exc_type(exc_kind, pickle.dumps(sys.exc_info()))
+        else:
+            # tblib would be required to pickle traceback instances
+            exc_kind = self.server.thrift.ExceptionKind.EXC_MESSAGE
+            et, ev, tb = sys.exc_info()
+            exc = exc_type(exc_kind, '%s: %s' % (et.__name__, ev))
+        return thr.thrift.TProcessor.handle_exception(self, exc, result)
+
+
 class MultiplexedProcessor(thr.thrift.TMultiplexedProcessor):
 
     def __init__(self, server):
@@ -53,27 +77,26 @@ class MultiplexedProcessor(thr.thrift.TMultiplexedProcessor):
             exc = exc_type(exc_kind, '%s: %s' % (et.__name__, ev))
         return thr.thrift.TProcessor.handle_exception(self, exc, result)
 
-    def process_in(self, iprot):
-        api, seqid, result, call = thr.thrift.TMultiplexedProcessor.process_in(
-            self, iprot)
-        return api, seqid, result, call
-
 
 class Server(object):
     """Multiplex thrift server
     """
 
     def __init__(self, dispatcher, thrift_file, **options):
+        self.multiplexed = options.pop('multiplexed', True)
+        self.thrift_content_service = options.pop('thrift_content_service', 'info')
+        thrift_content = options.pop('thrift_content', None)
         self.options = options
         module_name = os.path.splitext(
             os.path.abspath(thrift_file))[0]+'_thrift'
         self._dispatcher = dispatcher
         self.thrift_file = thrift_file
-        content = utils.resolve_includes(open(thrift_file).read(),
-                                         [os.path.dirname(thrift_file)])
+        if thrift_content is None:
+            thrift_content = utils.resolve_includes(open(thrift_file).read(),
+                                                    [os.path.dirname(thrift_file)])
         i, fn = tempfile.mkstemp(suffix='.thrift', prefix='rpc-server-')
         f = os.fdopen(i, mode='w')
-        f.write(content)
+        f.write(thrift_content)
         f.close()
         self.thrift = thr.load(fn, module_name=module_name)
         os.remove(fn)
@@ -115,15 +138,19 @@ class Server(object):
     def _serve(self):
         """Create and run a Thrift server.
         """
-        service_names = [_n for _n in dir(self.thrift)
-                         if not _n.startswith('_')]
-        mux_proc = MultiplexedProcessor(self)
-        for service_name in service_names:
-            service = getattr(self.thrift, service_name)
-            proc = thr.thrift.TProcessor(service, self._dispatcher(self))
-            mux_proc.register_processor(service_name, proc)
+        if self.multiplexed:
+            service_names = [_n for _n in dir(self.thrift)
+                             if not _n.startswith('_')]
+            s_proc = MultiplexedProcessor(self)
+            for service_name in service_names:
+                service = getattr(self.thrift, service_name)
+                proc = thr.thrift.TProcessor(service, self._dispatcher(self))
+                s_proc.register_processor(service_name, proc)
+        else:
+            service = getattr(self.thrift, self.thrift_content_service)
+            s_proc = Processor(self, service, self._dispatcher(self))
         server = thr.server.TThreadedServer(
-            mux_proc,
+            s_proc,
             thr.transport.TServerSocket(**self.options),
             iprot_factory=thr.protocol.TBinaryProtocolFactory(),
             itrans_factory=thr.transport.TBufferedTransportFactory())

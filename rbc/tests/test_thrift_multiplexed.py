@@ -3,20 +3,102 @@ import os
 import pytest
 import numpy as np
 from rbc.thrift import (Server, Client, Dispatcher, Buffer, NDArray,
-                        dispatchermethod, Data, utils)
-from test_thrift_multiplexed import DispatcherTest
+                        dispatchermethod, Data)
 
-test_thrift_file = os.path.join(os.path.dirname(__file__), 'test.thrift')
-socket_options = dict(host='127.0.0.1', port=6325+1, thrift_content_service='test', multiplexed=False)
+socket_options = dict(host='127.0.0.1', port=6325)
+
+
+class DispatcherTest(Dispatcher):
+
+    @dispatchermethod
+    def test_buffer_transport(self, buf: bytes) -> Buffer:
+        assert isinstance(buf, bytes)
+        return buf
+
+    @dispatchermethod
+    def test_ndarray_transport(self, arr: np.ndarray) -> NDArray:
+        assert isinstance(arr, np.ndarray), repr(type(arr))
+        return arr
+
+    @dispatchermethod
+    def test_ndarray_transport2(self, arr):
+        assert isinstance(arr, np.ndarray), repr(type(arr))
+        return arr
+
+    @dispatchermethod
+    def test_Data_transport(self, data: dict) -> Data:
+        assert isinstance(data, dict), repr(type(data))
+        return data
+
+    @dispatchermethod
+    def test_Data_transport2(self, data) -> Data:
+        assert isinstance(data, dict), repr(type(data))
+        return data
+
+    def test_str_transport(self, s):
+        assert isinstance(s, str), repr(type(s))
+        return s
+
+    def test_bool_transport(self, s):
+        assert isinstance(s, bool), repr(type(s))
+        return s
+
+    def test_byte_transport(self, s):
+        assert isinstance(s, int), repr(type(s))
+        assert s == 8
+        return s
+
+    def test_int16_transport(self, s):
+        assert isinstance(s, int), repr(type(s))
+        assert s == 16
+        return s
+
+    def test_int32_transport(self, s):
+        assert isinstance(s, int), repr(type(s))
+        assert s == 32
+        return s
+
+    def test_int64_transport(self, s):
+        assert isinstance(s, int), repr(type(s))
+        assert s == 64
+        return s
+
+    @dispatchermethod
+    def test_int64_transport2(self, s):
+        assert isinstance(s, int), repr(type(s))
+        assert s == 64
+        return s
+
+    def test_double_transport(self, s):
+        assert isinstance(s, float), repr(type(s))
+        assert s == 3.14
+        return s
+
+    @dispatchermethod
+    def test_set_transport(self, s: set) -> set:
+        assert isinstance(s, set), repr((type(s), s))
+        return s
+
+    def test_list_transport(self, s):
+        assert isinstance(s, list), repr(type(s))
+        return s
+
+    def test_map_transport(self, s):
+        assert isinstance(s, dict), repr(type(s))
+        return s
+
+    def test_void(self):
+        return
+
+    def test_exception(self):
+        raise ValueError('my exception')
 
 
 @pytest.fixture(scope="module")
 def server(request):
     print('staring rpc_thrift server ...', end='')
-    test_thrift_file = os.path.join(os.path.dirname(__file__), 'test.thrift')
-    options = dict(multiplexed=False)
-    options.update(socket_options)
-    ps = Server.run_bg(DispatcherTest, test_thrift_file, options)
+    test_thrift_file = os.path.join(os.path.dirname(__file__), 'test_multiplexed.thrift')
+    ps = Server.run_bg(DispatcherTest, test_thrift_file, socket_options)
 
     def fin():
         if ps.is_alive():
