@@ -32,7 +32,8 @@ def toobject(thrift, tobj, cls=None):
         return tcls.toobject(thrift, tobj, cls=cls)
     if cls is not None:
         return cls(tobj)
-    raise NotImplementedError(repr((type(tobj), cls)))
+    return tobj
+    #raise NotImplementedError(repr((type(tobj), cls)))
 
 
 class Data(object):

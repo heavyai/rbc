@@ -15,6 +15,45 @@ import pickle
 import six
 from . import types
 
+def from_thrift(thrift, spec, result):
+    if not spec.thrift_spec:
+        assert result is None, repr(type(result))
+        return result
+    if 0 not in spec.thrift_spec:
+        return result
+    t = spec.thrift_spec[0]
+    if t[0] == thr.thrift.TType.STRING:
+        assert isinstance(result, str), repr(type(result))
+        return result
+    elif t[0] in [
+            thr.thrift.TType.I08,
+            thr.thrift.TType.I16,
+            thr.thrift.TType.I32,
+            thr.thrift.TType.I64]:
+        assert isinstance(result, int), repr(type(result))
+        return result
+    elif t[0] == thr.thrift.TType.BOOL:
+        assert isinstance(result, bool), repr(type(result))
+        return result
+    elif t[0] == thr.thrift.TType.DOUBLE:
+        assert isinstance(result, float), repr(type(result))
+        return result
+    elif t[0] == thr.thrift.TType.SET:
+        return set(result)
+    elif t[0] == thr.thrift.TType.LIST:
+        assert isinstance(result, list), repr(type(result))
+        return result
+    elif t[0] == thr.thrift.TType.MAP:
+        assert isinstance(result, dict), repr(type(result))
+        return result
+    elif t[0] == thr.thrift.TType.STRUCT:
+        # _i, status, tcls, _b = t
+        #assert t[1] == 'success', repr(t)
+        #assert isinstance(result, t[2]), repr(type(result))
+        return types.toobject(thrift, result)
+
+    raise NotImplementedError(repr((t, type(result))))
+
 
 class Client(object):
     """Thrift multiplex client.
@@ -96,6 +135,7 @@ class Client(object):
         return tuple(thrift_args)
 
     def _result_from_thrift(self, spec, result):
+        return from_thrift(self.thrift, spec, result)
         if not spec.thrift_spec:
             assert result is None, repr(type(result))
             return result
@@ -128,6 +168,8 @@ class Client(object):
             # _i, status, tcls, _b = t
             assert t[1] == 'success', repr(t)
             assert isinstance(result, t[2]), repr(type(result))
+            print(dir(result))
+            print(spec)
             return types.toobject(self.thrift, result)
         raise NotImplementedError(repr((t, type(result))))
 
@@ -164,6 +206,8 @@ class Client(object):
 
         where `bong(5) -> 6` and `kong('hello') -> 'hi'` is assumed.
         """
+        exception = getattr(self.thrift, 'Exception', Exception)
+
         results = {}
         for service_name, query_dict in services.items():
             factory = thr.protocol.TBinaryProtocolFactory()
@@ -176,14 +220,16 @@ class Client(object):
             results[service_name] = {}
             with ctx as c:
                 for query_name, query_args in query_dict.items():
-                    query_args = self._args_to_thrift(
-                        getattr(service, query_name + '_args'), query_args)
+                    argsmth = getattr(service, query_name + '_args')
+                    query_args = self._args_to_thrift(argsmth, query_args)
                     mth = getattr(c, query_name)
                     assert mth is not None
                     exc = None
                     try:
                         r = mth(*query_args)
-                    except self.thrift.Exception as msg:
+                    except exception as msg:
+                        if exception is Exception:
+                            raise
                         if msg.kind == self.thrift.ExceptionKind.EXC_TBLIB:
                             exc = pickle.loads(msg.message)
                         elif msg.kind == self.thrift.ExceptionKind.EXC_MESSAGE:

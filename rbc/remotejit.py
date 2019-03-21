@@ -38,6 +38,12 @@ class RemoteJIT(object):
     where the sum will be evaluated in the remote host.
     """
 
+    caller_cls = Caller
+    
+    multiplexed = True
+
+    thrift_content = None
+
     def __init__(self, host='127.0.0.1', port=11530, **options):
         """Construct remote JIT function decorator.
 
@@ -148,11 +154,11 @@ class Signature(object):
       sub(1, 2) -> -1
     """
 
-    def __init__(self, remote, options=None):
-        self.remote = remote   # RemoteJIT
+    def __init__(self, remotejit, options=None):
+        self.remotejit = remotejit   # RemoteJIT
         self.signatures = []
         if options is None:
-            options = remote.options
+            options = remotejit.options
         self.options = options
 
     def __str__(self):
@@ -162,16 +168,17 @@ class Signature(object):
     def __call__(self, obj):
         if obj is None:
             return self
+        caller_cls = self.remotejit.caller_cls
         if inspect.isfunction(obj):
             t = Type.fromcallable(obj)
             if t.is_complete:
                 self.signatures.append(t)
             signatures = self.signatures
             self.signatures = []  # allow reusing the Signature instance
-            return Caller(self.remote, signatures, obj, **self.options)  # finalized caller
-        elif isinstance(obj, Caller):
+            return caller_cls(self.remotejit, signatures, obj, **self.options)  # finalized caller
+        elif isinstance(obj, caller_cls):
             signatures = obj._signatures + self.signatures
-            return Caller(self.remote, signatures, obj.func, **self.options)
+            return caller_cls(self.remotejit, signatures, obj.func, **self.options)
         elif isinstance(obj, type(self)):
             self.signatures.extend(obj.signatures)
             return self

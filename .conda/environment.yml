@@ -3,11 +3,12 @@ channels:
   - pearu
   - conda-forge
 dependencies:
-  - gcc_linux-64
+  # - gcc_linux-64
   # - gxx_linux-64
   - setuptools
   - pip
   - numba
+  - llvmlite>=0.28
   - pytest
   - tblib
   # - cudatoolkit-dev   # disable temporary

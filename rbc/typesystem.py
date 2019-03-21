@@ -330,6 +330,9 @@ class Type(tuple):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct or (self.is_function and len(self[1]) > 0)
 
+    def __repr__(self):
+        return '%s%s' % (type(self).__name__, tuple.__repr__(self))
+    
     def __str__(self):
         if self._is_ok:
             return self.tostring()

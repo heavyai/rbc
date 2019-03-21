@@ -46,6 +46,9 @@ class Caller(object):
 
         self.local = local
 
+    def __repr__(self):
+        return '%s(%s, %s, %s)' % (type(self).__name__, self.remotejit, [s.tostring() for s in self._signatures], self.func)
+        
     def add_signature(self, sig):
         """Update Caller with a new signature
         """
@@ -89,8 +92,11 @@ class Caller(object):
             if self.local:
                 self._client = remotejit.LocalClient()
             else:
-                self._client = thrift.Client(host=self.remotejit.host,
-                                             port=self.remotejit.port)
+                self._client = thrift.Client(
+                    host=self.remotejit.host,
+                    port=self.remotejit.port,
+                    multiplexed=self.remotejit.multiplexed,
+                    thrift_content=self.remotejit.thrift_content)
         return self._client
 
     def remote_compile(self, sig):
