@@ -1,6 +1,5 @@
 name: rbc
 channels:
-  - pearu
   - conda-forge
 dependencies:
   # - gcc_linux-64
@@ -11,4 +10,5 @@ dependencies:
   - llvmlite>=0.28
   - pytest
   - tblib
+  - pymapd
   # - cudatoolkit-dev   # disable temporary
