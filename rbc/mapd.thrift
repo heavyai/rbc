@@ -603,5 +603,5 @@ service MapD {
   TLicenseInfo set_license_key(1: TSessionId session, 2: string key, 3: string nonce = "") throws (1: TMapDException e)
   TLicenseInfo get_license_claims(1: TSessionId session, 2: string nonce = "") throws (1: TMapDException e)
   # user-defined functions
-  void register_function(1: TSessionId session, 2: string name, 3: list<string> signatures, 4: string ir) throws (1: TMapDException e)
+  void register_function(1: TSessionId session, 2: string name, 3: list<string> signatures, 4: map<string, string> triple_ir_map) throws (1: TMapDException e)
 }

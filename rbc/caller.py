@@ -1,6 +1,7 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
+import re
 import inspect
 import warnings
 from .typesystem import Type
@@ -87,6 +88,16 @@ class Caller(object):
         return irtools.compile_function_to_IR(self.func, signatures,
                                               self.current_target,
                                               self.remotejit)
+
+    def compile_to_IR(self, signatures=None):
+        """Return a map of target triples and the corresponding LLVM IR strings.
+        """
+        triple_ir_map = {}
+        ir = self.get_IR(signatures=signatures)
+        triple = re.search(r'target\s+triple\s*=\s*"(?P<triple>.*?)"', ir)
+        if triple is not None:
+            triple_ir_map[triple.group('triple')] = ir
+        return triple_ir_map
 
     @property
     def client(self):

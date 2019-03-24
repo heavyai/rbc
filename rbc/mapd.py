@@ -37,7 +37,9 @@ class CallerMapD(Caller):
 
     def register(self):
         signatures = self._signatures
-        ir = self.get_IR(signatures)
+        #ir = self.get_IR(signatures)
+        ir = self.compile_to_IR(signatures)
+        print(ir)
         mangled_signatures = [s.mangle() for s in signatures]
         return self.call('register_function', self.session_id,
                          self.func.__name__, mangled_signatures, ir)
