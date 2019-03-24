@@ -88,6 +88,8 @@ class RemoteMapD(RemoteJIT):
         self.password = password
         self.dbname = dbname
 
-        thrift_filename = '/home/pearu/git/Quansight/mapd-core-internal/mapd.thrift'
-        self.thrift_content = resolve_includes(open(thrift_filename).read(), [os.path.dirname(thrift_filename)]).replace('completion_hints.', '')
+        #thrift_filename = '/home/pearu/git/Quansight/mapd-core-internal/mapd.thrift'
+        thrift_filename = os.path.join(os.path.dirname(__file__), 'mapd.thrift')
+        self.thrift_content = resolve_includes(open(thrift_filename).read(),
+                                               [os.path.dirname(thrift_filename)]).replace('completion_hints.', '')
         RemoteJIT.__init__(self, host=host, port=port, **options)
