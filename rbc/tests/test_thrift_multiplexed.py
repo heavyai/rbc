@@ -97,7 +97,8 @@ class DispatcherTest(Dispatcher):
 @pytest.fixture(scope="module")
 def server(request):
     print('staring rpc_thrift server ...', end='')
-    test_thrift_file = os.path.join(os.path.dirname(__file__), 'test_multiplexed.thrift')
+    test_thrift_file = os.path.join(os.path.dirname(__file__),
+                                    'test_multiplexed.thrift')
     ps = Server.run_bg(DispatcherTest, test_thrift_file, socket_options)
 
     def fin():

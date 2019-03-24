@@ -4,23 +4,8 @@ from .caller import Caller
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
-from pymapd._parsers import (_extract_description, _bind_parameters)
+from pymapd._parsers import _extract_description  # , _bind_parameters
 
-def _make_row_results_set(data):
-    # copied from pymapd.cursor.py
-    if data.row_set.is_columnar:
-        if data.row_set.columns:
-            nrows = len(data.row_set.columns[0].nulls)
-            ncols = len(data.row_set.row_desc)
-            columns = [_extract_col_vals(desc, col)
-                       for desc, col in zip(data.row_set.row_desc,
-                                            data.row_set.columns)]
-            for i in range(nrows):
-                yield tuple(columns[j][i] for j in range(ncols))
-    else:
-        for row in data.row_set.rows:
-            yield tuple(_extract_row_val(desc, val)
-                        for desc, val in zip(data.row_set.row_desc, row.cols))
 
 class CallerMapD(Caller):
     """
@@ -28,8 +13,7 @@ class CallerMapD(Caller):
 
     def call(self, name, *args):
         return self.client(MapD={name: args})['MapD'][name]
-        
-    
+
     def get_MapD_version(self):
         return self.call('get_version')
 
@@ -45,7 +29,8 @@ class CallerMapD(Caller):
 
     def sql_execute(self, query):
         columnar = True
-        result = self.call('sql_execute', self.session_id, query, columnar, "", -1, -1)
+        result = self.call('sql_execute', self.session_id, query,
+                           columnar, "", -1, -1)
 
         descr = _extract_description(result.row_set.row_desc)
         return descr, make_row_results_set(result)
@@ -54,13 +39,13 @@ class CallerMapD(Caller):
         signatures = self._signatures
         ir = self.get_IR(signatures)
         mangled_signatures = [s.mangle() for s in signatures]
-        return self.call('register_function', self.session_id, self.func.__name__, mangled_signatures, ir)
+        return self.call('register_function', self.session_id,
+                         self.func.__name__, mangled_signatures, ir)
 
 
 class RemoteMapD(RemoteJIT):
 
-    """
-    Usage:
+    """Usage:
 
       mapd = RemoteMapD(host=..., port=...)
 
@@ -70,7 +55,8 @@ class RemoteMapD(RemoteJIT):
 
       add.register()
 
-      Use pymapd, for instance, to make a SQL query `select add(c1, c2) from table`
+      Use pymapd, for instance, to make a SQL query `select add(c1,
+      c2) from table`
 
     """
 
@@ -88,8 +74,10 @@ class RemoteMapD(RemoteJIT):
         self.password = password
         self.dbname = dbname
 
-        #thrift_filename = '/home/pearu/git/Quansight/mapd-core-internal/mapd.thrift'
-        thrift_filename = os.path.join(os.path.dirname(__file__), 'mapd.thrift')
-        self.thrift_content = resolve_includes(open(thrift_filename).read(),
-                                               [os.path.dirname(thrift_filename)]).replace('completion_hints.', '')
+        thrift_filename = os.path.join(os.path.dirname(__file__),
+                                       'mapd.thrift')
+        self.thrift_content = resolve_includes(
+            open(thrift_filename).read(),
+            [os.path.dirname(thrift_filename)]).replace(
+                'completion_hints.', '')
         RemoteJIT.__init__(self, host=host, port=port, **options)

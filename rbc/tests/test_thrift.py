@@ -2,12 +2,12 @@
 import os
 import pytest
 import numpy as np
-from rbc.thrift import (Server, Client, Dispatcher, Buffer, NDArray,
-                        dispatchermethod, Data, utils)
+from rbc.thrift import Server, Client
 from test_thrift_multiplexed import DispatcherTest
 
 test_thrift_file = os.path.join(os.path.dirname(__file__), 'test.thrift')
-socket_options = dict(host='127.0.0.1', port=6325+1, thrift_content_service='test', multiplexed=False)
+socket_options = dict(host='127.0.0.1', port=6325+1,
+                      thrift_content_service='test', multiplexed=False)
 
 
 @pytest.fixture(scope="module")

@@ -7,7 +7,7 @@ import inspect
 from . import irtools
 from .caller import Caller
 from .typesystem import Type
-from .thrift import Server, Dispatcher, dispatchermethod, Data
+from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 
 
 class RemoteJIT(object):
@@ -39,7 +39,7 @@ class RemoteJIT(object):
     """
 
     caller_cls = Caller
-    
+
     multiplexed = True
 
     thrift_content = None
@@ -131,6 +131,13 @@ class RemoteJIT(object):
             self.server_process.terminate()
             self.server_process = None
 
+    def make_client(self):
+        return Client(
+            host=self.host,
+            port=self.port,
+            multiplexed=self.multiplexed,
+            thrift_content=self.thrift_content)
+
 
 class Signature(object):
     """Signature decorator for Python functions.
@@ -175,10 +182,12 @@ class Signature(object):
                 self.signatures.append(t)
             signatures = self.signatures
             self.signatures = []  # allow reusing the Signature instance
-            return caller_cls(self.remotejit, signatures, obj, **self.options)  # finalized caller
+            return caller_cls(self.remotejit, signatures, obj,
+                              **self.options)  # finalized caller
         elif isinstance(obj, caller_cls):
             signatures = obj._signatures + self.signatures
-            return caller_cls(self.remotejit, signatures, obj.func, **self.options)
+            return caller_cls(self.remotejit, signatures,
+                              obj.func, **self.options)
         elif isinstance(obj, type(self)):
             self.signatures.extend(obj.signatures)
             return self

@@ -33,7 +33,6 @@ def toobject(thrift, tobj, cls=None):
     if cls is not None:
         return cls(tobj)
     return tobj
-    #raise NotImplementedError(repr((type(tobj), cls)))
 
 
 class Data(object):

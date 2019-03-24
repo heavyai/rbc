@@ -332,7 +332,7 @@ class Type(tuple):
 
     def __repr__(self):
         return '%s%s' % (type(self).__name__, tuple.__repr__(self))
-    
+
     def __str__(self):
         if self._is_ok:
             return self.tostring()

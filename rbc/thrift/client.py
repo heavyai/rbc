@@ -15,6 +15,7 @@ import pickle
 import six
 from . import types
 
+
 def from_thrift(thrift, spec, result):
     if not spec.thrift_spec:
         assert result is None, repr(type(result))
@@ -48,8 +49,8 @@ def from_thrift(thrift, spec, result):
         return result
     elif t[0] == thr.thrift.TType.STRUCT:
         # _i, status, tcls, _b = t
-        #assert t[1] == 'success', repr(t)
-        #assert isinstance(result, t[2]), repr(type(result))
+        # assert t[1] == 'success', repr(t)
+        # assert isinstance(result, t[2]), repr(type(result))
         return types.toobject(thrift, result)
 
     raise NotImplementedError(repr((t, type(result))))
@@ -65,7 +66,8 @@ class Client(object):
     def __init__(self, thrift_content=None, **options):
         self.thrift_content = thrift_content
         self.multiplexed = options.pop('multiplexed', True)
-        self.thrift_content_service = options.pop('thrift_content_service', 'info')
+        self.thrift_content_service = options.pop(
+            'thrift_content_service', 'info')
         self.options = options
         self._update_thrift()
 
@@ -90,7 +92,8 @@ class Client(object):
                 factory = thr.protocol.TBinaryProtocolFactory()
             else:
                 factory = thr.protocol.TMultiplexedProtocolFactory(
-                    thr.protocol.TBinaryProtocolFactory(), self.thrift_content_service)
+                    thr.protocol.TBinaryProtocolFactory(),
+                    self.thrift_content_service)
             service = getattr(tmp_thrift, self.thrift_content_service)
             ctx = thr.rpc.client_context(service,
                                          proto_factory=factory,

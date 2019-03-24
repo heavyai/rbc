@@ -84,7 +84,8 @@ class Server(object):
 
     def __init__(self, dispatcher, thrift_file, **options):
         self.multiplexed = options.pop('multiplexed', True)
-        self.thrift_content_service = options.pop('thrift_content_service', 'info')
+        self.thrift_content_service = options.pop(
+            'thrift_content_service', 'info')
         thrift_content = options.pop('thrift_content', None)
         self.options = options
         module_name = os.path.splitext(
@@ -92,8 +93,8 @@ class Server(object):
         self._dispatcher = dispatcher
         self.thrift_file = thrift_file
         if thrift_content is None:
-            thrift_content = utils.resolve_includes(open(thrift_file).read(),
-                                                    [os.path.dirname(thrift_file)])
+            thrift_content = utils.resolve_includes(
+                open(thrift_file).read(), [os.path.dirname(thrift_file)])
         i, fn = tempfile.mkstemp(suffix='.thrift', prefix='rpc-server-')
         f = os.fdopen(i, mode='w')
         f.write(thrift_content)

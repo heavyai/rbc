@@ -5,8 +5,8 @@ import inspect
 import warnings
 from .typesystem import Type
 from . import irtools
-from . import thrift
 from . import remotejit
+
 
 class Caller(object):
     """Remote JIT caller
@@ -47,8 +47,10 @@ class Caller(object):
         self.local = local
 
     def __repr__(self):
-        return '%s(%s, %s, %s)' % (type(self).__name__, self.remotejit, [s.tostring() for s in self._signatures], self.func)
-        
+        return '%s(%s, %s, %s)' % (type(self).__name__, self.remotejit,
+                                   [s.tostring() for s in self._signatures],
+                                   self.func)
+
     def add_signature(self, sig):
         """Update Caller with a new signature
         """
@@ -92,11 +94,7 @@ class Caller(object):
             if self.local:
                 self._client = remotejit.LocalClient()
             else:
-                self._client = thrift.Client(
-                    host=self.remotejit.host,
-                    port=self.remotejit.port,
-                    multiplexed=self.remotejit.multiplexed,
-                    thrift_content=self.remotejit.thrift_content)
+                self._client = self.remotejit.make_client()
         return self._client
 
     def remote_compile(self, sig):
