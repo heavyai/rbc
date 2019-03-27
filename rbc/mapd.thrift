@@ -512,6 +512,8 @@ struct TGeoFileLayerInfo {
   2: TGeoFileLayerContents contents;
 }
 
+typedef map<string, string> TDeviceTargetMap
+
 service MapD {
   # connection, admin
   TSessionId connect(1: string user, 2: string passwd, 3: string dbname) throws (1: TMapDException e)
@@ -603,5 +605,6 @@ service MapD {
   TLicenseInfo set_license_key(1: TSessionId session, 2: string key, 3: string nonce = "") throws (1: TMapDException e)
   TLicenseInfo get_license_claims(1: TSessionId session, 2: string nonce = "") throws (1: TMapDException e)
   # user-defined functions
-  void register_function(1: TSessionId session, 2: string name, 3: list<string> signatures, 4: map<string, string> triple_ir_map) throws (1: TMapDException e)
+  TDeviceTargetMap get_device_target_map() throws (1: TMapDException e)
+  void register_runtime_udf(1: TSessionId session, 2: string signatures, 3: map<string, string> device_ir_map) throws (1: TMapDException e)
 }

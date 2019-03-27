@@ -42,25 +42,26 @@ def compile_function_to_IR(func, signatures, target, server=None):
       "<function name><signature.mangle()>"
     """
     initialize_llvm()
+    cpu_target = llvm.get_process_triple()
     if server is None or server.host in ['localhost', '127.0.0.1']:
-        if target == 'host':
+        if target == 'host' or target == cpu_target:
             # FYI, there is also get_process_triple()
             # triple = llvm.get_default_triple()
             target_desc = nb.targets.registry.cpu_target
             typing_context = target_desc.typing_context
             target_context = target_desc.target_context
-        elif target == 'cuda':
+        elif target == 'cuda' or target == 'nvptx64-nvidia-cuda':
             # triple = 'nvptx64-nvidia-cuda'
             target_desc = nb.cuda.descriptor.CUDATargetDesc
             typing_context = target_desc.typingctx
             target_context = target_desc.targetctx
-        elif target == 'cuda32':
+        elif target == 'cuda32' or target == 'nvptx-nvidia-cuda':
             # triple = 'nvptx-nvidia-cuda'
             target_desc = nb.cuda.descriptor.CUDATargetDesc
             typing_context = target_desc.typingctx
             target_context = target_desc.targetctx
         else:
-            raise NotImplementedError(repr(target))
+            raise NotImplementedError(repr((target, cpu_target)))
     else:
         raise NotImplementedError(repr((target, server)))
     flags = nb.compiler.Flags()
@@ -126,7 +127,10 @@ def compile_function_to_IR(func, signatures, target, server=None):
     # print(list(foo.inspect_llvm().values())[0])
 
     main_mod.verify()
-    return str(main_mod)
+    #print(main_mod)
+    irstr = str(main_mod)
+    
+    return irstr
 
 
 def compile_IR(ir):

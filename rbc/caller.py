@@ -82,6 +82,8 @@ class Caller(object):
 
     def get_IR(self, signatures=None):
         """Return LLVM IR string of compiled function for the current target.
+
+        Deprecated, use compile_to_IR instead.
         """
         if signatures is None:
             signatures = self._signatures
@@ -89,14 +91,23 @@ class Caller(object):
                                               self.current_target,
                                               self.remotejit)
 
-    def compile_to_IR(self, signatures=None):
-        """Return a map of target triples and the corresponding LLVM IR strings.
+    def compile_to_IR(self, signatures=None, targets=None):
+        """Return a map of target triples and the corresponding LLVM IR
+        strings.
         """
+        if targets is None:
+            targets = [self.current_target]
         triple_ir_map = {}
-        ir = self.get_IR(signatures=signatures)
-        triple = re.search(r'target\s+triple\s*=\s*"(?P<triple>.*?)"', ir)
-        if triple is not None:
-            triple_ir_map[triple.group('triple')] = ir
+        for target in targets:
+            old_target = self.target(target)
+            ir = self.get_IR(signatures=signatures)
+            self.target(old_target)
+            triple = re.search(r'target\s+triple\s*=\s*"(?P<triple>.*?)"', ir)
+            if triple is not None:
+                triple_ir_map[triple.group('triple')] = ir
+            else:
+                raise RuntimeError(
+                    'Caller.compile_to_IR: no `target triple = ...` in IR?!?')
         return triple_ir_map
 
     @property
