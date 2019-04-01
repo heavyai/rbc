@@ -30,16 +30,18 @@ class CallerMapD(Caller):
 
     def register(self):
         device_target_map = self.thrift_call('get_device_target_map')
-        #print('device_target_map=',device_target_map)
-        
+
         signatures = self._signatures
+        for i, sig in enumerate(signatures):
+            if i == 0:
+                sig.set_mangling('')
+            else:
+                sig.set_mangling('__%s' % (i))
         ir = self.compile_to_IR(signatures, targets=device_target_map.values())
 
-        #print(ir)
         name = self.func.__name__
-        mangled_signatures = [s.mangle() for s in signatures]
-        ast_signatures = '\n'.join(["%s%s '%s'" % (name, s.mangle(), s) for s in signatures])
-        #print(ast_signatures)
+        ast_signatures = '\n'.join(["%s%s '%s'" % (name, s.mangling, s)
+                                    for i, s in enumerate(signatures)])
 
         device_ir_map = {}
         for device, target in device_target_map.items():
@@ -67,6 +69,7 @@ class RemoteMapD(RemoteJIT):
 
     caller_cls = CallerMapD
     multiplexed = False
+    mangle_prefix = ''
 
     def __init__(self,
                  user='mapd',
@@ -106,7 +109,7 @@ class RemoteMapD(RemoteJIT):
 
     def sql_execute(self, query):
         columnar = True
-        result = self.thrift_call('sql_execute', self.session_id, query,
-                           columnar, "", -1, -1)
+        result = self.thrift_call(
+            'sql_execute', self.session_id, query, columnar, "", -1, -1)
         descr = _extract_description(result.row_set.row_desc)
         return descr, make_row_results_set(result)

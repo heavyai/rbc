@@ -77,7 +77,7 @@ def compile_function_to_IR(func, signatures, target, server=None):
         return x
 
     for sig in signatures:
-        fname = func.__name__ + sig.mangle()
+        fname = func.__name__ + sig.mangling
         args, return_type = nb.sigutils.normalize_signature(sig.tonumba())
         cres = nb.compiler.compile_extra(typingctx=typing_context,
                                          targetctx=target_context,
@@ -127,9 +127,8 @@ def compile_function_to_IR(func, signatures, target, server=None):
     # print(list(foo.inspect_llvm().values())[0])
 
     main_mod.verify()
-    #print(main_mod)
     irstr = str(main_mod)
-    
+
     return irstr
 
 

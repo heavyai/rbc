@@ -244,12 +244,25 @@ class Type(tuple):
 
     """
 
+    _mangling = None
+
     def __new__(cls, *args):
         obj = tuple.__new__(cls, args)
         if not obj._is_ok:
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
         return obj
+
+    def set_mangling(self, mangling):
+        """Set mangling string of the type.
+        """
+        self._mangling = mangling
+
+    @property
+    def mangling(self):
+        if self._mangling is None:
+            self._mangling = self.mangle()
+        return self._mangling
 
     @property
     def is_void(self):

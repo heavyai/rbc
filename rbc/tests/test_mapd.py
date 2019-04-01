@@ -20,72 +20,89 @@ is_available, reason = mapd_is_available()
 pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 
-def create_test_table(mapd, datatype='DOUBLE'):
-    table_name = 'test_table_{datatype}'.format(datatype=datatype)
-    drop_test_table(mapd, table_name)
-    mapd.sql_execute('''\
-CREATE TABLE IF NOT EXISTS test_table_{datatype} (
-    i INT,
-    x {datatype},
-    y {datatype}
-    );'''.format(datatype=datatype))
-    data = [
-        (1, 1.0, 0.0),
-        (2, 2.0, 0.0),
-        (3, 2.0, 1.0),
-        (4, 1.0, 2.0),
-        (5, 1.0, 1.0),
-    ]
-    for i, x, y in data:
-        mapd.sql_execute(
-            'INSERT INTO test_table_{datatype} VALUES ({i}, {x}, {y})'
-            .format(datatype=datatype, i=i, x=x, y=y))
-    descr, result = mapd.sql_execute('SELECT * FROM test_table_{datatype}'.format(datatype=datatype))
-    assert data == list(result)
-    return table_name
+@pytest.fixture(scope='module')
+def mapd():
+    m = rbc_mapd.RemoteMapD()
+    table_name = 'rbc_test_mapd'
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
+                'BOOLEAN']
+    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
+    # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
+    # MULTIPOLYGON, See
+    # https://www.omnisci.com/docs/latest/5_datatypes.html
+    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+    table_defn = ',\n'.join('%s %s' % (n, t)
+                            for t, n in zip(sqltypes, colnames))
+    m.sql_execute(
+        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
+        .format(**locals()))
 
-def drop_test_table(mapd, table_name):
-    mapd.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(table_name=table_name))
+    def row_value(row, col, colname):
+        if colname == 'b':
+            return ("'true'" if row % 2 == 0 else "'false'")
+        return row
+
+    rows = 5
+    for i in range(rows):
+        table_row = ', '.join(str(row_value(i, j, n))
+                              for j, n in enumerate(colnames))
+        m.sql_execute(
+            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+    m.table_name = table_name
+    yield m
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
-def test_redefine():
-    mapd = rbc_mapd.RemoteMapD()
-    table_name = create_test_table(mapd)
+def test_redefine(mapd):
 
     @mapd('f64(f64)')
     def incr(x):
         return x + 1
 
-    desrc, result = mapd.sql_execute('select x, incr_dadA(x) from {table_name}'.format(table_name=table_name))
-
+    desrc, result = mapd.sql_execute(
+        'select i4, incr(i4) from {mapd.table_name}'.format(**locals()))
     for x, x1 in result:
         assert x1 == x + 1
 
-    @mapd('f64(f64)')
+    @mapd('f64(f64)')  # noqa: F811
     def incr(x):
         return x + 2
 
-    desrc, result = mapd.sql_execute('select x, incr_dadA(x) from {table_name}'.format(table_name=table_name))
-
+    desrc, result = mapd.sql_execute(
+        'select i4, incr(i4) from {mapd.table_name}'.format(**locals()))
     for x, x1 in result:
         assert x1 == x + 2
 
-    drop_test_table(mapd, table_name)
 
-
-def test_simple():
-    mapd = rbc_mapd.RemoteMapD()
-
-    @mapd('f64(f64, f64)', 'i64(i64,i64)')
-    def add(x, y):
-        return x + 2*y
-
-    #print(add.get_MapD_version())
-    #add.register()
-    if 1:
-        descr, r = add.sql_execute(
-            'select add_daddA(dest_merc_x, dest_merc_y) from flights_2008_10k limit 10')
-        print(descr)
-        print(r)
-        print('\n'.join(str(s) for s in r))
-
+def test_single_argument_overloading(mapd):
+    @mapd(
+        'f64(f64)',
+        'i64(i64)',
+        'i32(i32)',
+        'f32(f32)',
+        'i32(f32)',
+    )
+    def mydecr(x):
+        return x - 1
+    desrc, result = mapd.sql_execute(
+        'select f4, mydecr(f4) from {mapd.table_name}'.format(**locals()))
+    result = list(result)
+    assert len(result) > 0
+    for x, x1 in result:
+        assert x1 == x - 1
+        assert isinstance(x1, type(x))
+    desrc, result = mapd.sql_execute(
+        'select f8, mydecr(f8) from {mapd.table_name}'.format(**locals()))
+    result = list(result)
+    assert len(result) > 0
+    for x, x1 in result:
+        assert x1 == x - 1
+        assert isinstance(x1, type(x))
+    desrc, result = mapd.sql_execute(
+        'select i4, mydecr(i4) from {mapd.table_name}'.format(**locals()))
+    result = list(result)
+    assert len(result) > 0
+    for x, x1 in result:
+        assert x1 == x - 1
+        assert isinstance(x1, type(x))
