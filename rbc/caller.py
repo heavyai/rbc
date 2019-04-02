@@ -47,6 +47,8 @@ class Caller(object):
 
         self.local = local
 
+        self.remotejit.append(self)
+
     def __repr__(self):
         return '%s(%s, %s, %s)' % (type(self).__name__, self.remotejit,
                                    [s.tostring() for s in self._signatures],
@@ -68,6 +70,7 @@ class Caller(object):
                 % (nargs, len(sig[1]), sig))
         if sig not in self._signatures:
             self._signatures.append(sig)
+            self.remotejit.discard_last_compile()
         else:
             warnings.warn('Caller.add_signature:'
                           ' signature `%s` has been already added' % (sig,))
@@ -87,9 +90,9 @@ class Caller(object):
         """
         if signatures is None:
             signatures = self._signatures
-        return irtools.compile_function_to_IR(self.func, signatures,
-                                              self.current_target,
-                                              self.remotejit)
+        return irtools.compile_to_IR([(self.func, signatures)],
+                                     self.current_target,
+                                     self.remotejit)
 
     def compile_to_IR(self, signatures=None, targets=None):
         """Return a map of target triples and the corresponding LLVM IR

@@ -3,6 +3,7 @@
 
 import os
 import inspect
+import warnings
 
 from . import irtools
 from .caller import Caller
@@ -38,8 +39,6 @@ class RemoteJIT(object):
     where the sum will be evaluated in the remote host.
     """
 
-    caller_cls = Caller
-
     multiplexed = True
 
     thrift_content = None
@@ -62,6 +61,37 @@ class RemoteJIT(object):
         self.port = port
         self.options = options
         self.server_process = None
+        self.callers = []
+        self._last_ir_map = None
+
+    def reset(self):
+        self.callers = []
+        self.discard_last_compile()
+
+    @property
+    def have_last_compile(self):
+        return self._last_ir_map is not None
+
+    def discard_last_compile(self):
+        self._last_ir_map = None
+
+    def append(self, caller: Caller):
+        """Add caller to the list of callers containing functions and their
+        signatures to be compiled.
+        """
+        self.callers.append(caller)
+        self.discard_last_compile()
+
+    def compile_to_IR(self, targets, server=None):
+        if self._last_ir_map is None:
+            functions_and_signatures = [(caller.func, caller._signatures)
+                                        for caller in self.callers]
+            ir_map = {}
+            for target in targets:
+                ir_map[target] = irtools.compile_to_IR(
+                    functions_and_signatures, target, server)
+            self._last_ir_map = ir_map
+        return self._last_ir_map
 
     def __call__(self, *signatures, **options):
         """Define a remote JIT function signatures and content.
@@ -175,19 +205,33 @@ class Signature(object):
     def __call__(self, obj):
         if obj is None:
             return self
-        caller_cls = self.remotejit.caller_cls
         if inspect.isfunction(obj):
             t = Type.fromcallable(obj)
             if t.is_complete:
                 self.signatures.append(t)
             signatures = self.signatures
             self.signatures = []  # allow reusing the Signature instance
-            return caller_cls(self.remotejit, signatures, obj,
-                              **self.options)  # finalized caller
-        elif isinstance(obj, caller_cls):
+            for caller in self.remotejit.callers:
+                if (caller.func.__name__ == obj.__name__
+                    and caller.nargs == len(
+                        inspect.signature(obj).parameters)):
+                    for sig in signatures:
+                        if sig not in caller._signatures:
+                            continue
+                        f1 = os.path.basename(obj.__code__.co_filename)
+                        f2 = os.path.basename(caller.func.__code__.co_filename)
+                        n1 = obj.__code__.co_firstlineno
+                        n2 = caller.func.__code__.co_firstlineno
+                        warnings.warn(
+                            '{f1}#{n1} re-implements {f2}#{n2} for `{sig}`'
+                            .format(f1=f1, n1=n1, f2=f2, n2=n2, sig=sig))
+                        del caller._signatures[caller._signatures.index(sig)]
+            return Caller(self.remotejit, signatures, obj,
+                          **self.options)  # finalized caller
+        elif isinstance(obj, Caller):
             signatures = obj._signatures + self.signatures
-            return caller_cls(self.remotejit, signatures,
-                              obj.func, **self.options)
+            return Caller(self.remotejit, signatures,
+                          obj.func, **self.options)
         elif isinstance(obj, type(self)):
             self.signatures.extend(obj.signatures)
             return self

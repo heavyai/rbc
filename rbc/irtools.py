@@ -14,34 +14,24 @@ def initialize_llvm():
     llvm.initialize_all_asmprinters()
 
 
-def compile_function_to_IR(func, signatures, target, server=None):
-    """Return target specific LLVM IR of a function for given signatures.
+def compile_to_IR(functions_and_signatures, target, server=None):
+    """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
     ----------
-    func : function
-      Specify Python function.
-    signatures : list
-      Specify a list of function types (`Type` instances) for which IR
-      functions will be compiled.
+    functions_and_signatures : list
+      Specify a list of Python function and its signatures pairs.
     target : {'host', 'cuda', 'cuda32'}
       Specify LLVM IR target.
     server : {Server, None}
       Specify server containing the target. If unspecified, use local
-      host.
+      host. [NOT IMPLEMENTED]
 
     Returns
     -------
     ir : str
       LLVM IR string for the given target.
-
-    Notes
-    -----
-    Signature specific function names in LLVM IR are in the form
-
-      "<function name><signature.mangle()>"
     """
-    initialize_llvm()
     cpu_target = llvm.get_process_triple()
     if server is None or server.host in ['localhost', '127.0.0.1']:
         if target == 'host' or target == cpu_target:
@@ -68,67 +58,46 @@ def compile_function_to_IR(func, signatures, target, server=None):
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
 
-    main_mod = llvm.parse_assembly('source_filename="{}"'
-                                   .format(inspect.getsourcefile(func)))
-    main_mod.name = func.__name__
+    main_mod = llvm.parse_assembly('source_filename="{}"'.format(__file__))
+    main_mod.name = 'rbc_irtools'
 
-    @nb.njit
-    def foo(x):
-        return x
+    for func, signatures in functions_and_signatures:
+        for sig in signatures:
+            fname = func.__name__ + sig.mangling
+            args, return_type = nb.sigutils.normalize_signature(sig.tonumba())
+            cres = nb.compiler.compile_extra(typingctx=typing_context,
+                                             targetctx=target_context,
+                                             func=func,
+                                             args=args,
+                                             return_type=return_type,
+                                             flags=flags,
+                                             locals={})
+            # C wrapper
+            fndesc = cres.fndesc
+            module = cres.library.create_ir_module(fndesc.unique_name)
+            context = cres.target_context
+            ll_argtypes = [context.get_value_type(ty) for ty in args]
+            ll_return_type = context.get_value_type(return_type)
 
-    for sig in signatures:
-        fname = func.__name__ + sig.mangling
-        args, return_type = nb.sigutils.normalize_signature(sig.tonumba())
-        cres = nb.compiler.compile_extra(typingctx=typing_context,
-                                         targetctx=target_context,
-                                         func=func,
-                                         args=args,
-                                         return_type=return_type,
-                                         flags=flags,
-                                         locals={})
-        # C wrapper
-        fndesc = cres.fndesc
-        module = cres.library.create_ir_module(fndesc.unique_name)
-        context = cres.target_context
-        ll_argtypes = [context.get_value_type(ty) for ty in args]
-        ll_return_type = context.get_value_type(return_type)
+            wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
+            wrapfn = module.add_function(wrapty, fname)
+            builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
 
-        wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
-        wrapfn = module.add_function(wrapty, fname)
-        builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
+            fnty = context.call_conv.get_function_type(return_type, args)
+            fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+            status, out = context.call_conv.call_function(
+                builder, fn, return_type, args, wrapfn.args)
+            builder.ret(out)
+            cres.library.add_ir_module(module)
 
-        fnty = context.call_conv.get_function_type(return_type, args)
-        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
-        status, out = context.call_conv.call_function(
-            builder, fn, return_type, args, wrapfn.args)
-        builder.ret(out)
-        cres.library.add_ir_module(module)
-
-        cres.library._optimize_final_module()
-        cres.library._final_module.verify()
-        cres.library._finalized = True
-        llvmir = cres.library.get_llvm_str()
-        main_mod.link_in(llvm.parse_assembly(llvmir), preserve=True)
-
-    if 0:
-        print('Functions:')
-        for f in main_mod.functions:
-            print(f.name, f.is_declaration, f.type)
-            print(dir(f))
-        print('Global variables:')
-        for v in main_mod.global_variables:
-            print(v.name, v.is_declaration)
-        print('Struct types:')
-        for t in main_mod.struct_types:
-            print(t.name, t.is_pointer, str(t))
-
-    # foo = func.__closure__[0].cell_contents
-    # print(dir(foo))
-    # print(list(foo.inspect_llvm().values())[0])
+            cres.library._optimize_final_module()
+            cres.library._final_module.verify()
+            cres.library._finalized = True
+            llvmir = cres.library.get_llvm_str()
+            main_mod.link_in(llvm.parse_assembly(llvmir), preserve=True)
 
     main_mod.verify()
     irstr = str(main_mod)
-
     return irstr
 
 

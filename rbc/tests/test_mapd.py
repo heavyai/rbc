@@ -55,6 +55,7 @@ def mapd():
 
 
 def test_redefine(mapd):
+    mapd.reset()
 
     @mapd('f64(f64)')
     def incr(x):
@@ -76,6 +77,8 @@ def test_redefine(mapd):
 
 
 def test_single_argument_overloading(mapd):
+    mapd.reset()
+
     @mapd(
         'f64(f64)',
         'i64(i64)',
@@ -106,3 +109,48 @@ def test_single_argument_overloading(mapd):
     for x, x1 in result:
         assert x1 == x - 1
         assert isinstance(x1, type(x))
+
+
+def test_thrift_api_doc(mapd):
+    mapd.reset()
+
+    @mapd('double(int, double)',
+          'float(int, float)',
+          'int(int, int)')
+    def foo(i, v):
+        return v * i + 55
+
+    descr, result = mapd.sql_execute(
+        'select f8, foo(i4, f8) from {mapd.table_name}'.format(**locals()))
+    result = list(result)
+    assert len(result) > 0
+    for i, (x, x1) in enumerate(result):
+        assert x1 == x * i + 55
+        assert isinstance(x1, type(x))
+
+
+def test_multiple_implementation(mapd):
+    mapd.reset()
+
+    @mapd('int(f64)', 'int(i64)')  # noqa: F811
+    def bits(x):
+        return 64
+
+    @mapd('int(f32)', 'int(i32)')  # noqa: F811
+    def bits(x):
+        return 32
+
+    @mapd('int(i16)')  # noqa: F811
+    def bits(x):
+        return 16
+
+    @mapd('int(i8)')  # noqa: F811
+    def bits(x):
+        return 8
+
+    descr, result = mapd.sql_execute(
+        'select bits(i1), bits(i2), bits(i4), bits(f4), bits(i8), bits(f8)'
+        ' from {mapd.table_name} limit 1'.format(**locals()))
+    result = list(result)
+    assert len(result) == 1
+    assert result[0] == (8, 16, 32, 32, 64, 64)

@@ -1,53 +1,10 @@
 
 import os
-from .caller import Caller
+from collections import defaultdict
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
-
-
-class CallerMapD(Caller):
-    """
-    """
-    def __init__(self, *args, **kwargs):
-        Caller.__init__(self, *args, **kwargs)
-        self.register()
-
-    def thrift_call(self, name, *args):
-        return self.remotejit.thrift_call(name, *args)
-
-    def get_MapD_version(self):
-        return self.remotejit.version
-
-    _session_id = None
-    @property
-    def session_id(self):
-        return self.remotejit.session_id
-
-    def sql_execute(self, query):
-        return self.remotejit.sql_execute(query)
-
-    def register(self):
-        device_target_map = self.thrift_call('get_device_target_map')
-
-        signatures = self._signatures
-        for i, sig in enumerate(signatures):
-            if i == 0:
-                sig.set_mangling('')
-            else:
-                sig.set_mangling('__%s' % (i))
-        ir = self.compile_to_IR(signatures, targets=device_target_map.values())
-
-        name = self.func.__name__
-        ast_signatures = '\n'.join(["%s%s '%s'" % (name, s.mangling, s)
-                                    for i, s in enumerate(signatures)])
-
-        device_ir_map = {}
-        for device, target in device_target_map.items():
-            device_ir_map[device] = ir[target]
-        return self.thrift_call('register_runtime_udf', self.session_id,
-                                ast_signatures, device_ir_map)
 
 
 class RemoteMapD(RemoteJIT):
@@ -56,18 +13,17 @@ class RemoteMapD(RemoteJIT):
 
       mapd = RemoteMapD(host=..., port=...)
 
-      @mapd
+      @mapd('int(int, int)')
       def add(a, b):
           return a + b
 
-      add.register()
+      mapd.register()
 
       Use pymapd, for instance, to make a SQL query `select add(c1,
       c2) from table`
 
     """
 
-    caller_cls = CallerMapD
     multiplexed = False
     mangle_prefix = ''
 
@@ -108,8 +64,39 @@ class RemoteMapD(RemoteJIT):
         return self.make_client()(MapD={name: args})['MapD'][name]
 
     def sql_execute(self, query):
+        self.register()
         columnar = True
         result = self.thrift_call(
             'sql_execute', self.session_id, query, columnar, "", -1, -1)
         descr = _extract_description(result.row_set.row_desc)
         return descr, make_row_results_set(result)
+
+    def register(self):
+        if self.have_last_compile:
+            return
+
+        functions_map = defaultdict(list)
+        for caller in self.callers:
+            key = caller.func.__name__, caller.nargs
+            functions_map[key].extend(caller._signatures)
+        ast_signatures = []
+        for (name, nargs), signatures in functions_map.items():
+            for i, sig in enumerate(signatures):
+                if i == 0:
+                    sig.set_mangling('')
+                else:
+                    sig.set_mangling('__%s' % (i))
+                ast_signatures.append("%s%s '%s'" % (name, sig.mangling, sig))
+        ast_signatures = '\n'.join(ast_signatures)
+
+        # print(ast_signatures)
+
+        device_target_map = self.thrift_call('get_device_target_map')
+        ir_map = self.compile_to_IR(targets=device_target_map.values())
+        device_ir_map = {}
+        for device, target in device_target_map.items():
+            device_ir_map[device] = ir_map[target]
+            # print(ir_map[target])
+
+        return self.thrift_call('register_runtime_udf', self.session_id,
+                                ast_signatures, device_ir_map)
