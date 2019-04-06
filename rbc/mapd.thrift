@@ -46,9 +46,10 @@ enum TDeviceType {
   GPU
 }
 
-enum TTableType {
+enum TFileType {
   DELIMITED,
-  POLYGON
+  POLYGON,
+  PARQUET
 }
 
 enum TPartitionDetail {
@@ -69,6 +70,13 @@ enum TImportHeaderRow {
   AUTODETECT,
   NO_HEADER,
   HAS_HEADER
+}
+
+enum TRole {
+  SERVER, // A single node instance
+  AGGREGATOR,
+  LEAF,
+  STRING_DICTIONARY
 }
 
 /* union */ struct TDatumVal {
@@ -192,7 +200,7 @@ struct TCopyParams {
   9: string array_begin
   10: string array_end
   11: i32 threads
-  12: TTableType table_type=TTableType.DELIMITED
+  12: TFileType file_type=TFileType.DELIMITED
   13: string s3_access_key
   14: string s3_secret_key
   15: string s3_region
@@ -202,6 +210,7 @@ struct TCopyParams {
   19: i32 geo_coords_srid=4326
   20: bool sanitize_column_names=true
   21: string geo_layer_name
+  22: string s3_endpoint
 }
 
 struct TCreateParams {
@@ -247,6 +256,7 @@ struct TServerStatus {
   5: string edition
   6: string host_name
   7: bool poly_rendering_enabled
+  8: TRole role
 }
 
 struct TPixel {
@@ -404,12 +414,13 @@ struct TRenderParseResult {
 }
 
 struct TRawRenderPassDataResult {
-  1: i32 num_channels
-  2: binary pixels
-  3: binary row_ids_A
-  4: binary row_ids_B
-  5: binary table_ids
-  6: binary accum_data
+  1: i32 num_pixel_channels
+  2: i32 num_pixel_samples
+  3: binary pixels
+  4: binary row_ids_A
+  5: binary row_ids_B
+  6: binary table_ids
+  7: binary accum_data
 }
 
 typedef map<i32, TRawRenderPassDataResult> TRenderPassMap
@@ -502,7 +513,7 @@ struct TLicenseInfo {
 }
 
 struct TSessionInfo {
-  1: string user; 
+  1: string user;
   2: string database;
   3: i64 start_time;
 }
@@ -576,7 +587,7 @@ service MapD {
   void load_table_binary_arrow(1: TSessionId session, 2: string table_name, 3: binary arrow_stream) throws (1: TMapDException e)
   void load_table(1: TSessionId session, 2: string table_name, 3: list<TStringRow> rows) throws (1: TMapDException e)
   TDetectResult detect_column_types(1: TSessionId session, 2: string file_name, 3: TCopyParams copy_params) throws (1: TMapDException e)
-  void create_table(1: TSessionId session, 2: string table_name, 3: TRowDescriptor row_desc, 4: TTableType table_type=TTableType.DELIMITED, 5: TCreateParams create_params) throws (1: TMapDException e)
+  void create_table(1: TSessionId session, 2: string table_name, 3: TRowDescriptor row_desc, 4: TFileType file_type=TFileType.DELIMITED, 5: TCreateParams create_params) throws (1: TMapDException e)
   void import_table(1: TSessionId session, 2: string table_name, 3: string file_name, 4: TCopyParams copy_params) throws (1: TMapDException e)
   void import_geo_table(1: TSessionId session, 2: string table_name, 3: string file_name, 4: TCopyParams copy_params, 5: TRowDescriptor row_desc, 6: TCreateParams create_params) throws (1: TMapDException e)
   TImportStatus import_table_status(1: TSessionId session, 2: string import_id) throws (1: TMapDException e)

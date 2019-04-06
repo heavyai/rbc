@@ -129,6 +129,55 @@ def test_thrift_api_doc(mapd):
         assert isinstance(x1, type(x))
 
 
+def test_manual_ir(mapd):
+    descr, result = mapd.sql_execute(
+        'SELECT * FROM {mapd.table_name}'.format(**locals()))
+    result = list(result)
+    assert result == [(0.0, 0.0, 0, 0, 0, 0, 1), (1.0, 1.0, 1, 1, 1, 1, 0),
+                      (2.0, 2.0, 2, 2, 2, 2, 1), (3.0, 3.0, 3, 3, 3, 3, 0),
+                      (4.0, 4.0, 4, 4, 4, 4, 1)]
+    device_target_map = mapd.thrift_call('get_device_target_map')
+    cpu_target_triple = device_target_map['cpu']
+    cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+    gpu_target_triple = device_target_map.get('gpu')
+    gpu_target_datalayout = ("e-p:64:64:64-i1:8:8-i8:8:8-"
+                             "i16:16:16-i32:32:32-i64:64:64-"
+                             "f32:32:32-f64:64:64-v16:16:16-"
+                             "v32:32:32-v64:64:64-v128:128:128-n16:32:64")
+
+    foo_ir = '''\
+define i32 @foobar(i32 %.1, i32 %.2) {
+entry:
+  %.18.i = mul i32 %.2, %.1
+  %.33.i = add i32 %.18.i, 55
+  ret i32 %.33.i
+}
+'''
+    ast_signatures = "foobar 'int32(int32, int32)'"
+    device_ir_map = dict()
+    device_ir_map['cpu'] = '''
+target datalayout = "{cpu_target_datalayout}"
+target triple = "{cpu_target_triple}"
+{foo_ir}
+'''.format(**locals())
+
+    if gpu_target_triple is not None:
+        device_ir_map['gpu'] = '''
+target datalayout = "{gpu_target_datalayout}"
+target triple = "{gpu_target_triple}"
+{foo_ir}
+'''.format(**locals())
+
+    mapd.thrift_call('register_runtime_udf', mapd.session_id,
+                     ast_signatures, device_ir_map)
+    descr, result = mapd.sql_execute(
+        'SELECT i4, foobar(i4, i4) FROM {mapd.table_name}'.format(**locals()))
+    result = list(result)
+    assert len(result) > 0
+    for x, r in result:
+        assert r == x * x + 55
+
+
 def test_multiple_implementation(mapd):
     mapd.reset()
 

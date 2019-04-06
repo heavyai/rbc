@@ -166,7 +166,8 @@ class RemoteJIT(object):
             host=self.host,
             port=self.port,
             multiplexed=self.multiplexed,
-            thrift_content=self.thrift_content)
+            thrift_content=self.thrift_content,
+            socket_timeout=10000)
 
 
 class Signature(object):

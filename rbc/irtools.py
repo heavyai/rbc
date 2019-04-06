@@ -2,7 +2,6 @@
 # Created: February 2019
 
 import re
-import inspect
 import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm

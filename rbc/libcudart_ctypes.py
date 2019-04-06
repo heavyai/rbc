@@ -141,6 +141,7 @@ def get_ctype(tstr):
 
 
 class CTypesEnum(IntEnum):
+
     # See
     #   https://www.chriskrycho.com/2015/ctypes-structures-and-dll-exports.html
     @classmethod
@@ -149,13 +150,15 @@ class CTypesEnum(IntEnum):
 
 
 cudaError_value_name_map = get_cuda_enum('driver_types.h', 'cudaError')
-cudaError = type('cudaError', (CTypesEnum, ),
-                 dict([(n, v) for v, n in cudaError_value_name_map.items()]))
+cudaError_name_value_map = dict((n, v)
+                                for (v, n) in cudaError_value_name_map.items())
+_cudaError_member_defs = '\n'.join(
+    ['%s = %s' % _item for _item in cudaError_name_value_map.items()])
 
-# s = 'class cudaError(CTypesEnum):\n'
-# for v, n in cudaError_value_name_map.items():
-#     s += '    {} = {}\n'.format(n, v)
-# exec(s)
+
+class cudaError(CTypesEnum):
+    exec(_cudaError_member_defs)
+
 
 #
 # CUDA struct definitions
