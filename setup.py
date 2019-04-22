@@ -41,7 +41,7 @@ def setup_package():
         author='Pearu Peterson',
         maintainer='Pearu Peterson',
         author_email='pearu.peterson@quansight.com',
-        url='https://github.com/plures/rbc',
+        url='https://github.com/xnd-project/rbc',
         platforms='Cross Platform',
         classifiers=[
             "Intended Audience :: Developers",

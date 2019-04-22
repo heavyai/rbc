@@ -9,7 +9,7 @@ extensions = [
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'rbc'
-copyright = '2019, Plures Project'
+copyright = '2019, Xnd-Project'
 version = 'v0.1.0'
 release = 'v0.1.0'
 exclude_patterns = ['doc', 'build']
@@ -46,8 +46,8 @@ html_context = {
 html_show_sourcelink = False
 
 extlinks = {
-    'issue': ('https://github.com/plures/rbc/issues/%s', 'GH#'),
-    'pr': ('https://github.com/plures/rbc/pull/%s', 'GH#')
+    'issue': ('https://github.com/xnd-project/rbc/issues/%s', 'GH#'),
+    'pr': ('https://github.com/xnd-project/rbc/pull/%s', 'GH#')
 }
 
 html_logo = "images/xndlogo.png"

@@ -1,8 +1,8 @@
 # RBC - Remote Backend Compiler
 
-[![Build Status](https://travis-ci.org/plures/rbc.svg?branch=master)](https://travis-ci.org/plures/rbc)
+[![Build Status](https://travis-ci.org/xnd-project/rbc.svg?branch=master)](https://travis-ci.org/xnd-project/rbc)
 
-[![CircleCI](https://circleci.com/gh/plures/rbc.svg?style=svg)](https://circleci.com/gh/plures/rbc)
+[![CircleCI](https://circleci.com/gh/xnd-project/rbc.svg?style=svg)](https://circleci.com/gh/xnd-project/rbc)
 
 [![Documentation Status](https://readthedocs.org/projects/rbc/badge/?version=latest)](https://rbc.readthedocs.io/en/latest/?badge=latest)
 
