@@ -178,6 +178,53 @@ target triple = "{gpu_target_triple}"
         assert r == x * x + 55
 
 
+def test_ir_parse_error(mapd):
+    device_target_map = mapd.thrift_call('get_device_target_map')
+    foo_ir = '''\
+define i32 @foobar(i32 %.1, i32 %.2) {
+entry:
+  %.18.i = mul i32 %.2, %.1
+  %.33.i = add i32 %.18.i, 55
+  ret i32 %.33.i
+
+'''
+    ast_signatures = "foobar 'int32(int32, int32)'"
+    device_ir_map = dict()
+    device_ir_map['cpu'] = foo_ir
+
+    gpu_target_triple = device_target_map.get('gpu')
+    if gpu_target_triple is not None:
+        device_ir_map['gpu'] = foo_ir
+
+    with pytest.raises(Exception, match=r".*LLVM IR ParseError:"):
+        mapd.thrift_call('register_runtime_udf', mapd.session_id,
+                         ast_signatures, device_ir_map)
+
+
+@pytest.mark.skip(reason='mapd server crashes')
+def test_ir_query_error(mapd):
+    device_target_map = mapd.thrift_call('get_device_target_map')
+    gpu_target_triple = device_target_map.get('gpu')
+    foo_ir = '''\
+define i32 @foobarrr(i32 %.1, i32 %.2) {
+entry:
+  %.18.i = mul i32 %.2, %.1
+  %.33.i = add i32 %.18.i, 55
+  ret i32 %.33.i
+}
+'''
+    ast_signatures = "foobar 'int32(int32, int32)'"
+    device_ir_map = dict()
+    device_ir_map['cpu'] = foo_ir
+    if gpu_target_triple is not None:
+        device_ir_map['gpu'] = foo_ir
+
+    mapd.thrift_call('register_runtime_udf', mapd.session_id,
+                     ast_signatures, device_ir_map)
+    descr, result = mapd.sql_execute(
+        'SELECT i4, foobar(i4, i4) FROM {mapd.table_name}'.format(**locals()))
+
+
 def test_multiple_implementation(mapd):
     mapd.reset()
 
