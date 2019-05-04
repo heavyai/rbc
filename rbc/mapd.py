@@ -91,7 +91,12 @@ class RemoteMapD(RemoteJIT):
 
         # print(ast_signatures)
 
-        device_target_map = self.thrift_call('get_device_target_map')
+        device_params = self.thrift_call('get_device_parameters')
+        device_target_map = {}
+        for prop, value in device_params.items():
+            if prop.endswith('_triple'):
+                device = prop.rsplit('_', 1)[0]
+                device_target_map[device] = value
         ir_map = self.compile_to_IR(targets=device_target_map.values())
         device_ir_map = {}
         for device, target in device_target_map.items():

@@ -395,6 +395,8 @@ class Type(tuple):
         if self.is_char:
             # in numba, char==int8
             return _numba_int_map.get(int(self[0][4:]))
+        if self.is_atomic:
+            return nb.types.Type(self[0])
         raise NotImplementedError(repr(self))
 
     def toctypes(self):

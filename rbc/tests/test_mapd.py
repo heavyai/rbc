@@ -136,10 +136,11 @@ def test_manual_ir(mapd):
     assert result == [(0.0, 0.0, 0, 0, 0, 0, 1), (1.0, 1.0, 1, 1, 1, 1, 0),
                       (2.0, 2.0, 2, 2, 2, 2, 1), (3.0, 3.0, 3, 3, 3, 3, 0),
                       (4.0, 4.0, 4, 4, 4, 4, 1)]
-    device_target_map = mapd.thrift_call('get_device_target_map')
-    cpu_target_triple = device_target_map['cpu']
+    device_params = mapd.thrift_call('get_device_parameters')
+    print(device_params)
+    cpu_target_triple = device_params['cpu_triple']
     cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-    gpu_target_triple = device_target_map.get('gpu')
+    gpu_target_triple = device_params.get('gpu_triple')
     gpu_target_datalayout = ("e-p:64:64:64-i1:8:8-i8:8:8-"
                              "i16:16:16-i32:32:32-i64:64:64-"
                              "f32:32:32-f64:64:64-v16:16:16-"
@@ -179,7 +180,7 @@ target triple = "{gpu_target_triple}"
 
 
 def test_ir_parse_error(mapd):
-    device_target_map = mapd.thrift_call('get_device_target_map')
+    device_params = mapd.thrift_call('get_device_parameters')
     foo_ir = '''\
 define i32 @foobar(i32 %.1, i32 %.2) {
 entry:
@@ -192,9 +193,9 @@ entry:
     device_ir_map = dict()
     device_ir_map['cpu'] = foo_ir
 
-    gpu_target_triple = device_target_map.get('gpu')
+    gpu_target_triple = device_params.get('gpu_triple')
     if gpu_target_triple is not None:
-        device_ir_map['gpu'] = foo_ir
+        device_ir_map['gpu_triple'] = foo_ir
 
     with pytest.raises(Exception, match=r".*LLVM IR ParseError:"):
         mapd.thrift_call('register_runtime_udf', mapd.session_id,
@@ -203,8 +204,8 @@ entry:
 
 @pytest.mark.skip(reason='mapd server crashes')
 def test_ir_query_error(mapd):
-    device_target_map = mapd.thrift_call('get_device_target_map')
-    gpu_target_triple = device_target_map.get('gpu')
+    device_params = mapd.thrift_call('get_device_parameters')
+    gpu_target_triple = device_params.get('gpu_triple')
     foo_ir = '''\
 define i32 @foobarrr(i32 %.1, i32 %.2) {
 entry:

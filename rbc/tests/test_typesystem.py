@@ -347,3 +347,7 @@ def test_mangling():
         check(s+'('+s+',{'+s+'})')
         check(s+'('+s+',{'+s+'},'+s+')')
     check('()')
+
+
+def test_unspecified():
+    assert Type.fromstring('unknown(_0,_1)') == 'unknown(_0, _1)'
