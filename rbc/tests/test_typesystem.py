@@ -350,4 +350,4 @@ def test_mangling():
 
 
 def test_unspecified():
-    assert Type.fromstring('unknown(_0,_1)') == 'unknown(_0, _1)'
+    assert str(Type.fromstring('unknown(_0,_1)')) == 'unknown(_0, _1)'
