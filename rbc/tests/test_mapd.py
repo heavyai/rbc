@@ -137,7 +137,7 @@ def test_manual_ir(mapd):
                       (2.0, 2.0, 2, 2, 2, 2, 1), (3.0, 3.0, 3, 3, 3, 3, 0),
                       (4.0, 4.0, 4, 4, 4, 4, 1)]
     device_params = mapd.thrift_call('get_device_parameters')
-    print(device_params)
+    # print(device_params)
     cpu_target_triple = device_params['cpu_triple']
     cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
     gpu_target_triple = device_params.get('gpu_triple')
@@ -251,3 +251,19 @@ def test_multiple_implementation(mapd):
     result = list(result)
     assert len(result) == 1
     assert result[0] == (8, 16, 32, 32, 64, 64)
+
+
+def test_loadtime_udf(mapd):
+    # This test requires that mapd server is started with `--udf
+    # sample_udf.cpp` option where the .cpp file defines `udf_diff`
+    try:
+        desrc, result = mapd.sql_execute(
+            'select i4, udf_diff(i4, i4) from {mapd.table_name}'
+            .format(**locals()))
+    except Exception as msg:
+        assert 'No match found for function signature udf_diff' in str(msg)
+        return
+    result = list(result)
+    for i_, (i, d) in enumerate(result):
+        assert i_ == i
+        assert d == 0
