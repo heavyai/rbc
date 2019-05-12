@@ -1,8 +1,10 @@
 name: rbc
 channels:
   - conda-forge
+  - defaults
 dependencies:
-  - gcc_linux-64    # required for building thriftpy2
+  #- gcc_linux-64    # required for building thriftpy2
+  - c-compiler
   # - gxx_linux-64
   - setuptools
   - pip
