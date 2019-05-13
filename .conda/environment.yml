@@ -1,3 +1,9 @@
+#
+# Usage:
+#   conda env create --file=.conda/environment.yml -n rbc-dev
+#   python setup.py develop
+#   pytest -sv .
+
 name: rbc
 channels:
   - conda-forge
