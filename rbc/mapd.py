@@ -28,11 +28,11 @@ class RemoteMapD(RemoteJIT):
     mangle_prefix = ''
 
     def __init__(self,
-                 user='mapd',
+                 user='admin',
                  password='HyperInteractive',
                  host='127.0.0.1',
                  port=6274,
-                 dbname='mapd',
+                 dbname='omnisci',
                  **options):
         self.user = user
         self.password = password
