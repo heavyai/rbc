@@ -10,10 +10,9 @@ builtins.__RBC_SETUP__ = True
 if os.path.exists('MANIFEST'):
     os.remove('MANIFEST')
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+CONDA_BUILD = int(os.environ.get('CONDA_BUILD', '0'))
+
+from setuptools import setup, find_packages
 
 DESCRIPTION = "RBC - Remote Backend Compiler"
 LONG_DESCRIPTION = """
@@ -31,6 +30,16 @@ def setup_package():
     old_path = os.getcwd()
     os.chdir(src_path)
     sys.path.insert(0, src_path)
+
+    if CONDA_BUILD:
+        # conda dependencies are specified in meta.yaml
+        install_requires = []
+        setup_requires = []
+        tests_require = []
+    else:
+        install_requires = ["numba", "llvmlite", "tblib", "thriftpy2", "six"]
+        setup_requires = ['pytest-runner']
+        tests_require = ['pytest']
 
     metadata = dict(
         name='rbc',
@@ -52,15 +61,11 @@ def setup_package():
             "Operating System :: OS Independent",
             "Topic :: Software Development",
         ],
-        install_requires=[
-            "numba",
-            "llvmlite",
-            "tblib",
-            "thriftpy2",
-        ],
-        packages=['rbc'],
-        setup_requires=['pytest-runner'],
-        tests_require=['pytest'],
+        packages=find_packages(),
+        package_data={'': ['*.thrift']},
+        install_requires=install_requires,
+        setup_requires=setup_requires,
+        tests_require=tests_require,
     )
 
     try:
