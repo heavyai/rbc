@@ -3,7 +3,7 @@ import os
 import pytest
 import numpy as np
 from rbc.thrift import Server, Client
-from test_thrift_multiplexed import DispatcherTest
+from .test_thrift_multiplexed import DispatcherTest
 
 test_thrift_file = os.path.join(os.path.dirname(__file__), 'test.thrift')
 socket_options = dict(host='127.0.0.1', port=6325+1,
