@@ -32,4 +32,5 @@ requirements:
 
 about:
   home: https://github.com/xnd-project/rbc
-  license: BSD 3-clause
+  license: BSD
+  license_file: '{{ environ["RECIPE_DIR"] }}/../LICENSE'
