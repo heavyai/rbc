@@ -1,9 +1,7 @@
 # RBC - Remote Backend Compiler
 
 [![Build Status](https://travis-ci.org/xnd-project/rbc.svg?branch=master)](https://travis-ci.org/xnd-project/rbc)
-
 [![CircleCI](https://circleci.com/gh/xnd-project/rbc.svg?style=svg)](https://circleci.com/gh/xnd-project/rbc)
-
 [![Documentation Status](https://readthedocs.org/projects/rbc/badge/?version=latest)](https://rbc.readthedocs.io/en/latest/?badge=latest)
 
 ## Introduction
@@ -58,3 +56,81 @@ The prototype of a RBC model is implemented in Python using
 [Numba](https://numba.pydata.org/) and
 [llvmlite](http://llvmlite.pydata.org/en/latest/) tools.
 
+## Installation
+
+### conda
+
+```
+conda install -c conda-forge rbc
+```
+See [RBC conda-forge package](https://github.com/conda-forge/rbc-feedstock#about-rbc) for more information.
+
+## Testing
+
+```
+pytest -sv --pyargs rbc
+```
+
+## Usage
+
+### Case 1: Compile and evaluate a function in a background process
+
+```
+from rbc import RemoteJIT
+rjit = RemoteJIT()
+rjit.start_server(background=True)
+
+@rjit('double(double, double)', 'int(int, int)')
+def add(x, y):
+    return x + y
+
+assert add(1, 2) == 3
+assert add(1.2, 2.3) == 3.5
+
+rjit.stop_server()
+```
+
+### Case 2: Compile and evaluate a function in a remote server
+
+In remote server (here using localhost for example), start the RemoteJIT process
+```
+import rbc
+rjit = rbc.RemoteJIT(host='localhost', port=23678)
+rjit.start_server()  # this will run the server loop
+```
+
+In a client computer, use the remote servers RemoteJIT process for compilation and evaluation:
+```
+from rbc import RemoteJIT
+rjit = RemoteJIT(host='localhost', port=23678)
+@rjit('double(double, double)', 'int(int, int)')
+def add(x, y):
+    return x + y
+assert add(1, 2) == 3
+assert add(1.2, 2.3) == 3.5
+```
+
+### Case 3: Define User Defined Function (UDF) in Python and register it in OmnisciDB server
+
+Assume that OmnisciDB server is running in localhost, for instance.
+
+In a client computer, register a UDF in OmnisciDB server:
+```
+from rbc.mapd import RemoteMapD
+mapd = RemoteMapD()
+@mapd('i32(i32)')
+def incr(x):
+    return x + 1
+mapd.register()
+```
+
+In a client computer, use the UDF in a query to OmnisciDB server:
+```
+import ibis
+con = ibis.mapd.connect(...)
+q = con.sql('select i, incr(i) from mytable').execute()
+```
+
+### More examples and usage cases
+
+See [notebooks](https://github.com/xnd-project/rbc/tree/master/notebooks).
