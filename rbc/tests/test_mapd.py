@@ -284,13 +284,15 @@ def test_f32(mapd):
 
     (notice the order of signatures in mapd decorator argument).
     """
-    
+
     @mapd('f32(f32)', 'f32(f64)')  # noqa: F811
     def f_32(x): return x+4.5
-    descr, result = mapd.sql_execute('select f_32(0.0E0) from {mapd.table_name} limit 1'.format(**locals()))
+    descr, result = mapd.sql_execute(
+        'select f_32(0.0E0) from {mapd.table_name} limit 1'
+        .format(**locals()))
     assert list(result)[0] == (4.5,)
 
-@pytest.mark.skip('omniscidb issue 359')
+
 def test_castop(mapd):
     @mapd('i16(i16)')  # noqa: F811
     def i32(x): return x+2
@@ -301,7 +303,8 @@ def test_castop(mapd):
     descr, result = mapd.sql_execute(
         'select i32(cast(1 as int))'
         ' from {mapd.table_name} limit 1'.format(**locals()))
-    assert list(result)[0] == (5,)    
+    assert list(result)[0] == (5,)
+
 
 def test_casting(mapd):
     """
@@ -323,14 +326,9 @@ def test_casting(mapd):
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
     """
     mapd.reset()
-    
+
     @mapd('i8(i8)')    # noqa: F811
     def i8(x): return x+1
-
-    # cannot create a 8-bit int literal in sql, so, using a helper
-    # function for that
-    @mapd('i8(i8)', 'i8(i16)')    # noqa: F811
-    def i_8(x): return x+1
 
     @mapd('i16(i16)')  # noqa: F811
     def i16(x): return x+2
@@ -344,6 +342,14 @@ def test_casting(mapd):
     @mapd('f32(f32)')  # noqa: F811
     def f32(x): return x+4.5
 
+    # cannot create a 8-bit and 16-bit int literals in sql, so, using
+    # the following helper functions:
+    @mapd('i8(i8)', 'i8(i16)', 'i8(i32)')    # noqa: F811
+    def i_8(x): return x+1
+
+    @mapd('i16(i16)', 'i16(i32)')  # noqa: F811
+    def i_16(x): return x+2
+
     # cannot create a 32-bit float literal in sql, so, using a helper
     # function for that:
     @mapd('f32(f32)', 'f32(f64)')  # noqa: F811
@@ -355,23 +361,23 @@ def test_casting(mapd):
     @mapd('i8(i8)')
     def ifoo(x): return x + 1
 
-    @mapd('i16(i16)')
+    @mapd('i16(i16)')  # noqa: F811
     def ifoo(x): return x + 2
-    
-    @mapd('i32(i32)')
+
+    @mapd('i32(i32)')  # noqa: F811
     def ifoo(x): return x + 4
 
-    @mapd('i64(i64)')
+    @mapd('i64(i64)')  # noqa: F811
     def ifoo(x): return x + 8
 
     @mapd('f32(f32)')
     def ffoo(x): return x + 4.5
 
-    @mapd('f64(f64)')
+    @mapd('f64(f64)')  # noqa: F811
     def ffoo(x): return x + 8.5
 
     descr, result = mapd.sql_execute(
-        'select i_8(0),i16(0),i32(0),i64(0) from {mapd.table_name} limit 1'
+        'select i_8(0),i_16(0),i32(0),i64(0) from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (1, 2, 4, 8)
 
@@ -381,7 +387,7 @@ def test_casting(mapd):
     assert list(result)[0] == (1, 2, 4, 8)
 
     descr, result = mapd.sql_execute(
-        'select ifoo(i_8(0)),ifoo(i16(0)),ifoo(i32(0)),ifoo(i64(0))'
+        'select ifoo(i_8(0)),ifoo(i_16(0)),ifoo(i32(0)),ifoo(i64(0))'
         ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (1+1, 2+2, 4+4, 8+8)
@@ -391,9 +397,9 @@ def test_casting(mapd):
         ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (1, 2, 4, 8)
-    
+
     descr, result = mapd.sql_execute(
-        'select i64(i_8(0)), i64(i16(0)),i64(i32(0)),i64(i64(0))'
+        'select i64(i_8(0)), i64(i_16(0)),i64(i32(0)),i64(i64(0))'
         ' from {mapd.table_name} limit 1'.format(**locals()))
     assert list(result)[0] == (9, 10, 12, 16)
 
@@ -403,7 +409,7 @@ def test_casting(mapd):
     assert list(result)[0] == (8, 8, 8, 8)
 
     descr, result = mapd.sql_execute(
-        'select i32(i_8(0)), i32(i16(0)),i32(i32(0))'
+        'select i32(i_8(0)), i32(i_16(0)),i32(i32(0))'
         ' from {mapd.table_name} limit 1'.format(**locals()))
     assert list(result)[0] == (5, 6, 8)
 
@@ -413,7 +419,7 @@ def test_casting(mapd):
     assert list(result)[0] == (4, 4, 4)
 
     descr, result = mapd.sql_execute(
-        'select i16(i_8(0)), i16(i16(0)) from {mapd.table_name} limit 1'
+        'select i16(i_8(0)), i16(i_16(0)) from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (3, 4)
 
@@ -421,7 +427,7 @@ def test_casting(mapd):
         'select i16(i1), i16(i2) from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (2, 2)
-    
+
     descr, result = mapd.sql_execute(
         'select i8(i_8(0)) from {mapd.table_name} limit 1'.format(**locals()))
     assert list(result)[0] == (2,)
@@ -481,22 +487,24 @@ def test_casting(mapd):
             ('i32(0)', r'i8', r'INTEGER'),
             ('i4', r'i16', r'INTEGER'),
             ('i4', r'i8', r'INTEGER'),
-            ('i16(0)', r'i8', r'SMALLINT'),
+            ('i_16(0)', r'i8', r'SMALLINT'),
             ('i2', r'i8', r'SMALLINT'),
             ('f64(0)', r'f32', r'DOUBLE'),
             ('f8', r'f32', r'DOUBLE'),
     ]:
-        with pytest.raises(Exception,
-                           match=r".*Function "+f+r"\("+t+r"\) not supported"):
-            descr, result = mapd.sql_execute(
-                'select '+f+'('+v+') from {mapd.table_name} limit 1'
-                .format(**locals()))
+        q = ('select '+f+'('+v+') from {mapd.table_name} limit 1'
+             .format(**locals()))
+        match = r".*Function "+f+r"\("+t+r"\) not supported"
+        with pytest.raises(Exception, match=match):
+            descr, result = mapd.sql_execute(q)
+            print('query: ', q)
+            print('expected: ', match)
 
     for f in [r'f64', r'f32']:
         for at, av, r in [
                 (r'BIGINT', 'i64(0)', (16.5,)),
                 (r'INTEGER', 'i32(0)', (12.5,)),
-                (r'SMALLINT', 'i16(0)', (10.5,)),
+                (r'SMALLINT', 'i_16(0)', (10.5,)),
                 (r'TINYINT', 'i_8(0)', (9.5,)),
                 (r'BIGINT', 'i8', (8.5,)),
                 (r'INTEGER', 'i4', (8.5,)),
@@ -506,7 +514,7 @@ def test_casting(mapd):
             if f == r'f64':  # temporary: allow integers as double arguments
                 descr, result = mapd.sql_execute(
                     'select '+f+'('+av+') from {mapd.table_name} limit 1'
-                .format(**locals()))
+                    .format(**locals()))
                 assert list(result)[0] == r
                 continue
             with pytest.raises(
@@ -530,6 +538,7 @@ def test_casting(mapd):
                     'select '+f+'('+av+') from {mapd.table_name} limit 1'
                     .format(**locals()))
 
+
 def test_truncate_issue(mapd):
     mapd.reset()
 
@@ -552,29 +561,34 @@ def test_truncate_issue(mapd):
     descr, result = mapd.sql_execute(
         'select bits(truncate(2016, 1)) from {mapd.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (16,)
+    assert list(result)[0] in [(16,), (32,)]
 
     descr, result = mapd.sql_execute(
-        'select bits(truncate(cast(2016.0 as smallint), 1)) from {mapd.table_name} limit 1'
+        'select bits(truncate(cast(2016.0 as smallint), 1))'
+        ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (16,)
 
     descr, result = mapd.sql_execute(
-        'select bits(truncate(cast(2016.0 as int), 1)) from {mapd.table_name} limit 1'
+        'select bits(truncate(cast(2016.0 as int), 1))'
+        ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (32,)
 
     descr, result = mapd.sql_execute(
-        'select bits(truncate(cast(2016.0 as bigint), 1)) from {mapd.table_name} limit 1'
+        'select bits(truncate(cast(2016.0 as bigint), 1))'
+        ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
 
     descr, result = mapd.sql_execute(
-        'select bits(truncate(cast(2016.0 as float), 1)) from {mapd.table_name} limit 1'
+        'select bits(truncate(cast(2016.0 as float), 1))'
+        ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (32,)
 
     descr, result = mapd.sql_execute(
-        'select bits(truncate(cast(2016.0 as double), 1)) from {mapd.table_name} limit 1'
+        'select bits(truncate(cast(2016.0 as double), 1))'
+        ' from {mapd.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
