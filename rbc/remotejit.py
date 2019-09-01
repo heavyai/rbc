@@ -57,6 +57,7 @@ class RemoteJIT(object):
         options : dict
           Specify default options.
         """
+        self.debug = options.pop('debug', False)
         self.host = host
         self.port = port
         self.options = options

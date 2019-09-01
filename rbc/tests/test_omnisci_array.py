@@ -1,0 +1,111 @@
+import pytest
+rbc_omnisci = pytest.importorskip('rbc.mapd')
+
+
+def omnisci_is_available():
+    """Return True if OmniSci server is accessible.
+    """
+    omnisci = rbc_omnisci.RemoteMapD()
+    client = omnisci.make_client()
+    try:
+        version = client(MapD=dict(get_version=()))['MapD']['get_version']
+    except Exception as msg:
+        return False, 'failed to get OmniSci version: %s' % (msg)
+    if version >= '4.6':
+        return True, None
+    return False, 'expected OmniSci version 4.6 or greater, got %s' % (version)
+
+
+is_available, reason = omnisci_is_available()
+pytestmark = pytest.mark.skipif(not is_available, reason=reason)
+
+
+@pytest.fixture(scope='module')
+def omnisci():
+    m = rbc_omnisci.RemoteMapD(debug=not True)
+    table_name = 'rbc_test_omnisci_array'
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    sqltypes = ['FLOAT[]', 'DOUBLE[]',
+                'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
+                'BOOLEAN[]']
+    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
+    # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
+    # MULTIPOLYGON, See
+    # https://www.omnisci.com/docs/latest/5_datatypes.html
+    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+    table_defn = ',\n'.join('%s %s' % (n, t)
+                            for t, n in zip(sqltypes, colnames))
+    m.sql_execute(
+        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
+        .format(**locals()))
+
+    def row_value(row, col, colname):
+        if colname == 'b':
+            return 'ARRAY[%s]' % (', '.join(
+                ("'true'" if i % 2 == 0 else "'false'")
+                for i in range(-3, 3)))
+        return 'ARRAY[%s]' % (', '.join(
+            str(row * 10 + i) for i in range(-3, 3)))
+
+    rows = 5
+    for i in range(rows):
+        table_row = ', '.join(str(row_value(i, j, n))
+                              for j, n in enumerate(colnames))
+        m.sql_execute(
+            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+    m.table_name = table_name
+    yield m
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+
+def test_get_array_size_ir(omnisci):
+    omnisci.reset()
+    omnisci.register()
+
+    device_params = omnisci.thrift_call('get_device_parameters')
+    cpu_target_triple = device_params['cpu_triple']
+    cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
+    # The following are codelets from clang --emit-llvm output with
+    # attributes removed and change of function names:
+    Array_getSize_i32_ir = '''\
+define dso_local i64 @Array_getSize_i32(%struct.Array*) align 2 {
+  %2 = alloca %struct.Array*, align 8
+  store %struct.Array* %0, %struct.Array** %2, align 8
+  %3 = load %struct.Array*, %struct.Array** %2, align 8
+  %4 = getelementptr inbounds %struct.Array, %struct.Array* %3, i32 0, i32 1
+  %5 = load i64, i64* %4, align 8
+  ret i64 %5
+}
+'''
+
+    array_sz_i32_ir = '''\
+define dso_local i32 @array_sz_int32(%struct.Array* byval align 8) {
+  %2 = call i64 @Array_getSize_i32(%struct.Array* %0)
+  %3 = trunc i64 %2 to i32
+  ret i32 %3
+}'''
+
+    ast_signatures = "array_sz_int32 'int32_t(Array<int32_t>)'"
+
+    device_ir_map = dict()
+    device_ir_map['cpu'] = '''\
+target datalayout = "{cpu_target_datalayout}"
+target triple = "{cpu_target_triple}"
+
+%struct.Array = type {{ i32*, i64, i8 }}
+
+{Array_getSize_i32_ir}
+
+{array_sz_i32_ir}
+'''.format(**locals())
+
+    omnisci.thrift_call('register_runtime_udf',
+                        omnisci.session_id,
+                        ast_signatures, device_ir_map)
+
+    desrc, result = omnisci.sql_execute(
+        'select i4, array_sz_int32(i4) from {omnisci.table_name}'
+        .format(**locals()))
+    for a, sz in result:
+        assert len(a) == sz

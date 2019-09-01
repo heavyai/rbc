@@ -61,11 +61,15 @@ class RemoteMapD(RemoteJIT):
         return self._session_id
 
     def thrift_call(self, name, *args):
+        if self.debug:
+            print('thrift_call %s%s' % (name, args))
         return self.make_client()(MapD={name: args})['MapD'][name]
 
     def sql_execute(self, query):
         self.register()
         columnar = True
+        if self.debug:
+            print('  %s;' % (query))
         result = self.thrift_call(
             'sql_execute', self.session_id, query, columnar, "", -1, -1)
         descr = _extract_description(result.row_set.row_desc)
@@ -89,8 +93,10 @@ class RemoteMapD(RemoteJIT):
                 ast_signatures.append("%s%s '%s'" % (name, sig.mangling, sig))
         ast_signatures = '\n'.join(ast_signatures)
 
-        # print(ast_signatures)
-
+        if self.debug:
+            print()
+            print(' signatures '.center(80, '-'))
+            print(ast_signatures)
         device_params = self.thrift_call('get_device_parameters')
         device_target_map = {}
         for prop, value in device_params.items():
@@ -100,8 +106,12 @@ class RemoteMapD(RemoteJIT):
         ir_map = self.compile_to_IR(targets=device_target_map.values())
         device_ir_map = {}
         for device, target in device_target_map.items():
-            device_ir_map[device] = ir_map[target]
-            # print(ir_map[target])
+            ir = device_ir_map[device] = ir_map[target]
+            if self.debug:
+                print(('IR[%s]' % (device)).center(80, '-'))
+                print(ir)
+        if self.debug:
+            print('=' * 80)
 
         return self.thrift_call('register_runtime_udf', self.session_id,
                                 ast_signatures, device_ir_map)
