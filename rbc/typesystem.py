@@ -19,6 +19,81 @@ class TypeParseError(Exception):
     """
 
 
+class TargetInfo(object):
+    """Base class for determining various information about the target
+    system.
+
+    """
+
+    def __init__(self, strict=False):
+        """
+        Parameters
+        ----------
+        strict: bool
+          When True, require that atomic types are concrete. If not,
+          raise an exception.
+        """
+        self.strict = strict
+
+    def sizeof(self, t):
+        """Return the sizeof(t) value in the target system.
+
+        Parameters
+        ----------
+        t : {str, ...}
+            Specify types name. For a full support, one should
+            implement the sizeof for the following type names: char,
+            uchar, schar, byte, ubyte, short, ushort, int, uint, long,
+            ulong, longlong, ulonglong, float, double, longdouble,
+            complex, bool, size_t, ssize_t. wchar
+        """
+        raise NotImplementedError("%s.sizeof(%r)"
+                                  % (type(self).__name__, t))
+
+
+class LocalTargetInfo(TargetInfo):
+    """Uses ctypes to determine the type info in a local system.
+
+    """
+    def sizeof(self, t):
+        if isinstance(t, str):
+            if t == 'complex':
+                return 2 * self.sizeof('float')
+            ct = dict(
+                bool=ctypes.c_bool,
+
+                size_t=ctypes.c_size_t,
+                ssize_t=ctypes.c_ssize_t,
+
+                char=ctypes.c_char,
+                uchar=ctypes.c_char,
+                schar=ctypes.c_char,
+                byte=ctypes.c_byte,
+                ubyte=ctypes.c_ubyte,
+
+                wchar=ctypes.c_wchar,
+
+                short=ctypes.c_short,
+                ushort=ctypes.c_ushort,
+
+                int=ctypes.c_int,
+                uint=ctypes.c_uint,
+
+                long=ctypes.c_long,
+                ulong=ctypes.c_ulong,
+
+                longlong=ctypes.c_longlong,
+                ulonglong=ctypes.c_ulonglong,
+
+                float=ctypes.c_float,
+                double=ctypes.c_double,
+                longdouble=ctypes.c_longdouble,
+            ).get(t)
+            if ct is not None:
+                return ctypes.sizeof(ct)
+        return super(LocalTargetInfo, self).sizeof(t)
+
+
 def _findparen(s):
     """Find the index of left parenthesis that matches with the one at the
     end of a string.
@@ -62,14 +137,51 @@ def _commasplit(s):
     raise TypeParseError('failed to comma-split `%s`' % s)
 
 
-_bool_match = re.compile(r'\A(boolean|bool|b)\Z').match
-_char_match = re.compile(r'\A(char)\s*(8|16|32|)\Z').match
+_charn_match = re.compile(r'\A(char)(32|16|8)(_t|)\Z').match
+_intn_match = re.compile(r'\A(signed\s*int|int|i)(\d+)(_t|)\Z').match
+_uintn_match = re.compile(r'\A(unsigned\s*int|uint|u)(\d+)(_t|)\Z').match
+_floatn_match = re.compile(r'\A(float|f)(16|32|64|128|256)(_t|)\Z').match
+_complexn_match = re.compile(
+    r'\A(complex|c)(16|32|64|128|256|512)(_t|)\Z').match
+
+_bool_match = re.compile(r'\A(boolean|bool|_Bool|b)\Z').match
 _string_match = re.compile(r'\A(string|str)\Z').match
-_int_match = re.compile(r'\A(int|i)\s*(\d*)\Z').match
-_uint_match = re.compile(r'\A(uint|u|unsigned\s*int)\s*(\d*)\Z').match
-_float_match = re.compile(r'\A(float|f)\s*(16|32|64|128|256|)\Z').match
+
+_char_match = re.compile(r'\A(char)\Z').match
+_schar_match = re.compile(r'\A(signed\s*char)\Z').match
+_uchar_match = re.compile(r'\A(unsigned\s*char|uchar)\Z').match
+_byte_match = re.compile(r'\A(signed\s*byte|byte)\Z').match
+_ubyte_match = re.compile(r'\A(unsigned\s*byte|ubyte)\Z').match
+_wchar_match = re.compile(r'\A(wchar)(_t|)\Z').match
+
+_short_match = re.compile(
+    r'\A(signed\s*short\s*int|signed\s*short|short\s*int|short)\Z').match
+_ushort_match = re.compile(
+    r'\A(unsigned\s*short\s*int|unsigned\s*short|ushort)\Z').match
+
+_int_match = re.compile(r'\A(signed\s*int|signed|int|i)\Z').match
+_uint_match = re.compile(r'\A(unsigned\s*int|unsigned|uint|u)\Z').match
+
+_long_match = re.compile(
+    r'\A(signed\s*long\s*int|signed\s*long|long\s*int|long|l)\Z').match
+_ulong_match = re.compile(
+    r'\A(unsigned\s*long\s*int|unsigned\s*long|ulong)\Z').match
+
+_longlong_match = re.compile(
+    r'\A(signed\s*long\s*long\s*int|signed\s*long\s*long|long\s*long'
+    r'\s*int|long\s*long)\Z').match
+_ulonglong_match = re.compile(
+    r'\A(unsigned\s*long\s*long\s*int|unsigned\s*long\s*long)\Z'
+).match
+
+_size_t_match = re.compile(r'\A(std::|c_|)size_t\Z').match
+_ssize_t_match = re.compile(r'\A(std::|c_|)ssize_t\Z').match
+
+_float_match = re.compile(r'\A(float|f)\Z').match
 _double_match = re.compile(r'\A(double|d)\Z').match
-_complex_match = re.compile(r'\A(complex|c)\s*(16|32|64|128|256|512|)\Z').match
+_longdouble_match = re.compile(r'\A(long\s*double)\Z').match
+
+_complex_match = re.compile(r'\A(complex|c)\Z').match
 
 
 class Complex64(ctypes.Structure):
@@ -192,7 +304,7 @@ class Type(tuple):
 
       void        - a "no type"
       atomic      e.g. `int32`
-      pointer     e.g. `int32`
+      pointer     e.g. `int32*`
       struct      e.g. `{int32, int32}`
       function    e.g. `int32(int32, int32)`
 
@@ -201,8 +313,8 @@ class Type(tuple):
     constructions of atomic types.
 
     The name content of an atomic type is arbitrary but it cannot be
-    empty. For instance, all the following Type instances represent
-    atomic types: Type('a'), Type('a long name')
+    empty. For instance, Type('a') and Type('a long name') are atomic
+    types.
 
     Parsing types from a string is not fixed to any type system, the
     names of types can be arbitrary.  However, converting the Type
@@ -211,25 +323,25 @@ class Type(tuple):
     to normalized name):
 
       no type:                    void, none
-      bool:                       bool, boolean, b
+      bool:                       bool, boolean, _Bool, b
       8-bit char:                 char8, char
       16-bit char:                char16
       32-bit char:                char32, wchar
-      8-bit signed integer:       int8, i8, byte
-      16-bit signed integer:      int16, i16
-      32-bit signed integer:      int32, i32, int
-      64-bit signed integer:      int64, i64, long
-      128-bit signed integer:     int128, i128, long long
-      8-bit unsigned integer:     uint8, u8, ubyte
-      16-bit unsigned integer:    uint16, u16
-      32-bit unsigned integer:    uint32, u32, uint, unsigned int
-      64-bit unsigned integer:    uint64, u64, ulong, unsigned long
-      128-bit unsigned integer:   uint128, u128, ulong long, unsigned long long
-      16-bit float:               float16, f16, f2
-      32-bit float:               float32, f32, f4, float
-      64-bit float:               float64, f64, f8, double
+      8-bit signed integer:       int8, i8, byte, signed char
+      16-bit signed integer:      int16, i16, int16_t
+      32-bit signed integer:      int32, i32, int32_t
+      64-bit signed integer:      int64, i64, int64_t
+      128-bit signed integer:     int128, i128, int128_t
+      8-bit unsigned integer:     uint8, u8, ubyte, unsigned char
+      16-bit unsigned integer:    uint16, u16, uint16_t
+      32-bit unsigned integer:    uint32, u32, uint32_t
+      64-bit unsigned integer:    uint64, u64, uint64_t
+      128-bit unsigned integer:   uint128, u128, uint64_t
+      16-bit float:               float16, f16
+      32-bit float:               float32, f32, float
+      64-bit float:               float64, f64, double
       128-bit float:              float128, f128, long double
-      32-bit complex:             complex32, c32
+      32-bit complex:             complex32, c32, complex
       64-bit complex:             complex64, c64
       128-bit complex:            complex128, c128
       256-bit complex:            complex256, c256
@@ -242,6 +354,9 @@ class Type(tuple):
       N-bit float: float<N>
       N-bit complex: complex<N>
 
+    Also byte, short, int, long, long long, signed int, size_t,
+    ssize_t, etc are supported but their normalized names are system
+    dependent.
     """
 
     _mangling = None
@@ -462,49 +577,63 @@ class Type(tuple):
         return cls(s)
 
     @classmethod
-    def fromstring(cls, s):
+    def fromstring(cls, s, target_info=None):
         """Return new Type instance from a string.
+
+        Parameters
+        ----------
+        s : str
+        target_info : {TargetInfo, None}
+          Specify TargetInfo instance that provides methods for
+          determining the type information of a particular
+          target. When not specified, then LocalTargetInfo instance
+          will be created.
         """
+        if target_info is None:
+            target_info = LocalTargetInfo()
         try:
-            return cls._fromstring(s)._normalize()
+            return cls._fromstring(s)._normalize(
+                target_info, target_info.strict)
         except TypeParseError as msg:
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
 
     @classmethod
-    def fromnumba(cls, t):
+    def fromnumba(cls, t, target_info=None):
         """Return new Type instance from numba type object.
         """
         if nb is None:
             raise RuntimeError('importing numba failed: %s' % (nb_NA_message))
         n = _numba_imap.get(t)
         if n is not None:
-            return cls.fromstring(n)
+            return cls.fromstring(n, target_info=target_info)
         if isinstance(t, nb.typing.templates.Signature):
-            atypes = map(cls.fromnumba, t.args)
-            rtype = cls.fromnumba(t.return_type)
+            atypes = (cls.fromnumba(a, target_info=target_info)
+                      for a in t.args)
+            rtype = cls.fromnumba(t.return_type, target_info=target_info)
             return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
-            return cls(cls.fromnumba(t.dtype), '*')
+            return cls(cls.fromnumba(t.dtype, target_info=target_info), '*')
         raise NotImplementedError(repr(t))
 
     @classmethod
-    def fromctypes(cls, t):
+    def fromctypes(cls, t, target_info=None):
         """Return new Type instance from ctypes type object.
         """
         n = _ctypes_imap.get(t)
         if n is not None:
-            return cls.fromstring(n)
+            return cls.fromstring(n, target_info=target_info)
         if issubclass(t, ctypes.Structure):
-            return cls(*(cls.fromctypes(_t) for _f, _t in t._fields_))
+            return cls(*(cls.fromctypes(_t, target_info=target_info)
+                         for _f, _t in t._fields_))
         if issubclass(t, ctypes._Pointer):
-            return cls(cls.fromctypes(t._type_), '*')
+            return cls(cls.fromctypes(t._type_, target_info=target_info), '*')
         if issubclass(t, ctypes._CFuncPtr):
-            return cls(cls.fromctypes(t._restype_),
+            return cls(cls.fromctypes(t._restype_, target_info=target_info),
                        tuple(map(cls.fromctypes, t._argtypes_)) or (Type(),))
         raise NotImplementedError(repr(t))
 
     @classmethod
-    def fromcallable(cls, func):
+    def fromcallable(cls, func, target_info=None):
         """Return new Type instance from a callable object.
 
         The callable object must use annotations for specifying the
@@ -520,7 +649,7 @@ class Type(tuple):
             rtype = cls()  # void
             # TODO: check that function does not return other than None
         else:
-            rtype = cls.fromobject(annot)
+            rtype = cls.fromobject(annot, target_info=target_info)
         atypes = []
         for n, param in sig.parameters.items():
             annot = param.annotation
@@ -532,103 +661,123 @@ class Type(tuple):
             if annot == sig.empty:
                 atypes.append(cls('<type of %s>' % n))
             else:
-                atypes.append(cls.fromobject(annot))
+                atypes.append(cls.fromobject(annot, target_info=target_info))
         return cls(rtype, tuple(atypes) or (Type(),))
 
     @classmethod
-    def fromvalue(cls, obj):
+    def fromvalue(cls, obj, target_info=None):
         """Return Type instance that corresponds to given Python value.
         """
         n = _python_imap.get(type(obj))
         if n is not None:
-            return cls.fromstring(n)
-        raise NotImplementedError(repr(type(obj)))
+            return cls.fromstring(n, target_info=target_info)
+        raise NotImplementedError('%s.fromvalue(%r)'
+                                  % (cls.__name__, obj))
 
     @classmethod
-    def fromobject(cls, obj):
+    def fromobject(cls, obj, target_info=None):
         """Return new Type instance from any object.
+
+        Parameters
+        ----------
+        obj : object
+        target_info : {TargetInfo, None}
+          Specify TargetInfo instance that provides methods for
+          determining the type information of a particular
+          target. When not specified, then LocalTargetInfo instance
+          will be created.
         """
         if isinstance(obj, cls):
             return obj
         if isinstance(obj, str):
-            return cls.fromstring(obj)
+            return cls.fromstring(obj, target_info=target_info)
         n = _python_imap.get(obj)
         if n is not None:
-            return cls.fromstring(n)
+            return cls.fromstring(n, target_info=target_info)
         if hasattr(obj, '__module__'):
             if obj.__module__.startswith('numba'):
-                return cls.fromnumba(obj)
+                return cls.fromnumba(obj, target_info=target_info)
             if obj.__module__.startswith('ctypes'):
-                return cls.fromctypes(obj)
+                return cls.fromctypes(obj, target_info=target_info)
         if inspect.isclass(obj):
             if obj is int:
                 return cls('int64')
-            return cls.fromstring(obj.__name__)
+            return cls.fromstring(obj.__name__,
+                                  target_info=target_info)
         if callable(obj):
-            return cls.fromcallable(obj)
+            return cls.fromcallable(obj, target_info=target_info)
         raise NotImplementedError(repr(type(obj)))
 
-    def _normalize(self):
+    def _normalize(self, target_info, strict):
         """Return new Type instance with atomic types normalized.
         """
         if self.is_void:
             return self
         if self.is_atomic:
             s = self[0]
-            m = _int_match(s)
-            if m is not None:
-                bits = m.group(2)
-                if not bits:
-                    bits = '32'
-                return self.__class__('int' + bits)
-            m = _uint_match(s)
-            if m is not None:
-                bits = m.group(2)
-                if not bits:
-                    bits = '32'
-                return self.__class__('uint' + bits)
-            m = _float_match(s)
-            if m is not None:
-                bits = m.group(2)
-                if not bits:
-                    bits = '32'
-                return self.__class__('float' + bits)
-            m = _double_match(s)
-            if m is not None:
-                return self.__class__('float64')
-            m = _complex_match(s)
-            if m is not None:
-                bits = m.group(2)
-                if not bits:
-                    bits = '64'
-                return self.__class__('complex' + bits)
-            m = _string_match(s)
-            if m is not None:
-                return self.__class__('string')
             m = _bool_match(s)
             if m is not None:
                 return self.__class__('bool')
-            m = _char_match(s)
+            m = _string_match(s)
             if m is not None:
-                bits = m.group(2)
-                if not bits:
-                    bits = '8'
-                return self.__class__('char' + bits)
-            if s == 'byte':
-                return self.__class__('int8')
-            if s == 'ubyte':
-                return self.__class__('uint8')
-            if s == 'wchar':
-                bits = str(ctypes.sizeof(ctypes.c_wchar) * 8)
-                return self.__class__('char' + bits)
+                return self.__class__('string')
+            for match, ntype in [
+                    (_charn_match, 'char'),
+                    (_intn_match, 'int'),
+                    (_uintn_match, 'uint'),
+                    (_floatn_match, 'float'),
+                    (_complexn_match, 'complex'),
+            ]:
+                m = match(s)
+                if m is not None:
+                    bits = m.group(2)
+                    return self.__class__(ntype + bits)
+            for match, otype, ntype in [
+                    (_char_match, 'char', 'char'),
+                    (_wchar_match, 'wchar', 'char'),
+
+                    (_uchar_match, 'uchar', 'uint'),
+                    (_schar_match, 'char', 'int'),
+
+                    (_byte_match, 'byte', 'int'),
+                    (_ubyte_match, 'ubyte', 'uint'),
+
+                    (_short_match, 'short', 'int'),
+                    (_ushort_match, 'ushort', 'uint'),
+
+                    (_int_match, 'int', 'int'),
+                    (_uint_match, 'uint', 'uint'),
+
+                    (_long_match, 'long', 'int'),
+                    (_ulong_match, 'ulong', 'uint'),
+
+                    (_longlong_match, 'longlong', 'int'),
+                    (_ulonglong_match, 'ulonglong', 'uint'),
+
+                    (_size_t_match, 'size_t', 'uint'),
+                    (_ssize_t_match, 'ssize_t', 'int'),
+
+                    (_float_match, 'float', 'float'),
+                    (_double_match, 'double', 'float'),
+                    (_longdouble_match, 'longdouble', 'float'),
+                    (_complex_match, 'complex', 'complex'),
+            ]:
+                if match(s) is not None:
+                    bits = str(target_info.sizeof(otype) * 8)
+                    return self.__class__(ntype + bits)
+            if strict:
+                raise ValueError('%s is not concrete' % (self))
             return self
         if self.is_pointer:
-            return self.__class__(self[0]._normalize(), self[1])
+            return self.__class__(
+                self[0]._normalize(target_info, strict), self[1])
         if self.is_struct:
-            return self.__class__(*(t._normalize() for t in self))
+            return self.__class__(
+                *(t._normalize(target_info, strict) for t in self))
         if self.is_function:
-            return self.__class__(self[0]._normalize(),
-                                  tuple(t._normalize() for t in self[1]))
+            return self.__class__(
+                self[0]._normalize(target_info, strict),
+                tuple(t._normalize(target_info, strict) for t in self[1]))
         raise NotImplementedError(repr(self))
 
     def mangle(self):
@@ -666,6 +815,8 @@ class Type(tuple):
     def bits(self):
         if self.is_void:
             return 0
+        if self.is_bool:
+            return 8  # TODO: this is system dependent
         if self.is_int:
             return int(self[0][3:])
         if self.is_uint or self.is_char:

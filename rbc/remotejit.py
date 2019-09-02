@@ -7,7 +7,7 @@ import warnings
 
 from . import irtools
 from .caller import Caller
-from .typesystem import Type
+from .typesystem import Type, LocalTargetInfo
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 
 
@@ -57,6 +57,11 @@ class RemoteJIT(object):
         options : dict
           Specify default options.
         """
+        target_info = options.pop('target_info', None)
+        if target_info is None:
+            target_info = LocalTargetInfo(strict=True)
+        self.target_info = target_info
+
         self.debug = options.pop('debug', False)
         self.host = host
         self.port = port
@@ -136,7 +141,7 @@ class RemoteJIT(object):
             elif isinstance(sig, Signature):
                 s = s(sig)
             else:
-                s = s(Type.fromobject(sig))
+                s = s(Type.fromobject(sig, self.target_info))
         # s is Signature instance
         if func is not None:
             # s becomes Caller instance
@@ -208,7 +213,7 @@ class Signature(object):
         if obj is None:
             return self
         if inspect.isfunction(obj):
-            t = Type.fromcallable(obj)
+            t = Type.fromcallable(obj, target_info=self.remotejit.target_info)
             if t.is_complete:
                 self.signatures.append(t)
             signatures = self.signatures
@@ -238,7 +243,8 @@ class Signature(object):
             self.signatures.extend(obj.signatures)
             return self
         else:
-            self.signatures.append(Type.fromobject(obj))
+            self.signatures.append(
+                Type.fromobject(obj, target_info=self.remotejit.target_info))
             return self
 
 

@@ -119,6 +119,7 @@ def test_normalize():
 
     assert tostr('a') == 'a'
     assert tostr('int32') == 'int32'
+    assert tostr('int32_t') == 'int32'
     assert tostr('int') == 'int32'
     assert tostr('i') == 'int32'
     assert tostr('i35') == 'int35'
@@ -147,6 +148,7 @@ def test_normalize():
     assert tostr('') == 'void'
     assert tostr('bool') == 'bool'
     assert tostr('b') == 'bool'
+    assert tostr('_Bool') == 'bool'
 
     assert tostr('str') == 'string'
     assert tostr('string') == 'string'
@@ -154,6 +156,27 @@ def test_normalize():
     assert tostr('i(i*, i15)') == 'int32(int32*, int15)'
     assert tostr('{i,d,c, bool,f,str*}') \
         == '{int32, float64, complex64, bool, float32, string*}'
+
+    # assumes LP64 data model:
+    assert tostr('l') == 'int64'
+    assert tostr('long') == 'int64'
+    assert tostr('long long') == 'int64'
+    assert tostr('unsigned long') == 'uint64'
+    assert tostr('short') == 'int16'
+    assert tostr('unsigned short') == 'uint16'
+    assert tostr('ssize_t') == 'int64'
+    assert tostr('size_t') == 'uint64'
+    assert tostr('c_size_t') == 'uint64'
+    assert tostr('std::size_t') == 'uint64'
+    assert tostr('long double') == 'float128'
+    assert tostr('byte') == 'int8'
+    assert tostr('unsigned byte') == 'uint8'
+    assert tostr('signed char') == 'int8'
+    assert tostr('unsigned char') == 'uint8'
+    assert tostr('wchar_t') == 'char32'
+    assert tostr('char32') == 'char32'
+    assert tostr('signed') == 'int32'
+    assert tostr('unsigned') == 'uint32'
 
 
 def test_toctypes():
