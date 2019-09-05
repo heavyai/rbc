@@ -126,8 +126,6 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
             )
 
     main_library._optimize_final_module()
-    main_module.verify()
-    main_library._finalized = True
 
     # Catch undefined functions:
     used_functions = set(function_names)
@@ -137,13 +135,27 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
             used_functions.add(fn)
             if descr == 'undefined':
                 raise RuntimeError('function `%s` is undefined' % (fn))
-    if debug:
-        unused_functions = [f.name for f in main_module.functions
-                            if f.name not in used_functions]
-        if unused_functions:
-            print('compile_to_IR: the following functions are not used:')
-            for fname in unused_functions:
+
+    # for global_variable in main_module.global_variables:
+    #    global_variable.linkage = llvm.Linkage.private
+
+    unused_functions = [f.name for f in main_module.functions
+                        if f.name not in used_functions]
+
+    if unused_functions:
+        if debug:
+            print('compile_to_IR: the following functions are not used'
+                  ' and will be removed:')
+        for fname in unused_functions:
+            if debug:
                 print('  ', fname)
+            lf = main_module.get_function(fname)
+            lf.linkage = llvm.Linkage.private
+        main_library._optimize_final_module()
+
+    main_module.verify()
+    main_library._finalized = True
+
     # TODO: determine unused global_variables and struct_types
 
     irstr = main_library.get_llvm_str()
