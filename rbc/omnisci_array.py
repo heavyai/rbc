@@ -73,7 +73,7 @@ def mapd_array_getitem(x, i):
         return impl
 
 
-_array_type_match = re.compile(r'\A(.*)\s*[[]\s*[]]\Z').match
+_array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
 
 
 def array_type_converter(target_info, obj):
