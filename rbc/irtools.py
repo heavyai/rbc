@@ -13,6 +13,26 @@ def initialize_llvm():
     llvm.initialize_all_asmprinters()
 
 
+def get_function_dependencies(module, funcname, _deps=None):
+    if _deps is None:
+        _deps = dict()
+    func = module.get_function(funcname)
+    assert func.name == funcname
+    for block in func.blocks:
+        for instruction in block.instructions:
+            if instruction.opcode == 'call':
+                name = list(instruction.operands)[-1].name
+                f = module.get_function(name)
+                if name.startswith('llvm.'):
+                    _deps[name] = 'intrinsic'
+                elif f.is_declaration:
+                    _deps[name] = 'undefined'
+                else:
+                    _deps[name] = 'defined'
+                    get_function_dependencies(module, name, _deps=_deps)
+    return _deps
+
+
 def compile_to_IR(functions_and_signatures, target, server=None):
     """Compile functions with given signatures to target specific LLVM IR.
 
@@ -53,16 +73,20 @@ def compile_to_IR(functions_and_signatures, target, server=None):
             raise NotImplementedError(repr((target, cpu_target)))
     else:
         raise NotImplementedError(repr((target, server)))
+
+    codegen = target_context.codegen()
+    main_library = codegen.create_library('rbc.irtools.compile_to_IR')
+    main_module = main_library._final_module
+
     flags = nb.compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
 
-    main_mod = llvm.parse_assembly('source_filename="{}"'.format(__file__))
-    main_mod.name = 'rbc_irtools'
-
+    function_names = []
     for func, signatures in functions_and_signatures:
         for sig in signatures:
             fname = func.__name__ + sig.mangling
+            function_names.append(fname)
             args, return_type = nb.sigutils.normalize_signature(sig.tonumba())
             cres = nb.compiler.compile_extra(typingctx=typing_context,
                                              targetctx=target_context,
@@ -70,8 +94,13 @@ def compile_to_IR(functions_and_signatures, target, server=None):
                                              args=args,
                                              return_type=return_type,
                                              flags=flags,
+                                             library=main_library,
                                              locals={})
-            # C wrapper
+
+            # The compilation result contains a function with
+            # prototype `<function name>(<rtype>* result,
+            # <arguments>)`. In the following we add a new function
+            # with a prototype `<rtype> <fname>(<arguments>)`:
             fndesc = cres.fndesc
             module = cres.library.create_ir_module(fndesc.unique_name)
             context = cres.target_context
@@ -81,7 +110,6 @@ def compile_to_IR(functions_and_signatures, target, server=None):
             wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
             wrapfn = module.add_function(wrapty, fname)
             builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
-
             fnty = context.call_conv.get_function_type(return_type, args)
             fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
             status, out = context.call_conv.call_function(
@@ -89,14 +117,38 @@ def compile_to_IR(functions_and_signatures, target, server=None):
             builder.ret(out)
             cres.library.add_ir_module(module)
 
-            cres.library._optimize_final_module()
-            cres.library._final_module.verify()
-            cres.library._finalized = True
-            llvmir = cres.library.get_llvm_str()
-            main_mod.link_in(llvm.parse_assembly(llvmir), preserve=True)
+    seen = set()
+    for _library in main_library._linking_libraries:
+        if _library not in seen:
+            seen.add(_library)
+            main_module.link_in(
+                _library._get_module_for_linking(), preserve=True,
+            )
 
-    main_mod.verify()
-    irstr = str(main_mod)
+    main_library._optimize_final_module()
+    main_module.verify()
+    main_library._finalized = True
+
+    # Catch undefined functions:
+    used_functions = set(function_names)
+    for fname in function_names:
+        deps = get_function_dependencies(main_module, fname)
+        for fn, descr in deps.items():
+            used_functions.add(fn)
+            if descr == 'undefined':
+                raise RuntimeError('function `%s` is undefined' % (fn))
+    unused_functions = [f.name for f in main_module.functions
+                        if f.name not in used_functions]
+    if unused_functions:
+        print('compile_to_IR: the following functions are not used:')
+        for fname in unused_functions:
+            print('  ', fname)
+    # TODO: determine unused global_variables and struct_types
+
+    irstr = main_library.get_llvm_str()
+
+    # TODO: remove unused functions
+
     return irstr
 
 
