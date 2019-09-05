@@ -33,7 +33,7 @@ def get_function_dependencies(module, funcname, _deps=None):
     return _deps
 
 
-def compile_to_IR(functions_and_signatures, target, server=None):
+def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -137,12 +137,13 @@ def compile_to_IR(functions_and_signatures, target, server=None):
             used_functions.add(fn)
             if descr == 'undefined':
                 raise RuntimeError('function `%s` is undefined' % (fn))
-    unused_functions = [f.name for f in main_module.functions
-                        if f.name not in used_functions]
-    if unused_functions:
-        print('compile_to_IR: the following functions are not used:')
-        for fname in unused_functions:
-            print('  ', fname)
+    if debug:
+        unused_functions = [f.name for f in main_module.functions
+                            if f.name not in used_functions]
+        if unused_functions:
+            print('compile_to_IR: the following functions are not used:')
+            for fname in unused_functions:
+                print('  ', fname)
     # TODO: determine unused global_variables and struct_types
 
     irstr = main_library.get_llvm_str()

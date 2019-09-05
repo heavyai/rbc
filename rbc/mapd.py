@@ -1,10 +1,10 @@
-
 import os
 from collections import defaultdict
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
+from .omnisci_array import array_type_converter
 
 
 class RemoteMapD(RemoteJIT):
@@ -46,6 +46,8 @@ class RemoteMapD(RemoteJIT):
                 'completion_hints.', '')
         RemoteJIT.__init__(self, host=host, port=port, **options)
 
+        self.target_info.add_converter(array_type_converter)
+
     @property
     def version(self):
         return self.thrift_call('get_version')
@@ -62,7 +64,10 @@ class RemoteMapD(RemoteJIT):
 
     def thrift_call(self, name, *args):
         if self.debug:
-            print('thrift_call %s%s' % (name, args))
+            msg = 'thrift_call %s%s' % (name, args)
+            if len(msg) > 200:
+                msg = msg[:180] + '...' + msg[-15:]
+            print(msg)
         return self.make_client()(MapD={name: args})['MapD'][name]
 
     def sql_execute(self, query):
@@ -90,7 +95,8 @@ class RemoteMapD(RemoteJIT):
                     sig.set_mangling('')
                 else:
                     sig.set_mangling('__%s' % (i))
-                ast_signatures.append("%s%s '%s'" % (name, sig.mangling, sig))
+                ast_signatures.append(
+                    "%s%s '%s'" % (name, sig.mangling, sig.toprototype()))
         ast_signatures = '\n'.join(ast_signatures)
 
         if self.debug:
@@ -106,7 +112,8 @@ class RemoteMapD(RemoteJIT):
         ir_map = self.compile_to_IR(targets=device_target_map.values())
         device_ir_map = {}
         for device, target in device_target_map.items():
-            ir = device_ir_map[device] = ir_map[target]
+            ir = ir_map[target]
+            device_ir_map[device] = ir
             if self.debug:
                 print(('IR[%s]' % (device)).center(80, '-'))
                 print(ir)

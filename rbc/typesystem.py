@@ -9,6 +9,7 @@ import ctypes
 import inspect
 try:
     import numba as nb
+    import numba.typing.ctypes_utils
 except ImportError as msg:
     nb = None
     nb_NA_message = str(msg)
@@ -34,6 +35,7 @@ class TargetInfo(object):
           raise an exception.
         """
         self.strict = strict
+        self.custom_type_converters = []
 
     def sizeof(self, t):
         """Return the sizeof(t) value in the target system.
@@ -49,6 +51,32 @@ class TargetInfo(object):
         """
         raise NotImplementedError("%s.sizeof(%r)"
                                   % (type(self).__name__, t))
+
+    def add_converter(self, converter):
+        """Add custom type converter.
+
+        Custom type converters are called on non-concrete atomic
+        types.
+
+        Parameters
+        ----------
+        converter : callable
+          Specify a function with signature `converter(target_info,
+          obj)` that returns `Type` instance corresponding to
+          `obj`. If the conversion is unsuccesful, the `converter`
+          returns `None` so that other converter functions could be
+          tried.
+
+        """
+        self.custom_type_converters.append(converter)
+
+    def custom_type(self, t):
+        """Return custom type of an object.
+        """
+        for converter in self.custom_type_converters:
+            r = converter(self, t)
+            if r is not None:
+                return r
 
 
 class LocalTargetInfo(TargetInfo):
@@ -182,6 +210,13 @@ _double_match = re.compile(r'\A(double|d)\Z').match
 _longdouble_match = re.compile(r'\A(long\s*double)\Z').match
 
 _complex_match = re.compile(r'\A(complex|c)\Z').match
+
+
+# For `Type.fromstring('<typespec> <name>')` support:
+_type_name_match = re.compile(r'\A(.*)\s(\w+)\Z').match
+# bad names are the names of types that can have modifiers such as
+# `signed`, `unsigned`, `long`, etc.:
+_bad_names_match = re.compile(r'\A(char|byte|short|int|long|double)\Z').match
 
 
 class Complex64(ctypes.Structure):
@@ -361,11 +396,12 @@ class Type(tuple):
 
     _mangling = None
 
-    def __new__(cls, *args):
+    def __new__(cls, *args, **params):
         obj = tuple.__new__(cls, args)
         if not obj._is_ok:
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
+        obj._params = params
         return obj
 
     def set_mangling(self, mangling):
@@ -466,25 +502,66 @@ class Type(tuple):
             return self.tostring()
         return tuple.__str__(self)
 
-    def tostring(self):
+    def tostring(self, use_typename=False):
         """Return string representation of a type.
         """
         if self.is_void:
             return 'void'
+        name = self._params.get('name')
+        if name is not None:
+            suffix = ' ' + name
+        else:
+            suffix = ''
+        if use_typename:
+            typename = self._params.get('typename')
+            if typename is not None:
+                return typename + suffix
         if self.is_atomic:
-            return self[0]
+            return self[0] + suffix
         if self.is_pointer:
-            return self[0].tostring() + '*'
+            return self[0].tostring(use_typename=use_typename) + '*' + suffix
         if self.is_struct:
-            return '{' + ', '.join([t.tostring() for t in self]) + '}'
+            return '{' + ', '.join([t.tostring(use_typename=use_typename)
+                                    for t in self]) + '}' + suffix
         if self.is_function:
-            return self[0].tostring() + '(' + ', '.join(
-                a.tostring() for a in self[1]) + ')'
+            return (self[0].tostring(use_typename=use_typename)
+                    + '(' + ', '.join(
+                        a.tostring(use_typename=use_typename)
+                        for a in self[1]) + ')' + suffix)
+        raise NotImplementedError(repr(self))
+
+    def toprototype(self):
+        if self.is_void:
+            return 'void'
+        typename = self._params.get('typename')
+        if typename is not None:
+            return typename
+        if self.is_atomic:
+            s = self[0]
+            if self.is_int or self.is_uint:
+                return s + '_t'
+            if self.is_float:
+                bits = self.bits
+                if bits == 32:
+                    return 'float'
+                elif bits == 64:
+                    return 'double'
+            return s
+        if self.is_pointer:
+            return self[0].toprototype() + '*'
+        if self.is_struct:
+            return '{' + ', '.join([t.toprototype() for t in self]) + '}'
+        if self.is_function:
+            return self[0].toprototype() + '(' + ', '.join(
+                a.toprototype() for a in self[1]) + ')'
         raise NotImplementedError(repr(self))
 
     def tonumba(self):
         """Convert Type instance to numba type object.
         """
+        numba_type = self._params.get('tonumba')
+        if numba_type is not None:
+            return numba_type
         if self.is_void:
             return nb.void
         if self.is_int:
@@ -500,10 +577,17 @@ class Type(tuple):
         if self.is_pointer:
             return nb.types.CPointer(self[0].tonumba())
         if self.is_struct:
-            return nb.typing.ctypes_utils.from_ctypes(self.toctypes())
+            struct_name = self._params.get('name')
+            if struct_name is None:
+                struct_name = 'STRUCT'+self.mangling
+            members = []
+            for i, member in enumerate(self):
+                name = member._params.get('name', '_%s' % (i+1))
+                members.append((name, member.tonumba()))
+            return make_numba_struct(struct_name, members)
         if self.is_function:
             rtype = self[0].tonumba()
-            atypes = [t.tonumba() for t in self[1]]
+            atypes = [t.tonumba() for t in self[1] if not t.is_void]
             return rtype(*atypes)
         if self.is_string:
             return nb.types.string
@@ -546,7 +630,7 @@ class Type(tuple):
                         dict(_fields_=fields))
         if self.is_function:
             rtype = self[0].toctypes()
-            atypes = [t.toctypes() for t in self[1]]
+            atypes = [t.toctypes() for t in self[1] if not t.is_void]
             return ctypes.CFUNCTYPE(rtype, *atypes)
         if self.is_string:
             return ctypes.c_wchar_p
@@ -573,6 +657,14 @@ class Type(tuple):
             return cls(rtype, atypes)
         if s == 'void' or s == 'none' or not s:  # void
             return cls()
+        m = _type_name_match(s)
+        if m is not None:
+            name = m.group(2)
+            if not _bad_names_match(name):
+                # `<typespec> <name>`
+                t = cls._fromstring(m.group(1))
+                t._params['name'] = name
+                return t
         # atomic
         return cls(s)
 
@@ -711,16 +803,17 @@ class Type(tuple):
     def _normalize(self, target_info, strict):
         """Return new Type instance with atomic types normalized.
         """
+        params = self._params
         if self.is_void:
             return self
         if self.is_atomic:
             s = self[0]
             m = _bool_match(s)
             if m is not None:
-                return self.__class__('bool')
+                return self.__class__('bool', **params)
             m = _string_match(s)
             if m is not None:
-                return self.__class__('string')
+                return self.__class__('string', **params)
             for match, ntype in [
                     (_charn_match, 'char'),
                     (_intn_match, 'int'),
@@ -731,7 +824,7 @@ class Type(tuple):
                 m = match(s)
                 if m is not None:
                     bits = m.group(2)
-                    return self.__class__(ntype + bits)
+                    return self.__class__(ntype + bits, **params)
             for match, otype, ntype in [
                     (_char_match, 'char', 'char'),
                     (_wchar_match, 'wchar', 'char'),
@@ -764,20 +857,24 @@ class Type(tuple):
             ]:
                 if match(s) is not None:
                     bits = str(target_info.sizeof(otype) * 8)
-                    return self.__class__(ntype + bits)
+                    return self.__class__(ntype + bits, **params)
+            t = target_info.custom_type(s)
+            if t is not None:
+                return t
             if strict:
                 raise ValueError('%s is not concrete' % (self))
             return self
         if self.is_pointer:
             return self.__class__(
-                self[0]._normalize(target_info, strict), self[1])
+                self[0]._normalize(target_info, strict), self[1], **params)
         if self.is_struct:
             return self.__class__(
-                *(t._normalize(target_info, strict) for t in self))
+                *(t._normalize(target_info, strict) for t in self), **params)
         if self.is_function:
             return self.__class__(
                 self[0]._normalize(target_info, strict),
-                tuple(t._normalize(target_info, strict) for t in self[1]))
+                tuple(t._normalize(target_info, strict) for t in self[1]),
+                **params)
         raise NotImplementedError(repr(self))
 
     def mangle(self):
@@ -917,6 +1014,12 @@ class Type(tuple):
             return penalty
         raise NotImplementedError(repr(type(other)))
 
+    def __call__(self, *atypes, **params):
+        return self.__class__(self, atypes, **params)
+
+    def pointer(self):
+        return self.__class__(self, '*')
+
 
 def _demangle(s):
     """Helper function to demangle the string of mangled Type.
@@ -963,3 +1066,19 @@ def _demangle(s):
         r, rest = _demangle(rest)
         result.extend(r)
     return tuple(result), rest
+
+
+def make_numba_struct(name, members, _cache={}):
+    """Create numba struct type instance.
+    """
+    t = _cache.get(name)
+    if t is None:
+        def model__init__(self, dmm, fe_type):
+            numba.datamodel.StructModel.__init__(self, dmm, fe_type, members)
+        struct_model = type(name+'Model',
+                            (numba.datamodel.StructModel,),
+                            dict(__init__=model__init__))
+        struct_type = type(name+'Type', (numba.types.Type,), {})
+        numba.datamodel.registry.register_default(struct_type)(struct_model)
+        _cache[name] = t = struct_type(name)
+    return t

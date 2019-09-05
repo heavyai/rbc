@@ -55,11 +55,17 @@ def omnisci():
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    try:
+        m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    except Exception as msg:
+        print('%s in deardown' % (type(msg)))
 
 
-def test_get_array_size_ir(omnisci):
+def test_get_array_size_ir1(omnisci):
     omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
     omnisci.register()
 
     device_params = omnisci.thrift_call('get_device_parameters')
@@ -109,3 +115,49 @@ target triple = "{cpu_target_triple}"
         .format(**locals()))
     for a, sz in result:
         assert len(a) == sz
+
+
+def test_return_len(omnisci):
+    omnisci.reset()
+
+    @omnisci('int64(int32[])')
+    def array_sz_int32(x):
+        return len(x)
+
+    desrc, result = omnisci.sql_execute(
+        'select i4, array_sz_int32(i4) from {omnisci.table_name}'
+        .format(**locals()))
+    for a, sz in result:
+        assert len(a) == sz
+
+
+def test_return_item(omnisci):
+    omnisci.reset()
+
+    @omnisci('int32(int32[], int32)')
+    def array_getitem_int32(x, i):
+        return x[i]
+
+    query = ('select i4, array_getitem_int32(i4, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+
+
+def test_sum(omnisci):
+    omnisci.reset()
+
+    @omnisci('int32(int32[])')
+    def array_sum_int32(x):
+        r = 0
+        n = len(x)
+        for i in range(n):
+            r = r + x[i]
+        return r
+
+    query = ('select i4, array_sum_int32(i4) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, s in result:
+        assert sum(a) == s

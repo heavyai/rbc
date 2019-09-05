@@ -95,7 +95,8 @@ class RemoteJIT(object):
             ir_map = {}
             for target in targets:
                 ir_map[target] = irtools.compile_to_IR(
-                    functions_and_signatures, target, server)
+                    functions_and_signatures, target, server,
+                    debug=self.debug)
             self._last_ir_map = ir_map
         return self._last_ir_map
 

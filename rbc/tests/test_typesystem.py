@@ -47,6 +47,17 @@ def test_fromstring():
     assert Type.fromstring('void(j,k)') == Type(Type(),
                                                 (Type('j'), Type('k')))
 
+    assert Type.fromstring('i a') == Type('int32', name='a')
+    assert Type.fromstring('i* a') == Type(Type('int32'), '*', name='a')
+    assert Type.fromstring('{i,j} a') == Type(Type('int32'), Type('j'),
+                                              name='a')
+    assert Type.fromstring('i(j) a') == Type(Type('int32'), (Type('j'),),
+                                             name='a')
+    assert Type.fromstring('i a*') == Type(Type('int32', name='a'), '*')
+    assert Type.fromstring('{i a,j b} c') == Type(Type('int32', name='a'),
+                                                  Type('j', name='b'),
+                                                  name='c')
+
     with pytest.raises(ValueError, match=r'failed to find lparen index in'):
         Type.fromstring('a)')
 
@@ -254,7 +265,7 @@ def test_tonumba():
     assert tonumba('complex') == nb.complex64
     assert tonumba('complex128') == nb.complex128
     assert tonumba('double*') == nb.types.CPointer(nb.float64)
-    assert tonumba('()') == nb.void(nb.void)
+    assert tonumba('()') == nb.void()
     assert tonumba('d(i64, f)') == nb.double(nb.int64, nb.float_)
     # assert tonumba('{i,d}')  # numba does not support C struct
 
