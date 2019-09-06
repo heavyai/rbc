@@ -87,7 +87,8 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
         for sig in signatures:
             fname = func.__name__ + sig.mangling
             function_names.append(fname)
-            args, return_type = nb.sigutils.normalize_signature(sig.tonumba())
+            args, return_type = nb.sigutils.normalize_signature(
+                sig.tonumba(bool_is_int8=True))
             cres = nb.compiler.compile_extra(typingctx=typing_context,
                                              targetctx=target_context,
                                              func=func,
@@ -96,7 +97,6 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
                                              flags=flags,
                                              library=main_library,
                                              locals={})
-
             # The compilation result contains a function with
             # prototype `<function name>(<rtype>* result,
             # <arguments>)`. In the following we add a new function

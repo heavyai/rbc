@@ -44,6 +44,9 @@ def omnisci():
             return 'ARRAY[%s]' % (', '.join(
                 ("'true'" if i % 2 == 0 else "'false'")
                 for i in range(-3, 3)))
+        if colname.startswith('f'):
+            return 'ARRAY[%s]' % (', '.join(
+                str(row * 10 + i + 0.5) for i in range(-3, 3)))
         return 'ARRAY[%s]' % (', '.join(
             str(row * 10 + i) for i in range(-3, 3)))
 
@@ -117,13 +120,12 @@ target triple = "{cpu_target_triple}"
         assert len(a) == sz
 
 
-def test_return_len(omnisci):
+def test_len_i32(omnisci):
     omnisci.reset()
 
     @omnisci('int64(int32[])')
     def array_sz_int32(x):
         return len(x)
-
     desrc, result = omnisci.sql_execute(
         'select i4, array_sz_int32(i4) from {omnisci.table_name}'
         .format(**locals()))
@@ -131,7 +133,35 @@ def test_return_len(omnisci):
         assert len(a) == sz
 
 
-def test_return_item(omnisci):
+def test_len_f64(omnisci):
+    omnisci.reset()
+
+    @omnisci('int64(float64[])')
+    def array_sz_double(x):
+        return len(x)
+    print(array_sz_double.get_IR())
+    desrc, result = omnisci.sql_execute(
+        'select f8, array_sz_double(f8) from {omnisci.table_name}'
+        .format(**locals()))
+    for a, sz in result:
+        assert len(a) == sz
+
+
+def test_getitem_i8(omnisci):
+    omnisci.reset()
+
+    @omnisci('int8(int8[], int32)')
+    def array_getitem_int8(x, i):
+        return x[i]
+
+    query = ('select i1, array_getitem_int8(i1, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+
+
+def test_getitem_i32(omnisci):
     omnisci.reset()
 
     @omnisci('int32(int32[], int32)')
@@ -143,6 +173,61 @@ def test_return_item(omnisci):
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
+
+
+def test_getitem_i64(omnisci):
+    omnisci.reset()
+
+    @omnisci('int64(int64[], int64)')
+    def array_getitem_int64(x, i):
+        return x[i]
+
+    query = ('select i8, array_getitem_int64(i8, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+
+
+def test_getitem_float(omnisci):
+    omnisci.reset()
+
+    @omnisci('double(double[], int32)')
+    def array_getitem_double(x, i):
+        return x[i]
+
+    query = ('select f8, array_getitem_double(f8, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+        assert type(a[2]) == type(item)
+
+    @omnisci('float(float[], int64)')
+    def array_getitem_float(x, i):
+        return x[i]
+
+    query = ('select f4, array_getitem_float(f4, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+        assert type(a[2]) == type(item)
+
+
+def test_getitem_bool(omnisci):
+    omnisci.reset()
+
+    @omnisci('bool(bool[], int64)')
+    def array_getitem_bool(x, i):
+        return x[i]
+    print(array_getitem_bool.get_IR())
+    query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+        print(a, item)
 
 
 def test_sum(omnisci):
@@ -161,3 +246,23 @@ def test_sum(omnisci):
     desrc, result = omnisci.sql_execute(query)
     for a, s in result:
         assert sum(a) == s
+
+
+def test_even_sum(omnisci):
+    omnisci.reset()
+
+    @omnisci('int32(bool[], int32[])')
+    def array_even_sum_int32(b, x):
+        r = 0
+        n = len(x)
+        for i in range(n):
+            if b[i]:
+                r = r + x[i]
+        return r
+
+    query = (
+        'select b, i4, array_even_sum_int32(b, i4) from {omnisci.table_name}'
+        .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for b, i4, s in result:
+        assert sum([i_ for b_, i_ in zip(b, i4) if b_]) == s

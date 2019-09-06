@@ -556,8 +556,18 @@ class Type(tuple):
                 a.toprototype() for a in self[1]) + ')'
         raise NotImplementedError(repr(self))
 
-    def tonumba(self):
+    def tonumba(self, bool_is_int8=None):
         """Convert Type instance to numba type object.
+
+        Parameters
+        ----------
+        bool_is_int8: {bool, None}
+
+          If true, boolean data and values are mapped to LLVM `i8`,
+          otherwise to `i1`. Note that numba boolean maps data to `i8`
+          and value to `i1`. To get numba convention, specify
+          `bool_is_int8` as `None`.
+
         """
         numba_type = self._params.get('tonumba')
         if numba_type is not None:
@@ -573,9 +583,12 @@ class Type(tuple):
         if self.is_complex:
             return _numba_complex_map.get(int(self[0][7:]))
         if self.is_bool:
-            return nb.boolean
+            if bool_is_int8 is None:
+                return nb.boolean
+            return boolean8 if bool_is_int8 else boolean1
         if self.is_pointer:
-            return nb.types.CPointer(self[0].tonumba())
+            return nb.types.CPointer(
+                self[0].tonumba(bool_is_int8=bool_is_int8))
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -583,11 +596,13 @@ class Type(tuple):
             members = []
             for i, member in enumerate(self):
                 name = member._params.get('name', '_%s' % (i+1))
-                members.append((name, member.tonumba()))
+                members.append((name,
+                                member.tonumba(bool_is_int8=bool_is_int8)))
             return make_numba_struct(struct_name, members)
         if self.is_function:
-            rtype = self[0].tonumba()
-            atypes = [t.tonumba() for t in self[1] if not t.is_void]
+            rtype = self[0].tonumba(bool_is_int8=bool_is_int8)
+            atypes = [t.tonumba(bool_is_int8=bool_is_int8)
+                      for t in self[1] if not t.is_void]
             return rtype(*atypes)
         if self.is_string:
             return nb.types.string
@@ -913,7 +928,7 @@ class Type(tuple):
         if self.is_void:
             return 0
         if self.is_bool:
-            return 8  # TODO: this is system dependent
+            return 1
         if self.is_int:
             return int(self[0][3:])
         if self.is_uint or self.is_char:
@@ -1068,6 +1083,34 @@ def _demangle(s):
     return tuple(result), rest
 
 
+if nb is not None:
+    class Boolean1(numba.types.Boolean):
+        pass
+
+    @numba.datamodel.register_default(Boolean1)
+    class Boolean1Model(numba.datamodel.models.BooleanModel):
+
+        def get_data_type(self):
+            return self._bit_type
+
+    class Boolean8(numba.types.Boolean):
+        pass
+
+    @numba.datamodel.register_default(Boolean8)
+    class Boolean8Model(numba.datamodel.models.BooleanModel):
+
+        def get_value_type(self):
+            return self._byte_type
+
+    boolean1 = Boolean1('boolean1')
+    boolean8 = Boolean8('boolean8')
+
+    @numba.targets.imputils.lower_cast(Boolean1, numba.types.Boolean)
+    @numba.targets.imputils.lower_cast(Boolean8, numba.types.Boolean)
+    def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
+        return builder.icmp_signed('!=', val, val.type(0))
+
+
 def make_numba_struct(name, members, _cache={}):
     """Create numba struct type instance.
     """
@@ -1078,7 +1121,8 @@ def make_numba_struct(name, members, _cache={}):
         struct_model = type(name+'Model',
                             (numba.datamodel.StructModel,),
                             dict(__init__=model__init__))
-        struct_type = type(name+'Type', (numba.types.Type,), {})
+        struct_type = type(name+'Type', (numba.types.Type,),
+                           dict(members=[t for n, t in members]))
         numba.datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
     return t
