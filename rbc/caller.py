@@ -109,7 +109,7 @@ class Caller(object):
         lst = []
         for triple, llvm_module in triple_ir_map.items():
             lst.append(str(llvm_module))
-        return ('\n' + '-'*80 + '\n').join(lst)
+        return ('\n;' + '-'*80 + '\n').join(lst)
 
     @property
     def client(self):
