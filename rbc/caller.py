@@ -1,7 +1,6 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
-import re
 import inspect
 import warnings
 from .typesystem import Type
@@ -54,6 +53,9 @@ class Caller(object):
                                    [s.tostring() for s in self._signatures],
                                    self.func)
 
+    def __str__(self):
+        return self.describe()
+
     def add_signature(self, sig):
         """Update Caller with a new signature
         """
@@ -83,35 +85,31 @@ class Caller(object):
             self.current_target = target
         return old_target
 
-    def get_IR(self, signatures=None):
-        """Return LLVM IR string of compiled function for the current target.
-
-        Deprecated, use compile_to_IR instead.
-        """
-        if signatures is None:
-            signatures = self._signatures
-        return irtools.compile_to_IR([(self.func, signatures)],
-                                     self.current_target,
-                                     self.remotejit)
-
-    def compile_to_IR(self, signatures=None, targets=None):
+    def compile_to_LLVM(self, signatures=None, targets=None):
         """Return a map of target triples and the corresponding LLVM IR
         strings.
         """
         if targets is None:
             targets = [self.current_target]
+        if signatures is None:
+            signatures = self._signatures
         triple_ir_map = {}
         for target in targets:
             old_target = self.target(target)
-            ir = self.get_IR(signatures=signatures)
+            llvm_module = irtools.compile_to_LLVM([(self.func, signatures)],
+                                                  self.current_target,
+                                                  server=self.remotejit,
+                                                  **self.remotejit.options)
             self.target(old_target)
-            triple = re.search(r'target\s+triple\s*=\s*"(?P<triple>.*?)"', ir)
-            if triple is not None:
-                triple_ir_map[triple.group('triple')] = ir
-            else:
-                raise RuntimeError(
-                    'Caller.compile_to_IR: no `target triple = ...` in IR?!?')
+            triple_ir_map[llvm_module.triple] = llvm_module
         return triple_ir_map
+
+    def describe(self):
+        triple_ir_map = self.compile_to_LLVM()
+        lst = []
+        for triple, llvm_module in triple_ir_map.items():
+            lst.append(str(llvm_module))
+        return ('\n' + '-'*80 + '\n').join(lst)
 
     @property
     def client(self):
@@ -129,7 +127,10 @@ class Caller(object):
         ir = self.ir_cache.get(sig)
         if ir is not None:
             return
-        ir = self.get_IR([sig])
+        d = self.compile_to_LLVM([sig])
+        assert len(d) == 1, repr(list(d.keys()))
+        llvm_module = list(d.values())[0]
+        ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [sig]])
         response = self.client(remotejit=dict(
             compile=(self.func.__name__, mangled_signatures, ir)))

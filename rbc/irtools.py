@@ -33,7 +33,8 @@ def get_function_dependencies(module, funcname, _deps=None):
     return _deps
 
 
-def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
+def compile_to_LLVM(functions_and_signatures, target, server=None,
+                    use_host_target=False, debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -45,11 +46,19 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
     server : {Server, None}
       Specify server containing the target. If unspecified, use local
       host. [NOT IMPLEMENTED]
+    use_host_target: bool
+      Use cpu target for constructing LLVM module and reset to
+      specified target. This is useful when numba.cuda does not
+      implement features that cpu target is supporting (like operator
+      overloading, etc). Note that this is not guaranteed to work in
+      general as there numba cpu target may generate instructions that
+      NVVM does not support.
 
     Returns
     -------
-    ir : str
-      LLVM IR string for the given target.
+    module : llvmlite.binding.ModuleRef
+      LLVM module instance. To get the IR string, use `str(module)`.
+
     """
     cpu_target = llvm.get_process_triple()
     if server is None or server.host in ['localhost', '127.0.0.1']:
@@ -59,16 +68,29 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
             target_desc = nb.targets.registry.cpu_target
             typing_context = target_desc.typing_context
             target_context = target_desc.target_context
+            use_host_target = False
         elif target == 'cuda' or target == 'nvptx64-nvidia-cuda':
-            # triple = 'nvptx64-nvidia-cuda'
-            target_desc = nb.cuda.descriptor.CUDATargetDesc
-            typing_context = target_desc.typingctx
-            target_context = target_desc.targetctx
+            if use_host_target:
+                triple = 'nvptx64-nvidia-cuda'
+                data_layout = nb.cuda.cudadrv.nvvm.data_layout[64]
+                target_desc = nb.targets.registry.cpu_target
+                typing_context = target_desc.typing_context
+                target_context = target_desc.target_context
+            else:
+                target_desc = nb.cuda.descriptor.CUDATargetDesc
+                typing_context = target_desc.typingctx
+                target_context = target_desc.targetctx
         elif target == 'cuda32' or target == 'nvptx-nvidia-cuda':
-            # triple = 'nvptx-nvidia-cuda'
-            target_desc = nb.cuda.descriptor.CUDATargetDesc
-            typing_context = target_desc.typingctx
-            target_context = target_desc.targetctx
+            if use_host_target:
+                triple = 'nvptx-nvidia-cuda'
+                data_layout = nb.cuda.cudadrv.nvvm.data_layout[32]
+                target_desc = nb.targets.registry.cpu_target
+                typing_context = target_desc.typing_context
+                target_context = target_desc.target_context
+            else:
+                target_desc = nb.cuda.descriptor.CUDATargetDesc
+                typing_context = target_desc.typingctx
+                target_context = target_desc.targetctx
         else:
             raise NotImplementedError(repr((target, cpu_target)))
     else:
@@ -152,17 +174,18 @@ def compile_to_IR(functions_and_signatures, target, server=None, debug=False):
             lf = main_module.get_function(fname)
             lf.linkage = llvm.Linkage.private
         main_library._optimize_final_module()
+    # TODO: determine unused global_variables and struct_types
 
     main_module.verify()
     main_library._finalized = True
 
-    # TODO: determine unused global_variables and struct_types
+    if use_host_target:
+        # when using reuse_host_target option for given target, we
+        # assume that target triple and data_layout is defined above:
+        main_module.triple = triple
+        main_module.data_layout = data_layout
 
-    irstr = main_library.get_llvm_str()
-
-    # TODO: remove unused functions
-
-    return irstr
+    return main_module
 
 
 def compile_IR(ir):

@@ -22,7 +22,8 @@ pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
-    m = rbc_omnisci.RemoteMapD(debug=not True)
+    m = rbc_omnisci.RemoteMapD(debug=not True,
+                               use_host_target=True)
     table_name = 'rbc_test_omnisci_array'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
@@ -64,7 +65,7 @@ def omnisci():
         print('%s in deardown' % (type(msg)))
 
 
-def test_get_array_size_ir1(omnisci):
+def _test_get_array_size_ir1(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -139,7 +140,7 @@ def test_len_f64(omnisci):
     @omnisci('int64(float64[])')
     def array_sz_double(x):
         return len(x)
-    print(array_sz_double.get_IR())
+    print(array_sz_double)
     desrc, result = omnisci.sql_execute(
         'select f8, array_sz_double(f8) from {omnisci.table_name}'
         .format(**locals()))
@@ -221,13 +222,12 @@ def test_getitem_bool(omnisci):
     @omnisci('bool(bool[], int64)')
     def array_getitem_bool(x, i):
         return x[i]
-    print(array_getitem_bool.get_IR())
+    print(array_getitem_bool)
     query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
              .format(**locals()))
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
-        print(a, item)
 
 
 def test_sum(omnisci):

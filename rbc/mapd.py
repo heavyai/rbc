@@ -109,11 +109,26 @@ class RemoteMapD(RemoteJIT):
             if prop.endswith('_triple'):
                 device = prop.rsplit('_', 1)[0]
                 device_target_map[device] = value
-        ir_map = self.compile_to_IR(targets=device_target_map.values())
+        ir_map = self.compile_to_LLVM(targets=device_target_map.values())
         device_ir_map = {}
         for device, target in device_target_map.items():
-            ir = ir_map[target]
-            device_ir_map[device] = ir
+            llvm_module = ir_map[target]
+
+            require_triple = device_params.get(device+'_triple')
+            if require_triple is not None:
+                if llvm_module.triple != require_triple:
+                    raise RuntimeError(
+                        'Expected triple `{}` but LLVM contains `{}`'
+                        .format(require_triple, llvm_module.triple))
+
+            require_data_layout = device_params.get(device+'_datalayout')
+            if require_data_layout is not None:
+                if llvm_module.data_layout != require_data_layout:
+                    raise RuntimeError(
+                        'Expected data layout `{}` but LLVM contains `{}`'
+                        .format(require_data_layout, llvm_module.data_layout))
+
+            ir = device_ir_map[device] = str(llvm_module)
             if self.debug:
                 print(('IR[%s]' % (device)).center(80, '-'))
                 print(ir)

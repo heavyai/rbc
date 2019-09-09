@@ -88,15 +88,15 @@ class RemoteJIT(object):
         self.callers.append(caller)
         self.discard_last_compile()
 
-    def compile_to_IR(self, targets, server=None):
+    def compile_to_LLVM(self, targets):
         if self._last_ir_map is None:
             functions_and_signatures = [(caller.func, caller._signatures)
                                         for caller in self.callers]
             ir_map = {}
             for target in targets:
-                ir_map[target] = irtools.compile_to_IR(
-                    functions_and_signatures, target, server,
-                    debug=self.debug)
+                ir_map[target] = irtools.compile_to_LLVM(
+                    functions_and_signatures, target,
+                    debug=self.debug, **self.options)
             self._last_ir_map = ir_map
         return self._last_ir_map
 
