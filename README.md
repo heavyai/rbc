@@ -65,6 +65,12 @@ conda install -c conda-forge rbc
 ```
 See [RBC conda-forge package](https://github.com/conda-forge/rbc-feedstock#about-rbc) for more information.
 
+### pip
+
+```
+pip install rbc-project
+```
+
 ## Testing
 
 ```
