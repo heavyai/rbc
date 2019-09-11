@@ -16,7 +16,7 @@ install:
   - ls -la
   - env
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then bash ./miniconda.sh -b -p $MINICONDA ; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then start /wait "" ./Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /S /D=$MINICONDA ; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then ./Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /D=$MINICONDA ; fi
   - hash -r
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then source $MINICONDA/etc/profile.d/conda.sh ;fi
   - conda config --set always_yes yes --set changeps1 no
