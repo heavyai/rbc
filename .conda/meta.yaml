@@ -28,6 +28,7 @@ requirements:
     - tblib
     - llvmlite >=0.29
     - numba
+    - netifaces
   run:
     - python
     - thriftpy2
@@ -35,6 +36,7 @@ requirements:
     - llvmlite
     - numba
     - six
+    - netifaces
 
 about:
   home: https://github.com/xnd-project/rbc

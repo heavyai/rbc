@@ -5,6 +5,7 @@ import re
 import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
+from .utils import is_localhost
 
 
 def initialize_llvm():
@@ -61,7 +62,7 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
 
     """
     cpu_target = llvm.get_process_triple()
-    if server is None or server.host in ['localhost', '127.0.0.1']:
+    if server is None or is_localhost(server.host):
         if target == 'host' or target == cpu_target:
             # FYI, there is also get_process_triple()
             # triple = llvm.get_default_triple()

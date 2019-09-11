@@ -3,10 +3,11 @@ import os
 import pytest
 import numpy as np
 from rbc.thrift import Server, Client
+from rbc.utils import get_local_ip
 from .test_thrift_multiplexed import DispatcherTest
 
 test_thrift_file = os.path.join(os.path.dirname(__file__), 'test.thrift')
-socket_options = dict(host='127.0.0.1', port=6325+1,
+socket_options = dict(host=get_local_ip(), port=6325+1,
                       thrift_content_service='test', multiplexed=False)
 
 

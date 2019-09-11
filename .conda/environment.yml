@@ -20,3 +20,4 @@ dependencies:
   - tblib
   - pymapd
   # - cudatoolkit-dev   # disable temporary
+  - netifaces

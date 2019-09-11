@@ -38,7 +38,8 @@ def setup_package():
         setup_requires = []
         tests_require = []
     else:
-        install_requires = ["numba", "llvmlite>=0.29", "tblib", "thriftpy2", "six"]
+        install_requires = ["numba", "llvmlite>=0.29", "tblib", "thriftpy2",
+                            "six", "netifaces"]
         setup_requires = ['pytest-runner']
         tests_require = ['pytest']
 

@@ -9,6 +9,7 @@ from . import irtools
 from .caller import Caller
 from .typesystem import Type, LocalTargetInfo
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
+from .utils import get_local_ip
 
 
 class RemoteJIT(object):
@@ -43,7 +44,7 @@ class RemoteJIT(object):
 
     thrift_content = None
 
-    def __init__(self, host='127.0.0.1', port=11530, **options):
+    def __init__(self, host='localhost', port=11530, **options):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -57,6 +58,9 @@ class RemoteJIT(object):
         options : dict
           Specify default options.
         """
+        if host == 'localhost':
+            host = get_local_ip()
+
         target_info = options.pop('target_info', None)
         if target_info is None:
             target_info = LocalTargetInfo(strict=True)

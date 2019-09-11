@@ -30,7 +30,7 @@ class RemoteMapD(RemoteJIT):
     def __init__(self,
                  user='admin',
                  password='HyperInteractive',
-                 host='127.0.0.1',
+                 host='localhost',
                  port=6274,
                  dbname='omnisci',
                  **options):

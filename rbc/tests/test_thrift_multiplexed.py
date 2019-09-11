@@ -4,8 +4,9 @@ import pytest
 import numpy as np
 from rbc.thrift import (Server, Client, Dispatcher, Buffer, NDArray,
                         dispatchermethod, Data)
+from rbc.utils import get_local_ip
 
-socket_options = dict(host='127.0.0.1', port=6325)
+socket_options = dict(host=get_local_ip(), port=6325)
 
 
 class DispatcherTest(Dispatcher):
