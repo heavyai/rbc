@@ -18,7 +18,7 @@ before_build:
 build_script:
   - "%PYTHON%\\python.exe -m pip install pytest"
   - "%PYTHON%\\python.exe setup.py develop"
-  - "%PYTHON%\\python.exe -m pytest rbc"
+  - "%PYTHON%\\python.exe -m pytest rbc -vs"
   - git clean -xdf
   - "%PYTHON%\\python.exe setup.py install"
-  - "%PYTHON%\\python.exe -m pytest rbc"
+  - "%PYTHON%\\python.exe -m pytest rbc -vs"
