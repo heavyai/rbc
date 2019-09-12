@@ -109,6 +109,26 @@ def test_construction():
             return a + b
 
 
+def test_return_scalar(rjit):
+
+    @rjit('i64(i64)', 'f64(f64)', 'c128(c128)')
+    def ret(a):
+        return a
+    ret.target('host')
+
+    r = ret(123)
+    assert r == 123
+    assert isinstance(r, int)
+
+    r = ret(123.45)
+    assert r == 123.45
+    assert isinstance(r, float)
+
+    r = ret(123+45j)
+    assert r == 123+45j
+    assert isinstance(r, complex)
+
+
 def test_rjit_add(rjit):
 
     @rjit('i64(i64,i64)')
@@ -139,7 +159,6 @@ def test_rjit_add(rjit):
         add(1j, 2)
 
     add.add_signature('c128(c128,c128)')
-    print(add)
     r = add(1j, 2j)
     assert isinstance(r, complex)
     assert r == 3j
