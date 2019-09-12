@@ -139,6 +139,7 @@ def test_rjit_add(rjit):
         add(1j, 2)
 
     add.add_signature('c128(c128,c128)')
+    print(add)
     r = add(1j, 2j)
     assert isinstance(r, complex)
     assert r == 3j
