@@ -122,7 +122,11 @@ class Server(object):
                 socket.create_connection(
                     (options['host'], options['port']), timeout=0.1)
             except ConnectionRefusedError:
-                time.sleep(0.1)
+                time.sleep(0.5)
+            except Exception as msg:
+                print('Connection failed: `%s`, trying again in 0.5 secs..'
+                      % (msg))
+                time.sleep(0.5)
             else:
                 break
         else:
