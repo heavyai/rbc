@@ -109,7 +109,7 @@ class Server(object):
         Server(dispatcher, thrift_file, **options)._serve()
 
     @staticmethod
-    def run_bg(dispatcher, thrift_file, options, startup_time=2):
+    def run_bg(dispatcher, thrift_file, options, startup_time=5):
         """Run server in background process.
         """
         ctx = multiprocessing.get_context('spawn')
