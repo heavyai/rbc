@@ -1,8 +1,12 @@
 import atexit
 import pytest
+import sys
 from rbc.remotejit import RemoteJIT, Signature
 from rbc.caller import Caller
 from rbc.typesystem import Type
+
+
+win32 = sys.platform == 'win32'
 
 
 @pytest.fixture(scope="module")
@@ -124,9 +128,11 @@ def test_return_scalar(rjit):
     assert r == 123.45
     assert isinstance(r, float)
 
-    r = ret(123+45j)
-    assert r == 123+45j
-    assert isinstance(r, complex)
+    if not win32:
+        # see https://github.com/xnd-project/rbc/issues/4
+        r = ret(123+45j)
+        assert r == 123+45j
+        assert isinstance(r, complex)
 
 
 def test_rjit_add(rjit):
@@ -159,11 +165,13 @@ def test_rjit_add(rjit):
         add(1j, 2)
 
     add.add_signature('c128(c128,c128)')
-    r = add(1j, 2j)
-    assert isinstance(r, complex)
-    assert r == 3j
 
-    assert add(1j, 2) == 2+1j
+    if not win32:
+        # see https://github.com/xnd-project/rbc/issues/4
+        r = add(1j, 2j)
+        assert isinstance(r, complex)
+        assert r == 3j
+        assert add(1j, 2) == 2+1j
 
 
 def test_options_local(rjit):
