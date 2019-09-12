@@ -29,14 +29,18 @@ def is_localhost(ip):
         return True
     interfaces = netifaces.interfaces()
     mac_list = []
+    AF_PACKET = getattr(netifaces, 'AF_PACKET', None)
+    if AF_PACKET is None:
+        # netifaces version < 0.10.8:
+        AF_PACKET = getattr(netifaces, 'AF_LINK', None)
     for i in interfaces:
         ifaddrs = netifaces.ifaddresses(i)
         if netifaces.AF_INET in ifaddrs:
             for ifaddr in ifaddrs[netifaces.AF_INET]:
                 if ifaddr.get('addr') == ip:
                     return True
-        if netifaces.AF_PACKET in ifaddrs:
-            for ifaddr in ifaddrs[netifaces.AF_PACKET]:
+        if AF_PACKET in ifaddrs:
+            for ifaddr in ifaddrs[AF_PACKET]:
                 mac = ifaddr.get('addr')
                 if mac is not None:
                     mac_list.append(mac.replace(':', ''))
