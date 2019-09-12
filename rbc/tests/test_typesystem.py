@@ -5,6 +5,7 @@ except ImportError:
 
 import pytest
 from rbc.typesystem import Type
+from rbc.utils import get_datamodel
 
 
 def test_findparen():
@@ -168,26 +169,49 @@ def test_normalize():
     assert tostr('{i,d,c, bool,f,str*}') \
         == '{int32, float64, complex64, bool, float32, string*}'
 
-    # assumes LP64 data model:
-    assert tostr('l') == 'int64'
-    assert tostr('long') == 'int64'
-    assert tostr('long long') == 'int64'
-    assert tostr('unsigned long') == 'uint64'
-    assert tostr('short') == 'int16'
-    assert tostr('unsigned short') == 'uint16'
-    assert tostr('ssize_t') == 'int64'
-    assert tostr('size_t') == 'uint64'
-    assert tostr('c_size_t') == 'uint64'
-    assert tostr('std::size_t') == 'uint64'
-    assert tostr('long double') == 'float128'
-    assert tostr('byte') == 'int8'
-    assert tostr('unsigned byte') == 'uint8'
-    assert tostr('signed char') == 'int8'
-    assert tostr('unsigned char') == 'uint8'
-    assert tostr('wchar_t') == 'char32'
-    assert tostr('char32') == 'char32'
-    assert tostr('signed') == 'int32'
-    assert tostr('unsigned') == 'uint32'
+    datamodel = get_datamodel()
+    if datamodel == 'LP64':
+        assert tostr('l') == 'int64'
+        assert tostr('long') == 'int64'
+        assert tostr('long long') == 'int64'
+        assert tostr('unsigned long') == 'uint64'
+        assert tostr('short') == 'int16'
+        assert tostr('unsigned short') == 'uint16'
+        assert tostr('ssize_t') == 'int64'
+        assert tostr('size_t') == 'uint64'
+        assert tostr('c_size_t') == 'uint64'
+        assert tostr('std::size_t') == 'uint64'
+        assert tostr('long double') == 'float128'
+        assert tostr('byte') == 'int8'
+        assert tostr('unsigned byte') == 'uint8'
+        assert tostr('signed char') == 'int8'
+        assert tostr('unsigned char') == 'uint8'
+        assert tostr('wchar_t') == 'char32'
+        assert tostr('char32') == 'char32'
+        assert tostr('signed') == 'int32'
+        assert tostr('unsigned') == 'uint32'
+    elif datamodel == 'LLP64':
+        assert tostr('l') == 'int32'
+        assert tostr('long') == 'int32'
+        assert tostr('long long') == 'int64'
+        assert tostr('unsigned long') == 'uint32'
+        assert tostr('short') == 'int16'
+        assert tostr('unsigned short') == 'uint16'
+        assert tostr('ssize_t') == 'int64'
+        assert tostr('size_t') == 'uint64'
+        assert tostr('c_size_t') == 'uint64'
+        assert tostr('std::size_t') == 'uint64'
+        assert tostr('long double') == 'float128'
+        assert tostr('byte') == 'int8'
+        assert tostr('unsigned byte') == 'uint8'
+        assert tostr('signed char') == 'int8'
+        assert tostr('unsigned char') == 'uint8'
+        assert tostr('wchar_t') == 'char32'
+        assert tostr('char32') == 'char32'
+        assert tostr('signed') == 'int32'
+        assert tostr('unsigned') == 'uint32'
+    else:
+        raise NotImplementedError('tests for datamodel=`%s`' % (datamodel))
 
 
 def test_toctypes():

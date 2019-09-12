@@ -3,6 +3,7 @@ import subprocess
 import ipaddress
 import netifaces
 import uuid
+import ctypes
 
 
 def get_local_ip():
@@ -55,3 +56,24 @@ def runcommand(*cmd):
 
 
 runcommand.cache = {}
+
+
+def get_datamodel():
+    """Return the data model of a host system.
+    """
+    short_sizeof = ctypes.sizeof(ctypes.c_short()) * 8
+    int_sizeof = ctypes.sizeof(ctypes.c_int()) * 8
+    long_sizeof = ctypes.sizeof(ctypes.c_long()) * 8
+    ptr_sizeof = ctypes.sizeof(ctypes.c_voidp()) * 8
+    longlong_sizeof = ctypes.sizeof(ctypes.c_longlong()) * 8
+    return {
+        (0,  16,  0, 16,  0): 'IP16',     # PDP-11 Unix
+        (16, 16, 32, 16,  0): 'IP16L32',  # PDP-11 Unix
+        (16, 16, 32, 32,  0): 'I16LP32',  # MC68000, AppleMac68K, MS x86
+        (16, 32, 32, 32,  0): 'ILP32',    # IBM 370, VAX Unix, workstations
+        (16, 32, 32, 32, 64): 'ILP32LL',  # MS Win32
+        (16, 32, 32, 64, 64): 'LLP64',    # MS Win64
+        (16, 32, 64, 64, 64): 'LP64',     # Most UNIX systems
+        (16, 64, 64, 64, 64): 'ILP64',    # HAL
+        (64, 64, 64, 64, 64): 'SILP64',   # UNICOS
+    }[short_sizeof, int_sizeof, long_sizeof, ptr_sizeof, longlong_sizeof]

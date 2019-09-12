@@ -247,8 +247,11 @@ class Complex128(ctypes.Structure):
 
 
 # Initialize type maps
-_ctypes_imap = {ctypes.c_void_p: 'void*', None: 'void', ctypes.c_bool: 'bool',
-                ctypes.c_char_p: 'char8*', ctypes.c_wchar_p: 'char32*'}
+_ctypes_imap = {
+    ctypes.c_void_p: 'void*', None: 'void', ctypes.c_bool: 'bool',
+    ctypes.c_char_p: 'char%s*' % (ctypes.sizeof(ctypes.c_char()) * 8),
+    ctypes.c_wchar_p: 'char%s*' % (ctypes.sizeof(ctypes.c_wchar()) * 8),
+}
 _ctypes_char_map = {}
 _ctypes_int_map = {}
 _ctypes_uint_map = {}
