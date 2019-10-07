@@ -40,10 +40,12 @@ class RemoteMapD(RemoteJIT):
 
         thrift_filename = os.path.join(os.path.dirname(__file__),
                                        'mapd.thrift')
-        self.thrift_content = resolve_includes(
+        content = resolve_includes(
             open(thrift_filename).read(),
-            [os.path.dirname(thrift_filename)]).replace(
-                'completion_hints.', '')
+            [os.path.dirname(thrift_filename)])
+        for p in ['completion_hints.', 'common.', 'serialized_result_set.']:
+            content = content.replace(p, '')
+        self.thrift_content = content
         RemoteJIT.__init__(self, host=host, port=port, **options)
 
         self.target_info.add_converter(array_type_converter)
@@ -103,7 +105,8 @@ class RemoteMapD(RemoteJIT):
             print()
             print(' signatures '.center(80, '-'))
             print(ast_signatures)
-        device_params = self.thrift_call('get_device_parameters')
+        device_params = self.thrift_call('get_device_parameters',
+                                         self.session_id)
         device_target_map = {}
         for prop, value in device_params.items():
             if prop.endswith('_triple'):

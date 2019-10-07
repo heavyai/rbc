@@ -137,7 +137,7 @@ def test_manual_ir(mapd):
     assert result == [(0.0, 0.0, 0, 0, 0, 0, 1), (1.0, 1.0, 1, 1, 1, 1, 0),
                       (2.0, 2.0, 2, 2, 2, 2, 1), (3.0, 3.0, 3, 3, 3, 3, 0),
                       (4.0, 4.0, 4, 4, 4, 4, 1)]
-    device_params = mapd.thrift_call('get_device_parameters')
+    device_params = mapd.thrift_call('get_device_parameters', mapd.session_id)
     # print(device_params)
     cpu_target_triple = device_params['cpu_triple']
     cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -181,7 +181,7 @@ target triple = "{gpu_target_triple}"
 
 
 def test_ir_parse_error(mapd):
-    device_params = mapd.thrift_call('get_device_parameters')
+    device_params = mapd.thrift_call('get_device_parameters', mapd.session_id)
     foo_ir = '''\
 define i32 @foobar(i32 %.1, i32 %.2) {
 entry:
@@ -205,7 +205,7 @@ entry:
 
 @pytest.mark.skip(reason='mapd server crashes')
 def test_ir_query_error(mapd):
-    device_params = mapd.thrift_call('get_device_parameters')
+    device_params = mapd.thrift_call('get_device_parameters', mapd.session_id)
     gpu_target_triple = device_params.get('gpu_triple')
     foo_ir = '''\
 define i32 @foobarrr(i32 %.1, i32 %.2) {

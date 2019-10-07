@@ -4,11 +4,22 @@ import re
 import functools
 from . import types
 
-include_match = re.compile(r'^\s*include\s+"(?P<filename>[\w./\\]+)"',
+include_match = re.compile(r'^\s*include\s+"(?P<filename>[\w._/\\]+)"',
                            flags=re.M).match
+namespace_match = re.compile(
+    r'^\s*namespace\s+(?P<scope>\w+)\s+(?P<identifier>[\w._]+)',
+    flags=re.M).match
 
 
-def resolve_includes(thrift_content, include_dirs):
+def resolve_includes(thrift_content, include_dirs,
+                     _namespace_list=None,
+                     _included=None):
+    if _namespace_list is None:
+        recursive = False
+        _namespace_list = []
+        _included = []
+    else:
+        recursive = True
     lines = []
     for line in thrift_content.splitlines():
         m = include_match(line)
@@ -18,17 +29,33 @@ def resolve_includes(thrift_content, include_dirs):
                 fn = os.path.join(p, filename)
                 if os.path.isfile(fn):
                     # print('including {}'.format(fn))
-                    d = os.path.abspath(os.path.dirname(fn))
+                    afn = os.path.abspath(fn)
+                    if afn in _included:
+                        break
+                    _included.append(afn)
                     content = open(fn).read()
-                    resolve_includes(content, [d] + include_dirs)
+                    d = os.path.abspath(os.path.dirname(fn))
+                    content = resolve_includes(content, [d] + include_dirs,
+                                               _namespace_list,
+                                               _included)
                     lines.append(content)
                     break
             else:
                 raise FileNotFoundError('could not find {} in {}'.format(
                     filename, os.pathsep.join(include_dirs)))
-        else:
-            lines.append(line)
-    return '\n'.join(lines)
+            continue
+        m = namespace_match(line)
+        if m is not None:
+            scope_and_identifier = m.group('scope'), m.group('identifier')
+            if scope_and_identifier not in _namespace_list:
+                _namespace_list.append(scope_and_identifier)
+            continue
+        lines.append(line)
+    if not recursive:
+        for scope_and_identifier in _namespace_list:
+            lines.insert(0, 'namespace %s %s' % scope_and_identifier)
+    content = '\n'.join(lines)
+    return content
 
 
 def dispatchermethod(mth):
