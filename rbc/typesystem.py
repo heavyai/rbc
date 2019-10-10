@@ -407,6 +407,28 @@ class Type(tuple):
         obj._params = params
         return obj
 
+    def annotation(self, **annotations):
+        """Set and get annotations.
+        """
+        annotation = self._params.get('annotation')
+        if annotation is None:
+            annotation = self._params['annotation'] = {}
+        annotation.update(annotations)
+        return annotation
+
+    def __or__(self, other):
+        """Apply annotations to a copy of type instance.
+        """
+        self.annotation()  # ensures annotation key in _params
+        params = self._params.copy()
+        annotation = params['annotation'] = params['annotation'].copy()
+        if isinstance(other, str):
+            if other:
+                annotation[other] = ''
+        elif isinstance(other, dict):
+            annotation.update(other)
+        return type(self)(*self, **params)
+
     def set_mangling(self, mangling):
         """Set mangling string of the type.
         """
@@ -505,9 +527,19 @@ class Type(tuple):
             return self.tostring()
         return tuple.__str__(self)
 
-    def tostring(self, use_typename=False):
+    def tostring(self, use_typename=False, use_annotation=True):
         """Return string representation of a type.
         """
+        if use_annotation:
+            s = self.tostring(use_typename=use_typename, use_annotation=False)
+            annotation = self.annotation()
+            for name, value in annotation.items():
+                if value:
+                    s = '%s | %s=%s' % (s, name, value)
+                else:
+                    s = '%s | %s' % (s, name)
+            return s
+
         if self.is_void:
             return 'void'
         name = self._params.get('name')
@@ -675,6 +707,18 @@ class Type(tuple):
             return cls(rtype, atypes)
         if s == 'void' or s == 'none' or not s:  # void
             return cls()
+        if '|' in s:
+            s, a = s.rsplit('|', 1)
+            t = cls._fromstring(s.rstrip())
+            if '=' in a:
+                n, v = a.split('=', 1)
+            else:
+                n, v = a, ''
+            n = n.strip()
+            v = v.strip()
+            if n or v:
+                t.annotation(**{n: v})
+            return t
         m = _type_name_match(s)
         if m is not None:
             name = m.group(2)
