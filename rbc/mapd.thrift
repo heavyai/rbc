@@ -570,4 +570,12 @@ service MapD {
   # user-defined functions
   map<string, string> get_device_parameters(1: TSessionId session) throws (1: TMapDException e)
   void register_runtime_udf(1: TSessionId session, 2: string signatures, 3: map<string, string> device_ir_map) throws (1: TMapDException e)
+  void register_table_function(
+    1: TSessionId session,
+    2: string name,
+    3: TOutputBufferSizeType sizerType,
+    4: i32 sizerArgPos,
+    5: list<TExtArgumentType> inputArgTypes,
+    6: list<TExtArgumentType> outputArgTypes,
+    7: map<string, string> device_ir_map) throws (1: TMapDException e)
 }

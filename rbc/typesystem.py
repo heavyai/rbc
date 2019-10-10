@@ -429,6 +429,24 @@ class Type(tuple):
             annotation.update(other)
         return type(self)(*self, **params)
 
+    def inherit_annotations(self, other):
+        if isinstance(other, Type):
+            self.annotation().update(other.annotation())
+            for a, b in zip(self, other):
+                if isinstance(a, str):
+                    pass
+                elif isinstance(a, Type):
+                    a.inherit_annotations(b)
+                elif isinstance(a, tuple):
+                    for x, y in zip(a, b):
+                        if isinstance(x, str):
+                            pass
+                        else:
+                            x.inherit_annotations(y)
+                else:
+                    raise NotImplementedError('inherit_annotations: %s'
+                                              % ((a, type(a)),))
+
     def set_mangling(self, mangling):
         """Set mangling string of the type.
         """
@@ -799,7 +817,9 @@ class Type(tuple):
                              'a lambda function is not supported')
         sig = inspect.signature(func)
         annot = sig.return_annotation
-        if annot == sig.empty:
+        if isinstance(annot, dict):
+            rtype = cls() | annot  # void
+        elif annot == sig.empty:
             rtype = cls()  # void
             # TODO: check that function does not return other than None
         else:
@@ -812,7 +832,9 @@ class Type(tuple):
                 raise ValueError(
                     'callable argument kind must be positional,'
                     ' `%s` has kind %s' % (param, param.kind))
-            if annot == sig.empty:
+            if isinstance(annot, dict):
+                atypes.append(cls('<type of %s>' % n) | annot)
+            elif annot == sig.empty:
                 atypes.append(cls('<type of %s>' % n))
             else:
                 atypes.append(cls.fromobject(annot, target_info=target_info))

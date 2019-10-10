@@ -50,3 +50,34 @@ struct TTypeInfo {
   7: i32 comp_param,
   8: optional i32 size=-1
 }
+
+/* See QueryEngine/ExtensionFunctionsWhitelist.h for required values */
+enum TExtArgumentType {
+  Int8,
+  Int16,
+  Int32,
+  Int64,
+  Float,
+  Double,
+  PInt8,
+  PInt16,
+  PInt32,
+  PInt64,
+  PFloat,
+  PDouble,
+  Bool,
+  ArrayInt8,
+  ArrayInt16,
+  ArrayInt32,
+  ArrayInt64,
+  ArrayFloat,
+  ArrayDouble,
+  GeoPoint
+}
+
+/* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required values */
+enum TOutputBufferSizeType {
+  kUserSpecifiedConstantParameter,
+  kUserSpecifiedRowMultiplier,
+  kConstant
+}

@@ -64,13 +64,16 @@ class RemoteMapD(RemoteJIT):
             self._session_id = self.thrift_call('connect', user, pw, dbname)
         return self._session_id
 
-    def thrift_call(self, name, *args):
+    def thrift_call(self, name, *args, **kwargs):
+        client = kwargs.get('client')
+        if client is None:
+            client = self.make_client()
         if self.debug:
             msg = 'thrift_call %s%s' % (name, args)
             if len(msg) > 200:
                 msg = msg[:180] + '...' + msg[-15:]
             print(msg)
-        return self.make_client()(MapD={name: args})['MapD'][name]
+        return client(MapD={name: args})['MapD'][name]
 
     def sql_execute(self, query):
         self.register()
@@ -86,10 +89,31 @@ class RemoteMapD(RemoteJIT):
         if self.have_last_compile:
             return
 
+        thrift_client = self.make_client()
+        thrift = thrift_client.thrift
+
+        ext_arguments_map = {
+            'int8': thrift.TExtArgumentType.Int8,
+            'int16': thrift.TExtArgumentType.Int16,
+            'int32': thrift.TExtArgumentType.Int32,
+            'int64': thrift.TExtArgumentType.Int64,
+            'float32': thrift.TExtArgumentType.Float,
+            'float64': thrift.TExtArgumentType.Double,
+            'int8*': thrift.TExtArgumentType.PInt8,
+            'int16*': thrift.TExtArgumentType.PInt16,
+            'int32*': thrift.TExtArgumentType.PInt32,
+            'int64*': thrift.TExtArgumentType.PInt64,
+            'float32*': thrift.TExtArgumentType.PFloat,
+            'float64*': thrift.TExtArgumentType.PDouble,
+            'bool': thrift.TExtArgumentType.Bool,
+        }
+
         functions_map = defaultdict(list)
         for caller in self.callers:
             key = caller.func.__name__, caller.nargs
             functions_map[key].extend(caller._signatures)
+
+        table_functions = []
         ast_signatures = []
         for (name, nargs), signatures in functions_map.items():
             for i, sig in enumerate(signatures):
@@ -97,10 +121,36 @@ class RemoteMapD(RemoteJIT):
                     sig.set_mangling('')
                 else:
                     sig.set_mangling('__%s' % (i))
-                ast_signatures.append(
-                    "%s%s '%s'" % (name, sig.mangling, sig.toprototype()))
-        ast_signatures = '\n'.join(ast_signatures)
+                if 'table' in sig[0].annotation():  # UDTF
+                    sizer = None
+                    sizer_index = -1
+                    inputArgTypes = []
+                    outputArgTypes = []
+                    for i, a in enumerate(sig[1]):
+                        _sizer = a.annotation().get('sizer')
+                        if _sizer is not None:
+                            # expect no more than one sizer argument
+                            assert sizer_index == -1
+                            sizer_index = i
+                            sizer = _sizer
+                        atype = ext_arguments_map[
+                            a.tostring(use_annotation=False)]
+                        if i > 0:
+                            if 'output' in a.annotation():
+                                outputArgTypes.append(atype)
+                            else:
+                                inputArgTypes.append(atype)
+                    if sizer is None:
+                        sizer = 'kConstant'
+                    sizer_type = getattr(thrift.TOutputBufferSizeType, sizer)
+                    table_functions.append(
+                        (name + sig.mangling, sizer_type, sizer_index,
+                         inputArgTypes, outputArgTypes))
+                else:  # UDF
+                    ast_signatures.append(
+                        "%s%s '%s'" % (name, sig.mangling, sig.toprototype()))
 
+        ast_signatures = '\n'.join(ast_signatures)
         if self.debug:
             print()
             print(' signatures '.center(80, '-'))
@@ -138,5 +188,10 @@ class RemoteMapD(RemoteJIT):
         if self.debug:
             print('=' * 80)
 
+        if table_functions:
+            assert len(table_functions) == 1
+            return self.thrift_call('register_table_function', self.session_id,
+                                    *(table_functions[0] + (device_ir_map,)),
+                                    **dict(client=thrift_client))
         return self.thrift_call('register_runtime_udf', self.session_id,
                                 ast_signatures, device_ir_map)
