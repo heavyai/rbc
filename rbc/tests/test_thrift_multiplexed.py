@@ -94,6 +94,10 @@ class DispatcherTest(Dispatcher):
     def test_exception(self):
         raise ValueError('my exception')
 
+    def test_myenum_transport(self, s):
+        assert isinstance(s, int), repr(type(s))
+        return s
+
 
 @pytest.fixture(scope="module")
 def server(request):

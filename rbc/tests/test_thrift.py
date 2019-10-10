@@ -160,3 +160,13 @@ def test_exception(server):
             ValueError,
             match="my exception"):
         conn(test=dict(test_exception=()))
+
+
+def test_myenum_transport(server):
+    conn = Client(**socket_options)
+    s = conn.thrift.MyEnum.MyONE
+    r = conn(test=dict(test_myenum_transport=(s,)))
+    assert r['test']['test_myenum_transport'] == s
+    s = conn.thrift.MyEnum.MyTWO
+    r = conn(test=dict(test_myenum_transport=(s,)))
+    assert r['test']['test_myenum_transport'] == s
