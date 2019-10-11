@@ -96,8 +96,9 @@ def test_simple(omnisci):
                 y[j] = x[i]
         output_row_count[0] = m * input_row_count
         error_code[0] = 0
-    omnisci.reset()
-    return
+    #omnisci.reset()
+    omnisci.register()
+    #return
     # select d, count(*) from table(row_copier(cursor(SELECT d
     #                     FROM tf_test GROUP BY d), 5)) GROUP BY d ORDER BY d;
     descr, result = omnisci.sql_execute(

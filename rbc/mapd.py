@@ -121,6 +121,7 @@ class RemoteMapD(RemoteJIT):
                     sig.set_mangling('')
                 else:
                     sig.set_mangling('__%s' % (i))
+                signature = "%s%s '%s'" % (name, sig.mangling, sig.toprototype())
                 if 'table' in sig[0].annotation():  # UDTF
                     sizer = None
                     sizer_index = -1
@@ -144,11 +145,11 @@ class RemoteMapD(RemoteJIT):
                         sizer = 'kConstant'
                     sizer_type = getattr(thrift.TOutputBufferSizeType, sizer)
                     table_functions.append(
-                        (name + sig.mangling, sizer_type, sizer_index,
+                        (name + sig.mangling, signature,
+                         sizer_type, sizer_index,
                          inputArgTypes, outputArgTypes))
                 else:  # UDF
-                    ast_signatures.append(
-                        "%s%s '%s'" % (name, sig.mangling, sig.toprototype()))
+                    ast_signatures.append(signature)
 
         ast_signatures = '\n'.join(ast_signatures)
         if self.debug:

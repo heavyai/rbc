@@ -573,9 +573,10 @@ service MapD {
   void register_table_function(
     1: TSessionId session,
     2: string name,
-    3: TOutputBufferSizeType sizerType,
-    4: i32 sizerArgPos,
-    5: list<TExtArgumentType> inputArgTypes,
-    6: list<TExtArgumentType> outputArgTypes,
-    7: map<string, string> device_ir_map) throws (1: TMapDException e)
+    3: string signature,
+    4: TOutputBufferSizeType sizerType,
+    5: i32 sizerArgPos,
+    6: list<TExtArgumentType> inputArgTypes,
+    7: list<TExtArgumentType> outputArgTypes,
+    8: map<string, string> device_ir_map) throws (1: TMapDException e)
 }
