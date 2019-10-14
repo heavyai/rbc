@@ -22,7 +22,7 @@ pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
-    m = rbc_omnisci.RemoteMapD(debug=True,
+    m = rbc_omnisci.RemoteMapD(debug=not True,
                                use_host_target=True)
     table_name = 'rbc_test_omnisci_udtf'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
@@ -59,22 +59,34 @@ def test_simple(omnisci):
     # queries:
     omnisci.register()
 
-    # @omnisci('|table(int32*, double*, int64, int64*, double*|output)')
-    def my_row_copier1(error_code, x, input_row_count, output_row_count, y):
+    def my_row_copier1(x, input_row_count_ptr, output_row_count, y):
         # sizer type is Constant
         m = 5
+        input_row_count = input_row_count_ptr[0]
         n = m * input_row_count
         for i in range(input_row_count):
             for c in range(m):
                 y[i + c * input_row_count] = x[i]
         output_row_count[0] = n
-        error_code[0] = 0
+        return 0
 
-    # @omnisci('|table(int32*, double*, int64, int64, int64*, double*|output)')
-    def my_row_copier2(error_code, x,
-                       n: dict(sizer='kUserSpecifiedConstantParameter'),
-                       input_row_count, output_row_count, y):
+    if 0:
+        omnisci('int32|table(double*|cursor, int64*, int64*, double*|output)')(my_row_copier1)
+        # Exception: Failed to allocate 5612303629517800 bytes of memory
+        descr, result = omnisci.sql_execute(
+            'select * from table(my_row_copier1(cursor(select f8 '
+            'from {omnisci.table_name})));'
+            .format(**locals()))
+
+        for i, r in enumerate(result):
+            print(i, r)
+
+    def my_row_copier2(x,
+                       n_ptr: dict(sizer='kUserSpecifiedConstantParameter'),
+                       input_row_count_ptr, output_row_count, y):
+        n = n_ptr[0]
         m = 5
+        input_row_count = input_row_count_ptr[0]
         for i in range(input_row_count):
             for c in range(m):
                 j = i + c * input_row_count
@@ -83,28 +95,36 @@ def test_simple(omnisci):
                 else:
                     break
         output_row_count[0] = n
-        error_code[0] = 0
+        return 0
 
-    @omnisci('|table(int32*, double*, int64, int64, int64*, double*|output)')
-    def my_row_copier3(error_code, x,
-                       m: dict(sizer='kUserSpecifiedRowMultiplier'),
-                       input_row_count, output_row_count, y):
+    if 0:
+        omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*, double*|output)')(my_row_copier2)
+        # Exception: Failed to allocate 5612303562962920 bytes of memory
+        descr, result = omnisci.sql_execute(
+            'select * from table(my_row_copier2(cursor(select f8 '
+            'from {omnisci.table_name}), 2));'
+            .format(**locals()))
+
+        for i, r in enumerate(result):
+            print(i, r)
+
+    @omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*, double*|output)')
+    def my_row_copier3(x,
+                       m_ptr: dict(sizer='kUserSpecifiedRowMultiplier'),
+                       input_row_count_ptr, output_row_count, y):
+        m = m_ptr[0]
+        input_row_count = input_row_count_ptr[0]
         for i in range(input_row_count):
-            break
             for c in range(m):
                 j = i + c * input_row_count
-                y[j] = x[i]
+                y[j] = x[i] * 2
         output_row_count[0] = m * input_row_count
-        error_code[0] = 0
-    #omnisci.reset()
-    omnisci.register()
-    #return
-    # select d, count(*) from table(row_copier(cursor(SELECT d
-    #                     FROM tf_test GROUP BY d), 5)) GROUP BY d ORDER BY d;
+        return 0
+
     descr, result = omnisci.sql_execute(
-        'select f8, * from table(my_row_copier3(cursor(select f8 '
+        'select * from table(my_row_copier3(cursor(select f8 '
         'from {omnisci.table_name}), 2));'
         .format(**locals()))
-    print(descr)
-    for r in result:
-        print(r)
+
+    for i, r in enumerate(result):
+        assert r == (( i%5 )*2,)

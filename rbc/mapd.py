@@ -121,10 +121,10 @@ class RemoteMapD(RemoteJIT):
                     sig.set_mangling('')
                 else:
                     sig.set_mangling('__%s' % (i))
-                signature = "%s%s '%s'" % (name, sig.mangling, sig.toprototype())
                 if 'table' in sig[0].annotation():  # UDTF
                     sizer = None
                     sizer_index = -1
+                    sigArgTypes = []
                     inputArgTypes = []
                     outputArgTypes = []
                     for i, a in enumerate(sig[1]):
@@ -132,23 +132,31 @@ class RemoteMapD(RemoteJIT):
                         if _sizer is not None:
                             # expect no more than one sizer argument
                             assert sizer_index == -1
-                            sizer_index = i
+                            sizer_index = i + 1
                             sizer = _sizer
                         atype = ext_arguments_map[
                             a.tostring(use_annotation=False)]
-                        if i > 0:
+                        if i >= 0:
                             if 'output' in a.annotation():
                                 outputArgTypes.append(atype)
                             else:
+                                if 'input' in a.annotation():
+                                    sigArgTypes.append(a.toprototype())
+                                elif 'cursor' in a.annotation():
+                                    sigArgTypes.append('Cursor')
                                 inputArgTypes.append(atype)
                     if sizer is None:
                         sizer = 'kConstant'
                     sizer_type = getattr(thrift.TOutputBufferSizeType, sizer)
+                    signature = "%s%s '%s(%s)'" % (
+                        name, sig.mangling, sig[0].toprototype(),
+                        ', '.join(sigArgTypes))
                     table_functions.append(
                         (name + sig.mangling, signature,
                          sizer_type, sizer_index,
                          inputArgTypes, outputArgTypes))
                 else:  # UDF
+                    signature = "%s%s '%s'" % (name, sig.mangling, sig.toprototype())
                     ast_signatures.append(signature)
 
         ast_signatures = '\n'.join(ast_signatures)
