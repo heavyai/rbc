@@ -108,6 +108,10 @@ def test_simple(omnisci):
         for i, r in enumerate(result):
             print(i, r)
 
+    @omnisci('double(double)')
+    def myincr(x):
+        return x + 1.0
+            
     @omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*, double*|output)')
     def my_row_copier3(x,
                        m_ptr: dict(sizer='kUserSpecifiedRowMultiplier'),
@@ -122,9 +126,9 @@ def test_simple(omnisci):
         return 0
 
     descr, result = omnisci.sql_execute(
-        'select * from table(my_row_copier3(cursor(select f8 '
+        'select f8, myincr(f8) from table(my_row_copier3(cursor(select f8 '
         'from {omnisci.table_name}), 2));'
         .format(**locals()))
 
     for i, r in enumerate(result):
-        assert r == (( i%5 )*2,)
+        assert r == ((i % 5) * 2, (i % 5) * 2 + 1)

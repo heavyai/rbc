@@ -108,6 +108,9 @@ class RemoteMapD(RemoteJIT):
             'bool': thrift.TExtArgumentType.Bool,
         }
 
+        udfs = []
+        udtfs = []
+
         functions_map = defaultdict(list)
         for caller in self.callers:
             key = caller.func.__name__, caller.nargs
@@ -127,6 +130,7 @@ class RemoteMapD(RemoteJIT):
                     sigArgTypes = []
                     inputArgTypes = []
                     outputArgTypes = []
+                    sqlArgTypes = []
                     for i, a in enumerate(sig[1]):
                         _sizer = a.annotation().get('sizer')
                         if _sizer is not None:
@@ -142,8 +146,10 @@ class RemoteMapD(RemoteJIT):
                             else:
                                 if 'input' in a.annotation():
                                     sigArgTypes.append(a.toprototype())
+                                    sqlArgTypes.append(a.toprototype())
                                 elif 'cursor' in a.annotation():
                                     sigArgTypes.append('Cursor')
+                                    sqlArgTypes.append('Cursor')
                                 inputArgTypes.append(atype)
                     if sizer is None:
                         sizer = 'kConstant'
@@ -155,9 +161,16 @@ class RemoteMapD(RemoteJIT):
                         (name + sig.mangling, signature,
                          sizer_type, sizer_index,
                          inputArgTypes, outputArgTypes))
+                    udtfs.append(thrift.TUserDefinedTableFunction(
+                        name + sig.mangling, signature,
+                        sizer_type, sizer_index,
+                        inputArgTypes, outputArgTypes, []))
                 else:  # UDF
-                    signature = "%s%s '%s'" % (name, sig.mangling, sig.toprototype())
+                    signature = "%s%s '%s'" % (
+                        name, sig.mangling, sig.toprototype())
                     ast_signatures.append(signature)
+                    udfs.append(thrift.TUserDefinedFunction(
+                        name + sig.mangling, signature, [], None))
 
         ast_signatures = '\n'.join(ast_signatures)
         if self.debug:
@@ -197,10 +210,7 @@ class RemoteMapD(RemoteJIT):
         if self.debug:
             print('=' * 80)
 
-        if table_functions:
-            assert len(table_functions) == 1
-            return self.thrift_call('register_table_function', self.session_id,
-                                    *(table_functions[0] + (device_ir_map,)),
-                                    **dict(client=thrift_client))
-        return self.thrift_call('register_runtime_udf', self.session_id,
-                                ast_signatures, device_ir_map)
+        return self.thrift_call('register_runtime_extension_functions',
+                                self.session_id,
+                                udfs, udtfs, device_ir_map,
+                                **dict(client=thrift_client))

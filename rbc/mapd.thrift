@@ -43,6 +43,35 @@ enum TRole {
   STRING_DICTIONARY
 }
 
+struct TUserDefinedFunction {
+  1: string name,
+  2: string signature,
+  3: list<TExtArgumentType> argTypes,
+  4: TExtArgumentType retType
+}
+
+struct TUserDefinedTableFunction {
+  /* The signature of an UDTF is defined by the SQL extension function signature
+     and the LLVM/NVVM IR function signature. The signature of SQL extension function is
+       <name>(<input1>, <input2>, ..., <sizer parameter>, <inputN>, ..) -> table(<output1>, <output2>, ...)
+     where input can be either cursor or literal type and are collected in sqlArgTypes.
+
+     The signature of a LLVM IR function is
+       int32 <name>(<inputArgTypes>, <outputArgTypes>)
+     where
+       inputArgTypes[sizerArgPos - 1] corresponds to sizer parameter
+       inputArgTypes[-2] corresponds to input_row_count_ptr
+       inputArgTypes[-1] corresponds to output_row_count_ptr
+   */
+  1: string name,
+  2: string signature,
+  3: TOutputBufferSizeType sizerType,
+  4: i32 sizerArgPos,
+  5: list<TExtArgumentType> inputArgTypes,
+  6: list<TExtArgumentType> outputArgTypes,
+  7: list<TExtArgumentType> sqlArgTypes
+}
+
 /* union */ struct TDatumVal {
   1: i64 int_val,
   2: double real_val,
@@ -579,4 +608,5 @@ service MapD {
     6: list<TExtArgumentType> inputArgTypes,
     7: list<TExtArgumentType> outputArgTypes,
     8: map<string, string> device_ir_map) throws (1: TMapDException e)
+  void register_runtime_extension_functions(1: TSessionId session, 2: list<TUserDefinedFunction> udfs, 3: list<TUserDefinedTableFunction> udtfs, 4: map<string, string> device_ir_map) throws (1: TMapDException e)
 }

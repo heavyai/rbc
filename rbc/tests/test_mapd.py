@@ -85,7 +85,7 @@ def test_single_argument_overloading(mapd):
         'i64(i64)',
         'i32(i32)',
         'f32(f32)',
-        'i32(f32)',
+        # 'i32(f32)',
     )
     def mydecr(x):
         return x - 1
