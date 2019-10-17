@@ -71,7 +71,8 @@ def test_simple(omnisci):
         return 0
 
     if 0:
-        omnisci('int32|table(double*|cursor, int64*, int64*, double*|output)')(my_row_copier1)
+        omnisci('int32|table(double*|cursor, int64*, int64*, double*|output)')(
+            my_row_copier1)
         # Exception: Failed to allocate 5612303629517800 bytes of memory
         descr, result = omnisci.sql_execute(
             'select * from table(my_row_copier1(cursor(select f8 '
@@ -98,7 +99,8 @@ def test_simple(omnisci):
         return 0
 
     if 0:
-        omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*, double*|output)')(my_row_copier2)
+        omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*,'
+                ' double*|output)')(my_row_copier2)
         # Exception: Failed to allocate 5612303562962920 bytes of memory
         descr, result = omnisci.sql_execute(
             'select * from table(my_row_copier2(cursor(select f8 '
@@ -111,8 +113,9 @@ def test_simple(omnisci):
     @omnisci('double(double)')
     def myincr(x):
         return x + 1.0
-            
-    @omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*, double*|output)')
+
+    @omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*,'
+             ' double*|output)')
     def my_row_copier3(x,
                        m_ptr: dict(sizer='kUserSpecifiedRowMultiplier'),
                        input_row_count_ptr, output_row_count, y):

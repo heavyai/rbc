@@ -6,14 +6,15 @@ def mapd_is_available():
     """Return True if MapD server is accessible.
     """
     mapd = rbc_mapd.RemoteMapD()
-    client = mapd.make_client()
     try:
-        version = client(MapD=dict(get_version=()))['MapD']['get_version']
+        version = mapd.version
     except Exception as msg:
-        return False, 'failed to get MapD version: %s' % (msg)
-    if version >= '4.6':
+        return False, 'failed to get OmniSci version: %s' % (msg)
+    print('OmniSci version', version)
+    if version[:2] >= (4, 6):
         return True, None
-    return False, 'expected MapD version 4.6 or greater, got %s' % (version)
+    return False, ('expected OmniSci version 4.6 or greater, got %s'
+                   % (version,))
 
 
 is_available, reason = mapd_is_available()

@@ -1,4 +1,6 @@
 import os
+import re
+import warnings
 from collections import defaultdict
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
@@ -50,11 +52,22 @@ class RemoteMapD(RemoteJIT):
 
         self.target_info.add_converter(array_type_converter)
 
+        self._version = None
+        self._session_id = None
+        self._thrift_client = None
+
     @property
     def version(self):
-        return self.thrift_call('get_version')
+        if self._version is None:
+            version = self.thrift_call('get_version')
+            m = re.match(r'(\d+)[.](\d+)[.](\d+)(.*)', version)
+            if m is None:
+                raise RuntimeError('Could not parse OmniSci version=%r'
+                                   % (version))
+            major, minor, micro, dev = m.groups()
+            self._version = int(major), int(minor), int(micro), dev
+        return self._version
 
-    _session_id = None
     @property
     def session_id(self):
         if self._session_id is None:
@@ -64,10 +77,40 @@ class RemoteMapD(RemoteJIT):
             self._session_id = self.thrift_call('connect', user, pw, dbname)
         return self._session_id
 
+    @property
+    def thrift_client(self):
+        if self._thrift_client is None:
+            self._thrift_client = self.make_client()
+        return self._thrift_client
+
     def thrift_call(self, name, *args, **kwargs):
         client = kwargs.get('client')
         if client is None:
-            client = self.make_client()
+            client = self.thrift_client
+
+        if name == 'register_runtime_udf' and self.version[:2] >= (4, 9):
+            warnings.warn('Using register_runtime_udf is deprecated, '
+                          'use register_runtime_extension_functions instead.')
+            session_id, signatures, device_ir_map = args
+            udfs = []
+            sig_re = re.compile(r"\A(?P<name>[\w\d_]+)\s+"
+                                r"'(?P<rtype>[\w\d_]+)[(](?P<atypes>.*)[)]'\Z")
+            thrift = client.thrift
+            ext_arguments_map = self._get_ext_arguments_map()
+            for signature in signatures.splitlines():
+                m = sig_re.match(signature)
+                if m is None:
+                    raise RuntimeError(
+                        'Failed to parse signature %r' % (signature))
+                name = m.group('name')
+                rtype = ext_arguments_map[m.group('rtype')]
+                atypes = [ext_arguments_map[a.strip()]
+                          for a in m.group('atypes').split(',')]
+                udfs.append(thrift.TUserDefinedFunction(
+                    name, signature, atypes, rtype))
+            return self.thrift_call('register_runtime_extension_functions',
+                                    session_id, udfs, [], device_ir_map)
+
         if self.debug:
             msg = 'thrift_call %s%s' % (name, args)
             if len(msg) > 200:
@@ -85,13 +128,12 @@ class RemoteMapD(RemoteJIT):
         descr = _extract_description(result.row_set.row_desc)
         return descr, make_row_results_set(result)
 
-    def register(self):
-        if self.have_last_compile:
-            return
+    _ext_arguments_map = None
 
-        thrift_client = self.make_client()
-        thrift = thrift_client.thrift
-
+    def _get_ext_arguments_map(self):
+        if self._ext_arguments_map is not None:
+            return self._ext_arguments_map
+        thrift = self.thrift_client.thrift
         ext_arguments_map = {
             'int8': thrift.TExtArgumentType.Int8,
             'int16': thrift.TExtArgumentType.Int16,
@@ -106,7 +148,46 @@ class RemoteMapD(RemoteJIT):
             'float32*': thrift.TExtArgumentType.PFloat,
             'float64*': thrift.TExtArgumentType.PDouble,
             'bool': thrift.TExtArgumentType.Bool,
+            'Array<bool>': thrift.TExtArgumentType.ArrayInt8,
+            'Array<int8_t>': thrift.TExtArgumentType.ArrayInt8,
+            'Array<int16_t>': thrift.TExtArgumentType.ArrayInt16,
+            'Array<int32_t>': thrift.TExtArgumentType.ArrayInt32,
+            'Array<int64_t>': thrift.TExtArgumentType.ArrayInt64,
+            'Array<float>': thrift.TExtArgumentType.ArrayFloat,
+            'Array<double>': thrift.TExtArgumentType.ArrayDouble,
+            'Cursor': thrift.TExtArgumentType.Cursor,
+            'void': thrift.TExtArgumentType.Void,
+            'GeoPoint': thrift.TExtArgumentType.GeoPoint,
         }
+        ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<bool>']
+        ext_arguments_map['{int8* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<int8_t>']
+        ext_arguments_map['{int16* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<int16_t>']
+        ext_arguments_map['{int32* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<int32_t>']
+        ext_arguments_map['{int64* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<int64_t>']
+        ext_arguments_map['{float32* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<float>']
+        ext_arguments_map['{float64* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map['Array<double>']
+        values = list(ext_arguments_map.values())
+        for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
+            if v not in values:
+                warnings.warn('Adding (%r, thrift.TExtArgumentType.%s) '
+                              'to ext_arguments_map in %s' % (n, n, __file__))
+                ext_arguments_map[n] = v
+        self._ext_arguments_map = ext_arguments_map
+        return ext_arguments_map
+
+    def register(self):
+        if self.have_last_compile:
+            return
+
+        ext_arguments_map = self._get_ext_arguments_map()
+        thrift = self.thrift_client.thrift
 
         udfs = []
         udtfs = []
@@ -115,9 +196,8 @@ class RemoteMapD(RemoteJIT):
         for caller in self.callers:
             key = caller.func.__name__, caller.nargs
             functions_map[key].extend(caller._signatures)
+            # todo: eliminate dublicated signatures
 
-        table_functions = []
-        ast_signatures = []
         for (name, nargs), signatures in functions_map.items():
             for i, sig in enumerate(signatures):
                 if i == 0:
@@ -140,43 +220,39 @@ class RemoteMapD(RemoteJIT):
                             sizer = _sizer
                         atype = ext_arguments_map[
                             a.tostring(use_annotation=False)]
-                        if i >= 0:
-                            if 'output' in a.annotation():
-                                outputArgTypes.append(atype)
-                            else:
-                                if 'input' in a.annotation():
-                                    sigArgTypes.append(a.toprototype())
-                                    sqlArgTypes.append(a.toprototype())
-                                elif 'cursor' in a.annotation():
-                                    sigArgTypes.append('Cursor')
-                                    sqlArgTypes.append('Cursor')
-                                inputArgTypes.append(atype)
+                        if 'output' in a.annotation():
+                            outputArgTypes.append(atype)
+                        else:
+                            if 'input' in a.annotation():
+                                sigArgTypes.append(a.toprototype())
+                                sqlArgTypes.append(atype)
+                            elif 'cursor' in a.annotation():
+                                sigArgTypes.append('Cursor')
+                                sqlArgTypes.append(ext_arguments_map['Cursor'])
+                            inputArgTypes.append(atype)
                     if sizer is None:
                         sizer = 'kConstant'
                     sizer_type = getattr(thrift.TOutputBufferSizeType, sizer)
+                    # todo: eliminate using signature, requires
+                    # support from omniscidb
                     signature = "%s%s '%s(%s)'" % (
                         name, sig.mangling, sig[0].toprototype(),
                         ', '.join(sigArgTypes))
-                    table_functions.append(
-                        (name + sig.mangling, signature,
-                         sizer_type, sizer_index,
-                         inputArgTypes, outputArgTypes))
                     udtfs.append(thrift.TUserDefinedTableFunction(
                         name + sig.mangling, signature,
                         sizer_type, sizer_index,
-                        inputArgTypes, outputArgTypes, []))
-                else:  # UDF
+                        inputArgTypes, outputArgTypes, sqlArgTypes))
+                else:  # UDF todo: eliminate using signature, requires
+                    # support from omniscidb
                     signature = "%s%s '%s'" % (
                         name, sig.mangling, sig.toprototype())
-                    ast_signatures.append(signature)
+                    rtype = ext_arguments_map[sig[0].tostring(
+                        use_annotation=False)]
+                    atypes = [ext_arguments_map[a.tostring(
+                        use_annotation=False)] for a in sig[1]]
                     udfs.append(thrift.TUserDefinedFunction(
-                        name + sig.mangling, signature, [], None))
+                        name + sig.mangling, signature, atypes, rtype))
 
-        ast_signatures = '\n'.join(ast_signatures)
-        if self.debug:
-            print()
-            print(' signatures '.center(80, '-'))
-            print(ast_signatures)
         device_params = self.thrift_call('get_device_parameters',
                                          self.session_id)
         device_target_map = {}
@@ -212,5 +288,4 @@ class RemoteMapD(RemoteJIT):
 
         return self.thrift_call('register_runtime_extension_functions',
                                 self.session_id,
-                                udfs, udtfs, device_ir_map,
-                                **dict(client=thrift_client))
+                                udfs, udtfs, device_ir_map)
