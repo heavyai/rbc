@@ -1,5 +1,10 @@
 include "../thrift/types.thrift"
 
+enum MyEnum {
+  MyONE,
+  MyTWO
+}
+
 service test {
     string thrift_content(),
     Buffer test_buffer_transport(1: Buffer buf),
@@ -20,4 +25,5 @@ service test {
     list<i32> test_list_transport(1: list<i32> s),
     void test_void(),
     void test_exception() throws (1: Exception e),
+    MyEnum test_myenum_transport(1: MyEnum s),
 }

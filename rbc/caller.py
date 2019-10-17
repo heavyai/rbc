@@ -38,7 +38,11 @@ class Caller(object):
         signature = inspect.signature(self.func)
         self.nargs = len(signature.parameters)
 
+        # needed for annotations
+        fsig = Type.fromobject(self.func)
+
         for sig in signatures:
+            sig.inherit_annotations(fsig)
             self.add_signature(sig)
 
         self._client = None

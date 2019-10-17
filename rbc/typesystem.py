@@ -407,6 +407,46 @@ class Type(tuple):
         obj._params = params
         return obj
 
+    def annotation(self, **annotations):
+        """Set and get annotations.
+        """
+        annotation = self._params.get('annotation')
+        if annotation is None:
+            annotation = self._params['annotation'] = {}
+        annotation.update(annotations)
+        return annotation
+
+    def __or__(self, other):
+        """Apply annotations to a copy of type instance.
+        """
+        self.annotation()  # ensures annotation key in _params
+        params = self._params.copy()
+        annotation = params['annotation'] = params['annotation'].copy()
+        if isinstance(other, str):
+            if other:
+                annotation[other] = ''
+        elif isinstance(other, dict):
+            annotation.update(other)
+        return type(self)(*self, **params)
+
+    def inherit_annotations(self, other):
+        if isinstance(other, Type):
+            self.annotation().update(other.annotation())
+            for a, b in zip(self, other):
+                if isinstance(a, str):
+                    pass
+                elif isinstance(a, Type):
+                    a.inherit_annotations(b)
+                elif isinstance(a, tuple):
+                    for x, y in zip(a, b):
+                        if isinstance(x, str):
+                            pass
+                        else:
+                            x.inherit_annotations(y)
+                else:
+                    raise NotImplementedError('inherit_annotations: %s'
+                                              % ((a, type(a)),))
+
     def set_mangling(self, mangling):
         """Set mangling string of the type.
         """
@@ -505,9 +545,19 @@ class Type(tuple):
             return self.tostring()
         return tuple.__str__(self)
 
-    def tostring(self, use_typename=False):
+    def tostring(self, use_typename=False, use_annotation=True):
         """Return string representation of a type.
         """
+        if use_annotation:
+            s = self.tostring(use_typename=use_typename, use_annotation=False)
+            annotation = self.annotation()
+            for name, value in annotation.items():
+                if value:
+                    s = '%s | %s=%s' % (s, name, value)
+                else:
+                    s = '%s | %s' % (s, name)
+            return s
+
         if self.is_void:
             return 'void'
         name = self._params.get('name')
@@ -675,6 +725,18 @@ class Type(tuple):
             return cls(rtype, atypes)
         if s == 'void' or s == 'none' or not s:  # void
             return cls()
+        if '|' in s:
+            s, a = s.rsplit('|', 1)
+            t = cls._fromstring(s.rstrip())
+            if '=' in a:
+                n, v = a.split('=', 1)
+            else:
+                n, v = a, ''
+            n = n.strip()
+            v = v.strip()
+            if n or v:
+                t.annotation(**{n: v})
+            return t
         m = _type_name_match(s)
         if m is not None:
             name = m.group(2)
@@ -755,7 +817,9 @@ class Type(tuple):
                              'a lambda function is not supported')
         sig = inspect.signature(func)
         annot = sig.return_annotation
-        if annot == sig.empty:
+        if isinstance(annot, dict):
+            rtype = cls() | annot  # void
+        elif annot == sig.empty:
             rtype = cls()  # void
             # TODO: check that function does not return other than None
         else:
@@ -768,7 +832,9 @@ class Type(tuple):
                 raise ValueError(
                     'callable argument kind must be positional,'
                     ' `%s` has kind %s' % (param, param.kind))
-            if annot == sig.empty:
+            if isinstance(annot, dict):
+                atypes.append(cls('<type of %s>' % n) | annot)
+            elif annot == sig.empty:
                 atypes.append(cls('<type of %s>' % n))
             else:
                 atypes.append(cls.fromobject(annot, target_info=target_info))

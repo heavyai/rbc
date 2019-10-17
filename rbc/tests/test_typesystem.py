@@ -409,3 +409,29 @@ def test_mangling():
 
 def test_unspecified():
     assert str(Type.fromstring('unknown(_0,_1)')) == 'unknown(_0, _1)'
+
+
+def test_annotation():
+    t = Type.fromstring('int foo| a = 1')
+    assert t.annotation() == dict(a='1')
+    assert t[0] == 'int32'
+
+    def tostr(a):
+        return Type.fromstring(a).tostring()
+
+    assert tostr('int foo| a = 1') == 'int32 foo | a=1'
+    assert tostr('int foo| a = 1 | b') == 'int32 foo | a=1 | b'
+    assert tostr('int foo| a = 1 | a = 2') == 'int32 foo | a=2'
+
+    assert tostr('int| a = 1') == 'int32 | a=1'
+    assert tostr('int*| a = 1') == 'int32* | a=1'
+    assert tostr('{int, int}| a = 1') == '{int32, int32} | a=1'
+    assert (tostr('{int|a=1, int|a=2}| a = 3')
+            == '{int32 | a=1, int32 | a=2} | a=3')
+    assert tostr('int foo|') == 'int32 foo'
+    assert tostr('int foo|a') == 'int32 foo | a'
+    assert tostr('int foo|=1') == 'int32 foo | =1'
+
+    t = Type.fromstring('int')
+    assert (t | 'a').tostring() == 'int32 | a'
+    assert (t | dict(b=1, c=2)).tostring() == 'int32 | b=1 | c=2'
