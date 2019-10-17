@@ -41,11 +41,11 @@ class RemoteMapD(RemoteJIT):
         self.dbname = dbname
 
         thrift_filename = os.path.join(os.path.dirname(__file__),
-                                       'mapd.thrift')
+                                       'omnisci.thrift')
         content = resolve_includes(
             open(thrift_filename).read(),
             [os.path.dirname(thrift_filename)])
-        for p in ['completion_hints.', 'common.', 'serialized_result_set.']:
+        for p in ['common.', 'extension_functions.']:
             content = content.replace(p, '')
         self.thrift_content = content
         RemoteJIT.__init__(self, host=host, port=port, **options)
@@ -107,7 +107,7 @@ class RemoteMapD(RemoteJIT):
                 atypes = [ext_arguments_map[a.strip()]
                           for a in m.group('atypes').split(',')]
                 udfs.append(thrift.TUserDefinedFunction(
-                    name, signature, atypes, rtype))
+                    name, atypes, rtype))
             return self.thrift_call('register_runtime_extension_functions',
                                     session_id, udfs, [], device_ir_map)
 
@@ -207,7 +207,6 @@ class RemoteMapD(RemoteJIT):
                 if 'table' in sig[0].annotation():  # UDTF
                     sizer = None
                     sizer_index = -1
-                    sigArgTypes = []
                     inputArgTypes = []
                     outputArgTypes = []
                     sqlArgTypes = []
@@ -224,34 +223,24 @@ class RemoteMapD(RemoteJIT):
                             outputArgTypes.append(atype)
                         else:
                             if 'input' in a.annotation():
-                                sigArgTypes.append(a.toprototype())
                                 sqlArgTypes.append(atype)
                             elif 'cursor' in a.annotation():
-                                sigArgTypes.append('Cursor')
                                 sqlArgTypes.append(ext_arguments_map['Cursor'])
                             inputArgTypes.append(atype)
                     if sizer is None:
                         sizer = 'kConstant'
                     sizer_type = getattr(thrift.TOutputBufferSizeType, sizer)
-                    # todo: eliminate using signature, requires
-                    # support from omniscidb
-                    signature = "%s%s '%s(%s)'" % (
-                        name, sig.mangling, sig[0].toprototype(),
-                        ', '.join(sigArgTypes))
                     udtfs.append(thrift.TUserDefinedTableFunction(
-                        name + sig.mangling, signature,
+                        name + sig.mangling,
                         sizer_type, sizer_index,
                         inputArgTypes, outputArgTypes, sqlArgTypes))
-                else:  # UDF todo: eliminate using signature, requires
-                    # support from omniscidb
-                    signature = "%s%s '%s'" % (
-                        name, sig.mangling, sig.toprototype())
+                else:
                     rtype = ext_arguments_map[sig[0].tostring(
                         use_annotation=False)]
                     atypes = [ext_arguments_map[a.tostring(
                         use_annotation=False)] for a in sig[1]]
                     udfs.append(thrift.TUserDefinedFunction(
-                        name + sig.mangling, signature, atypes, rtype))
+                        name + sig.mangling, atypes, rtype))
 
         device_params = self.thrift_call('get_device_parameters',
                                          self.session_id)
