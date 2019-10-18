@@ -5,7 +5,7 @@ import re
 import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
-from .utils import is_localhost
+from .utils import is_localhost, triple_matches
 
 
 def initialize_llvm():
@@ -61,16 +61,13 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    cpu_target = llvm.get_process_triple()
     if server is None or is_localhost(server.host):
-        if target == 'host' or target == cpu_target:
-            # FYI, there is also get_process_triple()
-            # triple = llvm.get_default_triple()
+        if triple_matches(target, 'host'):
             target_desc = nb.targets.registry.cpu_target
             typing_context = target_desc.typing_context
             target_context = target_desc.target_context
             use_host_target = False
-        elif target == 'cuda' or target == 'nvptx64-nvidia-cuda':
+        elif triple_matches(target, 'cuda'):
             if use_host_target:
                 triple = 'nvptx64-nvidia-cuda'
                 data_layout = nb.cuda.cudadrv.nvvm.data_layout[64]
@@ -81,7 +78,7 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
                 target_desc = nb.cuda.descriptor.CUDATargetDesc
                 typing_context = target_desc.typingctx
                 target_context = target_desc.targetctx
-        elif target == 'cuda32' or target == 'nvptx-nvidia-cuda':
+        elif triple_matches(target, 'cuda32'):
             if use_host_target:
                 triple = 'nvptx-nvidia-cuda'
                 data_layout = nb.cuda.cudadrv.nvvm.data_layout[32]
@@ -93,6 +90,7 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
                 typing_context = target_desc.typingctx
                 target_context = target_desc.targetctx
         else:
+            cpu_target = llvm.get_process_triple()
             raise NotImplementedError(repr((target, cpu_target)))
     else:
         raise NotImplementedError(repr((target, server)))

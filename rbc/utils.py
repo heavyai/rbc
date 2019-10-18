@@ -4,6 +4,7 @@ import ipaddress
 import netifaces
 import uuid
 import ctypes
+import llvmlite.binding as llvm
 
 
 def get_local_ip():
@@ -81,3 +82,34 @@ def get_datamodel():
         (16, 64, 64, 64, 64): 'ILP64',    # HAL
         (64, 64, 64, 64, 64): 'SILP64',   # UNICOS
     }[short_sizeof, int_sizeof, long_sizeof, ptr_sizeof, longlong_sizeof]
+
+
+def triple_split(triple):
+    """Split target triple into parts.
+    """
+    arch, vendor, os = triple.split('-', 2)
+    if '-' in os:
+        os, env = os.split('-', 1)
+    else:
+        env = ''
+    return arch, vendor, os, env
+
+
+def triple_matches(triple, other):
+    """Check if target triples match.
+    """
+    if triple == other:
+        return True
+    if triple == 'cuda':
+        return triple_matches('nvptx64-nvidia-cuda', other)
+    if triple == 'cuda32':
+        return triple_matches('nvptx-nvidia-cuda', other)
+    if triple == 'host':
+        return triple_matches(llvm.get_process_triple(), other)
+    if other in ['cuda', 'cuda32', 'host']:
+        return triple_matches(other, triple)
+    arch1, vendor1, os1, env1 = triple_split(triple)
+    arch2, vendor2, os2, env2 = triple_split(other)
+    if os1 == os2 == 'linux':
+        return (arch1, env1) == (arch2, env2)
+    return (arch1, vendor1, os1, env1) == (arch2, vendor2, os2, env2)
