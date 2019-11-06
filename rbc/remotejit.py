@@ -53,7 +53,7 @@ class RemoteJIT(object):
         ----------
         host : str
           Specify the host name of IP of JIT server
-        port : int
+        port : {int, str}
           Specify the service port of the JIT server
         options : dict
           Specify default options.
@@ -68,7 +68,7 @@ class RemoteJIT(object):
 
         self.debug = options.pop('debug', False)
         self.host = host
-        self.port = port
+        self.port = int(port)
         self.options = options
         self.server_process = None
         self.callers = []
