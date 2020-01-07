@@ -5,7 +5,8 @@ rbc_mapd = pytest.importorskip('rbc.mapd')
 def mapd_is_available():
     """Return True if MapD server is accessible.
     """
-    mapd = rbc_mapd.RemoteMapD()
+    config = rbc_mapd.get_client_config()
+    mapd = rbc_mapd.RemoteMapD(**config)
     try:
         version = mapd.version
     except Exception as msg:
@@ -23,7 +24,8 @@ pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 @pytest.fixture(scope='module')
 def mapd():
-    m = rbc_mapd.RemoteMapD()
+    config = rbc_mapd.get_client_config()
+    m = rbc_mapd.RemoteMapD(**config)
     table_name = 'rbc_test_mapd'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
