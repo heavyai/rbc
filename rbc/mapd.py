@@ -1,12 +1,107 @@
 import os
 import re
 import warnings
+import configparser
 from collections import defaultdict
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_array import array_type_converter
+
+
+def get_client_config(**config):
+    """Retrieve the omnisci client configuration parameters from a client
+    home directory.
+
+    Note that here the client configurations parameters are those that
+    are used to configure the client software such as rbc or pymapd.
+    This is different from omnisci instance configuration described in
+    https://docs.omnisci.com/latest/4_configuration.html that is used
+    for configuring the omniscidb server software.
+
+    In Linux clients, the omnisci client configuration is read from
+    $HOME/.config/omnisci/client.conf
+
+    In Windows clients, the configuration is read from
+    %UserProfile/.config/omnisci/client.conf or
+    %AllUsersProfile/.config/omnisci/client.conf
+
+    When `OMNISCI_CLIENT_CONF` environment variable is defined then
+    the configuration is read from the file specified in this
+    variable.
+
+    The configuration file must use configuration language similar to
+    one used in MS Windows INI files. For omnisci client
+    configuration, the file may contain, for instance::
+
+      [user]
+      name: <OmniSciDB user name, defaults to admin>
+      password: <OmniSciDB user password>
+
+      [server]
+      host: <OmniSciDB server host name or IP, defaults to localhost>
+      port: <OmniSciDB server port, defaults to 6274>
+
+    Parameters
+    ----------
+    config : dict
+      Specify configuration parameters that override the parameters
+      from configuration file.
+
+    Returns
+    -------
+    config : dict
+      A dictionary of `user`, `password`, `host`, `port`, `dbname` and
+      other RemoteJIT options.
+
+    """
+    _config = dict(user='admin', password='HyperInteractive',
+                   host='localhost', port=6274, dbname='omnisci')
+    _config.update(**config)
+    config = _config
+
+    conf_file = os.environ.get('OMNISCI_CLIENT_CONF', None)
+    if conf_file is not None and not os.path.isfile(conf_file):
+        print(f'rbc.mapd.get_client_config: OMNISCI_CLIENT_CONF={conf_file!r}'
+              ' is not a file, ignoring.')
+        conf_file = None
+    if conf_file is None:
+        conf_file_base = os.path.join('.config', 'omnisci', 'client.conf')
+        for prefix_env in ['UserProfile', 'AllUsersProfile', 'HOME']:
+            prefix = os.environ.get(prefix_env, None)
+            if prefix is not None:
+                fn = os.path.join(prefix, conf_file_base)
+                if os.path.isfile(fn):
+                    conf_file = fn
+                    break
+    if conf_file is None:
+        return config
+
+    conf = configparser.ConfigParser()
+    conf.read(conf_file)
+
+    if 'user' in conf:
+        user = conf['user']
+        if 'name' in user:
+            config['user'] = user['name']
+        if 'password' in user:
+            config['password'] = user['password']
+
+    if 'server' in conf:
+        server = conf['server']
+        if 'host' in server:
+            config['host'] = server['host']
+        if 'port' in server:
+            config['port'] = int(server['port'])
+
+    if 'rbc' in conf:
+        rbc = conf['rbc']
+        for k in ['debug', 'use_host_target']:
+            if k in rbc:
+                config[k] = rbc.getboolean(k)
+
+    return config
 
 
 class RemoteMapD(RemoteJIT):
