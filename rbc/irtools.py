@@ -6,6 +6,7 @@ import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .utils import is_localhost, triple_matches
+from .targetinfo import TargetInfo
 
 
 def initialize_llvm():
@@ -32,6 +33,59 @@ def get_function_dependencies(module, funcname, _deps=None):
                     _deps[name] = 'defined'
                     get_function_dependencies(module, name, _deps=_deps)
     return _deps
+
+
+class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
+
+    # TODO: introduce JITRemoteCodeLibrary?
+    _library_class = nb.targets.codegen.JITCodeLibrary
+
+    def __init__(self, name, target_info):
+        self.target_info = target_info
+        super(JITRemoteCPUCodegen, self).__init__(name)
+        # we cannot use local host RuntimeLinker, in general.
+        self._rtlinker = None
+
+    def _get_host_cpu_name(self):
+        return self.target_info.device_name
+
+    def _get_host_cpu_features(self):
+        return self.target_info.device_features
+
+    def _customize_tm_options(self, options):
+        super(JITRemoteCPUCodegen, self)._customize_tm_options(options)
+        # fix reloc_model as the base method sets it using local target
+        if self.target_info.arch.startswith('x86'):
+            reloc_model = 'static'
+        else:
+            reloc_model = 'default'
+        options['reloc'] = reloc_model
+
+
+class RemoteCPUContext(nb.targets.cpu.CPUContext):
+
+    def __init__(self, typing_context, target_info):
+        self.target_info = target_info
+        super(RemoteCPUContext, self).__init__(typing_context)
+
+    @nb.compiler_lock.global_compiler_lock
+    def init(self):
+        self.address_size = self.target_info.bits
+        self.is32bit = (self.address_size == 32)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
+                                                     self.target_info)
+
+        # Map external C functions.
+        # nb.targets.externals.c_math_functions.install(self)
+        # TODO, seems problematic only for 32bit cases
+
+        # Initialize NRT runtime
+        # nb.targets.cpu.rtsys.initialize(self)
+        # TODO: is this needed for LLVM IR generation?
+
+        # import numba.unicode  # unicode support is not relevant here
+
+    # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
 
 def compile_to_LLVM(functions_and_signatures, target, server=None,
@@ -61,7 +115,14 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    if server is None or is_localhost(server.host):
+    if isinstance(target, TargetInfo):
+        typing_context = nb.typing.Context()
+        target_context = RemoteCPUContext(typing_context, target)
+        triple = target.triple
+        target_desc = nb.targets.registry.cpu_target
+        # Bring over Array overloads (a hack):
+        target_context._defns = target_desc.target_context._defns
+    elif server is None or is_localhost(server.host):
         if triple_matches(target, 'host'):
             target_desc = nb.targets.registry.cpu_target
             typing_context = target_desc.typing_context
@@ -90,6 +151,9 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
                 typing_context = target_desc.typingctx
                 target_context = target_desc.targetctx
         else:
+            typing_context = nb.typing.Context()
+            target_context = RemoteCPUContext(typing_context)
+            # TODO: set triple
             cpu_target = llvm.get_process_triple()
             raise NotImplementedError(repr((target, cpu_target)))
     else:
@@ -178,7 +242,11 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
     main_module.verify()
     main_library._finalized = True
 
-    if use_host_target:
+    if isinstance(target, TargetInfo):
+        main_module.triple = target.triple
+        main_module.data_layout = target.datalayout
+
+    elif use_host_target:
         # when using reuse_host_target option for given target, we
         # assume that target triple and data_layout is defined above:
         main_module.triple = triple

@@ -10,6 +10,7 @@ from .caller import Caller
 from .typesystem import Type, LocalTargetInfo
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
+from .targetinfo import TargetInfo
 
 
 class RemoteJIT(object):
@@ -63,6 +64,7 @@ class RemoteJIT(object):
 
         target_info = options.pop('target_info', None)
         if target_info is None:
+            # TODO: eliminate this
             target_info = LocalTargetInfo(strict=True)
         self.target_info = target_info
 
@@ -98,7 +100,12 @@ class RemoteJIT(object):
                                         for caller in self.callers]
             ir_map = {}
             for target in targets:
-                ir_map[target] = irtools.compile_to_LLVM(
+                if isinstance(target, TargetInfo):
+                    triple = target.triple
+                else:
+                    triple = target
+                    assert isinstance(triple, str), type(triple)
+                ir_map[triple] = irtools.compile_to_LLVM(
                     functions_and_signatures, target,
                     debug=self.debug, **self.options)
             self._last_ir_map = ir_map

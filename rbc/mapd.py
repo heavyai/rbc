@@ -8,6 +8,7 @@ from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_array import array_type_converter
+from .targetinfo import TargetInfo
 
 
 def get_client_config(**config):
@@ -284,6 +285,29 @@ class RemoteMapD(RemoteJIT):
         ext_arguments_map = self._get_ext_arguments_map()
         thrift = self.thrift_client.thrift
 
+        # Retieve target information, TODO: move this to higher level
+        # as the target info is requires in parsing signatures
+        device_params = self.thrift_call('get_device_parameters',
+                                         self.session_id)
+        device_target_map = {}
+        for prop, value in device_params.items():
+            if prop.endswith('_triple'):
+                device = prop.rsplit('_', 1)[0]
+                device_target_map[device] = value
+
+        target_infos = []
+        for device, target in device_target_map.items():
+            target_info = TargetInfo(name=device)
+            for prop, value in device_params.items():
+                if not prop.startswith(device + '_'):
+                    continue
+                target_info.set(prop[len(device)+1:], value)
+            if device == 'gpu':  # TODO: remove this hack
+                target_info.set('name', 'skylake')
+            # target_info.add_converter(array_type_converter)
+            target_infos.append(target_info)
+        #
+
         udfs = []
         udtfs = []
 
@@ -337,14 +361,9 @@ class RemoteMapD(RemoteJIT):
                     udfs.append(thrift.TUserDefinedFunction(
                         name + sig.mangling, atypes, rtype))
 
-        device_params = self.thrift_call('get_device_parameters',
-                                         self.session_id)
-        device_target_map = {}
-        for prop, value in device_params.items():
-            if prop.endswith('_triple'):
-                device = prop.rsplit('_', 1)[0]
-                device_target_map[device] = value
-        ir_map = self.compile_to_LLVM(targets=device_target_map.values())
+        # ir_map = self.compile_to_LLVM(targets=device_target_map.values())
+        ir_map = self.compile_to_LLVM(targets=target_infos)
+
         device_ir_map = {}
         for device, target in device_target_map.items():
             llvm_module = ir_map[target]
