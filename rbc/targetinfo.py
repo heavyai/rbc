@@ -159,10 +159,18 @@ class TargetInfo(object):
         if isinstance(t, str):
             if t == 'complex':
                 return self.sizeof('float') * 2
+            if t == 'double':
+                return 8
+            if t == 'float':
+                return 4
+            if t == 'int':
+                return 4
+            if t == 'size_t':
+                return self.bits // 8
         if isinstance(t, type) and issubclass(t, ctypes._SimpleCData):
             return ctypes.sizeof(t)
-        raise NotImplementedError("%s.sizeof(%r)"
-                                  % (type(self).__name__, t))
+        raise NotImplementedError(
+            f"{type(self).__name__}[{self.name},{self.triple}].sizeof({t!r})")
 
     def add_converter(self, converter):
         """Add custom type converter.

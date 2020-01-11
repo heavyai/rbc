@@ -5,7 +5,6 @@ import re
 import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
-from .utils import is_localhost, triple_matches
 from .targetinfo import TargetInfo
 
 
@@ -88,26 +87,15 @@ class RemoteCPUContext(nb.targets.cpu.CPUContext):
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
 
-def compile_to_LLVM(functions_and_signatures, target, server=None,
-                    use_host_target=False, debug=False):
+def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
     ----------
     functions_and_signatures : list
       Specify a list of Python function and its signatures pairs.
-    target : {'host', 'cuda', 'cuda32'}
-      Specify LLVM IR target.
-    server : {Server, None}
-      Specify server containing the target. If unspecified, use local
-      host. [NOT IMPLEMENTED]
-    use_host_target: bool
-      Use cpu target for constructing LLVM module and reset to
-      specified target. This is useful when numba.cuda does not
-      implement features that cpu target is supporting (like operator
-      overloading, etc). Note that this is not guaranteed to work in
-      general as there numba cpu target may generate instructions that
-      NVVM does not support.
+    target : TargetInfo
+      Specify target device information.
 
     Returns
     -------
@@ -115,49 +103,16 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    if isinstance(target, TargetInfo):
+    target_desc = nb.targets.registry.cpu_target
+    if target is None:
+        target = TargetInfo.host()
+        typing_context = target_desc.typing_context
+        target_context = target_desc.target_context
+    else:
         typing_context = nb.typing.Context()
         target_context = RemoteCPUContext(typing_context, target)
-        triple = target.triple
-        target_desc = nb.targets.registry.cpu_target
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
-    elif server is None or is_localhost(server.host):
-        if triple_matches(target, 'host'):
-            target_desc = nb.targets.registry.cpu_target
-            typing_context = target_desc.typing_context
-            target_context = target_desc.target_context
-            use_host_target = False
-        elif triple_matches(target, 'cuda'):
-            if use_host_target:
-                triple = 'nvptx64-nvidia-cuda'
-                data_layout = nb.cuda.cudadrv.nvvm.data_layout[64]
-                target_desc = nb.targets.registry.cpu_target
-                typing_context = target_desc.typing_context
-                target_context = target_desc.target_context
-            else:
-                target_desc = nb.cuda.descriptor.CUDATargetDesc
-                typing_context = target_desc.typingctx
-                target_context = target_desc.targetctx
-        elif triple_matches(target, 'cuda32'):
-            if use_host_target:
-                triple = 'nvptx-nvidia-cuda'
-                data_layout = nb.cuda.cudadrv.nvvm.data_layout[32]
-                target_desc = nb.targets.registry.cpu_target
-                typing_context = target_desc.typing_context
-                target_context = target_desc.target_context
-            else:
-                target_desc = nb.cuda.descriptor.CUDATargetDesc
-                typing_context = target_desc.typingctx
-                target_context = target_desc.targetctx
-        else:
-            typing_context = nb.typing.Context()
-            target_context = RemoteCPUContext(typing_context)
-            # TODO: set triple
-            cpu_target = llvm.get_process_triple()
-            raise NotImplementedError(repr((target, cpu_target)))
-    else:
-        raise NotImplementedError(repr((target, server)))
 
     codegen = target_context.codegen()
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
@@ -242,15 +197,8 @@ def compile_to_LLVM(functions_and_signatures, target, server=None,
     main_module.verify()
     main_library._finalized = True
 
-    if isinstance(target, TargetInfo):
-        main_module.triple = target.triple
-        main_module.data_layout = target.datalayout
-
-    elif use_host_target:
-        # when using reuse_host_target option for given target, we
-        # assume that target triple and data_layout is defined above:
-        main_module.triple = triple
-        main_module.data_layout = data_layout
+    main_module.triple = target.triple
+    main_module.data_layout = target.datalayout
 
     return main_module
 

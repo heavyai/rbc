@@ -1,10 +1,8 @@
 import atexit
 import pytest
 import sys
-from rbc.remotejit import RemoteJIT, Signature
-from rbc.caller import Caller
+from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
-
 
 win32 = sys.platform == 'win32'
 
@@ -30,8 +28,9 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    assert len(add._signatures) == 1
-    assert add._signatures[0] == Type.fromstring('i64(i64,i64)')
+    signatures = add.get_signatures()
+    assert len(signatures) == 1
+    assert signatures[0] == Type.fromstring('i64(i64,i64)')
 
     # Case 2
 
@@ -40,8 +39,9 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    assert len(add._signatures) == 1
-    assert add._signatures[0] == Type.fromstring('f64(f64,f64)')
+    signatures = add.get_signatures()
+    assert len(signatures) == 1
+    assert signatures[0] == Type.fromstring('f64(f64,f64)')
 
     # Case 3
 
@@ -51,9 +51,10 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    assert len(add._signatures) == 2
-    assert add._signatures[0] == Type.fromstring('i32(i32,i32)')
-    assert add._signatures[1] == Type.fromstring('f64(f64,f64)')
+    signatures = add.get_signatures()
+    assert len(signatures) == 2
+    assert signatures[1] == Type.fromstring('i32(i32,i32)')
+    assert signatures[0] == Type.fromstring('f64(f64,f64)')
 
     # Case 4
 
@@ -63,9 +64,10 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    assert len(add._signatures) == 2
-    assert add._signatures[0] == Type.fromstring('f64(f64,f64)')
-    assert add._signatures[1] == Type.fromstring('i32(i32,i32)')
+    signatures = add.get_signatures()
+    assert len(signatures) == 2
+    assert signatures[0] == Type.fromstring('f64(f64,f64)')
+    assert signatures[1] == Type.fromstring('i32(i32,i32)')
 
     # Case 5
 
@@ -81,9 +83,10 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    assert len(add._signatures) == 2
-    assert add._signatures[0] == Type.fromstring('i32(i32,i32)')
-    assert add._signatures[1] == Type.fromstring('f64(f64,f64)')
+    signatures = add.get_signatures()
+    assert len(signatures) == 2
+    assert signatures[0] == Type.fromstring('i32(i32,i32)')
+    assert signatures[1] == Type.fromstring('f64(f64,f64)')
 
     # Case 6
 
@@ -92,25 +95,15 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    assert len(add._signatures) == 0
+    signatures = add.get_signatures()
+    assert len(signatures) == 0
 
-    add.add_signature('i32(i32,i32)')
-    assert len(add._signatures) == 1
-    assert add._signatures[0] == Type.fromstring('i32(i32,i32)')
+    add.signature('i32(i32,i32)')
+    signatures = add.get_signatures()
+    assert len(signatures) == 1
+    assert signatures[0] == Type.fromstring('i32(i32,i32)')
 
-    # Invalid cases
-
-    with pytest.raises(ValueError,
-                       match=r'mismatch of the number of arguments'):
-        @rjit('int32(int32)')
-        def add(a, b):
-            return a + b
-
-    with pytest.raises(ValueError,
-                       match=r'expected signature with function kind'):
-        @rjit(int)
-        def add(a, b):
-            return a + b
+    # invalid cases are now handled at compile stage
 
 
 def test_return_scalar(rjit):
@@ -118,7 +111,6 @@ def test_return_scalar(rjit):
     @rjit('i64(i64)', 'f64(f64)', 'c128(c128)')
     def ret(a):
         return a
-    ret.target('host')
 
     r = ret(123)
     assert r == 123
@@ -141,17 +133,15 @@ def test_rjit_add(rjit):
     def add(a, b):
         return a + b
 
-    add.target('host')
-
     assert isinstance(add(1, 2), int)
     assert add(1, 2) == 3
 
     with pytest.raises(
             TypeError,
-            match=r'could not find matching function to given argument types'):
+            match=r'found no matching function type to given argument types'):
         add(1, 2.5)
 
-    add.add_signature('d(d,d)')
+    add.signature('d(d,d)')
 
     assert isinstance(add(1, 2.5), float)
     assert add(1, 2.5) == 3.5
@@ -161,10 +151,10 @@ def test_rjit_add(rjit):
 
     with pytest.raises(
             TypeError,
-            match=r'could not find matching function to given argument types'):
+            match=r'found no matching function type to given argument types'):
         add(1j, 2)
 
-    add.add_signature('c128(c128,c128)')
+    add.signature('c128(c128,c128)')
 
     if not win32:
         # see https://github.com/xnd-project/rbc/issues/4
@@ -182,24 +172,10 @@ def test_options_local(rjit):
 
     assert foo.local is False
 
-    @rjit(local=True)
-    def foo2(x: int) -> int:
-        return x + 1
-
     assert foo.local is False
-    assert foo2.local is True
-
-    @rjit
-    def foo3(x: int) -> int:
-        return x + 1
-
-    assert foo.local is False
-    assert foo2.local is True
-    assert foo3.local is False
-
+    assert foo.host.local is True
     assert foo(1) == 2   # remote execution
-    assert foo2(1) == 2  # local execution
-    assert foo3(1) == 2  # remote execution
+    assert foo.host(1) == 2  # local execution
 
 
 def test_composition(rjit):

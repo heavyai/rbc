@@ -24,7 +24,7 @@ pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 @pytest.fixture(scope='module')
 def mapd():
-    config = rbc_mapd.get_client_config()
+    config = rbc_mapd.get_client_config(debug=not True)
     m = rbc_mapd.RemoteMapD(**config)
     table_name = 'rbc_test_mapd'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
@@ -69,7 +69,7 @@ def test_redefine(mapd):
     for x, x1 in result:
         assert x1 == x + 1
 
-    # This should trigger an UserWarning
+    # Re-defining triggers a warning message when in debug mode
     @mapd('i32(i32)')  # noqa: F811
     def incr(x):
         return x + 2
@@ -134,6 +134,7 @@ def test_thrift_api_doc(mapd):
 
 
 def test_manual_ir(mapd):
+    mapd.reset()
     descr, result = mapd.sql_execute(
         'SELECT * FROM {mapd.table_name}'.format(**locals()))
     result = list(result)
@@ -175,6 +176,7 @@ target triple = "{gpu_target_triple}"
 
     mapd.thrift_call('register_runtime_udf', mapd.session_id,
                      ast_signatures, device_ir_map)
+    mapd._last_ir_map = {}  # hack
     descr, result = mapd.sql_execute(
         'SELECT i4, foobar(i4, i4) FROM {mapd.table_name}'.format(**locals()))
     result = list(result)

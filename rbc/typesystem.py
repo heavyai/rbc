@@ -418,7 +418,7 @@ class Type(tuple):
             return self[0].is_complete
         elif self.is_struct:
             for m in self:
-                if not m.complete:
+                if not m.is_complete:
                     return False
         elif self.is_function:
             if not self[0].is_complete:

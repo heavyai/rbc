@@ -23,8 +23,7 @@ pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
-    config = rbc_omnisci.get_client_config(debug=not True,
-                                           use_host_target=True)
+    config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteMapD(**config)
     table_name = 'rbc_test_omnisci_array'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
