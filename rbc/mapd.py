@@ -279,12 +279,7 @@ class RemoteMapD(RemoteJIT):
         self._ext_arguments_map = ext_arguments_map
         return ext_arguments_map
 
-    @property
-    def targets(self):
-        """Return device-target_info mapping of the remote server.
-        """
-        if self._targets is not None:
-            return self._targets
+    def retrieve_targets(self):
         device_params = self.thrift_call('get_device_parameters',
                                          self.session_id)
         device_target_map = {}
@@ -302,11 +297,6 @@ class RemoteMapD(RemoteJIT):
             if device == 'gpu':  # TODO: remove this hack
                 target_info.set('name', 'skylake')
             targets[device] = target_info
-        # todo: base class has the same code, introduce set_targets method
-        for target in targets.values():
-            for c in self.converters:
-                target.add_converter(c)
-        self._targets = targets
         return targets
 
     def register(self):

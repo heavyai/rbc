@@ -367,18 +367,28 @@ class RemoteJIT(object):
     def discard_last_compile(self):
         self._last_ir_map = None
 
+    def retrieve_targets(self):
+        """Retrieve target device information from remote client.
+
+        Returns
+        -------
+        targets : dict
+          Map of target device names and informations.
+        """
+        # TODO: the following is suitable only for local
+        # targets. Implement general API.
+        return dict(host_cpu=TargetInfo.host())
+
     @property
     def targets(self):
         """Return device-target_info mapping of the remote server.
         """
-        if self._targets is not None:
-            return self._targets
-        # TODO: retrieve target info from remote client
-        self._targets = targets = dict(host_cpu=TargetInfo.host())
-        for target in targets.values():
-            for c in self.converters:
-                target.add_converter(c)
-        return targets
+        if self._targets is None:
+            self._targets = targets = self.retrieve_targets()
+            for target in targets.values():
+                for c in self.converters:
+                    target.add_converter(c)
+        return self._targets
 
     def __call__(self, *signatures, **options):
         """Define a remote JIT function signatures and template.
