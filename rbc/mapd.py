@@ -177,7 +177,7 @@ class RemoteMapD(RemoteJIT):
     @property
     def thrift_client(self):
         if self._thrift_client is None:
-            self._thrift_client = self.make_client()
+            self._thrift_client = self.client
         return self._thrift_client
 
     def thrift_call(self, name, *args, **kwargs):

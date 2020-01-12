@@ -7,7 +7,7 @@ def omnisci_is_available():
     """
     config = rbc_omnisci.get_client_config()
     omnisci = rbc_omnisci.RemoteMapD(**config)
-    client = omnisci.make_client()
+    client = omnisci.client
     try:
         version = client(MapD=dict(get_version=()))['MapD']['get_version']
     except Exception as msg:

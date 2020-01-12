@@ -18,7 +18,7 @@ def rjit(request):
 
 def test_construction():
 
-    rjit = RemoteJIT()
+    rjit = RemoteJIT(local=True)
     assert isinstance(rjit, RemoteJIT)
 
     # Case 1
@@ -170,12 +170,8 @@ def test_options_local(rjit):
     def foo(x: int) -> int:
         return x + 1
 
-    assert foo.local is False
-
-    assert foo.local is False
-    assert foo.host.local is True
     assert foo(1) == 2   # remote execution
-    assert foo.host(1) == 2  # local execution
+    assert foo.local(1) == 2  # local execution
 
 
 def test_composition(rjit):

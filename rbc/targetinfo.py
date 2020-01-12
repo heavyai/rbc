@@ -1,4 +1,5 @@
 import ctypes
+import json
 
 
 class TargetInfo(object):
@@ -23,6 +24,25 @@ class TargetInfo(object):
         self.type_sizeof = {}
 
     _host_target_info_cache = {}
+
+    def todict(self):
+        return dict(name=self.name, strict=self.strict, info=self.info,
+                    type_sizeof=self.type_sizeof)
+
+    @classmethod
+    def fromdict(cls, data):
+        target_info = cls(data.get('name', 'somedevice'),
+                          strict=data.get('strict', False))
+        target_info.info.update(data.get('info', {}))
+        target_info.type_sizeof.update(data.get('type_sizeof', {}))
+        return target_info
+
+    def tojson(self):
+        return json.dumps(self.todict())
+
+    @classmethod
+    def fromjson(cls, data):
+        return cls.fromdict(json.loads(data))
 
     @classmethod
     def host(cls, name='host_cpu', strict=False):

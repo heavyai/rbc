@@ -48,6 +48,12 @@ class Signature(object):
             options = remotejit.options
         self.options = options
 
+    @property
+    def local(self):
+        sig = Signature(self.remotejit.local)
+        sig.signatures.extend(self.signatures)
+        return sig
+
     def __str__(self):
         lst = ["'%s'" % (s,) for s in self.signatures]
         return '%s(%s)' % (self.__class__.__name__, ', '.join(lst))
@@ -180,7 +186,7 @@ class Caller(object):
     executed remotely.
     """
 
-    def __init__(self, func, signature: Signature, local=False):
+    def __init__(self, func, signature: Signature):
         """Construct remote JIT caller instance.
 
         Parameters
@@ -201,18 +207,17 @@ class Caller(object):
 
         # Attributes used in RBC user-interface
         # cache of function types and LLVM IR strings
-        self.local = local
         self.ir_cache = {}
         self._client = None
 
         self.remotejit.add_caller(self)
 
     @property
-    def host(self):
+    def local(self):
         """Return Caller instance that executes function calls on the local
         host. Useful for debugging.
         """
-        return Caller(self.func, self.signature, local=True)
+        return Caller(self.func, self.signature.local)
 
     def __repr__(self):
         return '%s(%s, %s, local=%s)' % (type(self).__name__, self.func,
@@ -234,15 +239,6 @@ class Caller(object):
         lst.append(f'{"":-^80}')
         return '\n'.join(lst)
 
-    @property
-    def client(self):
-        if self._client is None:
-            if self.local:
-                self._client = LocalClient()
-            else:
-                self._client = self.remotejit.make_client()
-        return self._client
-
     def get_signatures(self, target_info=None):
         """Return a list of normalized signatures for given target device.
         """
@@ -258,20 +254,22 @@ class Caller(object):
         ir = self.ir_cache.get(ftype)
         if ir is not None:
             return
+        client = self.remotejit.client
         target_info = list(self.remotejit.targets.values())[0]
         llvm_module = irtools.compile_to_LLVM([(self.func, [ftype])],
                                               target_info,
                                               **self.remotejit.options)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
-        response = self.client(remotejit=dict(
+        response = client(remotejit=dict(
             compile=(self.func.__name__, mangled_signatures, ir)))
         assert response['remotejit']['compile']
         self.ir_cache[ftype] = ir
 
     def _remote_call(self, ftype: Type, arguments: tuple):
+        client = self.remotejit.client
         fullname = self.func.__name__ + ftype.mangle()
-        response = self.client(remotejit=dict(call=(fullname, arguments)))
+        response = client(remotejit=dict(call=(fullname, arguments)))
         return response['remotejit']['call']
 
     def __call__(self, *arguments):
@@ -347,6 +345,18 @@ class RemoteJIT(object):
         self._last_ir_map = None
         self._targets = None
 
+        local = options.pop('local', False)
+        if local:
+            self._client = LocalClient()
+        else:
+            self._client = None
+
+    @property
+    def local(self):
+        localjit = type(self)(local=True)
+        localjit._callers.extend(self._callers)
+        return localjit
+
     def add_caller(self, caller):
         self._callers.append(caller)
         self.discard_last_compile()
@@ -370,14 +380,19 @@ class RemoteJIT(object):
     def retrieve_targets(self):
         """Retrieve target device information from remote client.
 
+        Redefine this method if remote client is not native.
+
         Returns
         -------
         targets : dict
           Map of target device names and informations.
         """
-        # TODO: the following is suitable only for local
-        # targets. Implement general API.
-        return dict(host_cpu=TargetInfo.host())
+        # TODO: rename thrift API targets to get_device_parameters?
+        response = self.client(remotejit=dict(targets=()))
+        targets = {}
+        for device, data in response['remotejit']['targets'].items():
+            targets[device] = TargetInfo.fromjson(data)
+        return targets
 
     @property
     def targets(self):
@@ -440,13 +455,16 @@ class RemoteJIT(object):
             self.server_process.terminate()
             self.server_process = None
 
-    def make_client(self):
-        return Client(
-            host=self.host,
-            port=self.port,
-            multiplexed=self.multiplexed,
-            thrift_content=self.thrift_content,
-            socket_timeout=10000)
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = Client(
+                host=self.host,
+                port=self.port,
+                multiplexed=self.multiplexed,
+                thrift_content=self.thrift_content,
+                socket_timeout=10000)
+        return self._client
 
 
 class DispatcherRJIT(Dispatcher):
@@ -457,6 +475,17 @@ class DispatcherRJIT(Dispatcher):
         Dispatcher.__init__(self, server)
         self.compiled_functions = dict()
         self.engines = dict()
+
+    @dispatchermethod
+    def targets(self) -> dict:
+        """Retrieve target device information.
+
+        Returns
+        -------
+        info : dict
+          Map of target devices and their properties.
+        """
+        return dict(cpu=TargetInfo.host().tojson())
 
     @dispatchermethod
     def compile(self, name: str, signatures: str, ir: str) -> int:
