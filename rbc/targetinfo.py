@@ -3,8 +3,7 @@ import json
 
 
 class TargetInfo(object):
-    """Base class for determining various information about the target
-    system.
+    """Holds target device information.
     """
 
     def __init__(self, name, strict=False):
@@ -12,18 +11,16 @@ class TargetInfo(object):
         Parameters
         ----------
         name : str
-          The name of a target device. Typically 'cpu' or 'gpu'.
+          Specify unique name of a target device.
         strict: bool
-          When True, require that atomic types are concrete. If not,
-          raise an exception.
+          When True, require that atomic types are concrete. Used by
+          typesystem.
         """
         self.name = name
         self.strict = strict
         self.custom_type_converters = []
         self.info = {}
         self.type_sizeof = {}
-
-    _host_target_info_cache = {}
 
     def todict(self):
         return dict(name=self.name, strict=self.strict, info=self.info,
@@ -43,6 +40,8 @@ class TargetInfo(object):
     @classmethod
     def fromjson(cls, data):
         return cls.fromdict(json.loads(data))
+
+    _host_target_info_cache = {}
 
     @classmethod
     def host(cls, name='host_cpu', strict=False):
@@ -99,6 +98,8 @@ class TargetInfo(object):
                   f' unsupported property {prop}={value}.')
         self.info[prop] = value
 
+    # Convenience methods
+
     @property
     def triple(self):
         """Return target triple as a string.
@@ -130,7 +131,7 @@ class TargetInfo(object):
         """
         layout = self.info.get('datalayout')
         if layout is None:
-            if self.name != 'cpu':
+            if 'cpu' not in self.name:
                 print(f'rbc.{type(self).__name__}:'
                       f' no datalayout info for {self.name!r} device')
             # In the following we assume that datalayout of the target
@@ -159,7 +160,9 @@ class TargetInfo(object):
         """
         return self.info['name']
 
-    # info may also contain: count, threads, cores
+    # TODO: info may also contain: count, threads, cores
+
+    # Worker methods
 
     def sizeof(self, t):
         """Return the sizeof(t) value for given target device.
@@ -171,7 +174,12 @@ class TargetInfo(object):
             implement the sizeof for the following type names: char,
             uchar, schar, byte, ubyte, short, ushort, int, uint, long,
             ulong, longlong, ulonglong, float, double, longdouble,
-            complex, bool, size_t, ssize_t. wchar
+            complex, bool, size_t, ssize_t, wchar.
+
+        Returns
+        -------
+        size : int
+          Byte-size of the input type.
         """
         s = self.type_sizeof.get(t)
         if s is not None:
@@ -206,7 +214,6 @@ class TargetInfo(object):
           `obj`. If the conversion is unsuccesful, the `converter`
           returns `None` so that other converter functions could be
           tried.
-
         """
         self.custom_type_converters.append(converter)
 
@@ -217,7 +224,3 @@ class TargetInfo(object):
             r = converter(self, t)
             if r is not None:
                 return r
-
-
-# Usage of LocalTargetInfo is deprecated
-LocalTargetInfo = TargetInfo.host

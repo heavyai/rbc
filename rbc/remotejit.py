@@ -41,12 +41,10 @@ class Signature(object):
       sub(1, 2) -> -1
     """
 
-    def __init__(self, remotejit, options=None):
-        self.remotejit = remotejit   # RemoteJIT
+    def __init__(self, remotejit):
+        assert isinstance(remotejit, RemoteJIT), type(remotejit)
+        self.remotejit = remotejit
         self.signatures = []
-        if options is None:
-            options = remotejit.options
-        self.options = options
 
     @property
     def local(self):
@@ -74,14 +72,12 @@ class Signature(object):
 
         Note
         ----
-
         The validity of the input argument is not checked here.  This
         is because the bit-size of certain C types (e.g. size_t, long,
         etc) depend on the target device which information will be
         available at the compile stage. The target dependent
         signatures can be retrieved using
         `signature.get_signatures(target_info)`.
-
         """
         if obj is None:
             return self
@@ -92,12 +88,12 @@ class Signature(object):
         if isinstance(obj, Caller):
             # return new Caller with extended signatures set
             assert obj.remotejit is self.remotejit
-            final = Signature(self.remotejit, options=self.options)
+            final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             final(obj.signature)  # copies the signatures from obj to final
             return Caller(obj.func, final)
         if inspect.isfunction(obj):
-            final = Signature(self.remotejit, options=self.options)
+            final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             return Caller(obj, final)
         self.signatures.append(obj)
@@ -155,7 +151,7 @@ class Signature(object):
         -------
         signature : Signature
         """
-        signature = Signature(self.remotejit, options=self.options)
+        signature = Signature(self.remotejit)
         fsig = Type.fromcallable(func, target_info)
         nargs = len(fsig[1])
         for sig in self.signatures:
@@ -206,8 +202,7 @@ class Caller(object):
         self.nargs = len(inspect.signature(func).parameters)
 
         # Attributes used in RBC user-interface
-        # cache of function types and LLVM IR strings
-        self.ir_cache = {}
+        self._is_compiled = set()  # items are (fname, ftype)
         self._client = None
 
         self.remotejit.add_caller(self)
@@ -227,6 +222,8 @@ class Caller(object):
         return self.describe()
 
     def describe(self):
+        """Return LLVM IRs of all target devices.
+        """
         lst = ['']
         for device, target_info in self.remotejit.targets.items():
             lst.append(f'{device:-^80}')
@@ -234,52 +231,37 @@ class Caller(object):
             llvm_module = irtools.compile_to_LLVM(
                 [(self.func, signatures)],
                 target_info,
-                **self.remotejit.options)
+                debug=self.remotejit.debug)
             lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
         return '\n'.join(lst)
 
-    def get_signatures(self, target_info=None):
+    def get_signatures(self, target_info: TargetInfo):
         """Return a list of normalized signatures for given target device.
         """
-        if target_info is None:
-            target_info = list(self.remotejit.targets.values())[0]
         return self.signature.normalized(self.func, target_info).signatures
 
     # RBC user-interface
 
-    def _remote_compile(self, ftype: Type):
-        """Compile function and signatures to machine code in remote JIT server.
-        """
-        ir = self.ir_cache.get(ftype)
-        if ir is not None:
-            return
-        client = self.remotejit.client
-        target_info = list(self.remotejit.targets.values())[0]
-        llvm_module = irtools.compile_to_LLVM([(self.func, [ftype])],
-                                              target_info,
-                                              **self.remotejit.options)
-        ir = str(llvm_module)
-        mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
-        response = client(remotejit=dict(
-            compile=(self.func.__name__, mangled_signatures, ir)))
-        assert response['remotejit']['compile']
-        self.ir_cache[ftype] = ir
-
-    def _remote_call(self, ftype: Type, arguments: tuple):
-        client = self.remotejit.client
-        fullname = self.func.__name__ + ftype.mangle()
-        response = client(remotejit=dict(call=(fullname, arguments)))
-        return response['remotejit']['call']
-
-    def __call__(self, *arguments):
+    def __call__(self, *arguments, **options):
         """Return the result of a remote JIT compiled function call.
         """
-        target_info = list(self.remotejit.targets.values())[0]
-        atypes = tuple(map(Type.fromvalue, arguments))
+        device = options.get('device')
+        targets = self.remotejit.targets
+        if device is None:
+            if len(targets) > 1:
+                raise TypeError(
+                    f'specifying device is required when target has more than'
+                    f' one device. Available devices: {", ".join(targets)}')
+            device = tuple(targets)[0]
+        target_info = targets[device]
+        atypes = tuple(Type.fromvalue(a, target_info) for a in arguments)
         ftype = self.signature.best_match(self.func, atypes, target_info)
-        self._remote_compile(ftype)
-        return self._remote_call(ftype, arguments)
+        key = self.func.__name__, ftype
+        if key not in self._is_compiled:
+            self.remotejit.remote_compile(self.func, ftype, target_info)
+            self._is_compiled.add(key)
+        return self.remotejit.remote_call(self.func, ftype, arguments)
 
 
 class RemoteJIT(object):
@@ -316,7 +298,8 @@ class RemoteJIT(object):
 
     thrift_content = None
 
-    def __init__(self, host='localhost', port=11530, **options):
+    def __init__(self, host='localhost', port=11530,
+                 local=False, debug=False):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -327,16 +310,17 @@ class RemoteJIT(object):
           Specify the host name of IP of JIT server
         port : {int, str}
           Specify the service port of the JIT server
-        options : dict
-          Specify default options.
+        local : bool
+          When True, use local client. Useful for debugging.
+        debug : bool
+          When True, output debug messages.
         """
         if host == 'localhost':
             host = get_local_ip()
 
-        self.debug = options.pop('debug', False)
+        self.debug = debug
         self.host = host
         self.port = int(port)
-        self.options = options
         self.server_process = None
 
         # A collection of Caller instances. Each represents a function
@@ -345,7 +329,6 @@ class RemoteJIT(object):
         self._last_ir_map = None
         self._targets = None
 
-        local = options.pop('local', False)
         if local:
             self._client = LocalClient()
         else:
@@ -414,8 +397,7 @@ class RemoteJIT(object):
           Specify signatures of a remote JIT function, or a Python
           function as a template from which the remote JIT function
           will be compiled.
-        options : dict
-          Specify options that overwide the default options.
+        local : bool
 
         Returns
         -------
@@ -431,7 +413,10 @@ class RemoteJIT(object):
         or any other object that can be converted to function type,
         see `Type.fromobject` for more information.
         """
-        s = Signature(self, options=options)
+        if options.get('local'):
+            s = Signature(self.local)
+        else:
+            s = Signature(self)
         for sig in signatures:
             s = s(sig)
         return s
@@ -465,6 +450,28 @@ class RemoteJIT(object):
                 thrift_content=self.thrift_content,
                 socket_timeout=10000)
         return self._client
+
+    def remote_compile(self, func, ftype: Type, target_info: TargetInfo):
+        """Remote compile function and signatures to machine code.
+
+        Returns the corresponding LLVM IR module instance which may be
+        useful for debugging.
+        """
+        llvm_module = irtools.compile_to_LLVM(
+            [(func, [ftype])], target_info, debug=self.debug)
+        ir = str(llvm_module)
+        mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
+        response = self.client(remotejit=dict(
+            compile=(func.__name__, mangled_signatures, ir)))
+        assert response['remotejit']['compile'], response
+        return llvm_module
+
+    def remote_call(self, func, ftype: Type, arguments: tuple):
+        """Call function remotely on given arguments.
+        """
+        fullname = func.__name__ + ftype.mangle()
+        response = self.client(remotejit=dict(call=(fullname, arguments)))
+        return response['remotejit']['call']
 
 
 class DispatcherRJIT(Dispatcher):
@@ -536,8 +543,7 @@ class LocalClient(object):
     All calls will be made in a local process. Useful for debbuging.
     """
 
-    def __init__(self, **options):
-        self.options = options
+    def __init__(self):
         self.dispatcher = DispatcherRJIT(None)
 
     def __call__(self, **services):

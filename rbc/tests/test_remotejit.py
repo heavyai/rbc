@@ -7,6 +7,10 @@ from rbc.typesystem import Type
 win32 = sys.platform == 'win32'
 
 
+def Type_fromstring(s):
+    return Type.fromstring(s, None)
+
+
 @pytest.fixture(scope="module")
 def rjit(request):
     rjit = RemoteJIT()
@@ -19,6 +23,9 @@ def rjit(request):
 def test_construction():
 
     rjit = RemoteJIT(local=True)
+    device = tuple(rjit.targets)[0]
+    target_info = rjit.targets[device]
+
     assert isinstance(rjit, RemoteJIT)
 
     # Case 1
@@ -28,9 +35,9 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 1
-    assert signatures[0] == Type.fromstring('i64(i64,i64)')
+    assert signatures[0] == Type_fromstring('i64(i64,i64)')
 
     # Case 2
 
@@ -39,9 +46,9 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 1
-    assert signatures[0] == Type.fromstring('f64(f64,f64)')
+    assert signatures[0] == Type_fromstring('f64(f64,f64)')
 
     # Case 3
 
@@ -51,10 +58,10 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 2
-    assert signatures[1] == Type.fromstring('i32(i32,i32)')
-    assert signatures[0] == Type.fromstring('f64(f64,f64)')
+    assert signatures[1] == Type_fromstring('i32(i32,i32)')
+    assert signatures[0] == Type_fromstring('f64(f64,f64)')
 
     # Case 4
 
@@ -64,10 +71,10 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 2
-    assert signatures[0] == Type.fromstring('f64(f64,f64)')
-    assert signatures[1] == Type.fromstring('i32(i32,i32)')
+    assert signatures[0] == Type_fromstring('f64(f64,f64)')
+    assert signatures[1] == Type_fromstring('i32(i32,i32)')
 
     # Case 5
 
@@ -83,10 +90,10 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 2
-    assert signatures[0] == Type.fromstring('i32(i32,i32)')
-    assert signatures[1] == Type.fromstring('f64(f64,f64)')
+    assert signatures[0] == Type_fromstring('i32(i32,i32)')
+    assert signatures[1] == Type_fromstring('f64(f64,f64)')
 
     # Case 6
 
@@ -95,13 +102,13 @@ def test_construction():
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 0
 
     add.signature('i32(i32,i32)')
-    signatures = add.get_signatures()
+    signatures = add.get_signatures(target_info)
     assert len(signatures) == 1
-    assert signatures[0] == Type.fromstring('i32(i32,i32)')
+    assert signatures[0] == Type_fromstring('i32(i32,i32)')
 
     # invalid cases are now handled at compile stage
 

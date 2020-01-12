@@ -6,6 +6,25 @@ except ImportError:
 import pytest
 from rbc.typesystem import Type
 from rbc.utils import get_datamodel
+from rbc.targetinfo import TargetInfo
+
+target_info = TargetInfo.host()
+
+
+def Type_fromstring(s):
+    return Type.fromstring(s, target_info)
+
+
+def Type_fromobject(s):
+    return Type.fromobject(s, target_info)
+
+
+def Type_fromcallable(s):
+    return Type.fromcallable(s, target_info)
+
+
+def Type_fromvalue(s):
+    return Type.fromvalue(s, target_info)
 
 
 def test_findparen():
@@ -32,44 +51,44 @@ def test_commasplit():
 
 
 def test_fromstring():
-    assert Type.fromstring('void') == Type()
-    assert Type.fromstring('') == Type()
-    assert Type.fromstring('none') == Type()
-    assert Type.fromstring('i') == Type('int32')
-    assert Type.fromstring('i*') == Type(Type('int32'), '*')
-    assert Type.fromstring('*') == Type(Type(), '*')
-    assert Type.fromstring('void*') == Type(Type(), '*')
-    assert Type.fromstring('{i,j}') == Type(Type('int32'), Type('j'))
-    assert Type.fromstring('i(j)') == Type(Type('int32'), (Type('j'), ))
-    assert Type.fromstring('i(j , k)') == Type(Type('int32'),
+    assert Type_fromstring('void') == Type()
+    assert Type_fromstring('') == Type()
+    assert Type_fromstring('none') == Type()
+    assert Type_fromstring('i') == Type('int32')
+    assert Type_fromstring('i*') == Type(Type('int32'), '*')
+    assert Type_fromstring('*') == Type(Type(), '*')
+    assert Type_fromstring('void*') == Type(Type(), '*')
+    assert Type_fromstring('{i,j}') == Type(Type('int32'), Type('j'))
+    assert Type_fromstring('i(j)') == Type(Type('int32'), (Type('j'), ))
+    assert Type_fromstring('i(j , k)') == Type(Type('int32'),
                                                (Type('j'), Type('k')))
-    assert Type.fromstring('  (j , k) ') == Type(Type(),
+    assert Type_fromstring('  (j , k) ') == Type(Type(),
                                                  (Type('j'), Type('k')))
-    assert Type.fromstring('void(j,k)') == Type(Type(),
+    assert Type_fromstring('void(j,k)') == Type(Type(),
                                                 (Type('j'), Type('k')))
 
-    assert Type.fromstring('i a') == Type('int32', name='a')
-    assert Type.fromstring('i* a') == Type(Type('int32'), '*', name='a')
-    assert Type.fromstring('{i,j} a') == Type(Type('int32'), Type('j'),
+    assert Type_fromstring('i a') == Type('int32', name='a')
+    assert Type_fromstring('i* a') == Type(Type('int32'), '*', name='a')
+    assert Type_fromstring('{i,j} a') == Type(Type('int32'), Type('j'),
                                               name='a')
-    assert Type.fromstring('i(j) a') == Type(Type('int32'), (Type('j'),),
+    assert Type_fromstring('i(j) a') == Type(Type('int32'), (Type('j'),),
                                              name='a')
-    assert Type.fromstring('i a*') == Type(Type('int32', name='a'), '*')
-    assert Type.fromstring('{i a,j b} c') == Type(Type('int32', name='a'),
+    assert Type_fromstring('i a*') == Type(Type('int32', name='a'), '*')
+    assert Type_fromstring('{i a,j b} c') == Type(Type('int32', name='a'),
                                                   Type('j', name='b'),
                                                   name='c')
 
     with pytest.raises(ValueError, match=r'failed to find lparen index in'):
-        Type.fromstring('a)')
+        Type_fromstring('a)')
 
     with pytest.raises(ValueError, match=r'failed to comma-split'):
-        Type.fromstring('a((b)')
+        Type_fromstring('a((b)')
 
     with pytest.raises(ValueError, match=r'failed to comma-split'):
-        Type.fromstring('a((b)')
+        Type_fromstring('a((b)')
 
     with pytest.raises(ValueError, match=r'mismatching curly parenthesis in'):
-        Type.fromstring('ab}')
+        Type_fromstring('ab}')
 
 
 def test_is_properties():
@@ -79,23 +98,23 @@ def test_is_properties():
     assert t._is_ok and t.is_atomic
     t = Type('ij')
     assert t._is_ok and t.is_atomic
-    t = Type.fromstring('ij')
+    t = Type_fromstring('ij')
     assert t._is_ok and t.is_atomic
-    t = Type.fromstring('i,j')
+    t = Type_fromstring('i,j')
     assert t._is_ok and t.is_atomic  # !
-    t = Type.fromstring('i  *')
+    t = Type_fromstring('i  *')
     assert t._is_ok and t.is_pointer
-    t = Type.fromstring('*')
+    t = Type_fromstring('*')
     assert t._is_ok and t.is_pointer
-    t = Type.fromstring('i* * ')
+    t = Type_fromstring('i* * ')
     assert t._is_ok and t.is_pointer
-    t = Type.fromstring('i(j)')
+    t = Type_fromstring('i(j)')
     assert t._is_ok and t.is_function
-    t = Type.fromstring('(j)')
+    t = Type_fromstring('(j)')
     assert t._is_ok and t.is_function
-    t = Type.fromstring('()')
+    t = Type_fromstring('()')
     assert t._is_ok and t.is_function
-    t = Type.fromstring('{i, j}')
+    t = Type_fromstring('{i, j}')
     assert t._is_ok and t.is_struct
 
     with pytest.raises(ValueError,
@@ -106,7 +125,7 @@ def test_is_properties():
 def test_tostring():
 
     def tostr(a):
-        return Type.fromstring(a).tostring()
+        return Type_fromstring(a).tostring()
 
     assert tostr('a') == 'a'
     assert tostr('()') == 'void(void)'
@@ -127,7 +146,7 @@ def test_tostring():
 def test_normalize():
 
     def tostr(a):
-        return Type.fromstring(a).tostring()
+        return Type_fromstring(a).tostring()
 
     assert tostr('a') == 'a'
     assert tostr('int32') == 'int32'
@@ -218,7 +237,7 @@ def test_toctypes():
     import ctypes
 
     def toctypes(a):
-        return Type.fromstring(a).toctypes()
+        return Type_fromstring(a).toctypes()
 
     assert toctypes('bool') == ctypes.c_bool
     assert toctypes('i8') == ctypes.c_int8
@@ -245,10 +264,10 @@ def test_fromctypes():
     import ctypes
 
     def fromstr(a):
-        return Type.fromstring(a)
+        return Type_fromstring(a)
 
     def fromctypes(t):
-        return Type.fromctypes(t)
+        return Type.fromctypes(t, target_info)
 
     assert fromctypes(ctypes.c_char_p) == fromstr('char*')
     assert fromctypes(ctypes.c_wchar_p) == fromstr('wchar*')
@@ -272,7 +291,7 @@ def test_fromctypes():
 @pytest.mark.skipif(nb is None, reason='numba is not available')
 def test_tonumba():
     def tonumba(a):
-        return Type.fromstring(a).tonumba()
+        return Type_fromstring(a).tonumba()
 
     assert tonumba('void') == nb.void
     assert tonumba('bool') == nb.boolean
@@ -299,10 +318,10 @@ def test_fromnumba():
     import numba as nb
 
     def fromstr(a):
-        return Type.fromstring(a)
+        return Type_fromstring(a)
 
     def fromnumba(t):
-        return Type.fromnumba(t)
+        return Type.fromnumba(t, target_info)
 
     assert fromnumba(nb.void) == fromstr('void')
     assert fromnumba(nb.boolean) == fromstr('bool')
@@ -327,51 +346,51 @@ def test_fromcallable():
     def foo(a: int, b: float) -> int:
         pass
 
-    assert Type.fromcallable(foo) == Type.fromstring('i64(i64,d)')
+    assert Type_fromcallable(foo) == Type_fromstring('i64(i64,d)')
 
     def foo(a: 'int32', b):  # noqa: F821
         pass
 
-    assert Type.fromcallable(foo) == Type.fromstring('void(i32,<type of b>)')
+    assert Type_fromcallable(foo) == Type_fromstring('void(i32,<type of b>)')
 
     with pytest.raises(
             ValueError,
             match=(r'constructing Type instance from'
                    r' a lambda function is not supported')):
-        Type.fromcallable(lambda a: a)
+        Type_fromcallable(lambda a: a)
 
     with pytest.raises(
             ValueError,
             match=r'callable argument kind must be positional'):
         def foo(*args): pass
-        Type.fromcallable(foo)
+        Type_fromcallable(foo)
 
 
 def test_fromvalue():
-    assert Type.fromvalue(1) == Type.fromstring('i64')
-    assert Type.fromvalue(1.0) == Type.fromstring('f64')
-    assert Type.fromvalue(1j) == Type.fromstring('c128')
-    assert Type.fromvalue("123".encode()) == Type.fromstring('char*')
-    assert Type.fromvalue("123") == Type.fromstring('string')
+    assert Type_fromvalue(1) == Type_fromstring('i64')
+    assert Type_fromvalue(1.0) == Type_fromstring('f64')
+    assert Type_fromvalue(1j) == Type_fromstring('c128')
+    assert Type_fromvalue("123".encode()) == Type_fromstring('char*')
+    assert Type_fromvalue("123") == Type_fromstring('string')
 
 
 def test_fromobject():
     import ctypes
-    assert Type.fromobject('i8') == Type.fromstring('i8')
-    assert Type.fromobject(int) == Type.fromstring('i64')
-    assert Type.fromobject(ctypes.c_int16) == Type.fromstring('i16')
+    assert Type_fromobject('i8') == Type_fromstring('i8')
+    assert Type_fromobject(int) == Type_fromstring('i64')
+    assert Type_fromobject(ctypes.c_int16) == Type_fromstring('i16')
     if nb is not None:
-        assert Type.fromobject(nb.int16) == Type.fromstring('i16')
+        assert Type_fromobject(nb.int16) == Type_fromstring('i16')
 
     def foo():
         pass
 
-    assert Type.fromobject(foo) == Type.fromstring('void(void)')
+    assert Type_fromobject(foo) == Type_fromstring('void(void)')
 
 
 def test_mangling():
     def check(s):
-        t1 = Type.fromstring(s)
+        t1 = Type_fromstring(s)
         m = t1.mangle()
         try:
             t2 = Type.demangle(m)
@@ -408,16 +427,16 @@ def test_mangling():
 
 
 def test_unspecified():
-    assert str(Type.fromstring('unknown(_0,_1)')) == 'unknown(_0, _1)'
+    assert str(Type_fromstring('unknown(_0,_1)')) == 'unknown(_0, _1)'
 
 
 def test_annotation():
-    t = Type.fromstring('int foo| a = 1')
+    t = Type_fromstring('int foo| a = 1')
     assert t.annotation() == dict(a='1')
     assert t[0] == 'int32'
 
     def tostr(a):
-        return Type.fromstring(a).tostring()
+        return Type_fromstring(a).tostring()
 
     assert tostr('int foo| a = 1') == 'int32 foo | a=1'
     assert tostr('int foo| a = 1 | b') == 'int32 foo | a=1 | b'
@@ -432,6 +451,6 @@ def test_annotation():
     assert tostr('int foo|a') == 'int32 foo | a'
     assert tostr('int foo|=1') == 'int32 foo | =1'
 
-    t = Type.fromstring('int')
+    t = Type_fromstring('int')
     assert (t | 'a').tostring() == 'int32 | a'
     assert (t | dict(b=1, c=2)).tostring() == 'int32 | b=1 | c=2'

@@ -294,7 +294,9 @@ class RemoteMapD(RemoteJIT):
                 if not prop.startswith(device + '_'):
                     continue
                 target_info.set(prop[len(device)+1:], value)
-            if device == 'gpu':  # TODO: remove this hack
+            if device == 'gpu':
+                # TODO: remove this hack
+                # see https://github.com/numba/numba/issues/4546
                 target_info.set('name', 'skylake')
             targets[device] = target_info
         return targets
