@@ -4,6 +4,13 @@ Releases
 
 For the latest updates, see `https://github.com/xnd-project/rbc/releases`_.
 
+v0.2.0dev0 (January 13, 2020)
+-----------------------------
+
+- Implement TargetInfo to ensure the correctness of types bit-sizes.
+- Add Windows OmnisciDB client support.
+- Revised and cleaned up remote jit code.
+
 v0.1.1dev1 (December 5, 2019)
 -----------------------------
 
