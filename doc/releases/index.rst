@@ -38,10 +38,18 @@ First release.
 How to make a new RBC release?
 ------------------------------
 
+- Checkout master branch.
+
 - Make sure that all tests pass.
+  + ``pytest -sv rbc/``
+
+- Remove ``dev?`` part from the ``VERSION`` string in ``setup.py``
+  + ``git add -u .``
+  + ``git commit -m "Prepare for release"``
+  + ``git push -u origin master``
 
 - Go to `https://github.com/xnd-project/rbc/releases`_ and click *Draft a new release*
-  + Specify tag version using the following format: `v<major>.<minor>.<micro>dev<number>`. For instance, `v0.1.2.dev0`.
+  + Specify tag version using the following format: `v<major>.<minor>.<micro>dev<number>`. For instance, `v0.1.2dev0`.
   + Fill in the release title
   + Fill in the release description
   + Click *Publish release*
