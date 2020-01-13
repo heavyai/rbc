@@ -20,108 +20,6 @@ class TypeParseError(Exception):
     """
 
 
-class TargetInfo(object):
-    """Base class for determining various information about the target
-    system.
-
-    """
-
-    def __init__(self, strict=False):
-        """
-        Parameters
-        ----------
-        strict: bool
-          When True, require that atomic types are concrete. If not,
-          raise an exception.
-        """
-        self.strict = strict
-        self.custom_type_converters = []
-
-    def sizeof(self, t):
-        """Return the sizeof(t) value in the target system.
-
-        Parameters
-        ----------
-        t : {str, ...}
-            Specify types name. For a full support, one should
-            implement the sizeof for the following type names: char,
-            uchar, schar, byte, ubyte, short, ushort, int, uint, long,
-            ulong, longlong, ulonglong, float, double, longdouble,
-            complex, bool, size_t, ssize_t. wchar
-        """
-        raise NotImplementedError("%s.sizeof(%r)"
-                                  % (type(self).__name__, t))
-
-    def add_converter(self, converter):
-        """Add custom type converter.
-
-        Custom type converters are called on non-concrete atomic
-        types.
-
-        Parameters
-        ----------
-        converter : callable
-          Specify a function with signature `converter(target_info,
-          obj)` that returns `Type` instance corresponding to
-          `obj`. If the conversion is unsuccesful, the `converter`
-          returns `None` so that other converter functions could be
-          tried.
-
-        """
-        self.custom_type_converters.append(converter)
-
-    def custom_type(self, t):
-        """Return custom type of an object.
-        """
-        for converter in self.custom_type_converters:
-            r = converter(self, t)
-            if r is not None:
-                return r
-
-
-class LocalTargetInfo(TargetInfo):
-    """Uses ctypes to determine the type info in a local system.
-
-    """
-    def sizeof(self, t):
-        if isinstance(t, str):
-            if t == 'complex':
-                return 2 * self.sizeof('float')
-            ct = dict(
-                bool=ctypes.c_bool,
-
-                size_t=ctypes.c_size_t,
-                ssize_t=ctypes.c_ssize_t,
-
-                char=ctypes.c_char,
-                uchar=ctypes.c_char,
-                schar=ctypes.c_char,
-                byte=ctypes.c_byte,
-                ubyte=ctypes.c_ubyte,
-
-                wchar=ctypes.c_wchar,
-
-                short=ctypes.c_short,
-                ushort=ctypes.c_ushort,
-
-                int=ctypes.c_int,
-                uint=ctypes.c_uint,
-
-                long=ctypes.c_long,
-                ulong=ctypes.c_ulong,
-
-                longlong=ctypes.c_longlong,
-                ulonglong=ctypes.c_ulonglong,
-
-                float=ctypes.c_float,
-                double=ctypes.c_double,
-                longdouble=ctypes.c_longdouble,
-            ).get(t)
-            if ct is not None:
-                return ctypes.sizeof(ct)
-        return super(LocalTargetInfo, self).sizeof(t)
-
-
 def _findparen(s):
     """Find the index of left parenthesis that matches with the one at the
     end of a string.
@@ -518,7 +416,7 @@ class Type(tuple):
             return self[0].is_complete
         elif self.is_struct:
             for m in self:
-                if not m.complete:
+                if not m.is_complete:
                     return False
         elif self.is_function:
             if not self[0].is_complete:
@@ -749,7 +647,7 @@ class Type(tuple):
         return cls(s)
 
     @classmethod
-    def fromstring(cls, s, target_info=None):
+    def fromstring(cls, s, target_info):
         """Return new Type instance from a string.
 
         Parameters
@@ -758,54 +656,52 @@ class Type(tuple):
         target_info : {TargetInfo, None}
           Specify TargetInfo instance that provides methods for
           determining the type information of a particular
-          target. When not specified, then LocalTargetInfo instance
-          will be created.
+          target. When not specified, TargetInfo.host() is used.
         """
-        if target_info is None:
-            target_info = LocalTargetInfo()
         try:
-            return cls._fromstring(s)._normalize(
-                target_info, target_info.strict)
+            return cls._fromstring(s)._normalize(target_info)
         except TypeParseError as msg:
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
 
     @classmethod
-    def fromnumba(cls, t, target_info=None):
+    def fromnumba(cls, t, target_info):
         """Return new Type instance from numba type object.
         """
         if nb is None:
             raise RuntimeError('importing numba failed: %s' % (nb_NA_message))
         n = _numba_imap.get(t)
         if n is not None:
-            return cls.fromstring(n, target_info=target_info)
+            return cls.fromstring(n, target_info)
         if isinstance(t, nb.typing.templates.Signature):
-            atypes = (cls.fromnumba(a, target_info=target_info)
+            atypes = (cls.fromnumba(a, target_info)
                       for a in t.args)
-            rtype = cls.fromnumba(t.return_type, target_info=target_info)
+            rtype = cls.fromnumba(t.return_type, target_info)
             return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
-            return cls(cls.fromnumba(t.dtype, target_info=target_info), '*')
+            return cls(cls.fromnumba(t.dtype, target_info), '*')
         raise NotImplementedError(repr(t))
 
     @classmethod
-    def fromctypes(cls, t, target_info=None):
+    def fromctypes(cls, t, target_info):
         """Return new Type instance from ctypes type object.
         """
         n = _ctypes_imap.get(t)
         if n is not None:
-            return cls.fromstring(n, target_info=target_info)
+            return cls.fromstring(n, target_info)
         if issubclass(t, ctypes.Structure):
-            return cls(*(cls.fromctypes(_t, target_info=target_info)
+            return cls(*(cls.fromctypes(_t, target_info)
                          for _f, _t in t._fields_))
         if issubclass(t, ctypes._Pointer):
-            return cls(cls.fromctypes(t._type_, target_info=target_info), '*')
+            return cls(cls.fromctypes(t._type_, target_info), '*')
         if issubclass(t, ctypes._CFuncPtr):
-            return cls(cls.fromctypes(t._restype_, target_info=target_info),
-                       tuple(map(cls.fromctypes, t._argtypes_)) or (Type(),))
+            atypes = tuple(cls.fromctypes(a, target_info)
+                           for a in t._argtypes_)
+            return cls(cls.fromctypes(
+                t._restype_, target_info), atypes or (Type(),))
         raise NotImplementedError(repr(t))
 
     @classmethod
-    def fromcallable(cls, func, target_info=None):
+    def fromcallable(cls, func, target_info):
         """Return new Type instance from a callable object.
 
         The callable object must use annotations for specifying the
@@ -823,7 +719,7 @@ class Type(tuple):
             rtype = cls()  # void
             # TODO: check that function does not return other than None
         else:
-            rtype = cls.fromobject(annot, target_info=target_info)
+            rtype = cls.fromobject(annot, target_info)
         atypes = []
         for n, param in sig.parameters.items():
             annot = param.annotation
@@ -837,54 +733,61 @@ class Type(tuple):
             elif annot == sig.empty:
                 atypes.append(cls('<type of %s>' % n))
             else:
-                atypes.append(cls.fromobject(annot, target_info=target_info))
+                atypes.append(cls.fromobject(annot, target_info))
         return cls(rtype, tuple(atypes) or (Type(),))
 
     @classmethod
-    def fromvalue(cls, obj, target_info=None):
+    def fromvalue(cls, obj, target_info):
         """Return Type instance that corresponds to given Python value.
         """
         n = _python_imap.get(type(obj))
         if n is not None:
-            return cls.fromstring(n, target_info=target_info)
+            return cls.fromstring(n, target_info)
         raise NotImplementedError('%s.fromvalue(%r)'
                                   % (cls.__name__, obj))
 
     @classmethod
-    def fromobject(cls, obj, target_info=None):
+    def fromobject(cls, obj, target_info):
         """Return new Type instance from any object.
 
         Parameters
         ----------
         obj : object
-        target_info : {TargetInfo, None}
+        target_info : TargetInfo
           Specify TargetInfo instance that provides methods for
           determining the type information of a particular
-          target. When not specified, then LocalTargetInfo instance
-          will be created.
+          target.
+
+        Note
+        ----
+        Using TargetInfo ensures that the returned Type instance
+        bit-size corresponds to what target's device is using.
+
+        Also, TargetInfo supports custom types, that is, mapping
+        non-standard type specifications (e.g. typedef-s, named
+        struct-s, C++ classes) to standard type specifications.
         """
         if isinstance(obj, cls):
             return obj
         if isinstance(obj, str):
-            return cls.fromstring(obj, target_info=target_info)
+            return cls.fromstring(obj, target_info)
         n = _python_imap.get(obj)
         if n is not None:
-            return cls.fromstring(n, target_info=target_info)
+            return cls.fromstring(n, target_info)
         if hasattr(obj, '__module__'):
             if obj.__module__.startswith('numba'):
-                return cls.fromnumba(obj, target_info=target_info)
+                return cls.fromnumba(obj, target_info)
             if obj.__module__.startswith('ctypes'):
-                return cls.fromctypes(obj, target_info=target_info)
+                return cls.fromctypes(obj, target_info)
         if inspect.isclass(obj):
             if obj is int:
                 return cls('int64')
-            return cls.fromstring(obj.__name__,
-                                  target_info=target_info)
+            return cls.fromstring(obj.__name__, target_info)
         if callable(obj):
-            return cls.fromcallable(obj, target_info=target_info)
+            return cls.fromcallable(obj, target_info)
         raise NotImplementedError(repr(type(obj)))
 
-    def _normalize(self, target_info, strict):
+    def _normalize(self, target_info):
         """Return new Type instance with atomic types normalized.
         """
         params = self._params
@@ -940,24 +843,29 @@ class Type(tuple):
                     (_complex_match, 'complex', 'complex'),
             ]:
                 if match(s) is not None:
+                    if target_info is None:
+                        raise TypeError(
+                            f'{self}: cannot determine sizeof({otype}):'
+                            ' no TargetInfo specified')
                     bits = str(target_info.sizeof(otype) * 8)
                     return self.__class__(ntype + bits, **params)
-            t = target_info.custom_type(s)
-            if t is not None:
-                return t
-            if strict:
-                raise ValueError('%s is not concrete' % (self))
+            if target_info is not None:
+                t = target_info.custom_type(s)
+                if t is not None:
+                    return t
+                if target_info.strict:
+                    raise ValueError('%s is not concrete' % (self))
             return self
         if self.is_pointer:
             return self.__class__(
-                self[0]._normalize(target_info, strict), self[1], **params)
+                self[0]._normalize(target_info), self[1], **params)
         if self.is_struct:
             return self.__class__(
-                *(t._normalize(target_info, strict) for t in self), **params)
+                *(t._normalize(target_info) for t in self), **params)
         if self.is_function:
             return self.__class__(
-                self[0]._normalize(target_info, strict),
-                tuple(t._normalize(target_info, strict) for t in self[1]),
+                self[0]._normalize(target_info),
+                tuple(t._normalize(target_info) for t in self[1]),
                 **params)
         raise NotImplementedError(repr(self))
 

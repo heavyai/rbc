@@ -8,6 +8,8 @@ from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_array import array_type_converter
+from .targetinfo import TargetInfo
+from .irtools import compile_to_LLVM
 
 
 def get_client_config(**config):
@@ -121,6 +123,7 @@ class RemoteMapD(RemoteJIT):
 
     """
 
+    converters = [array_type_converter]
     multiplexed = False
     mangle_prefix = ''
 
@@ -145,11 +148,10 @@ class RemoteMapD(RemoteJIT):
         self.thrift_content = content
         RemoteJIT.__init__(self, host=host, port=port, **options)
 
-        self.target_info.add_converter(array_type_converter)
-
         self._version = None
         self._session_id = None
         self._thrift_client = None
+        self._targets = None
 
     @property
     def version(self):
@@ -175,7 +177,7 @@ class RemoteMapD(RemoteJIT):
     @property
     def thrift_client(self):
         if self._thrift_client is None:
-            self._thrift_client = self.make_client()
+            self._thrift_client = self.client
         return self._thrift_client
 
     def thrift_call(self, name, *args, **kwargs):
@@ -277,6 +279,28 @@ class RemoteMapD(RemoteJIT):
         self._ext_arguments_map = ext_arguments_map
         return ext_arguments_map
 
+    def retrieve_targets(self):
+        device_params = self.thrift_call('get_device_parameters',
+                                         self.session_id)
+        device_target_map = {}
+        for prop, value in device_params.items():
+            if prop.endswith('_triple'):
+                device = prop.rsplit('_', 1)[0]
+                device_target_map[device] = value
+        targets = {}
+        for device, target in device_target_map.items():
+            target_info = TargetInfo(name=device)
+            for prop, value in device_params.items():
+                if not prop.startswith(device + '_'):
+                    continue
+                target_info.set(prop[len(device)+1:], value)
+            if device == 'gpu':
+                # TODO: remove this hack
+                # see https://github.com/numba/numba/issues/4546
+                target_info.set('name', 'skylake')
+            targets[device] = target_info
+        return targets
+
     def register(self):
         if self.have_last_compile:
             return
@@ -286,90 +310,75 @@ class RemoteMapD(RemoteJIT):
 
         udfs = []
         udtfs = []
-
-        functions_map = defaultdict(list)
-        for caller in self.callers:
-            key = caller.func.__name__, caller.nargs
-            functions_map[key].extend(caller._signatures)
-            # todo: eliminate dublicated signatures
-
-        for (name, nargs), signatures in functions_map.items():
-            for i, sig in enumerate(signatures):
-                if i == 0:
-                    sig.set_mangling('')
-                else:
-                    sig.set_mangling('__%s' % (i))
-                if 'table' in sig[0].annotation():  # UDTF
-                    sizer = None
-                    sizer_index = -1
-                    inputArgTypes = []
-                    outputArgTypes = []
-                    sqlArgTypes = []
-                    for i, a in enumerate(sig[1]):
-                        _sizer = a.annotation().get('sizer')
-                        if _sizer is not None:
-                            # expect no more than one sizer argument
-                            assert sizer_index == -1
-                            sizer_index = i + 1
-                            sizer = _sizer
-                        atype = ext_arguments_map[
-                            a.tostring(use_annotation=False)]
-                        if 'output' in a.annotation():
-                            outputArgTypes.append(atype)
-                        else:
-                            if 'input' in a.annotation():
-                                sqlArgTypes.append(atype)
-                            elif 'cursor' in a.annotation():
-                                sqlArgTypes.append(ext_arguments_map['Cursor'])
-                            inputArgTypes.append(atype)
-                    if sizer is None:
-                        sizer = 'kConstant'
-                    sizer_type = getattr(thrift.TOutputBufferSizeType, sizer)
-                    udtfs.append(thrift.TUserDefinedTableFunction(
-                        name + sig.mangling,
-                        sizer_type, sizer_index,
-                        inputArgTypes, outputArgTypes, sqlArgTypes))
-                else:
-                    rtype = ext_arguments_map[sig[0].tostring(
-                        use_annotation=False)]
-                    atypes = [ext_arguments_map[a.tostring(
-                        use_annotation=False)] for a in sig[1]]
-                    udfs.append(thrift.TUserDefinedFunction(
-                        name + sig.mangling, atypes, rtype))
-
-        device_params = self.thrift_call('get_device_parameters',
-                                         self.session_id)
-        device_target_map = {}
-        for prop, value in device_params.items():
-            if prop.endswith('_triple'):
-                device = prop.rsplit('_', 1)[0]
-                device_target_map[device] = value
-        ir_map = self.compile_to_LLVM(targets=device_target_map.values())
         device_ir_map = {}
-        for device, target in device_target_map.items():
-            llvm_module = ir_map[target]
-
-            require_triple = device_params.get(device+'_triple')
-            if require_triple is not None:
-                if llvm_module.triple != require_triple:
-                    raise RuntimeError(
-                        'Expected triple `{}` but LLVM contains `{}`'
-                        .format(require_triple, llvm_module.triple))
-
-            require_data_layout = device_params.get(device+'_datalayout')
-            if require_data_layout is not None:
-                if llvm_module.data_layout != require_data_layout:
-                    raise RuntimeError(
-                        'Expected data layout `{}` but LLVM contains `{}`'
-                        .format(require_data_layout, llvm_module.data_layout))
-
-            ir = device_ir_map[device] = str(llvm_module)
-            if self.debug:
-                print(('IR[%s]' % (device)).center(80, '-'))
-                print(ir)
-        if self.debug:
-            print('=' * 80)
-
+        for device, target_info in self.targets.items():
+            functions_and_signatures = []
+            function_signatures = defaultdict(list)
+            for caller in reversed(self.get_callers()):
+                signatures = []
+                name = caller.func.__name__
+                for sig in caller.get_signatures(target_info):
+                    i = len(function_signatures[name])
+                    if sig in function_signatures[name]:
+                        if self.debug:
+                            f2 = os.path.basename(
+                                caller.func.__code__.co_filename)
+                            n2 = caller.func.__code__.co_firstlineno
+                            print(f'{type(self).__name__}.register: ignoring'
+                                  f' older definition of `{name}` for `{sig}`'
+                                  f' in {f2}#{n2}.')
+                        continue
+                    function_signatures[name].append(sig)
+                    if i == 0:
+                        sig.set_mangling('')
+                    else:
+                        sig.set_mangling('__%s' % (i))
+                    if 'table' in sig[0].annotation():  # UDTF
+                        sizer = None
+                        sizer_index = -1
+                        inputArgTypes = []
+                        outputArgTypes = []
+                        sqlArgTypes = []
+                        for i, a in enumerate(sig[1]):
+                            _sizer = a.annotation().get('sizer')
+                            if _sizer is not None:
+                                # expect no more than one sizer argument
+                                assert sizer_index == -1
+                                sizer_index = i + 1
+                                sizer = _sizer
+                            atype = ext_arguments_map[
+                                a.tostring(use_annotation=False)]
+                            if 'output' in a.annotation():
+                                outputArgTypes.append(atype)
+                            else:
+                                if 'input' in a.annotation():
+                                    sqlArgTypes.append(atype)
+                                elif 'cursor' in a.annotation():
+                                    sqlArgTypes.append(
+                                        ext_arguments_map['Cursor'])
+                                inputArgTypes.append(atype)
+                        if sizer is None:
+                            sizer = 'kConstant'
+                        sizer_type = getattr(
+                            thrift.TOutputBufferSizeType, sizer)
+                        udtfs.append(thrift.TUserDefinedTableFunction(
+                            name + sig.mangling,
+                            sizer_type, sizer_index,
+                            inputArgTypes, outputArgTypes, sqlArgTypes))
+                    else:
+                        rtype = ext_arguments_map[sig[0].tostring(
+                            use_annotation=False)]
+                        atypes = [ext_arguments_map[a.tostring(
+                            use_annotation=False)] for a in sig[1]]
+                        udfs.append(thrift.TUserDefinedFunction(
+                            name + sig.mangling, atypes, rtype))
+                    signatures.append(sig)
+                functions_and_signatures.append((caller.func, signatures))
+            llvm_module = compile_to_LLVM(functions_and_signatures,
+                                          target_info)
+            assert llvm_module.triple == target_info.triple
+            assert llvm_module.data_layout == target_info.datalayout
+            device_ir_map[device] = str(llvm_module)
         return self.thrift_call('register_runtime_extension_functions',
                                 self.session_id,
                                 udfs, udtfs, device_ir_map)

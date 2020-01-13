@@ -6,7 +6,7 @@ server.
 
 import os
 from .utils import resolve_includes
-from ..target_info import runcommand
+from ..utils import runcommand
 
 
 class Dispatcher(object):
