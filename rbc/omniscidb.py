@@ -213,7 +213,7 @@ class RemoteOmnisci(RemoteJIT):
             if len(msg) > 200:
                 msg = msg[:180] + '...' + msg[-15:]
             print(msg)
-        return client(MapD={name: args})['MapD'][name]
+        return client(Omnisci={name: args})['Omnisci'][name]
 
     def sql_execute(self, query):
         self.register()

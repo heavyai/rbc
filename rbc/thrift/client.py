@@ -217,7 +217,6 @@ class Client(object):
             if self.multiplexed:
                 factory = thr.protocol.TMultiplexedProtocolFactory(
                     factory, service_name)
-            print(service_name)
             service = getattr(self.thrift, service_name)
             ctx = thr.rpc.client_context(service, proto_factory=factory,
                                          **self.options)

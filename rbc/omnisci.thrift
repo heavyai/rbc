@@ -63,7 +63,7 @@ struct TQueryResult {
   4: string nonce
 }
 
-service MapD {
+service Omnisci {
   string get_version() throws (1: TMapDException e)
   TSessionId connect(1: string user, 2: string passwd, 3: string dbname) throws (1: TMapDException e)
   TQueryResult sql_execute(1: TSessionId session, 2: string query 3: bool column_format, 4: string nonce, 5: i32 first_n = -1, 6: i32 at_most_n = -1) throws (1: TMapDException e)
