@@ -29,5 +29,5 @@ before_script:
   - python setup.py develop
 
 script:
-  - flake8 .
+  - flake8 rbc
   - pytest -v -r s rbc/
