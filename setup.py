@@ -12,7 +12,7 @@ if os.path.exists('MANIFEST'):
 
 CONDA_BUILD = int(os.environ.get('CONDA_BUILD', '0'))
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages  # noqa: E402
 
 VERSION = '0.2.1dev0'  # for release, remove dev? part
 DESCRIPTION = "RBC - Remote Backend Compiler Project"
