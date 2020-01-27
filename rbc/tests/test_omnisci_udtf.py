@@ -9,7 +9,8 @@ def omnisci_is_available():
     omnisci = rbc_omnisci.RemoteOmnisci(**config)
     client = omnisci.client
     try:
-        version = client(Omnisci=dict(get_version=()))['Omnisci']['get_version']
+        version = client(
+                Omnisci=dict(get_version=()))['Omnisci']['get_version']
     except Exception as msg:
         return False, 'failed to get OmniSci version: %s' % (msg)
     if version >= '4.6':

@@ -3,6 +3,7 @@ import os
 import pytest
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
+
 def test_get_client_config(tmpdir):
     d = tmpdir.mkdir("omnisci")
     fh = d.join("client.conf")
@@ -41,6 +42,7 @@ use_host_target: False
             del os.environ['OMNISCI_CLIENT_CONF']
         else:
             os.environ['OMNISCI_CLIENT_CONF'] = old_conf
+
 
 def omnisci_is_available():
     """Return True if Omnisci server is accessible.
@@ -159,8 +161,8 @@ def test_thrift_api_doc(omnisci):
     omnisci.reset()
 
     @omnisci('double(int, double)',
-          'float(int, float)',
-          'int(int, int)')
+             'float(int, float)',
+             'int(int, int)')
     def foo(i, v):
         return v * i + 55
 
@@ -181,7 +183,8 @@ def test_manual_ir(omnisci):
     assert result == [(0.0, 0.0, 0, 0, 0, 0, 1), (1.0, 1.0, 1, 1, 1, 1, 0),
                       (2.0, 2.0, 2, 2, 2, 2, 1), (3.0, 3.0, 3, 3, 3, 3, 0),
                       (4.0, 4.0, 4, 4, 4, 4, 1)]
-    device_params = omnisci.thrift_call('get_device_parameters', omnisci.session_id)
+    device_params = omnisci.thrift_call('get_device_parameters',
+                                        omnisci.session_id)
     # print(device_params)
     cpu_target_triple = device_params['cpu_triple']
     cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -215,10 +218,11 @@ target triple = "{gpu_target_triple}"
 '''.format(**locals())
 
     omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
-                     ast_signatures, device_ir_map)
+                        ast_signatures, device_ir_map)
     omnisci._last_ir_map = {}  # hack
     descr, result = omnisci.sql_execute(
-        'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'.format(**locals()))
+        'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'
+        .format(**locals()))
     result = list(result)
     assert len(result) > 0
     for x, r in result:
@@ -226,7 +230,8 @@ target triple = "{gpu_target_triple}"
 
 
 def test_ir_parse_error(omnisci):
-    device_params = omnisci.thrift_call('get_device_parameters', omnisci.session_id)
+    device_params = omnisci.thrift_call('get_device_parameters',
+                                        omnisci.session_id)
     foo_ir = '''\
 define i32 @foobar(i32 %.1, i32 %.2) {
 entry:
@@ -245,12 +250,13 @@ entry:
 
     with pytest.raises(Exception, match=r".*LLVM IR ParseError:"):
         omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
-                         ast_signatures, device_ir_map)
+                            ast_signatures, device_ir_map)
 
 
 @pytest.mark.skip(reason='omnisci server crashes')
 def test_ir_query_error(omnisci):
-    device_params = omnisci.thrift_call('get_device_parameters', omnisci.session_id)
+    device_params = omnisci.thrift_call('get_device_parameters',
+                                        omnisci.session_id)
     gpu_target_triple = device_params.get('gpu_triple')
     foo_ir = '''\
 define i32 @foobarrr(i32 %.1, i32 %.2) {
@@ -267,9 +273,10 @@ entry:
         device_ir_map['gpu'] = foo_ir
 
     omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
-                     ast_signatures, device_ir_map)
+                        ast_signatures, device_ir_map)
     descr, result = omnisci.sql_execute(
-        'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'.format(**locals()))
+        'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'
+        .format(**locals()))
 
 
 def test_multiple_implementation(omnisci):
@@ -427,7 +434,8 @@ def test_casting(omnisci):
     assert list(result)[0] == (1, 2, 4, 8)
 
     descr, result = omnisci.sql_execute(
-        'select i_8(i1),i16(i2),i32(i4),i64(i8) from {omnisci.table_name} limit 1'
+        'select i_8(i1),i16(i2),i32(i4),i64(i8)'
+        ' from {omnisci.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (1, 2, 4, 8)
 
@@ -474,7 +482,8 @@ def test_casting(omnisci):
     assert list(result)[0] == (2, 2)
 
     descr, result = omnisci.sql_execute(
-        'select i8(i_8(0)) from {omnisci.table_name} limit 1'.format(**locals()))
+        'select i8(i_8(0)) from {omnisci.table_name} limit 1'
+        .format(**locals()))
     assert list(result)[0] == (2,)
 
     descr, result = omnisci.sql_execute(
