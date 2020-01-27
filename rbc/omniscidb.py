@@ -65,7 +65,8 @@ def get_client_config(**config):
 
     conf_file = os.environ.get('OMNISCI_CLIENT_CONF', None)
     if conf_file is not None and not os.path.isfile(conf_file):
-        print(f'rbc.mapd.get_client_config: OMNISCI_CLIENT_CONF={conf_file!r}'
+        print(f'rbc.omnisci.get_client_config:'
+              ' OMNISCI_CLIENT_CONF={conf_file!r}'
               ' is not a file, ignoring.')
         conf_file = None
     if conf_file is None:
@@ -106,17 +107,17 @@ def get_client_config(**config):
     return config
 
 
-class RemoteMapD(RemoteJIT):
+class RemoteOmnisci(RemoteJIT):
 
     """Usage:
 
-      mapd = RemoteMapD(host=..., port=...)
+      omnisci = RemoteOmnisci(host=..., port=...)
 
-      @mapd('int(int, int)')
+      @omnisci('int(int, int)')
       def add(a, b):
           return a + b
 
-      mapd.register()
+      omnisci.register()
 
       Use pymapd, for instance, to make a SQL query `select add(c1,
       c2) from table`
@@ -213,7 +214,7 @@ class RemoteMapD(RemoteJIT):
             if len(msg) > 200:
                 msg = msg[:180] + '...' + msg[-15:]
             print(msg)
-        return client(MapD={name: args})['MapD'][name]
+        return client(Omnisci={name: args})['Omnisci'][name]
 
     def sql_execute(self, query):
         self.register()
