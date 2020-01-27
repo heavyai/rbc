@@ -23,9 +23,13 @@ install:
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
+  - pip install flake8
 
 before_script:
   - python setup.py develop
+
+script:
+  - flake8 rbc
 
 script:
   - pytest -v -r s rbc/
