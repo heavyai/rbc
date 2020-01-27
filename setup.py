@@ -2,8 +2,6 @@ import os
 import sys
 import builtins
 
-from setuptools import setup, find_packages
-
 if sys.version_info[:2] < (3, 4):
     raise RuntimeError("Python version >= 3.4 required.")
 
@@ -13,6 +11,8 @@ if os.path.exists('MANIFEST'):
     os.remove('MANIFEST')
 
 CONDA_BUILD = int(os.environ.get('CONDA_BUILD', '0'))
+
+from setuptools import setup, find_packages
 
 VERSION = '0.2.1dev0'  # for release, remove dev? part
 DESCRIPTION = "RBC - Remote Backend Compiler Project"
