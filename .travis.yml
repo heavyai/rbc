@@ -30,6 +30,4 @@ before_script:
 
 script:
   - flake8 .
-
-script:
   - pytest -v -r s rbc/
