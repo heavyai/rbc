@@ -3,7 +3,11 @@ import docutils
 extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
-    'sphinx.ext.extlinks'
+    'sphinx.ext.extlinks',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.coverage',
+    'sphinx.ext.napoleon' 
 ]
 
 source_suffix = '.rst'

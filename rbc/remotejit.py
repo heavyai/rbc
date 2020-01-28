@@ -20,25 +20,28 @@ class Signature(object):
     representing the prototypes of functions.
 
     Signature decorators are re-usable and composeable. For example:
+    
+    .. highlight:: python
+    .. code-block:: python
 
-      rjit = RemoteJIT(host=..., port=...)
+        rjit = RemoteJIT(host='localhost' port=6274)
 
-      remotebinaryfunc = rjit('int32(int32, int32)',
-                              'float32(float32, float32)', ...)
-      # remotebinaryfunc is Signature instance
+        # remotebinaryfunc is Signature instance
+        remotebinaryfunc = rjit('int32(int32, int32)',
+                                'float32(float32, float32)', ...)
 
-      @remotebinaryfunc
-      def add(a, b):
-          return a + b
-      # add will be Caller instance
+        # add will be Caller instance
+        @remotebinaryfunc
+        def add(a, b):
+            return a + b
 
-      @remotebinaryfunc
-      def sub(a, b):
-          return a - b
-      # sub will be Caller instance
+        # sub will be Caller instance
+        @remotebinaryfunc
+        def sub(a, b):
+            return a - b
 
-      add(1, 2) -> 3
-      sub(1, 2) -> -1
+        add(1, 2) # returns 3
+        sub(1.0, 2.0) # returns -1.0
     """
 
     def __init__(self, remotejit):
@@ -270,26 +273,25 @@ class RemoteJIT(object):
 
     To use, define
 
-      rjit = RemoteJIT(host=..., port=...)
+    .. highlight:: python
+    .. code-block:: python
 
-    and then use
+        rjit = RemoteJIT(host='localhost', port=6274)
 
-      @rjit
-      def foo(a: int, b: int) -> int:
-        return a + b
+        @rjit
+        def foo(a: int, b: int) -> int:
+            return a + b
 
-    or
+        @rjit('double(double, double)',
+              'int64(int64, int64)')
+        def bar(a, b):
+            return a + b
 
-      @rjit('double(double, double)',
-            'int64(int64, int64)')
-      def foo(a, b):
-        return a + b
+        # Finally, call
+        c = foo(1, 2) # c = 3
+        b = bar(7.0, 1.0) # b = 8.0
 
-    Finally, call
-
-      c = foo(1, 2)
-
-    where the sum will be evaluated in the remote host.
+    The sum will be evaluated in the remote host.
     """
 
     converters = []

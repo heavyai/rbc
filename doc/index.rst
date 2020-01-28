@@ -22,12 +22,5 @@ and llvmlite tools.
    :maxdepth: 1
 
    rbc/index.rst
-
-
-Releases
---------
-
-.. toctree::
-   :maxdepth: 1
-
+   rbc/api.rst
    releases/index.rst
