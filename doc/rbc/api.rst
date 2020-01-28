@@ -1,4 +1,4 @@
-.. currentmodule:: ibis
+.. currentmodule:: rbc
 .. _api:
 
 *************
@@ -16,8 +16,13 @@ These methods are in the ``rbc.remotejit`` module namespace
 
 .. currentmodule:: rbc.remotejit
 
-.. automodule:: rbc.remotejit
-  :members:
-
 .. autosummary:: 
-  :toctree: rbc.remotejit
+  :toctree: generated 
+
+  Signature
+  Caller
+  RemoteJIT
+  DispatcherRJIT
+  LocalClient
+
+  

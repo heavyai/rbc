@@ -10,6 +10,11 @@ extensions = [
     'sphinx.ext.napoleon' 
 ]
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+autosummary_generate = True
+autosummary_imported_members = True
+
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'rbc'
