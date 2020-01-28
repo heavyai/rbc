@@ -123,18 +123,18 @@ Assume that OmnisciDB server is running in localhost, for instance.
 
 In a client computer, register a UDF in OmnisciDB server:
 ```
-from rbc.mapd import RemoteMapD
-mapd = RemoteMapD()
-@mapd('i32(i32)')
+from rbc.omniscidb import RemoteOmnisci
+omni = RemoteOmnisci()
+@omni('i32(i32)')
 def incr(x):
     return x + 1
-mapd.register()
+omni.register()
 ```
 
 In a client computer, use the UDF in a query to OmnisciDB server:
 ```
 import ibis
-con = ibis.mapd.connect(...)
+con = ibis.omniscidb.connect(...)
 q = con.sql('select i, incr(i) from mytable').execute()
 ```
 

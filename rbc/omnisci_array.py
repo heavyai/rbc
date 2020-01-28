@@ -30,7 +30,7 @@ class ArrayPointerModel(numba.datamodel.models.PointerModel):
 
 
 @numba.extending.intrinsic
-def mapd_array_len_(typingctx, data):
+def omnisci_array_len_(typingctx, data):
     sig = numba.types.int64(data)
 
     def codegen(context, builder, signature, args):
@@ -45,13 +45,13 @@ def mapd_array_len_(typingctx, data):
 
 
 @numba.extending.overload(len)
-def mapd_array_len(x):
+def omnisci_array_len(x):
     if isinstance(x, ArrayPointer):
-        return lambda x: mapd_array_len_(x)
+        return lambda x: omnisci_array_len_(x)
 
 
 @numba.extending.intrinsic
-def mapd_array_getitem_(typingctx, data, index):
+def omnisci_array_getitem_(typingctx, data, index):
     sig = data.eltype(data, index)
 
     def codegen(context, builder, signature, args):
@@ -69,9 +69,9 @@ def mapd_array_getitem_(typingctx, data, index):
 
 
 @numba.extending.overload(operator.getitem)
-def mapd_array_getitem(x, i):
+def omnisci_array_getitem(x, i):
     if isinstance(x, ArrayPointer):
-        return lambda x, i: mapd_array_getitem_(x, i)
+        return lambda x, i: omnisci_array_getitem_(x, i)
 
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match

@@ -1,15 +1,16 @@
 import pytest
-rbc_omnisci = pytest.importorskip('rbc.mapd')
+rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
 
 def omnisci_is_available():
     """Return True if OmniSci server is accessible.
     """
     config = rbc_omnisci.get_client_config()
-    omnisci = rbc_omnisci.RemoteMapD(**config)
+    omnisci = rbc_omnisci.RemoteOmnisci(**config)
     client = omnisci.client
     try:
-        version = client(MapD=dict(get_version=()))['MapD']['get_version']
+        version = client(
+                Omnisci=dict(get_version=()))['Omnisci']['get_version']
     except Exception as msg:
         return False, 'failed to get OmniSci version: %s' % (msg)
     if version >= '4.6':
@@ -24,7 +25,7 @@ pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 @pytest.fixture(scope='module')
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteMapD(**config)
+    m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_omnisci_array'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
