@@ -111,16 +111,19 @@ class RemoteOmnisci(RemoteJIT):
 
     """Usage:
 
-      omnisci = RemoteOmnisci(host=..., port=...)
+    .. highlight:: python
+    .. code-block:: python
 
-      @omnisci('int(int, int)')
-      def add(a, b):
-          return a + b
+        omnisci = RemoteOmnisci(host=..., port=...)
 
-      omnisci.register()
+        @omnisci('int(int, int)')
+        def add(a, b):
+            return a + b
 
-      Use pymapd, for instance, to make a SQL query `select add(c1,
-      c2) from table`
+        omnisci.register()
+
+    Use pymapd, for instance, to make a SQL query `select add(c1,
+    c2) from table`
 
     """
 
