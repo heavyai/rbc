@@ -15,6 +15,7 @@ enum TExtArgumentType {
   PInt64,
   PFloat,
   PDouble,
+  PBool,
   Bool,
   ArrayInt8,
   ArrayInt16,
@@ -22,8 +23,12 @@ enum TExtArgumentType {
   ArrayInt64,
   ArrayFloat,
   ArrayDouble,
+  ArrayBool,
   GeoPoint,
-  Cursor
+  GeoLineString,
+  Cursor,
+  GeoPolygon,
+  GeoMultiPolygon
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required values */
