@@ -20,7 +20,7 @@ class Signature(object):
     representing the prototypes of functions.
 
     Signature decorators are re-usable and composeable. For example:
-    
+
     .. highlight:: python
     .. code-block:: python
 

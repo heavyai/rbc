@@ -1,5 +1,4 @@
 .. currentmodule:: rbc
-.. _api:
 
 *************
 API Reference
@@ -16,7 +15,7 @@ These methods are in the ``rbc.remotejit`` module namespace
 .. currentmodule:: rbc.remotejit
 
 .. autosummary:: 
-  :toctree: generated 
+  :toctree: generated
 
   Signature
   Caller
@@ -37,6 +36,7 @@ These methods are in the ``rbc.ominscidb`` module namespace
 
   get_client_config
   RemoteOmnisci
+
 
 Omnisci Array
 --------------
@@ -119,6 +119,24 @@ These methods are in the ``rbc.irtools`` module namespace
   RemoteCPUContext
   compile_to_LLVM
   compile_IR
+
+
+Thrift
+-------
+
+These methods are in the ``rbc.thrift`` module namespace
+
+.. currentmodule:: rbc.thrift
+
+.. autosummary::
+  :toctree: generated
+ 
+  Buffer
+  Client
+  Data
+  Dispatcher
+  NDArray
+  Server
 
 
 Utils

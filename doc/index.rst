@@ -19,7 +19,7 @@ A Python package implementing a remote backend compiler using numba
 and llvmlite tools.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    rbc/index.rst
    rbc/api.rst
