@@ -54,25 +54,6 @@ These methods are in the ``rbc.omnisci_array`` module namespace
   omnisci_array_getitem
   array_type_converter
 
-RemoteNumba
-------------
-
-These methods are in the ``utils.remotenumba`` module namespace
-
-.. currentmodule:: utils.remotenumba
-
-.. autosummary:: 
-  :toctree: generated 
-
-  initialize_llvm
-  annotation_to_numba_type
-  get_numba_signature
-  get_llvm_ir
-  get_triple
-  create_execution_engine
-  compile_ir
-  compile 
-
 
 TargetInfo
 -----------
