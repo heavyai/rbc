@@ -8,12 +8,6 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 
 
-def initialize_llvm():
-    llvm.initialize()
-    llvm.initialize_all_targets()
-    llvm.initialize_all_asmprinters()
-
-
 def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
         _deps = dict()
