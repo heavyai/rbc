@@ -57,9 +57,9 @@ These methods are in the ``rbc.omnisci_array`` module namespace
 RemoteNumba
 ------------
 
-These methods are in the ``rbc.remotenumba`` module namespace
+These methods are in the ``utils.remotenumba`` module namespace
 
-.. currentmodule:: rbc.remotenumba
+.. currentmodule:: utils.remotenumba
 
 .. autosummary:: 
   :toctree: generated 
