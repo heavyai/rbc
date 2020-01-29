@@ -3,8 +3,21 @@ import docutils
 extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
-    'sphinx.ext.extlinks'
+    'sphinx.ext.extlinks',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.coverage',
+    'sphinx.ext.napoleon'
 ]
+
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+autosummary_generate = True
+autosummary_imported_members = True
+
+autodoc_default_options = {
+    'inherited-members': None,
+}
 
 source_suffix = '.rst'
 master_doc = 'index'
