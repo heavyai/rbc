@@ -24,7 +24,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                     _deps[name] = 'undefined'
                 else:
                     _deps[name] = 'defined'
-                    get_function_dependencies(module, name, _deps=_deps)
+                    if name not in _deps:
+                        get_function_dependencies(module, name, _deps=_deps)
     return _deps
 
 
@@ -184,7 +185,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
             if debug:
                 print('  ', fname)
             lf = main_module.get_function(fname)
-            lf.linkage = llvm.Linkage.private
+            lf.linkage = llvm.Linkage.external
         main_library._optimize_final_module()
     # TODO: determine unused global_variables and struct_types
 
