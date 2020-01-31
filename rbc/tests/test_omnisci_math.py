@@ -86,19 +86,21 @@ def test_trigonometric_funcs(omnisci):
 
     omnisci.register()
 
-    for fn_name in ['sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 'arctan2']:
+    for fn_name in ['sin', 'cos', 'tan', 'arcsin',
+                    'arccos', 'arctan', 'arctan2']:
         np_fn = getattr(np, fn_name)
 
         if fn_name in ['arctan2']:
-            query = 'select x, y, {fn_name}(x, y) from {omnisci.table_name}'.format(**locals())
-            descr, result = omnisci.sql_execute(query)
+            descr, result = omnisci.sql_execute(
+                'select x, y, {fn_name}(x, y) from {omnisci.table_name}'
+                .format(**locals()))
 
             for x, y, v in list(result):
                 assert(np.isclose(np_fn(x, y), v))
         else:
-            query = 'select x, {fn_name}(x) from {omnisci.table_name}'.format(**locals())
-
-            descr, result = omnisci.sql_execute(query)
+            descr, result = omnisci.sql_execute(
+                'select x, {fn_name}(x) from {omnisci.table_name}'
+                .format(**locals()))
 
             for x, v in list(result):
                 assert(np.isclose(np_fn(x), v))
@@ -138,9 +140,11 @@ def test_hyperbolic_funcs(omnisci):
 
         query = ''
         if fn_name == 'arccosh':
-            query = 'select i, {fn_name}(i) from {omnisci.table_name}'.format(**locals())
+            query = 'select i, {fn_name}(i) from {omnisci.table_name}'\
+                    .format(**locals())
         else:
-            query = 'select x, {fn_name}(x) from {omnisci.table_name}'.format(**locals())
+            query = 'select x, {fn_name}(x) from {omnisci.table_name}'\
+                    .format(**locals())
 
         descr, result = omnisci.sql_execute(query)
 
