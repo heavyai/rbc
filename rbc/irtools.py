@@ -170,6 +170,8 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
             used_functions.add(fn)
             if descr == 'undefined':
                 raise RuntimeError('function `%s` is undefined' % (fn))
+            # if descr == 'undefined':
+            #     raise RuntimeError('function `%s` is undefined' % (fn))
 
     # for global_variable in main_module.global_variables:
     #    global_variable.linkage = llvm.Linkage.private

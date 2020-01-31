@@ -1,5 +1,4 @@
 import pytest
-import math
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
 
@@ -138,39 +137,3 @@ def test_simple(omnisci):
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2, (i % 5) * 2 + 1)
-
-
-def test_math_functions(omnisci):
-    omnisci.reset()
-
-    omnisci.sql_execute('drop table if exists {omnisci.table_name}'.format(**locals()))
-    omnisci.sql_execute('create table if not exists {omnisci.table_name} (x DOUBLE, i INT)'.format(**locals()))
-
-    for _i in range(5):
-        x = float(_i) * 2
-        omnisci.sql_execute('insert into {omnisci.table_name} values ({x}, {_i})'.format(**locals()))
-
-    @omnisci('double(double)')  # noqa: F811
-    def sin(x):
-        return math.sin(x)
-
-    @omnisci('double(double)')  # noqa: F811
-    def cos(x):
-        return math.cos(x)
-
-    @omnisci('double(double)')  # noqa: F811
-    def atan(x):
-        return math.atan(x)
-
-    # @omnisci('double(double)')  # noqa: F811
-    # def asinh(x):
-    #     return np.arcsinh(x) # math.asinh will not work here!
-
-    descr, result = omnisci.sql_execute(
-        'select x, sin(x), cos(x), atan(x) from {omnisci.table_name}'
-        .format(**locals())
-    )
-
-    print(descr, result)
-    print(list(result))
-    
