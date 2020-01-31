@@ -170,8 +170,6 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
             used_functions.add(fn)
             if descr == 'undefined':
                 raise RuntimeError('function `%s` is undefined' % (fn))
-            # if descr == 'undefined':
-            #     raise RuntimeError('function `%s` is undefined' % (fn))
 
     # for global_variable in main_module.global_variables:
     #    global_variable.linkage = llvm.Linkage.private
@@ -184,10 +182,19 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
             print('compile_to_IR: the following functions are not used'
                   ' and will be removed:')
         for fname in unused_functions:
-            if debug:
-                print('  ', fname)
             lf = main_module.get_function(fname)
-            lf.linkage = llvm.Linkage.external
+            if debug:
+                print('  ', fname, 'with', lf.linkage)
+
+            if lf.is_declaration:
+                # if the function is a declaration,
+                # we just put the linkage as external
+                lf.linkage = llvm.Linkage.external
+            else:
+                # but if the function is not a declaration,
+                # we change the linkage to private
+                lf.linkage = llvm.Linkage.private
+
         main_library._optimize_final_module()
     # TODO: determine unused global_variables and struct_types
 
