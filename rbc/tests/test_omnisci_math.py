@@ -5,7 +5,7 @@ rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
 @pytest.fixture(scope='module')
 def omnisci():
-    config = rbc_omnisci.get_client_config(debug=not True)
+    config = rbc_omnisci.get_client_config(debug=False)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_omnisci_math'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
