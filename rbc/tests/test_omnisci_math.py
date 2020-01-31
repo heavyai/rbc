@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
+
 def omnisci_is_available():
     """Return True if OmniSci server is accessible.
     """
@@ -20,6 +21,7 @@ def omnisci_is_available():
 
 is_available, reason = omnisci_is_available()
 pytestmark = pytest.mark.skipif(not is_available, reason=reason)
+
 
 @pytest.fixture(scope='module')
 def omnisci():
