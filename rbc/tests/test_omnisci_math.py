@@ -150,3 +150,53 @@ def test_hyperbolic_funcs(omnisci):
 
         for x, v in list(result):
             assert(np.isclose(np_fn(x), v))
+
+
+def test_rounding_funcs(omnisci):
+    omnisci.reset()
+
+    @omnisci('double(double)')  # noqa: F811
+    def around(x):
+        return np.around(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def round_(x):
+        return np.round_(x)
+
+    # @omnisci('double(double)')  # noqa: F811
+    # def rint(x):
+    #     return np.rint(x)
+
+    # @omnisci('double(double)')  # noqa: F811
+    # def fix(x):
+    #     return np.fix(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def floor(x):
+        return np.floor(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def ceil(x):
+        return np.ceil(x)
+
+    # @omnisci('double(double)')  # noqa: F811
+    # def trunc(x):
+    #     return np.trunc(x)
+
+    omnisci.register()
+
+    for fn_name in ['around', 'round_', 'floor', 'ceil']:
+        np_fn = getattr(np, fn_name)
+
+        query = ''
+        if fn_name == 'arccosh':
+            query = 'select i, {fn_name}(i) from {omnisci.table_name}'\
+                    .format(**locals())
+        else:
+            query = 'select x, {fn_name}(x) from {omnisci.table_name}'\
+                    .format(**locals())
+
+        descr, result = omnisci.sql_execute(query)
+
+        for x, v in list(result):
+            assert(np.isclose(np_fn(x), v))
