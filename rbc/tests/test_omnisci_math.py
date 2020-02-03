@@ -31,14 +31,16 @@ def omnisci():
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
     m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} (x DOUBLE, y DOUBLE, i INT);'
+        'CREATE TABLE IF NOT EXISTS {table_name}'
+        ' (x DOUBLE, y DOUBLE, i INT, j INT);'
         .format(**locals()))
 
     for _i in range(1, 6):
         x = _i/10.0
         y = _i/6.0
         i = _i
-        m.sql_execute('insert into {table_name} values ({x}, {y}, {i})'
+        j = i * 10
+        m.sql_execute('insert into {table_name} values ({x}, {y}, {i}, {j})'
                       .format(**locals()))
 
     m.table_name = table_name
@@ -109,18 +111,6 @@ def test_trigonometric_funcs(omnisci):
 def test_hyperbolic_funcs(omnisci):
     omnisci.reset()
 
-    # @omnisci('double(double)')  # noqa: F811
-    # def sinh(x):
-    #     return np.sinh(x)
-
-    # @omnisci('double(double)')  # noqa: F811
-    # def cosh(x):
-    #     return np.cosh(x)
-
-    # @omnisci('double(double)')  # noqa: F811
-    # def tanh(x):
-    #     return np.tanh(x)
-
     @omnisci('double(double)')  # noqa: F811
     def arcsinh(x):
         return np.arcsinh(x)
@@ -163,14 +153,6 @@ def test_rounding_funcs(omnisci):
     def round_(x):
         return np.round_(x)
 
-    # @omnisci('double(double)')  # noqa: F811
-    # def rint(x):
-    #     return np.rint(x)
-
-    # @omnisci('double(double)')  # noqa: F811
-    # def fix(x):
-    #     return np.fix(x)
-
     @omnisci('double(double)')  # noqa: F811
     def floor(x):
         return np.floor(x)
@@ -178,10 +160,6 @@ def test_rounding_funcs(omnisci):
     @omnisci('double(double)')  # noqa: F811
     def ceil(x):
         return np.ceil(x)
-
-    # @omnisci('double(double)')  # noqa: F811
-    # def trunc(x):
-    #     return np.trunc(x)
 
     omnisci.register()
 
@@ -200,3 +178,128 @@ def test_rounding_funcs(omnisci):
 
         for x, v in list(result):
             assert(np.isclose(np_fn(x), v))
+
+
+def test_explog_funcs(omnisci):
+    omnisci.reset()
+
+    @omnisci('double(double)')  # noqa: F811
+    def exp(x):
+        return np.exp(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def log(x):
+        return np.log(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def log10(x):
+        return np.log10(x)
+
+    omnisci.register()
+
+    for fn_name in ['exp', 'log', 'log10']:
+        np_fn = getattr(np, fn_name)
+
+        descr, result = omnisci.sql_execute(
+            'select x, {fn_name}(x) from {omnisci.table_name}'
+            .format(**locals()))
+
+        for x, v in list(result):
+            assert(np.isclose(np_fn(x), v))
+
+
+def test_rational_funcs(omnisci):
+    omnisci.reset()
+
+    # @omnisci('int(int, int)')  # noqa: F811
+    # def lcm(i, j):
+    #     return np.lcm(i, j)
+
+    # @omnisci('int(int, int)')  # noqa: F811
+    # def gcd(i, j):
+    #     return np.gcd(i, j)
+
+    omnisci.register()
+
+    for fn_name in []:
+        np_fn = getattr(np, fn_name)
+
+        descr, result = omnisci.sql_execute(
+            'select i, j, {fn_name}(i, j) from {omnisci.table_name}'
+            .format(**locals()))
+
+        for i, j, v in list(result):
+            assert(np.isclose(np_fn(i, j), v))
+
+
+def test_arithmetic_funcs(omnisci):
+    omnisci.reset()
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def add(i, j):
+        return np.add(i, j)
+
+    @omnisci('double(double)')  # noqa: F811
+    def reciprocal(x):
+        return np.reciprocal(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def negative(x):
+        return np.negative(x)
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def multiply(x, y):
+        return np.multiply(x, y)
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def divide(x, y):
+        return np.divide(x, y)
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def subtract(x, y):
+        return np.subtract(x, y)
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def true_divide(x, y):
+        return np.true_divide(x, y)
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def floor_divide(x, y):
+        return np.floor_divide(x, y)
+
+    @omnisci('int(int, int)')  # noqa: F811
+    def mod(x, y):
+        return np.mod(x, y)
+
+    @omnisci('double(double, double)')  # noqa: F811
+    def remainder(x, y):
+        return np.remainder(x, y)
+
+    omnisci.register()
+
+    for fn_name in ['add', 'reciprocal', 'negative', 'multiply', 'divide',
+                    'subtract', 'true_divide', 'floor_divide', 'mod',
+                    'remainder']:
+        np_fn = getattr(np, fn_name)
+
+        if fn_name in ['reciprocal', 'negative']:
+            descr, result = omnisci.sql_execute(
+                'select x, {fn_name}(x) from {omnisci.table_name}'
+                .format(**locals()))
+
+            for x, v in list(result):
+                assert(np.isclose(np_fn(x), v))
+        elif fn_name in ['mod', 'remainder']:
+            descr, result = omnisci.sql_execute(
+                'select i, j, {fn_name}(i, j) from {omnisci.table_name}'
+                .format(**locals()))
+
+            for i, j, v in list(result):
+                assert(np.isclose(np_fn(i, j), v))
+        else:
+            descr, result = omnisci.sql_execute(
+                'select x, y, {fn_name}(x, y) from {omnisci.table_name}'
+                .format(**locals()))
+
+            for x, y, v in list(result):
+                assert(np.isclose(np_fn(x, y), v))
