@@ -237,7 +237,7 @@ class Type(tuple):
     """Represents a type.
 
     There are five kinds of a types:
-    
+
       ========    ============================
       Type        Description
       ========    ============================
