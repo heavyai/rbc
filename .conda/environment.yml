@@ -9,15 +9,17 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  #- gcc_linux-64    # required for building thriftpy2
-  - c-compiler
-  # - gxx_linux-64
+  - python>=3
+  #- c-compiler
   - setuptools
-  - pip
+  #- pip
   - numba
-  - llvmlite>=0.28
+  - llvmlite>=0.29
   - pytest
   - tblib
   - pymapd
-  # - cudatoolkit-dev   # disable temporary
+  - thriftpy2
   - netifaces
+  - ply
+  - flake8
+  # - cudatoolkit-dev   # disable temporary
