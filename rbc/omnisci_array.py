@@ -6,7 +6,7 @@ from . import typesystem
 
 
 class ArrayPointer(numba.types.Type):
-    """Type class for pointers to Omnisci Array<T> structure.
+    """Type class for pointers to :code:`Omnisci Array<T>` structure.
 
     We are not deriving from CPointer because ArrayPointer getitem is
     used to access the data stored in Array ptr member.

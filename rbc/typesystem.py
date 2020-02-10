@@ -238,11 +238,15 @@ class Type(tuple):
 
     There are five kinds of a types:
 
-      void        - a "no type"
-      atomic      e.g. `int32`
-      pointer     e.g. `int32*`
-      struct      e.g. `{int32, int32}`
-      function    e.g. `int32(int32, int32)`
+      ========    ============================
+      Type        Description
+      ========    ============================
+      void        a "no type"
+      atomic      e.g. ``int32``
+      pointer     e.g. ``int32*``
+      struct      e.g. ``{int32, int32}``
+      function    e.g. ``int32(int32, int32)``
+      ========    ============================
 
     Atomic types are types with names (Type contains a single
     string). All other types (except "no type") are certain
@@ -256,7 +260,7 @@ class Type(tuple):
     names of types can be arbitrary.  However, converting the Type
     instances to concrete types such as provided in numpy or numba,
     the following atomic types are defined (the first name corresponds
-    to normalized name):
+    to normalized name)::
 
       no type:                    void, none
       bool:                       bool, boolean, _Bool, b
@@ -283,15 +287,15 @@ class Type(tuple):
       256-bit complex:            complex256, c256
       string:                     string, str
 
-    with the following extensions:
+    with the following extensions::
 
-      N-bit signed integer: int<N>, i<N>       for instance: int5, i31
+      N-bit signed integer:   int<N>, i<N>       for instance: int5, i31
       N-bit unsigned integer: uint<N>, u<N>
-      N-bit float: float<N>
-      N-bit complex: complex<N>
+      N-bit float:            float<N>
+      N-bit complex:          complex<N>
 
-    Also byte, short, int, long, long long, signed int, size_t,
-    ssize_t, etc are supported but their normalized names are system
+    Also ``byte, short, int, long, long long, signed int, size_t,
+    ssize_t``, etc are supported but their normalized names are system
     dependent.
     """
 

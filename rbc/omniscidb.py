@@ -22,14 +22,14 @@ def get_client_config(**config):
     https://docs.omnisci.com/latest/4_configuration.html that is used
     for configuring the omniscidb server software.
 
-    In Linux clients, the omnisci client configuration is read from
-    $HOME/.config/omnisci/client.conf
+    In Linux clients, the omnisci client configuration is read from:
+    :code:`$HOME/.config/omnisci/client.conf`
 
     In Windows clients, the configuration is read from
-    %UserProfile/.config/omnisci/client.conf or
-    %AllUsersProfile/.config/omnisci/client.conf
+    :code:`%UserProfile/.config/omnisci/client.conf` or
+    :code:`%AllUsersProfile/.config/omnisci/client.conf`
 
-    When `OMNISCI_CLIENT_CONF` environment variable is defined then
+    When :code:`OMNISCI_CLIENT_CONF` environment variable is defined then
     the configuration is read from the file specified in this
     variable.
 

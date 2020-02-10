@@ -210,12 +210,13 @@ def compile_IR(ir):
     engine :
       Execution engine.
 
-    Usage on host
-    -------------
 
-    To get the address of the compiled functions, use
+    Examples
+    --------
 
-      addr = engine.get_function_address("<function name>")
+        To get the address of the compiled functions, use::
+
+          addr = engine.get_function_address("<function name>")
     """
     triple = re.search(
         r'target\s+triple\s*=\s*"(?P<triple>[-\d\w\W_]+)"\s*$',
