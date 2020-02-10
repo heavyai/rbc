@@ -113,7 +113,7 @@ def test_redefine(omnisci):
 
     # Re-defining triggers a warning message when in debug mode
     @omnisci('i32(i32)')  # noqa: F811
-    def incr(x):
+    def incr(x):  # noqa: F811
         return x + 2
 
     desrc, result = omnisci.sql_execute(
@@ -287,15 +287,15 @@ def test_multiple_implementation(omnisci):
         return 64
 
     @omnisci('int(f32)', 'int(i32)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 32
 
     @omnisci('int(i16)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 16
 
     @omnisci('int(i8)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 8
 
     descr, result = omnisci.sql_execute(
@@ -347,10 +347,10 @@ def test_f32(omnisci):
 
 def test_castop(omnisci):
     @omnisci('i16(i16)')  # noqa: F811
-    def i32(x): return x+2
+    def i32(x): return x+2  # noqa: F811
 
     @omnisci('i32(i32)')  # noqa: F811
-    def i32(x): return x+4
+    def i32(x): return x+4  # noqa: F811
 
     descr, result = omnisci.sql_execute(
         'select i32(cast(1 as int))'
@@ -414,19 +414,19 @@ def test_casting(omnisci):
     def ifoo(x): return x + 1
 
     @omnisci('i16(i16)')  # noqa: F811
-    def ifoo(x): return x + 2
+    def ifoo(x): return x + 2  # noqa: F811
 
     @omnisci('i32(i32)')  # noqa: F811
-    def ifoo(x): return x + 4
+    def ifoo(x): return x + 4  # noqa: F811
 
     @omnisci('i64(i64)')  # noqa: F811
-    def ifoo(x): return x + 8
+    def ifoo(x): return x + 8  # noqa: F811
 
     @omnisci('f32(f32)')
     def ffoo(x): return x + 4.5
 
     @omnisci('f64(f64)')  # noqa: F811
-    def ffoo(x): return x + 8.5
+    def ffoo(x): return x + 8.5  # noqa: F811
 
     descr, result = omnisci.sql_execute(
         'select i_8(0),i_16(0),i32(0),i64(0) from {omnisci.table_name} limit 1'
@@ -597,19 +597,19 @@ def test_truncate_issue(omnisci):
     omnisci.reset()
 
     @omnisci('int(f64)', 'int(i64)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 64
 
     @omnisci('int(f32)', 'int(i32)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 32
 
     @omnisci('int(i16)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 16
 
     @omnisci('int(i8)')  # noqa: F811
-    def bits(x):
+    def bits(x):  # noqa: F811
         return 8
 
     descr, result = omnisci.sql_execute(
