@@ -36,8 +36,6 @@ class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
     def __init__(self, name, target_info):
         self.target_info = target_info
         super(JITRemoteCPUCodegen, self).__init__(name)
-        # we cannot use local host RuntimeLinker, in general.
-        self._rtlinker = None
 
     def _get_host_cpu_name(self):
         return self.target_info.device_name
