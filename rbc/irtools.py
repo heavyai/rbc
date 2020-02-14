@@ -30,15 +30,12 @@ def get_function_dependencies(module, funcname, _deps=None):
 
 
 class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
-
     # TODO: introduce JITRemoteCodeLibrary?
     _library_class = nb.targets.codegen.JITCodeLibrary
 
     def __init__(self, name, target_info):
         self.target_info = target_info
         super(JITRemoteCPUCodegen, self).__init__(name)
-        # we cannot use local host RuntimeLinker, in general.
-        self._rtlinker = None
 
     def _get_host_cpu_name(self):
         return self.target_info.device_name
@@ -91,6 +88,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
       Specify a list of Python function and its signatures pairs.
     target : TargetInfo
       Specify target device information.
+    debug : bool
 
     Returns
     -------
@@ -177,15 +175,19 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     unused_functions = [f.name for f in main_module.functions
                         if f.name not in used_functions]
 
+    if debug:
+        print('\n========')
+        print('compile_to_IR: the following functions are used')
+        for fname in used_functions:
+            lf = main_module.get_function(fname)
+            print('  [ALIVE]', fname, 'with', lf.linkage)
+
     if unused_functions:
         if debug:
             print('compile_to_IR: the following functions are not used'
                   ' and will be removed:')
         for fname in unused_functions:
             lf = main_module.get_function(fname)
-            if debug:
-                print('  ', fname, 'with', lf.linkage)
-
             if lf.is_declaration:
                 # if the function is a declaration,
                 # we just put the linkage as external
@@ -194,6 +196,8 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
                 # but if the function is not a declaration,
                 # we change the linkage to private
                 lf.linkage = llvm.Linkage.private
+            if debug:
+                print('  [DEAD]', fname, 'with', lf.linkage)
 
         main_library._optimize_final_module()
     # TODO: determine unused global_variables and struct_types
@@ -203,6 +207,8 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
 
     main_module.triple = target.triple
     main_module.data_layout = target.datalayout
+
+    # print(str(main_module))
 
     return main_module
 

@@ -32,7 +32,7 @@ def omnisci():
 
     m.sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name}'
-        ' (x DOUBLE, y DOUBLE, i INT, j INT);'
+        ' (x DOUBLE, y DOUBLE, i INT, j INT, t INT[]);'
         .format(**locals()))
 
     for _i in range(1, 6):
@@ -40,8 +40,10 @@ def omnisci():
         y = _i/6.0
         i = _i
         j = i * 10
-        m.sql_execute('insert into {table_name} values ({x}, {y}, {i}, {j})'
-                      .format(**locals()))
+        t = 'ARRAY[%s]' % (', '.join(str(j + i) for i in range(-i, i+1)))
+        m.sql_execute(
+            'insert into {table_name} values ({x}, {y}, {i}, {j}, {t})'
+            .format(**locals()))
 
     m.table_name = table_name
     yield m
@@ -76,11 +78,9 @@ def test_trigonometric_funcs(omnisci):
     def arctan(x):
         return np.arctan(x)
 
-    # fails
     @omnisci('double(double, double)')  # noqa: F811
-    def hypot(x, y):
-        # z = np.hypot(x, y)
-        return 0.0
+    def _hypot(x, y):
+        return np.hypot(x, y)
 
     @omnisci('double(double, double)')  # noqa: F811
     def arctan2(x, y):
@@ -89,10 +89,10 @@ def test_trigonometric_funcs(omnisci):
     omnisci.register()
 
     for fn_name in ['sin', 'cos', 'tan', 'arcsin',
-                    'arccos', 'arctan', 'arctan2']:
-        np_fn = getattr(np, fn_name)
+                    'arccos', 'arctan', '_hypot', 'arctan2']:
+        np_fn = getattr(np, fn_name.lstrip('_'))
 
-        if fn_name in ['arctan2']:
+        if fn_name in ['_hypot', 'arctan2']:
             descr, result = omnisci.sql_execute(
                 'select x, y, {fn_name}(x, y) from {omnisci.table_name}'
                 .format(**locals()))
@@ -211,17 +211,17 @@ def test_explog_funcs(omnisci):
 def test_rational_funcs(omnisci):
     omnisci.reset()
 
-    # @omnisci('int(int, int)')  # noqa: F811
-    # def lcm(i, j):
-    #     return np.lcm(i, j)
+    @omnisci('int(int, int)')  # noqa: F811
+    def lcm(i, j):
+        return np.lcm(i, j)
 
-    # @omnisci('int(int, int)')  # noqa: F811
-    # def gcd(i, j):
-    #     return np.gcd(i, j)
+    @omnisci('int(int, int)')  # noqa: F811
+    def gcd(i, j):
+        return np.gcd(i, j)
 
     omnisci.register()
 
-    for fn_name in []:
+    for fn_name in ['lcm', 'gcd']:
         np_fn = getattr(np, fn_name)
 
         descr, result = omnisci.sql_execute(
@@ -230,6 +230,30 @@ def test_rational_funcs(omnisci):
 
         for i, j, v in list(result):
             assert(np.isclose(np_fn(i, j), v))
+
+
+def test_spd_funcs(omnisci):
+    omnisci.reset()
+
+    @omnisci('i32(i32[])')
+    def _sum(x):
+        return np.sum(x)
+
+    @omnisci('i64(i32[])')
+    def _prod(x):
+        return np.prod(x)
+
+    omnisci.register()
+
+    for fn_name in ['_sum', '_prod']:
+        np_fn = getattr(np, fn_name.lstrip('_'))
+
+        descr, result = omnisci.sql_execute(
+            'select t, {fn_name}(t) from {omnisci.table_name}'
+            .format(**locals()))
+
+        for t, v in list(result):
+            assert(np.isclose(np_fn(t), v))
 
 
 def test_arithmetic_funcs(omnisci):
@@ -256,6 +280,10 @@ def test_arithmetic_funcs(omnisci):
         return np.divide(x, y)
 
     @omnisci('double(double, double)')  # noqa: F811
+    def powersum(x, y):
+        return np.power(x, y)
+
+    @omnisci('double(double, double)')  # noqa: F811
     def subtract(x, y):
         return np.subtract(x, y)
 
@@ -278,7 +306,7 @@ def test_arithmetic_funcs(omnisci):
     omnisci.register()
 
     for fn_name in ['add', 'reciprocal', 'negative', 'multiply', 'divide',
-                    'subtract', 'true_divide', 'floor_divide', 'mod',
+                    'power', 'subtract', 'true_divide', 'floor_divide', 'mod',
                     'remainder']:
         np_fn = getattr(np, fn_name)
 
