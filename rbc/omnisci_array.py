@@ -71,7 +71,34 @@ def omnisci_array_getitem_(typingctx, data, index):
 @numba.extending.overload(operator.getitem)
 def omnisci_array_getitem(x, i):
     if isinstance(x, ArrayPointer):
-        return lambda x, i: omnisci_array_getitem_(x, i)
+        if isinstance(i, numba.types.Integer):
+            return lambda x, i: omnisci_array_getitem_(x, i)
+        if isinstance(i, numba.types.SliceType):
+            raise NotImplementedError('not implemented: slice of array')
+
+
+@numba.extending.intrinsic
+def new_int64(typingctx, size):
+    sig = typesystem.Type.fromstring('int64[](int64)', typingctx.target_info)
+    print('new:', sig)
+    # sig = data.eltype(data, size)
+
+    def codegen(context, builder, signature, args):
+        print('codegen')
+        size, = args
+        '''
+        return
+        rawptr = numba.cgutils.alloca_once_value(builder, value=data)
+        arr = builder.load(builder.gep(rawptr,
+                                       [ir.Constant(ir.IntType(32), 0)]))
+        ptr = builder.load(builder.gep(
+            arr, [ir.Constant(ir.IntType(32), 0),
+                  ir.Constant(ir.IntType(32), 0)]))
+        res = builder.load(builder.gep(ptr, [index]))
+
+        return res
+        '''
+    return sig, codegen
 
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match

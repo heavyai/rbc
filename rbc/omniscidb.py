@@ -229,6 +229,9 @@ class RemoteOmnisci(RemoteJIT):
     _ext_arguments_map = None
 
     def _get_ext_arguments_map(self):
+        """Return mapping of argument type names and the corresponding thrift
+        constants.
+        """
         if self._ext_arguments_map is not None:
             return self._ext_arguments_map
         thrift = self.thrift_client.thrift
@@ -257,6 +260,9 @@ class RemoteOmnisci(RemoteJIT):
             'Cursor': thrift.TExtArgumentType.Cursor,
             'void': thrift.TExtArgumentType.Void,
             'GeoPoint': thrift.TExtArgumentType.GeoPoint,
+            'GeoLineString': thrift.TExtArgumentType.GeoLineString,
+            'GeoPolygon': thrift.TExtArgumentType.GeoPolygon,
+            'GeoMultiPolygon': thrift.TExtArgumentType.GeoMultiPolygon,
         }
         ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
             = ext_arguments_map['Array<bool>']

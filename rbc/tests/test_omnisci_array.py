@@ -1,6 +1,8 @@
 import pytest
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
+from rbc import omnisci_array  # noqa E402
+
 
 def omnisci_is_available():
     """Return True if OmniSci server is accessible.
@@ -268,3 +270,29 @@ def test_even_sum(omnisci):
     desrc, result = omnisci.sql_execute(query)
     for b, i4, s in result:
         assert sum([i_ for b_, i_ in zip(b, i4) if b_]) == s
+
+
+def test_return_array(omnisci):
+    omnisci.reset()
+    import math
+    @omnisci('double(double)')
+    def mysin(x):
+        return math.sin(x)
+
+    print(mysin)
+    return
+    @omnisci('int64[](int64[], int64)')
+    def return_array(x, i):
+        y = omnisci_array.new_int64(i)
+        return y
+
+    print(return_array)
+
+    return
+
+    query = (
+        'select i8, return_array(i8) from {omnisci.table_name}'
+        .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, b in result:
+        print(a, b)

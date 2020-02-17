@@ -114,6 +114,10 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
 
+    # Type.fromstring when used in intrinsic functions, requires
+    # target info:
+    typing_context.target_info = target
+
     codegen = target_context.codegen()
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
     main_module = main_library._final_module
