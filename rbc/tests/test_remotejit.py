@@ -181,6 +181,7 @@ def test_rjit_np_trunc(rjit):
     assert trunc(0.3) == 0.0
     assert trunc(2.9) == 2.0
 
+
 def test_options_local(rjit):
 
     @rjit
