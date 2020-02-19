@@ -3,6 +3,7 @@ import pytest
 import sys
 from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
+import numpy as np
 
 win32 = sys.platform == 'win32'
 
@@ -170,6 +171,15 @@ def test_rjit_add(rjit):
         assert r == 3j
         assert add(1j, 2) == 2+1j
 
+
+def test_rjit_np_trunc(rjit):
+
+    @rjit('double(double)')
+    def trunc(x):
+        return np.trunc(x)
+
+    assert trunc(0.3) == 0.0
+    assert trunc(2.9) == 2.0
 
 def test_options_local(rjit):
 
