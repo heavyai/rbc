@@ -342,7 +342,7 @@ def test_multiple_fns(omnisci):
         a = np.add(x, y)
         b = np.multiply(x, y)
         c = np.add(a, b)
-        d = np.power(c, c) 
+        d = np.power(c, c)
         return np.trunc(d)
 
     omnisci.register()
@@ -355,4 +355,3 @@ def test_multiple_fns(omnisci):
 
     for exp, (_, _, got) in zip(expected, result):
         assert (exp == got)
-
