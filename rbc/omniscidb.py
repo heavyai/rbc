@@ -10,6 +10,7 @@ from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_array import array_type_converter
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
+from .errors import RedefinedError, ForbiddenNameError
 
 
 def get_client_config(**config):
@@ -125,8 +126,18 @@ class RemoteOmnisci(RemoteJIT):
     Use pymapd, for instance, to make a SQL query `select add(c1,
     c2) from table`
 
+    Attributes
+    ----------
+    forbidden_names : list
+        A list of forbidden function names. See
+        https://github.com/xnd-project/rbc/issues/32
+
     """
 
+
+    forbidden_names = ['sinh', 'cosh', 'tanh', 'rint', 'trunc',
+                       'expm1', 'exp2', 'log2', 'log1p'
+                       'logaddexp', 'logaddexp2', 'fmod']
     converters = [array_type_converter]
     multiplexed = False
     mangle_prefix = ''
@@ -321,6 +332,10 @@ class RemoteOmnisci(RemoteJIT):
             for caller in reversed(self.get_callers()):
                 signatures = []
                 name = caller.func.__name__
+                if name in self.forbidden_names:
+                    raise ForbiddenNameError(
+                        f'Attempt to define function with name `{name}`.'
+                        f' see: https://github.com/xnd-project/rbc/issues/32')
                 for sig in caller.get_signatures(target_info):
                     i = len(function_signatures[name])
                     if sig in function_signatures[name]:
@@ -331,7 +346,7 @@ class RemoteOmnisci(RemoteJIT):
                             print(f'{type(self).__name__}.register: ignoring'
                                   f' older definition of `{name}` for `{sig}`'
                                   f' in {f2}#{n2}.')
-                        continue
+                        raise RedefinedError(f"Attempt to redefine `{name}` for sig `{sig}`.")
                     function_signatures[name].append(sig)
                     if i == 0:
                         sig.set_mangling('')

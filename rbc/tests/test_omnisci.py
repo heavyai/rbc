@@ -1,5 +1,6 @@
 import os
-
+from rbc import errors
+import numpy as np
 import pytest
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
@@ -111,15 +112,62 @@ def test_redefine(omnisci):
     for x, x1 in result:
         assert x1 == x + 1
 
-    # Re-defining triggers a warning message when in debug mode
+
+    # Re-defining triggers an error message
     @omnisci('i32(i32)')  # noqa: F811
     def incr(x):  # noqa: F811
         return x + 2
 
-    desrc, result = omnisci.sql_execute(
-        'select i4, incr(i4) from {omnisci.table_name}'.format(**locals()))
-    for x, x1 in result:
-        assert x1 == x + 2
+    with pytest.raises(errors.RedefinedError) as excinfo:
+        omnisci.register()
+    assert "Attempt to redefine `incr` for sig `int32(int32)`" in str(excinfo.value)
+
+    # that's necessary to prevent the drop table command to launch another exception
+    omnisci.reset()
+
+
+def test_redefine2(omnisci):
+    omnisci.reset()
+
+    @omnisci('i32(i32)')
+    def incr(x):
+        return x + 1
+
+    @omnisci('i32(i32)')
+    def incr(x):
+        return x + 2
+
+    with pytest.raises(errors.RedefinedError) as excinfo:
+        omnisci.register()
+    assert "Attempt to redefine `incr` for sig `int32(int32)`" in str(excinfo.value)
+
+    # that's necessary to prevent the drop table command to launch another exception
+    omnisci.reset()
+
+def test_forbidden_define(omnisci):
+    omnisci.reset()
+
+    msg = "Attempt to define function with name `{name}`"
+
+    @omnisci('double(double)')
+    def sinh(x):
+        return np.sinh(x)
+
+    with pytest.raises(errors.ForbiddenNameError) as excinfo:
+        omnisci.register()
+    assert msg.format(name='sinh') in str(excinfo.value)
+
+    omnisci.reset()
+
+    @omnisci('double(double)')
+    def trunc(x):
+        return np.trunc(x)
+
+    with pytest.raises(errors.ForbiddenNameError) as excinfo:
+        omnisci.register()
+    assert msg.format(name='trunc') in str(excinfo.value)
+
+    omnisci.reset()
 
 
 def test_single_argument_overloading(omnisci):
