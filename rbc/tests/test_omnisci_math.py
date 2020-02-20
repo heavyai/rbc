@@ -331,3 +331,28 @@ def test_arithmetic_funcs(omnisci):
 
             for x, y, v in list(result):
                 assert(np.isclose(np_fn(x, y), v))
+
+
+def test_multiple_fns(omnisci):
+
+    omnisci.reset()
+
+    @omnisci('double(double, double)')
+    def multiple1(x, y):
+        a = np.add(x, y)
+        b = np.multiply(x, y)
+        c = np.add(a, b)
+        d = np.power(c, c) 
+        return np.trunc(d)
+
+    omnisci.register()
+
+    _, result = omnisci.sql_execute(
+        'select x, x, multiple1(x, y) from {omnisci.table_name}'
+        .format(**locals()))
+
+    expected = [0.0, 0.0, 0.0, 1.0, 2.0]
+
+    for exp, (_, _, got) in zip(expected, result):
+        assert (exp == got)
+
