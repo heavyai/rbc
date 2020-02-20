@@ -134,7 +134,6 @@ class RemoteOmnisci(RemoteJIT):
 
     """
 
-
     forbidden_names = ['sinh', 'cosh', 'tanh', 'rint', 'trunc',
                        'expm1', 'exp2', 'log2', 'log1p'
                        'logaddexp', 'logaddexp2', 'fmod']
@@ -346,7 +345,8 @@ class RemoteOmnisci(RemoteJIT):
                             print(f'{type(self).__name__}.register: ignoring'
                                   f' older definition of `{name}` for `{sig}`'
                                   f' in {f2}#{n2}.')
-                        raise RedefinedError(f"Attempt to redefine `{name}` for sig `{sig}`.")
+                        raise RedefinedError(
+                            f"Attempt to redefine `{name}` for sig `{sig}`.")
                     function_signatures[name].append(sig)
                     if i == 0:
                         sig.set_mangling('')
