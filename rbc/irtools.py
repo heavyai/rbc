@@ -176,7 +176,6 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
                         if f.name not in used_functions]
 
     if debug:
-        print('\n========')
         print('compile_to_IR: the following functions are used')
         for fname in used_functions:
             lf = main_module.get_function(fname)
@@ -207,7 +206,6 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
 
     main_module.triple = target.triple
     main_module.data_layout = target.datalayout
-
 
     return main_module
 
