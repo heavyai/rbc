@@ -208,7 +208,6 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     main_module.triple = target.triple
     main_module.data_layout = target.datalayout
 
-    # print(str(main_module))
 
     return main_module
 
