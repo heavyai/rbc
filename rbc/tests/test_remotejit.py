@@ -172,7 +172,7 @@ def test_rjit_add(rjit):
         assert add(1j, 2) == 2+1j
 
 
-def test_rjit_np_trunc(rjit):
+def test_rjit_np(rjit):
 
     @rjit('double(double)')
     def trunc(x):
@@ -180,6 +180,13 @@ def test_rjit_np_trunc(rjit):
 
     assert trunc(0.3) == 0.0
     assert trunc(2.9) == 2.0
+
+    @rjit('double(double)')
+    def exp2(x):
+        return np.exp2(x)
+
+    assert exp2(2) == 4.0
+    assert exp2(3) == 8.0
 
 
 def test_options_local(rjit):

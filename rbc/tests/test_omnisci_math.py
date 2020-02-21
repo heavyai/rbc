@@ -112,6 +112,18 @@ def test_hyperbolic_funcs(omnisci):
     omnisci.reset()
 
     @omnisci('double(double)')  # noqa: F811
+    def _sinh(x):
+        return np.sinh(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def _cosh(x):
+        return np.cosh(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def _tanh(x):
+        return np.tanh(x)
+
+    @omnisci('double(double)')  # noqa: F811
     def arcsinh(x):
         return np.arcsinh(x)
 
@@ -125,8 +137,9 @@ def test_hyperbolic_funcs(omnisci):
 
     omnisci.register()
 
-    for fn_name in ['arcsinh', 'arccosh', 'arctanh']:
-        np_fn = getattr(np, fn_name)
+    for fn_name in ['_sinh', '_cosh', '_tanh', 'arcsinh',
+                    'arccosh', 'arctanh']:
+        np_fn = getattr(np, fn_name.lstrip('_'))
 
         query = ''
         if fn_name == 'arccosh':
@@ -154,6 +167,10 @@ def test_rounding_funcs(omnisci):
         return np.round_(x)
 
     @omnisci('double(double)')  # noqa: F811
+    def _rint(x):
+        return np.rint(x)
+
+    @omnisci('double(double)')  # noqa: F811
     def floor(x):
         return np.floor(x)
 
@@ -161,10 +178,14 @@ def test_rounding_funcs(omnisci):
     def ceil(x):
         return np.ceil(x)
 
+    @omnisci('double(double)')  # noqa: F811
+    def _trunc(x):
+        return np.trunc(x)
+
     omnisci.register()
 
-    for fn_name in ['around', 'round_', 'floor', 'ceil']:
-        np_fn = getattr(np, fn_name)
+    for fn_name in ['around', '_rint', 'round_', 'floor', 'ceil', '_trunc']:
+        np_fn = getattr(np, fn_name.lstrip('_'))
 
         query = ''
         if fn_name == 'arccosh':
@@ -188,6 +209,15 @@ def test_explog_funcs(omnisci):
         return np.exp(x)
 
     @omnisci('double(double)')  # noqa: F811
+    def _expm1(x):
+        return np.expm1(x)
+
+    # doesn't work - even adding a prefix '_'
+    # @omnisci('double(double)')  # noqa: F811
+    # def exp2(x):
+    #     return np.exp2(x)
+
+    @omnisci('double(double)')  # noqa: F811
     def log(x):
         return np.log(x)
 
@@ -195,17 +225,44 @@ def test_explog_funcs(omnisci):
     def log10(x):
         return np.log10(x)
 
+    # doesn't work - even adding a prefix '_'
+    # @omnisci('double(double)')  # noqa: F811
+    # def _log2(x):
+    #     return np.log2(x)
+
+    @omnisci('double(double)')  # noqa: F811
+    def _log1p(x):
+        return np.log1p(x)
+
+    # doesn't work - even adding a prefix '_'
+    # @omnisci('double(double, double)')  # noqa: F811
+    # def _logaddexp(x, y):
+    #     return np.logaddexp(x, y)
+
+    # doesn't work - even adding a prefix '_'
+    # @omnisci('double(double, double)')  # noqa: F811
+    # def _logaddexp2(x, y):
+    #     return np.logaddexp2(x, y)
+
     omnisci.register()
 
-    for fn_name in ['exp', 'log', 'log10']:
-        np_fn = getattr(np, fn_name)
+    for fn_name in ['exp', '_expm1', 'log', 'log10', '_log1p']:
+        np_fn = getattr(np, fn_name.lstrip('_'))
 
-        descr, result = omnisci.sql_execute(
-            'select x, {fn_name}(x) from {omnisci.table_name}'
-            .format(**locals()))
+        if fn_name in ['_logaddexp', '_logaddexp2']:
+            descr, result = omnisci.sql_execute(
+                'select x, y, {fn_name}(x, y) from {omnisci.table_name}'
+                .format(**locals()))
 
-        for x, v in list(result):
-            assert(np.isclose(np_fn(x), v))
+            for x, y, v in list(result):
+                assert(np.isclose(np_fn(x, y), v))
+        else:
+            descr, result = omnisci.sql_execute(
+                'select x, {fn_name}(x) from {omnisci.table_name}'
+                .format(**locals()))
+
+            for x, v in list(result):
+                assert(np.isclose(np_fn(x), v))
 
 
 def test_rational_funcs(omnisci):
@@ -280,7 +337,7 @@ def test_arithmetic_funcs(omnisci):
         return np.divide(x, y)
 
     @omnisci('double(double, double)')  # noqa: F811
-    def powersum(x, y):
+    def _power(x, y):
         return np.power(x, y)
 
     @omnisci('double(double, double)')  # noqa: F811
@@ -295,6 +352,10 @@ def test_arithmetic_funcs(omnisci):
     def floor_divide(x, y):
         return np.floor_divide(x, y)
 
+    @omnisci('double(double, double)')
+    def _fmod(x, y):
+        return np.fmod(x, y)
+
     @omnisci('int(int, int)')  # noqa: F811
     def mod(x, y):
         return np.mod(x, y)
@@ -306,9 +367,9 @@ def test_arithmetic_funcs(omnisci):
     omnisci.register()
 
     for fn_name in ['add', 'reciprocal', 'negative', 'multiply', 'divide',
-                    'power', 'subtract', 'true_divide', 'floor_divide', 'mod',
-                    'remainder']:
-        np_fn = getattr(np, fn_name)
+                    '_power', 'subtract', 'true_divide', 'floor_divide',
+                    '_fmod', 'mod', 'remainder']:
+        np_fn = getattr(np, fn_name.lstrip('_'))
 
         if fn_name in ['reciprocal', 'negative']:
             descr, result = omnisci.sql_execute(
