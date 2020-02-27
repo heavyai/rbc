@@ -32,17 +32,22 @@ def omnisci():
 
     m.sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name}'
-        ' (x DOUBLE, y DOUBLE, i INT, j INT, t INT[]);'
+        ' (x DOUBLE, y DOUBLE, z DOUBLE, i INT, '
+        'j INT, t INT[], td DOUBLE[], te INT[]);'
         .format(**locals()))
 
     for _i in range(1, 6):
         x = _i/10.0
         y = _i/6.0
+        z = _i + 1.23
         i = _i
         j = i * 10
         t = 'ARRAY[%s]' % (', '.join(str(j + i) for i in range(-i, i+1)))
+        td = 'ARRAY[%s]' % (', '.join(str(j + i/1.0) for i in range(-i, i+1)))
+        te = 'Array[]'
         m.sql_execute(
-            'insert into {table_name} values ({x}, {y}, {i}, {j}, {t})'
+            'insert into {table_name} values ({x}, {y},'
+            ' {z}, {i}, {j}, {t}, {td}, {te})'
             .format(**locals()))
 
     m.table_name = table_name
@@ -141,18 +146,24 @@ def test_hyperbolic_funcs(omnisci):
                     'arccosh', 'arctanh']:
         np_fn = getattr(np, fn_name.lstrip('_'))
 
-        query = ''
         if fn_name == 'arccosh':
-            query = 'select i, {fn_name}(i) from {omnisci.table_name}'\
+            query = 'select i, z, {fn_name}(i), {fn_name}(z) \
+                     from {omnisci.table_name}'\
                     .format(**locals())
+
+            descr, result = omnisci.sql_execute(query)
+
+            for i, z, vi, vz in list(result):
+                assert(np_fn(i) == vi)
+                assert(np.isclose(np_fn(z), vz))
         else:
             query = 'select x, {fn_name}(x) from {omnisci.table_name}'\
                     .format(**locals())
 
-        descr, result = omnisci.sql_execute(query)
+            descr, result = omnisci.sql_execute(query)
 
-        for x, v in list(result):
-            assert(np.isclose(np_fn(x), v))
+            for x, v in list(result):
+                assert(np.isclose(np_fn(x), v))
 
 
 def test_rounding_funcs(omnisci):
@@ -187,13 +198,8 @@ def test_rounding_funcs(omnisci):
     for fn_name in ['around', '_rint', 'round_', 'floor', 'ceil', '_trunc']:
         np_fn = getattr(np, fn_name.lstrip('_'))
 
-        query = ''
-        if fn_name == 'arccosh':
-            query = 'select i, {fn_name}(i) from {omnisci.table_name}'\
-                    .format(**locals())
-        else:
-            query = 'select x, {fn_name}(x) from {omnisci.table_name}'\
-                    .format(**locals())
+        query = 'select x, {fn_name}(x) from {omnisci.table_name}'\
+                .format(**locals())
 
         descr, result = omnisci.sql_execute(query)
 
@@ -292,11 +298,11 @@ def test_rational_funcs(omnisci):
 def test_spd_funcs(omnisci):
     omnisci.reset()
 
-    @omnisci('i32(i32[])')
+    @omnisci('i32(i32[])', 'double(double[])')
     def _sum(x):
         return np.sum(x)
 
-    @omnisci('i64(i32[])')
+    @omnisci('i64(i32[])', 'double(double[])')
     def _prod(x):
         return np.prod(x)
 
@@ -305,12 +311,29 @@ def test_spd_funcs(omnisci):
     for fn_name in ['_sum', '_prod']:
         np_fn = getattr(np, fn_name.lstrip('_'))
 
+        # int list
         descr, result = omnisci.sql_execute(
             'select t, {fn_name}(t) from {omnisci.table_name}'
             .format(**locals()))
 
         for t, v in list(result):
-            assert(np.isclose(np_fn(t), v))
+            assert(np_fn(t) == v)
+
+        # double list
+        descr, result = omnisci.sql_execute(
+            'select td, {fn_name}(td) from {omnisci.table_name}'
+            .format(**locals()))
+
+        for td, v in list(result):
+            assert(np.isclose(np_fn(td), v))
+
+        # empty list
+        descr, result = omnisci.sql_execute(
+            'select te, {fn_name}(te) from {omnisci.table_name}'
+            .format(**locals()))
+
+        for te, v in list(result):
+            assert(np_fn([]) == v)
 
 
 def test_arithmetic_funcs(omnisci):
@@ -356,7 +379,7 @@ def test_arithmetic_funcs(omnisci):
     def _fmod(x, y):
         return np.fmod(x, y)
 
-    @omnisci('int(int, int)')  # noqa: F811
+    @omnisci('int(int, int)', 'double(double, double)')  # noqa: F811
     def mod(x, y):
         return np.mod(x, y)
 
@@ -366,9 +389,14 @@ def test_arithmetic_funcs(omnisci):
 
     omnisci.register()
 
-    for fn_name in ['add', 'reciprocal', 'negative', 'multiply', 'divide',
-                    '_power', 'subtract', 'true_divide', 'floor_divide',
-                    '_fmod', 'mod', 'remainder']:
+    all_funcs = set(['add', 'reciprocal', 'negative', 'multiply',
+                     'divide', '_power', 'subtract', 'true_divide',
+                     'floor_divide', '_fmod', 'mod', 'remainder'])
+
+    exclude = set(['reciprocal', 'negative', 'remainder'])
+
+    for fn_name in all_funcs:
+
         np_fn = getattr(np, fn_name.lstrip('_'))
 
         if fn_name in ['reciprocal', 'negative']:
@@ -378,14 +406,16 @@ def test_arithmetic_funcs(omnisci):
 
             for x, v in list(result):
                 assert(np.isclose(np_fn(x), v))
-        elif fn_name in ['mod', 'remainder']:
+
+        if fn_name in ['mod', 'remainder']:
             descr, result = omnisci.sql_execute(
                 'select i, j, {fn_name}(i, j) from {omnisci.table_name}'
                 .format(**locals()))
 
             for i, j, v in list(result):
                 assert(np.isclose(np_fn(i, j), v))
-        else:
+
+        if fn_name in all_funcs.difference(exclude):
             descr, result = omnisci.sql_execute(
                 'select x, y, {fn_name}(x, y) from {omnisci.table_name}'
                 .format(**locals()))
@@ -412,7 +442,7 @@ def test_multiple_fns(omnisci):
         'select x, x, multiple1(x, y) from {omnisci.table_name}'
         .format(**locals()))
 
-    expected = [0.0, 0.0, 0.0, 1.0, 2.0]
+    expected = multiple1.func(np.arange(1, 6)/10.0, np.arange(1, 6)/6.0)
 
     for exp, (_, _, got) in zip(expected, result):
         assert (exp == got)

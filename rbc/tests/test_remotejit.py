@@ -178,15 +178,15 @@ def test_rjit_np(rjit):
     def trunc(x):
         return np.trunc(x)
 
-    assert trunc(0.3) == 0.0
-    assert trunc(2.9) == 2.0
+    assert (np.allclose(trunc(0.3), np.trunc(0.3)))
+    assert (np.allclose(trunc(2.9), np.trunc(2.0)))
 
     @rjit('double(double)')
     def exp2(x):
         return np.exp2(x)
 
-    assert exp2(2) == 4.0
-    assert exp2(3) == 8.0
+    assert (np.allclose(exp2(2), np.exp2(2)))
+    assert (np.allclose(exp2(3), np.exp2(3)))
 
 
 def test_options_local(rjit):

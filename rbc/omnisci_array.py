@@ -100,9 +100,9 @@ def omnisci_np_sum(a):
 def omnisci_np_prod(a):
     if isinstance(a, ArrayPointer):
         def impl(a):
-            s = a[0]
+            s = 1
             n = len(a)
-            for i in range(1, n):
+            for i in range(n):
                 s *= a[i]
             return s
         return impl

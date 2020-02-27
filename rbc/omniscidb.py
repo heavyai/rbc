@@ -333,8 +333,13 @@ class RemoteOmnisci(RemoteJIT):
                 name = caller.func.__name__
                 if name in self.forbidden_names:
                     raise ForbiddenNameError(
-                        f'Attempt to define function with name `{name}`.'
-                        f' see: https://github.com/xnd-project/rbc/issues/32')
+                        f'\n\nAttempt to define function with name `{name}`.\n'
+                        f'As a workaround, add a prefix to the function name '
+                        f'or define it with another name:\n\n'
+                        f'   def prefix_{name}(x):\n'
+                        f'       return np.trunc(x)\n\n'
+                        f'For more information, see: '
+                        f'https://github.com/xnd-project/rbc/issues/32')
                 for sig in caller.get_signatures(target_info):
                     i = len(function_signatures[name])
                     if sig in function_signatures[name]:

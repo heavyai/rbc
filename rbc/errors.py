@@ -2,6 +2,7 @@
 rbc-specific errors and warnings.
 """
 
+
 class ForbiddenNameError(Exception):
     """
     Launch when the user defines a function with name
