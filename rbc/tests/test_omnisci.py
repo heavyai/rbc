@@ -112,42 +112,15 @@ def test_redefine(omnisci):
     for x, x1 in result:
         assert x1 == x + 1
 
-    # Re-defining triggers an error message
+    # Re-defining triggers a warning message when in debug mode
     @omnisci('i32(i32)')  # noqa: F811
     def incr(x):  # noqa: F811
         return x + 2
 
-    with pytest.raises(errors.RedefinedError) as excinfo:
-        omnisci.register()
-
-    msg = "Attempt to redefine `incr` for sig `int32(int32)`"
-    assert msg in str(excinfo.value)
-
-    # that's necessary to prevent the drop table command
-    # to raise another exception
-    omnisci.reset()
-
-
-def test_redefine2(omnisci):
-    omnisci.reset()
-
-    @omnisci('i32(i32)')
-    def incr(x):
-        return x + 1
-
-    @omnisci('i32(i32)')  # noqa: F811
-    def incr(x):  # noqa: F811
-        return x + 2
-
-    with pytest.raises(errors.RedefinedError) as excinfo:
-        omnisci.register()
-
-    msg = "Attempt to redefine `incr` for sig `int32(int32)`"
-    assert msg in str(excinfo.value)
-
-    # that's necessary to prevent the drop table command to
-    # raise another exception
-    omnisci.reset()
+    desrc, result = omnisci.sql_execute(
+        'select i4, incr(i4) from {omnisci.table_name}'.format(**locals()))
+    for x, x1 in result:
+        assert x1 == x + 2
 
 
 def test_forbidden_define(omnisci):

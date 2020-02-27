@@ -10,7 +10,7 @@ from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_array import array_type_converter
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import RedefinedError, ForbiddenNameError
+from .errors import ForbiddenNameError
 
 
 def get_client_config(**config):
@@ -345,8 +345,7 @@ class RemoteOmnisci(RemoteJIT):
                             print(f'{type(self).__name__}.register: ignoring'
                                   f' older definition of `{name}` for `{sig}`'
                                   f' in {f2}#{n2}.')
-                        raise RedefinedError(
-                            f"Attempt to redefine `{name}` for sig `{sig}`.")
+                        continue
                     function_signatures[name].append(sig)
                     if i == 0:
                         sig.set_mangling('')
