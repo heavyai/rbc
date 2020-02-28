@@ -18,7 +18,7 @@ fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
             'nexttoward']
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
-libm_funcs = [*exp_funcs, *power_funcs, *trigonometric_funcs, 
+libm_funcs = [*exp_funcs, *power_funcs, *trigonometric_funcs,
               *hyperbolic_funcs, *nearest_funcs, *fp_funcs,
               *classification_funcs]
 
