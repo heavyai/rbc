@@ -6,6 +6,7 @@ import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
+from .npy_mathimpl import *
 
 exp_funcs = ['exp', 'exp2', 'expm1', 'log', 'log2', 'log10',
              'log1p', 'ilogb', 'logb']
