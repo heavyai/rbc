@@ -3,6 +3,7 @@ import pytest
 import sys
 from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
+import numpy as np
 
 win32 = sys.platform == 'win32'
 
@@ -169,6 +170,23 @@ def test_rjit_add(rjit):
         assert isinstance(r, complex)
         assert r == 3j
         assert add(1j, 2) == 2+1j
+
+
+def test_rjit_np(rjit):
+
+    @rjit('double(double)')
+    def trunc(x):
+        return np.trunc(x)
+
+    assert (np.allclose(trunc(0.3), np.trunc(0.3)))
+    assert (np.allclose(trunc(2.9), np.trunc(2.0)))
+
+    @rjit('double(double)')
+    def exp2(x):
+        return np.exp2(x)
+
+    assert (np.allclose(exp2(2), np.exp2(2)))
+    assert (np.allclose(exp2(3), np.exp2(3)))
 
 
 def test_options_local(rjit):

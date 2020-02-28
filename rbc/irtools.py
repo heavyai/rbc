@@ -6,6 +6,22 @@ import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
+from .npy_mathimpl import *  # noqa: F403, F401
+
+exp_funcs = ['exp', 'exp2', 'expm1', 'log', 'log2', 'log10',
+             'log1p', 'ilogb', 'logb']
+power_funcs = ['sqrt', 'cbrt', 'hypot', 'pow']
+trigonometric_funcs = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2']
+hyperbolic_funcs = ['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']
+nearest_funcs = ['ceil', 'floor', 'trunc', 'round', 'lround', 'llround',
+                 'nearbyint', 'rint', 'lrint', 'llrint']
+fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
+            'nexttoward']
+classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
+                        'isnormal', 'signbit']
+libm_funcs = [*exp_funcs, *power_funcs, *trigonometric_funcs,
+              *hyperbolic_funcs, *nearest_funcs, *fp_funcs,
+              *classification_funcs]
 
 
 def get_function_dependencies(module, funcname, _deps=None):
@@ -21,23 +37,24 @@ def get_function_dependencies(module, funcname, _deps=None):
                 if name.startswith('llvm.'):
                     _deps[name] = 'intrinsic'
                 elif f.is_declaration:
-                    _deps[name] = 'undefined'
+                    if name in libm_funcs:
+                        _deps[name] = 'libm'
+                    else:
+                        _deps[name] = 'undefined'
                 else:
                     _deps[name] = 'defined'
-                    get_function_dependencies(module, name, _deps=_deps)
+                    if name not in _deps:
+                        get_function_dependencies(module, name, _deps=_deps)
     return _deps
 
 
 class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
-
     # TODO: introduce JITRemoteCodeLibrary?
     _library_class = nb.targets.codegen.JITCodeLibrary
 
     def __init__(self, name, target_info):
         self.target_info = target_info
         super(JITRemoteCPUCodegen, self).__init__(name)
-        # we cannot use local host RuntimeLinker, in general.
-        self._rtlinker = None
 
     def _get_host_cpu_name(self):
         return self.target_info.device_name
@@ -90,6 +107,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
       Specify a list of Python function and its signatures pairs.
     target : TargetInfo
       Specify target device information.
+    debug : bool
 
     Returns
     -------
@@ -176,15 +194,29 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     unused_functions = [f.name for f in main_module.functions
                         if f.name not in used_functions]
 
+    if debug:
+        print('compile_to_IR: the following functions are used')
+        for fname in used_functions:
+            lf = main_module.get_function(fname)
+            print('  [ALIVE]', fname, 'with', lf.linkage)
+
     if unused_functions:
         if debug:
             print('compile_to_IR: the following functions are not used'
                   ' and will be removed:')
         for fname in unused_functions:
-            if debug:
-                print('  ', fname)
             lf = main_module.get_function(fname)
-            lf.linkage = llvm.Linkage.private
+            if lf.is_declaration:
+                # if the function is a declaration,
+                # we just put the linkage as external
+                lf.linkage = llvm.Linkage.external
+            else:
+                # but if the function is not a declaration,
+                # we change the linkage to private
+                lf.linkage = llvm.Linkage.private
+            if debug:
+                print('  [DEAD]', fname, 'with', lf.linkage)
+
         main_library._optimize_final_module()
     # TODO: determine unused global_variables and struct_types
 

@@ -2,6 +2,7 @@ import re
 import operator
 import numba
 from llvmlite import ir
+import numpy as np
 from . import typesystem
 
 
@@ -72,6 +73,39 @@ def omnisci_array_getitem_(typingctx, data, index):
 def omnisci_array_getitem(x, i):
     if isinstance(x, ArrayPointer):
         return lambda x, i: omnisci_array_getitem_(x, i)
+
+
+@numba.extending.overload(operator.setitem)
+def omnisci_array_setitem(a, k, v):
+    if isinstance(a, ArrayPointer):
+        def impl(a, k, v):
+            return
+        return impl
+
+
+@numba.extending.overload(np.sum)
+@numba.extending.overload(sum)
+def omnisci_np_sum(a):
+    if isinstance(a, ArrayPointer):
+        def impl(a):
+            s = 0
+            n = len(a)
+            for i in range(n):
+                s += a[i]
+            return s
+        return impl
+
+
+@numba.extending.overload(np.prod)
+def omnisci_np_prod(a):
+    if isinstance(a, ArrayPointer):
+        def impl(a):
+            s = 1
+            n = len(a)
+            for i in range(n):
+                s *= a[i]
+            return s
+        return impl
 
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match

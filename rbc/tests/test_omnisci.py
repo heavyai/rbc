@@ -1,5 +1,6 @@
 import os
-
+from rbc import errors
+import numpy as np
 import pytest
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
@@ -120,6 +121,32 @@ def test_redefine(omnisci):
         'select i4, incr(i4) from {omnisci.table_name}'.format(**locals()))
     for x, x1 in result:
         assert x1 == x + 2
+
+
+def test_forbidden_define(omnisci):
+    omnisci.reset()
+
+    msg = "Attempt to define function with name `{name}`"
+
+    @omnisci('double(double)')
+    def sinh(x):
+        return np.sinh(x)
+
+    with pytest.raises(errors.ForbiddenNameError) as excinfo:
+        omnisci.register()
+    assert msg.format(name='sinh') in str(excinfo.value)
+
+    omnisci.reset()
+
+    @omnisci('double(double)')
+    def trunc(x):
+        return np.trunc(x)
+
+    with pytest.raises(errors.ForbiddenNameError) as excinfo:
+        omnisci.register()
+    assert msg.format(name='trunc') in str(excinfo.value)
+
+    omnisci.reset()
 
 
 def test_single_argument_overloading(omnisci):
@@ -423,7 +450,7 @@ def test_casting(omnisci):
     def ifoo(x): return x + 8  # noqa: F811
 
     @omnisci('f32(f32)')
-    def ffoo(x): return x + 4.5
+    def ffoo(x): return x + 4.5  # noqa: F811
 
     @omnisci('f64(f64)')  # noqa: F811
     def ffoo(x): return x + 8.5  # noqa: F811
