@@ -7,6 +7,20 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 
+exp_funcs = ['exp', 'exp2', 'expm1', 'log', 'log2', 'log10',
+             'log1p', 'ilogb', 'logb']
+power_funcs = ['sqrt', 'cbrt', 'hypot', 'pow']
+trigonometric_funcs = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2']
+hyperbolic_funcs = ['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']
+nearest_funcs = ['ceil', 'floor', 'trunc', 'round', 'lround', 'llround',
+                 'nearbyint', 'rint', 'lrint', 'llrint']
+fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
+            'nexttoward']
+classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
+                        'isnormal', 'signbit']
+libm_funcs = [*exp_funcs, *power_funcs, *trigonometric_funcs, *hyperbolic_funcs,
+              *nearest_funcs, *fp_funcs, *classification_funcs]
+
 
 def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
@@ -21,7 +35,10 @@ def get_function_dependencies(module, funcname, _deps=None):
                 if name.startswith('llvm.'):
                     _deps[name] = 'intrinsic'
                 elif f.is_declaration:
-                    _deps[name] = 'undefined'
+                    if name in libm_funcs:
+                        _deps[name] = 'libm'
+                    else:
+                        _deps[name] = 'undefined'
                 else:
                     _deps[name] = 'defined'
                     if name not in _deps:
@@ -166,8 +183,8 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
         deps = get_function_dependencies(main_module, fname)
         for fn, descr in deps.items():
             used_functions.add(fn)
-            # if descr == 'undefined':
-            #     raise RuntimeError('function `%s` is undefined' % (fn))
+            if descr == 'undefined':
+                raise RuntimeError('function `%s` is undefined' % (fn))
 
     # for global_variable in main_module.global_variables:
     #    global_variable.linkage = llvm.Linkage.private
