@@ -218,10 +218,9 @@ def test_explog_funcs(omnisci):
     def _expm1(x):
         return np.expm1(x)
 
-    # doesn't work - even adding a prefix '_'
-    # @omnisci('double(double)')  # noqa: F811
-    # def exp2(x):
-    #     return np.exp2(x)
+    @omnisci('double(double)')  # noqa: F811
+    def _exp2(x):
+        return np.exp2(x)
 
     @omnisci('double(double)')  # noqa: F811
     def log(x):
@@ -231,31 +230,29 @@ def test_explog_funcs(omnisci):
     def log10(x):
         return np.log10(x)
 
-    # doesn't work - even adding a prefix '_'
-    # @omnisci('double(double)')  # noqa: F811
-    # def _log2(x):
-    #     return np.log2(x)
+    @omnisci('double(double)')  # noqa: F811
+    def _log2(x):
+        return np.log2(x)
 
     @omnisci('double(double)')  # noqa: F811
     def _log1p(x):
         return np.log1p(x)
 
-    # doesn't work - even adding a prefix '_'
-    # @omnisci('double(double, double)')  # noqa: F811
-    # def _logaddexp(x, y):
-    #     return np.logaddexp(x, y)
+    @omnisci('double(double, double)')  # noqa: F811
+    def logaddexp(x, y):
+        return np.logaddexp(x, y)
 
-    # doesn't work - even adding a prefix '_'
-    # @omnisci('double(double, double)')  # noqa: F811
-    # def _logaddexp2(x, y):
-    #     return np.logaddexp2(x, y)
+    @omnisci('double(double, double)')  # noqa: F811
+    def logaddexp2(x, y):
+        return np.logaddexp2(x, y)
 
     omnisci.register()
 
-    for fn_name in ['exp', '_expm1', 'log', 'log10', '_log1p']:
+    for fn_name in ['exp', '_expm1', '_exp2', 'log', 'log10',
+                    '_log2', '_log1p', 'logaddexp', 'logaddexp2']:
         np_fn = getattr(np, fn_name.lstrip('_'))
 
-        if fn_name in ['_logaddexp', '_logaddexp2']:
+        if fn_name in ['logaddexp', 'logaddexp2']:
             descr, result = omnisci.sql_execute(
                 'select x, y, {fn_name}(x, y) from {omnisci.table_name}'
                 .format(**locals()))
