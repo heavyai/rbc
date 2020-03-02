@@ -207,8 +207,8 @@ if nb is not None:
                 _numba_imap[_t] = _k + str(_b)
 
 # numpy mapping
-_numpy_imap = {np.float32: 'float32', np.float64: 'float64',
-               np.float128: 'float128'}
+_numpy_imap = {np.float32: 'float32', np.double: 'float64',
+               np.longdouble: 'float128'}
 
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
