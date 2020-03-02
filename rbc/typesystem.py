@@ -20,6 +20,7 @@ except ImportError as msg:
     np = None
     np_NA_message = str(msg)
 
+
 class TypeParseError(Exception):
     """Failure to parse type definition
     """
