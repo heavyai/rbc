@@ -77,6 +77,14 @@ def test_logaddexp(rjit):
                     logzf = np.array(_z, dtype=dt)[()]
                     np.allclose(np.logaddexp(logxf, logyf), logzf)
 
+    def test_nan():
+        assert(np.isnan(logaddexp(np.nan, np.inf)))
+        assert(np.isnan(np.logaddexp(np.inf, np.nan)))
+        assert(np.isnan(np.logaddexp(np.nan, 0)))
+        assert(np.isnan(np.logaddexp(0, np.nan)))
+        assert(np.isnan(np.logaddexp(np.nan, np.nan)))
+
     test_values()
     test_range()
     test_inf()
+    test_nan()

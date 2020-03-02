@@ -6,6 +6,7 @@
 
 import re
 import ctypes
+import numpy as np
 import inspect
 try:
     import numba as nb
@@ -205,9 +206,13 @@ if nb is not None:
                     _m[_b] = _t
                 _numba_imap[_t] = _k + str(_b)
 
+# numpy mapping
+_numpy_imap = {np.float32: 'float32', np.float64: 'float64',
+               np.float128: 'float128'}
+
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
-                str: 'string', bytes: 'char*'}
+                str: 'string', bytes: 'char*', **_numpy_imap}
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #

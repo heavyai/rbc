@@ -31,9 +31,17 @@ def np_logaddexpr_impl(context, builder, sig, args):
 
 def np_logaddexpr2_impl(context, builder, sig, args):
     def impl(x, y):
-        a = np.power(2, x)
-        b = np.power(2, y)
-        return np.log2(a + b)
+        if x == y:
+            return x + 1
+        else:
+            tmp = x - y
+            if tmp > 0:
+                return x + np.log1p(np.exp(-tmp))
+            elif tmp <= 0:
+                return y + np.log1p(np.exp(tmp))
+            else:
+                # NaN's
+                return tmp
 
     return context.compile_internal(builder, impl, sig, args)
 
