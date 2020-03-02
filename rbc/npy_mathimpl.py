@@ -22,9 +22,6 @@ def np_logaddexpr_impl(context, builder, sig, args):
             else:
                 # NaN's
                 return tmp
-            a = np.exp(x)
-            b = np.exp(y)
-            return np.log(a + b)
 
     return context.compile_internal(builder, impl, sig, args)
 
