@@ -135,8 +135,7 @@ class RemoteOmnisci(RemoteJIT):
     """
 
     forbidden_names = ['sinh', 'cosh', 'tanh', 'rint', 'trunc',
-                       'expm1', 'exp2', 'log2', 'log1p'
-                       'logaddexp', 'logaddexp2', 'fmod']
+                       'expm1', 'exp2', 'log2', 'log1p', 'fmod']
     converters = [array_type_converter]
     multiplexed = False
     mangle_prefix = ''

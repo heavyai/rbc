@@ -14,6 +14,12 @@ except ImportError as msg:
     nb = None
     nb_NA_message = str(msg)
 
+try:
+    import numpy as np
+except ImportError as msg:
+    np = None
+    np_NA_message = str(msg)
+
 
 class TypeParseError(Exception):
     """Failure to parse type definition
@@ -205,9 +211,16 @@ if nb is not None:
                     _m[_b] = _t
                 _numba_imap[_t] = _k + str(_b)
 
+# numpy mapping
+if np is not None:
+    _numpy_imap = {np.float32: 'float32', np.double: 'float64',
+                   np.longdouble: 'float128'}
+else:
+    _numpy_imap = {}
+
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
-                str: 'string', bytes: 'char*'}
+                str: 'string', bytes: 'char*', **_numpy_imap}
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
