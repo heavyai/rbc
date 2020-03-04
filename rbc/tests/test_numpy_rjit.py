@@ -52,7 +52,7 @@ def test_logaddexp(rjit):
                 logxf = np.log(np.array(_x, dtype=dt))
                 logyf = np.log(np.array(_y, dtype=dt))
                 logzf = np.log(np.array(_z, dtype=dt))
-                np.allclose(fn(logxf, logyf), logzf)
+                assert(np.allclose(fn(logxf, logyf), logzf))
 
     def test_range(fn):
         x = [1000000, -1000000, 1000200, -1000200]
@@ -64,7 +64,7 @@ def test_logaddexp(rjit):
                 logxf = np.array(_x, dtype=dt)[()]
                 logyf = np.array(_y, dtype=dt)[()]
                 logzf = np.array(_z, dtype=dt)[()]
-                np.allclose(fn(logxf, logyf), logzf)
+                assert(np.allclose(fn(logxf, logyf), logzf))
 
     def test_inf(fn):
         # logaddexp inf
@@ -79,7 +79,7 @@ def test_logaddexp(rjit):
                     logxf = np.array(_x, dtype=dt)[()]
                     logyf = np.array(_y, dtype=dt)[()]
                     logzf = np.array(_z, dtype=dt)[()]
-                    np.allclose(fn(logxf, logyf), logzf)
+                    assert(np.allclose(fn(logxf, logyf), logzf))
 
     def test_nan(fn):
         assert(np.isnan(fn(np.nan, np.inf)))
