@@ -212,11 +212,12 @@ if nb is not None:
                 _numba_imap[_t] = _k + str(_b)
 
 # numpy mapping
+_numpy_imap = {}
 if np is not None:
-    _numpy_imap = {np.float32: 'float32', np.double: 'float64',
-                   np.longdouble: 'float128'}
-else:
-    _numpy_imap = {}
+
+    for k, v in np.typeDict.items():
+        name = np.dtype(v).name
+        _numpy_imap[v] = name
 
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
@@ -679,6 +680,17 @@ class Type(tuple):
             return cls._fromstring(s)._normalize(target_info)
         except TypeParseError as msg:
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
+
+    @classmethod
+    def fromnumpy(cls, t, target_info):
+        """Return new Type instance from numpy type object.
+        """
+        if np is None:
+            raise RuntimeError('importing numpy failed: %s' % (np_NA_message))
+
+        n = _numpy_imap.get(t)
+        if n is not None:
+            return cls.fromstring(n, target_info)
 
     @classmethod
     def fromnumba(cls, t, target_info):

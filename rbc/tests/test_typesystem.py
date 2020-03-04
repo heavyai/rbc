@@ -3,6 +3,11 @@ try:
 except ImportError:
     nb = None
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 import pytest
 from rbc.typesystem import Type
 from rbc.utils import get_datamodel
@@ -339,6 +344,42 @@ def test_fromnumba():
     assert fromnumba(nb.complex128) == fromstr('complex128')
     assert fromnumba(nb.types.CPointer(nb.float64)) == fromstr('double*')
     assert fromnumba(nb.double(nb.int64, nb.float_)) == fromstr('d(i64, f)')
+
+
+@pytest.mark.skipif(np is None, reason='NumPy is not available')
+def test_fromnumpy():
+
+    def fromstr(a):
+        return Type_fromstring(a)
+
+    def fromnumpy(t):
+        return Type.fromnumpy(t, target_info)
+
+    assert fromnumpy(np.void) == fromstr('void')
+    assert fromnumpy(np.bool_) == fromstr('bool')
+    assert fromnumpy(np.bytes_) == fromstr('bytes')
+    assert fromnumpy(np.complex64) == fromstr('complex64')
+    assert fromnumpy(np.complex128) == fromstr('complex128')
+    assert fromnumpy(np.complex256) == fromstr('complex256')
+    assert fromnumpy(np.datetime64) == fromstr('datetime64')
+    assert fromnumpy(np.float16) == fromstr('float16')
+    assert fromnumpy(np.float32) == fromstr('float32')
+    assert fromnumpy(np.float64) == fromstr('float64')
+    assert fromnumpy(np.float128) == fromstr('float128')
+    assert fromnumpy(np.double) == fromstr('float64')
+    assert fromnumpy(np.int8) == fromstr('int8')
+    assert fromnumpy(np.int16) == fromstr('int16')
+    assert fromnumpy(np.int32) == fromstr('int32')
+    assert fromnumpy(np.int64) == fromstr('int64')
+    assert fromnumpy(np.longlong) == fromstr('int64')
+    assert fromnumpy(np.object_) == fromstr('object')
+    assert fromnumpy(np.str_) == fromstr('str')
+    assert fromnumpy(np.timedelta64) == fromstr('timedelta64')
+    assert fromnumpy(np.uint8) == fromstr('uint8')
+    assert fromnumpy(np.uint16) == fromstr('uint16')
+    assert fromnumpy(np.uint32) == fromstr('uint32')
+    assert fromnumpy(np.uint64) == fromstr('uint64')
+    assert fromnumpy(np.ulonglong) == fromstr('uint64')
 
 
 def test_fromcallable():
