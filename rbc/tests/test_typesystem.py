@@ -417,6 +417,10 @@ def test_fromvalue():
     assert Type_fromvalue(1j) == Type_fromstring('c128')
     assert Type_fromvalue("123".encode()) == Type_fromstring('char*')
     assert Type_fromvalue("123") == Type_fromstring('string')
+    x = np.dtype(np.float64).type(3.0)
+    assert Type_fromvalue(x) == Type_fromstring('float64')
+    y = np.dtype(np.complex64).type((1+2j))
+    assert Type_fromvalue(y) == Type_fromstring('complex64')
 
 
 def test_fromobject():
