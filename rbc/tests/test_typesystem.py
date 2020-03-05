@@ -8,6 +8,7 @@ try:
 except ImportError:
     np = None
 
+import sys
 import pytest
 from rbc.typesystem import Type
 from rbc.utils import get_datamodel
@@ -15,6 +16,7 @@ from rbc.targetinfo import TargetInfo
 
 target_info = TargetInfo.host()
 
+win32 = sys.platform == 'win32'
 
 def Type_fromstring(s):
     return Type.fromstring(s, target_info)
@@ -360,7 +362,6 @@ def test_fromnumpy():
     assert fromnumpy(np.bytes_) == fromstr('bytes')
     assert fromnumpy(np.complex64) == fromstr('complex64')
     assert fromnumpy(np.complex128) == fromstr('complex128')
-    assert fromnumpy(np.complex256) == fromstr('complex256')
     assert fromnumpy(np.datetime64) == fromstr('datetime64')
     assert fromnumpy(np.float16) == fromstr('float16')
     assert fromnumpy(np.float32) == fromstr('float32')
@@ -381,6 +382,8 @@ def test_fromnumpy():
     assert fromnumpy(np.uint64) == fromstr('uint64')
     assert fromnumpy(np.ulonglong) == fromstr('uint64')
 
+    if not win32:
+        assert fromnumpy(np.complex256) == fromstr('complex256')
 
 def test_fromcallable():
 
