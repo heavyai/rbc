@@ -14,9 +14,9 @@ from rbc.typesystem import Type
 from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
+win32 = sys.platform == 'win32'
 target_info = TargetInfo.host()
 
-win32 = sys.platform == 'win32'
 
 def Type_fromstring(s):
     return Type.fromstring(s, target_info)
@@ -384,6 +384,7 @@ def test_fromnumpy():
 
     if not win32:
         assert fromnumpy(np.complex256) == fromstr('complex256')
+
 
 def test_fromcallable():
 
