@@ -366,7 +366,6 @@ def test_fromnumpy():
     assert fromnumpy(np.float16) == fromstr('float16')
     assert fromnumpy(np.float32) == fromstr('float32')
     assert fromnumpy(np.float64) == fromstr('float64')
-    assert fromnumpy(np.float128) == fromstr('float128')
     assert fromnumpy(np.double) == fromstr('float64')
     assert fromnumpy(np.int8) == fromstr('int8')
     assert fromnumpy(np.int16) == fromstr('int16')
@@ -383,6 +382,7 @@ def test_fromnumpy():
     assert fromnumpy(np.ulonglong) == fromstr('uint64')
 
     if not win32:
+        assert fromnumpy(np.float128) == fromstr('float128')
         assert fromnumpy(np.complex256) == fromstr('complex256')
 
 
