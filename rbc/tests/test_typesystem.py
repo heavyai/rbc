@@ -426,6 +426,9 @@ def test_fromobject():
     assert Type_fromobject(ctypes.c_int16) == Type_fromstring('i16')
     if nb is not None:
         assert Type_fromobject(nb.int16) == Type_fromstring('i16')
+    if np is not None:
+        assert Type_fromobject(np.int32) == Type_fromstring('i32')
+        assert Type_fromobject(np.complex64) == Type_fromstring('complex64')
 
     def foo():
         pass

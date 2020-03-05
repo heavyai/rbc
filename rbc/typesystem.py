@@ -221,7 +221,7 @@ if np is not None:
 
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
-                str: 'string', bytes: 'char*', **_numpy_imap}
+                str: 'string', bytes: 'char*'}
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
@@ -769,9 +769,10 @@ class Type(tuple):
     def fromvalue(cls, obj, target_info):
         """Return Type instance that corresponds to given Python value.
         """
-        n = _python_imap.get(type(obj))
-        if n is not None:
-            return cls.fromstring(n, target_info)
+        for mapping in [_python_imap, _numpy_imap]:
+            n = mapping.get(type(obj))
+            if n is not None:
+                return cls.fromstring(n, target_info)
         raise NotImplementedError('%s.fromvalue(%r)'
                                   % (cls.__name__, obj))
 
@@ -808,6 +809,8 @@ class Type(tuple):
                 return cls.fromnumba(obj, target_info)
             if obj.__module__.startswith('ctypes'):
                 return cls.fromctypes(obj, target_info)
+            if obj.__module__.startswith('numpy'):
+                return cls.fromnumpy(obj, target_info)
         if inspect.isclass(obj):
             if obj is int:
                 return cls('int64')
