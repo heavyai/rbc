@@ -19,9 +19,12 @@ fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
             'nexttoward']
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
-libm_funcs = [*exp_funcs, *power_funcs, *trigonometric_funcs,
-              *hyperbolic_funcs, *nearest_funcs, *fp_funcs,
-              *classification_funcs]
+def lf(l):
+    return l + [e + 'f' for e in l] + [e + 'l' for e in l]
+
+fp_funcs = lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
+              *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
+libm_funcs = [*fp_funcs, *classification_funcs]
 
 
 def get_function_dependencies(module, funcname, _deps=None):
