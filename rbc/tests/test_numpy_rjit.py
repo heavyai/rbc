@@ -27,8 +27,16 @@ def test_exp2(rjit):
     def exp2(x):
         return np.exp2(x)
 
-    assert (np.allclose(exp2(2), np.exp2(2)))
-    assert (np.allclose(exp2(3), np.exp2(3)))
+    assert (np.isclose(exp2(2), np.exp2(2)))
+    assert (np.isclose(exp2(3), np.exp2(3)))
+
+
+def test_exp2f(rjit):
+    @rjit('float(float)')
+    def exp2(x):
+        return np.exp2(x)
+
+    assert (np.isclose(exp2(2.0), np.exp2(2.0)))
 
 
 def test_logaddexp(rjit):

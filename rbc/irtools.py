@@ -8,6 +8,11 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .npy_mathimpl import *  # noqa: F403, F401
 
+
+def _lf(lst):
+    return lst + [e + 'f' for e in lst] + [e + 'l' for e in lst]
+
+
 exp_funcs = ['exp', 'exp2', 'expm1', 'log', 'log2', 'log10',
              'log1p', 'ilogb', 'logb']
 power_funcs = ['sqrt', 'cbrt', 'hypot', 'pow']
@@ -19,9 +24,10 @@ fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
             'nexttoward']
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
-libm_funcs = [*exp_funcs, *power_funcs, *trigonometric_funcs,
-              *hyperbolic_funcs, *nearest_funcs, *fp_funcs,
-              *classification_funcs]
+
+fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
+                *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
+libm_funcs = [*fp_funcs, *classification_funcs]
 
 
 def get_function_dependencies(module, funcname, _deps=None):
