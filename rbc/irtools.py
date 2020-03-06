@@ -26,7 +26,7 @@ classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
 
 fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
-              *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
+                *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
 libm_funcs = [*fp_funcs, *classification_funcs]
 
 
