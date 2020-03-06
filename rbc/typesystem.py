@@ -215,7 +215,7 @@ if nb is not None:
 _numpy_imap = {}
 if np is not None:
 
-    for k, v in np.typeDict.items():
+    for v in set(np.typeDict.values()):
         name = np.dtype(v).name
         _numpy_imap[v] = name
 
@@ -691,6 +691,8 @@ class Type(tuple):
         n = _numpy_imap.get(t)
         if n is not None:
             return cls.fromstring(n, target_info)
+
+        raise NotImplementedError(repr(t))
 
     @classmethod
     def fromnumba(cls, t, target_info):

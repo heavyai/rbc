@@ -8,13 +8,11 @@ try:
 except ImportError:
     np = None
 
-import sys
 import pytest
 from rbc.typesystem import Type
 from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
-win32 = sys.platform == 'win32'
 target_info = TargetInfo.host()
 
 
@@ -381,8 +379,9 @@ def test_fromnumpy():
     assert fromnumpy(np.uint64) == fromstr('uint64')
     assert fromnumpy(np.ulonglong) == fromstr('uint64')
 
-    if not win32:
+    if hasattr(np, 'float128'):
         assert fromnumpy(np.float128) == fromstr('float128')
+    if hasattr(np, 'complex256'):
         assert fromnumpy(np.complex256) == fromstr('complex256')
 
 
