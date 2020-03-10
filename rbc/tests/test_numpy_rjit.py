@@ -93,3 +93,13 @@ def test_logaddexp(rjit):
         test_range(fn)
         test_inf(fn)
         test_nan(fn)
+
+
+def test_foo(rjit):
+    @rjit('int(int[], int[])')
+    def logaddexp(x, y):
+        return x[0] + y[0]
+
+    x = np.asarray([1, 2, 3, 4, 5], dtype=np.int32)
+    y = np.asarray([5, 4, 3, 2, 1], dtype=np.int32)
+    assert(logaddexp(x, y), 6)

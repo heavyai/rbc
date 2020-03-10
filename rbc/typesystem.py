@@ -115,6 +115,8 @@ _longdouble_match = re.compile(r'\A(long\s*double)\Z').match
 
 _complex_match = re.compile(r'\A(complex|c)\Z').match
 
+_array_match = re.compile(r'\A(\w+)(\[\])').match
+
 
 # For `Type.fromstring('<typespec> <name>')` support:
 _type_name_match = re.compile(r'\A(.*)\s(\w+)\Z').match
@@ -226,7 +228,7 @@ _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
 _mangling_suffices = '_V'
-_mangling_prefixes = 'PKaA'
+_mangling_prefixes = 'PKaAM'
 _mangling_map = dict(
     void='v', bool='b',
     char8='c', char16='z', char32='w',
@@ -380,7 +382,13 @@ class Type(tuple):
 
     @property
     def is_atomic(self):
-        return len(self) == 1 and isinstance(self[0], str)
+        return len(self) == 1 and isinstance(self[0], str) \
+            and not(self.is_array)
+
+    @property
+    def is_array(self):
+        # to-do: change this
+        return '[]' in self
 
     @property
     def is_int(self):
@@ -430,6 +438,8 @@ class Type(tuple):
         """
         if self.is_atomic:
             return not self[0].startswith('<type of')
+        elif self.is_array:
+            return self[0].is_complete
         elif self.is_pointer:
             return self[0].is_complete
         elif self.is_struct:
@@ -451,7 +461,8 @@ class Type(tuple):
     @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
-            or self.is_struct or (self.is_function and len(self[1]) > 0)
+            or self.is_struct or self.is_array \
+            or (self.is_function and len(self[1]) > 0)
 
     def __repr__(self):
         return '%s%s' % (type(self).__name__, tuple.__repr__(self))
@@ -487,6 +498,8 @@ class Type(tuple):
                 return typename + suffix
         if self.is_atomic:
             return self[0] + suffix
+        if self.is_array:
+            return self[0].tostring() + self[1]
         if self.is_pointer:
             return self[0].tostring(use_typename=use_typename) + '*' + suffix
         if self.is_struct:
@@ -558,6 +571,9 @@ class Type(tuple):
         if self.is_pointer:
             return nb.types.CPointer(
                 self[0].tonumba(bool_is_int8=bool_is_int8))
+        if self.is_array:
+            return nb.types.Array(
+                self[0].tonumba(bool_is_int8=bool_is_int8), 1, 'C')
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -612,6 +628,8 @@ class Type(tuple):
             return type('struct%s' % (id(self)),
                         (ctypes.Structure, ),
                         dict(_fields_=fields))
+        if self.is_array:
+            return ctypes.Array
         if self.is_function:
             rtype = self[0].toctypes()
             atypes = [t.toctypes() for t in self[1] if not t.is_void]
@@ -623,6 +641,10 @@ class Type(tuple):
     @classmethod
     def _fromstring(cls, s):
         s = s.strip()
+        if s.endswith(']'):       # array
+            m = _array_match(s)
+            if m is not None:
+                return cls(cls._fromstring(m.group(1)), m.group(2))
         if s.endswith('*'):       # pointer
             return cls(cls._fromstring(s[:-1]), '*')
         if s.endswith('}'):       # struct
@@ -769,8 +791,11 @@ class Type(tuple):
 
     @classmethod
     def fromvalue(cls, obj, target_info):
-        """Return Type instance that corresponds to given Python value.
+        """Return Type instance that corresponds to given value.
         """
+        if isinstance(obj, np.ndarray):
+            n = '%s[]' % obj.dtype
+            return cls.fromstring(n, target_info)
         for mapping in [_python_imap, _numpy_imap]:
             n = mapping.get(type(obj))
             if n is not None:
@@ -896,6 +921,9 @@ class Type(tuple):
         if self.is_struct:
             return self.__class__(
                 *(t._normalize(target_info) for t in self), **params)
+        if self.is_array:
+            return self.__class__(
+                self[0]._normalize(target_info), self[1], **params)
         if self.is_function:
             return self.__class__(
                 self[0]._normalize(target_info),
@@ -919,6 +947,9 @@ class Type(tuple):
             r = self[0].mangle()
             a = ''.join([a.mangle() for a in self[1]])
             return '_' + r + 'a' + a + 'A'
+        if self.is_array:
+            r = self[0].mangle()
+            return '_' + r + 'M'
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
@@ -1054,6 +1085,9 @@ def _demangle(s):
 
     Algorithm invented by Pearu Peterson, February 2019
     """
+    print('\n-----', s, '=====')
+    # import pytest
+    # pytest.set_trace()
     if not s:
         return (Type(),), ''
     if s[0] == 'V':
@@ -1078,6 +1112,9 @@ def _demangle(s):
             typ = Type(rtype, atypes)
         elif kind == 'A':
             return block, rest
+        elif kind == 'M':
+            assert len(block) == 1, repr(block)
+            typ = Type(block[0], '[]')
         else:
             raise NotImplementedError(repr((kind, s)))
     else:

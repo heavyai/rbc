@@ -420,7 +420,8 @@ def test_fromvalue():
     assert Type_fromvalue(x) == Type_fromstring('float64')
     y = np.dtype(np.complex64).type((1+2j))
     assert Type_fromvalue(y) == Type_fromstring('complex64')
-
+    z = np.array(0, dtype=np.uint64)
+    assert Type_fromvalue(z) == Type_fromstring('uint64[]')
 
 def test_fromobject():
     import ctypes
