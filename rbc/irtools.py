@@ -66,7 +66,12 @@ class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
         return self.target_info.device_name
 
     def _get_host_cpu_features(self):
-        return self.target_info.device_features
+        features = self.target_info.device_features
+        if llvm.llvm_version_info[0] < 9:
+            # See https://github.com/xnd-project/rbc/issues/45
+            for f in ['cx8', 'enqcmd', 'avx512bf16']:
+                features = features.replace('+' + f, '').replace('-' + f, '')
+        return features
 
     def _customize_tm_options(self, options):
         super(JITRemoteCPUCodegen, self)._customize_tm_options(options)
