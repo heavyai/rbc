@@ -7,6 +7,15 @@ import ctypes
 import llvmlite.binding as llvm
 
 
+def get_version(package):
+    """Return a package version as a 3-tuple of integers.
+    """
+    if package == 'numba':
+        import numba
+        return tuple(map(int, numba.__version__.split('.')[:3]))
+    raise NotImplementedError(f'get version of package {package}')
+
+
 def get_local_ip():
     """Return localhost IP.
     """
