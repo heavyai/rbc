@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from rbc.utils import get_version
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 
 
@@ -268,6 +269,8 @@ def test_explog_funcs(omnisci):
                 assert(np.isclose(np_fn(x), v))
 
 
+@pytest.mark.skipif(get_version('numba') < (0, 47),
+                    reason="requires numba 0.47 or higher")
 def test_rational_funcs(omnisci):
     omnisci.reset()
 
