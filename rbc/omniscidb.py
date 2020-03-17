@@ -13,6 +13,29 @@ from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError
 
 
+def is_available(_cache={}):
+    """Return version tuple and None if OmnisciDB server is accessible or
+    recent enough. Otherwise return None and the reason about
+    unavailability.
+    """
+    if not _cache:
+        config = get_client_config()
+        omnisci = RemoteOmnisci(**config)
+        try:
+            version = omnisci.version
+        except Exception as msg:
+            _cache['reason'] = 'failed to get OmniSci version: %s' % (msg)
+        else:
+            print(' OmnisciDB version', version)
+            if version[:2] >= (4, 6):
+                _cache['version'] = version
+            else:
+                _cache['reason'] = (
+                    'expected OmniSci version 4.6 or greater, got %s'
+                    % (version,))
+    return _cache.get('version', ()), _cache.get('reason')
+
+
 def get_client_config(**config):
     """Retrieve the omnisci client configuration parameters from a client
     home directory.
@@ -165,6 +188,17 @@ class RemoteOmnisci(RemoteJIT):
         self._session_id = None
         self._thrift_client = None
         self._targets = None
+        self.thrift_typemap = defaultdict(dict)
+        self._init_thrift_typemap()
+
+    def _init_thrift_typemap(self):
+        """Initialize thrift type map using client thrift configuration.
+        """
+        typemap = self.thrift_typemap
+        for typename, typ in self.thrift_client.thrift.__dict__.items():
+            if hasattr(typ, '_NAMES_TO_VALUES'):
+                for name, value in typ._NAMES_TO_VALUES.items():
+                    typemap[typename][name] = value
 
     @property
     def version(self):
@@ -244,30 +278,31 @@ class RemoteOmnisci(RemoteJIT):
         if self._ext_arguments_map is not None:
             return self._ext_arguments_map
         thrift = self.thrift_client.thrift
+        typemap = self.thrift_typemap
         ext_arguments_map = {
-            'int8': thrift.TExtArgumentType.Int8,
-            'int16': thrift.TExtArgumentType.Int16,
-            'int32': thrift.TExtArgumentType.Int32,
-            'int64': thrift.TExtArgumentType.Int64,
-            'float32': thrift.TExtArgumentType.Float,
-            'float64': thrift.TExtArgumentType.Double,
-            'int8*': thrift.TExtArgumentType.PInt8,
-            'int16*': thrift.TExtArgumentType.PInt16,
-            'int32*': thrift.TExtArgumentType.PInt32,
-            'int64*': thrift.TExtArgumentType.PInt64,
-            'float32*': thrift.TExtArgumentType.PFloat,
-            'float64*': thrift.TExtArgumentType.PDouble,
-            'bool': thrift.TExtArgumentType.Bool,
-            'Array<bool>': thrift.TExtArgumentType.ArrayInt8,
-            'Array<int8_t>': thrift.TExtArgumentType.ArrayInt8,
-            'Array<int16_t>': thrift.TExtArgumentType.ArrayInt16,
-            'Array<int32_t>': thrift.TExtArgumentType.ArrayInt32,
-            'Array<int64_t>': thrift.TExtArgumentType.ArrayInt64,
-            'Array<float>': thrift.TExtArgumentType.ArrayFloat,
-            'Array<double>': thrift.TExtArgumentType.ArrayDouble,
-            'Cursor': thrift.TExtArgumentType.Cursor,
-            'void': thrift.TExtArgumentType.Void,
-            'GeoPoint': thrift.TExtArgumentType.GeoPoint,
+            'int8': typemap['TExtArgumentType']['Int8'],
+            'int16': typemap['TExtArgumentType']['Int16'],
+            'int32': typemap['TExtArgumentType']['Int32'],
+            'int64': typemap['TExtArgumentType']['Int64'],
+            'float32': typemap['TExtArgumentType']['Float'],
+            'float64': typemap['TExtArgumentType']['Double'],
+            'int8*': typemap['TExtArgumentType']['PInt8'],
+            'int16*': typemap['TExtArgumentType']['PInt16'],
+            'int32*': typemap['TExtArgumentType']['PInt32'],
+            'int64*': typemap['TExtArgumentType']['PInt64'],
+            'float32*': typemap['TExtArgumentType']['PFloat'],
+            'float64*': typemap['TExtArgumentType']['PDouble'],
+            'bool': typemap['TExtArgumentType']['Bool'],
+            'Array<bool>': typemap['TExtArgumentType']['ArrayInt8'],
+            'Array<int8_t>': typemap['TExtArgumentType']['ArrayInt8'],
+            'Array<int16_t>': typemap['TExtArgumentType']['ArrayInt16'],
+            'Array<int32_t>': typemap['TExtArgumentType']['ArrayInt32'],
+            'Array<int64_t>': typemap['TExtArgumentType']['ArrayInt64'],
+            'Array<float>': typemap['TExtArgumentType']['ArrayFloat'],
+            'Array<double>': typemap['TExtArgumentType']['ArrayDouble'],
+            'Cursor': typemap['TExtArgumentType']['Cursor'],
+            'void': typemap['TExtArgumentType']['Void'],
+            'GeoPoint': typemap['TExtArgumentType']['GeoPoint'],
         }
         ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
             = ext_arguments_map['Array<bool>']
@@ -295,11 +330,36 @@ class RemoteOmnisci(RemoteJIT):
     def retrieve_targets(self):
         device_params = self.thrift_call('get_device_parameters',
                                          self.session_id)
+        typemap = self.thrift_typemap
         device_target_map = {}
+        messages = []
         for prop, value in device_params.items():
             if prop.endswith('_triple'):
                 device = prop.rsplit('_', 1)[0]
                 device_target_map[device] = value
+
+            # Update thrift type map from server configuration
+            if 'Type.' in prop:
+                typ, member = prop.split('.', 1)
+                ivalue = int(value)
+                # Any warnings below indicate that the client and
+                # server thrift configurations are different. Server
+                # configuration will win.
+                if typ not in typemap:
+                    messages.append(f'thrift type map: add new type {typ}')
+                elif member not in typemap[typ]:
+                    messages.append(
+                        f'thrift type map: add new member {typ}.{member}')
+                elif ivalue != typemap[typ][member]:
+                    messages.append(
+                        f'thrift type map: update {typ}.{member}'
+                        f' to {ivalue} (was {typemap[typ][member]})')
+                else:
+                    continue
+                typemap[typ][member] = ivalue
+        if messages:
+            warnings.warn('\n  '.join([''] + messages))
+
         targets = {}
         for device, target in device_target_map.items():
             target_info = TargetInfo(name=device)
@@ -317,8 +377,6 @@ class RemoteOmnisci(RemoteJIT):
     def register(self):
         if self.have_last_compile:
             return
-
-        ext_arguments_map = self._get_ext_arguments_map()
         thrift = self.thrift_client.thrift
 
         udfs = []
@@ -328,6 +386,7 @@ class RemoteOmnisci(RemoteJIT):
             functions_and_signatures = []
             function_signatures = defaultdict(list)
             for caller in reversed(self.get_callers()):
+                ext_arguments_map = self._get_ext_arguments_map()
                 signatures = []
                 name = caller.func.__name__
                 if name in self.forbidden_names:

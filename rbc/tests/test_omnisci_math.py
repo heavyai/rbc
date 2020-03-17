@@ -1,27 +1,11 @@
 import numpy as np
 import pytest
 from rbc.utils import get_version
+
+
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-
-
-def omnisci_is_available():
-    """Return True if OmniSci server is accessible.
-    """
-    config = rbc_omnisci.get_client_config()
-    omnisci = rbc_omnisci.RemoteOmnisci(**config)
-    client = omnisci.client
-    try:
-        version = client(
-                Omnisci=dict(get_version=()))['Omnisci']['get_version']
-    except Exception as msg:
-        return False, 'failed to get OmniSci version: %s' % (msg)
-    if version >= '4.6':
-        return True, None
-    return False, 'expected OmniSci version 4.6 or greater, got %s' % (version)
-
-
-is_available, reason = omnisci_is_available()
-pytestmark = pytest.mark.skipif(not is_available, reason=reason)
+available_version, reason = rbc_omnisci.is_available()
+pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
@@ -295,6 +279,8 @@ def test_rational_funcs(omnisci):
             assert(np.isclose(np_fn(i, j), v))
 
 
+@pytest.mark.skipif(available_version < (5, 1),
+                    reason="requires OmnisciDB 5.1 or higher")
 def test_spd_funcs(omnisci):
     omnisci.reset()
 
