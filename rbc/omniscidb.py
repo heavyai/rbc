@@ -27,12 +27,12 @@ def is_available(_cache={}):
             _cache['reason'] = 'failed to get OmniSci version: %s' % (msg)
         else:
             print(' OmnisciDB version', version)
-        if version[:2] >= (4, 6):
-            _cache['version'] = version
-        else:
-            _cache['reason'] = (
-                'expected OmniSci version 4.6 or greater, got %s'
-                % (version,))
+            if version[:2] >= (4, 6):
+                _cache['version'] = version
+            else:
+                _cache['reason'] = (
+                    'expected OmniSci version 4.6 or greater, got %s'
+                    % (version,))
     return _cache.get('version'), _cache.get('reason')
 
 
