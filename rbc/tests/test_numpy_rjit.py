@@ -27,18 +27,26 @@ def test_exp2(rjit):
     def exp2(x):
         return np.exp2(x)
 
-    assert (np.allclose(exp2(2), np.exp2(2)))
-    assert (np.allclose(exp2(3), np.exp2(3)))
+    assert (np.isclose(exp2(2), np.exp2(2)))
+    assert (np.isclose(exp2(3), np.exp2(3)))
+
+
+def test_exp2f(rjit):
+    @rjit('float(float)')
+    def exp2(x):
+        return np.exp2(x)
+
+    assert (np.isclose(exp2(2.0), np.exp2(2.0)))
 
 
 def test_logaddexp(rjit):
     # ref:
     # https://github.com/numpy/numpy/blob/2fd9ff8277ad25aa386c3432b6ebc35322879d91/numpy/core/tests/test_umath.py#L818-L860
-
     @rjit('double(double, double)')
     def logaddexp(x, y):
         return np.logaddexp(x, y)
 
+    # https://github.com/numpy/numpy/blob/2fd9ff8277ad25aa386c3432b6ebc35322879d91/numpy/core/tests/test_umath.py#L580-L619
     @rjit('double(double, double)')
     def logaddexp2(x, y):
         return np.logaddexp2(x, y)
@@ -52,7 +60,7 @@ def test_logaddexp(rjit):
                 logxf = np.log(np.array(_x, dtype=dt))
                 logyf = np.log(np.array(_y, dtype=dt))
                 logzf = np.log(np.array(_z, dtype=dt))
-                np.allclose(fn(logxf, logyf), logzf)
+                assert(np.allclose(fn(logxf, logyf), logzf))
 
     def test_range(fn):
         x = [1000000, -1000000, 1000200, -1000200]
@@ -61,10 +69,10 @@ def test_logaddexp(rjit):
         for _x, _y, _z in zip(x, y, z):
             for dt in ['f', 'd', 'g']:
                 # [()] ~> quick hack! rbc doesn't support passing arrays
-                logxf = np.array(_x, dtype=dt)[()]
-                logyf = np.array(_y, dtype=dt)[()]
-                logzf = np.array(_z, dtype=dt)[()]
-                np.allclose(fn(logxf, logyf), logzf)
+                xf = np.array(_x, dtype=dt)[()]
+                yf = np.array(_y, dtype=dt)[()]
+                zf = np.array(_z, dtype=dt)[()]
+                assert(np.allclose(fn(xf, yf), zf))
 
     def test_inf(fn):
         # logaddexp inf
