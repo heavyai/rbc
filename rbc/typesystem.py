@@ -10,12 +10,14 @@ import inspect
 try:
     import numba as nb
     import numba.typing.ctypes_utils
+    nb_NA_message = None
 except ImportError as msg:
     nb = None
     nb_NA_message = str(msg)
 
 try:
     import numpy as np
+    np_NA_message = None
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)
@@ -728,7 +730,7 @@ class Type(tuple):
             # lambda function cannot carry annotations, hence:
             raise ValueError('constructing Type instance from '
                              'a lambda function is not supported')
-        sig = inspect.signature(func)
+        sig = get_signature(func)
         annot = sig.return_annotation
         if isinstance(annot, dict):
             rtype = cls() | annot  # void
@@ -1079,7 +1081,9 @@ def _demangle(s):
 
 if nb is not None:
     class Boolean1(numba.types.Boolean):
-        pass
+
+        def can_convert_from(self, typingctx, other):
+            return isinstance(other, numba.types.Boolean)
 
     @numba.datamodel.register_default(Boolean1)
     class Boolean1Model(numba.datamodel.models.BooleanModel):
@@ -1088,7 +1092,15 @@ if nb is not None:
             return self._bit_type
 
     class Boolean8(numba.types.Boolean):
-        pass
+
+        def can_convert_to(self, typingctx, other):
+            return isinstance(other, numba.types.Boolean)
+
+        def can_convert_from(self, typingctx, other):
+            return isinstance(other, numba.types.Boolean)
+
+        def unify(self, context, other):
+            print('UNIFY', other)
 
     @numba.datamodel.register_default(Boolean8)
     class Boolean8Model(numba.datamodel.models.BooleanModel):
@@ -1103,6 +1115,16 @@ if nb is not None:
     @numba.targets.imputils.lower_cast(Boolean8, numba.types.Boolean)
     def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
         return builder.icmp_signed('!=', val, val.type(0))
+
+    @numba.targets.imputils.lower_cast(numba.types.Boolean, Boolean1)
+    @numba.targets.imputils.lower_cast(numba.types.Boolean, Boolean8)
+    def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
+        llty = context.get_value_type(toty)
+        return builder.zext(val, llty)
+
+    @numba.extending.unbox(Boolean8)
+    def unbox_boolean8(typ, obj, c):
+        print('unbox_boolean8', typ, obj)
 
 
 def make_numba_struct(name, members, _cache={}):
@@ -1120,3 +1142,73 @@ def make_numba_struct(name, members, _cache={}):
         numba.datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
     return t
+
+
+_ufunc_pos_args_match = re.compile(
+    r'(?P<name>\w[\w\d_]*)\s*[(](?P<pos_args>[^/)]*)[/]?(?P<rest>.*)[)]').match
+_req_opt_args_match = re.compile(r'(?P<req_args>[^[]*)(?P<opt_args>.*)').match
+_annot_match = re.compile(
+    r'\s*(?P<name>\w[\w\d_]*)\s*[:](?P<annotation>.*)').match
+
+
+def get_signature(obj):
+    if inspect.isfunction(obj):
+        return inspect.signature(obj)
+    if np is not None:
+        if isinstance(obj, np.ufunc):
+            parameters = dict()
+            returns = dict()
+
+            sigline = obj.__doc__.lstrip().splitlines(1)[0]
+            m = _ufunc_pos_args_match(sigline)
+            name = m['name']
+            assert name == obj.__name__, (name, obj.__name__)
+            # rest = m['rest']
+            # positional arguments
+            m = _req_opt_args_match(m['pos_args'])
+            req_pos_names, opt_pos_names = [], []
+            for n in m.group('req_args').split(','):
+                n = n.strip()
+                if n:
+                    req_pos_names.append(n)
+                    parameters[n] = inspect.Parameter(
+                        n, inspect.Parameter.POSITIONAL_ONLY)
+            for n in (m.group('opt_args').replace('[', '')
+                      .replace(']', '').split(',')):
+                n = n.strip()
+                if n:
+                    opt_pos_names.append(n)
+                    parameters[n] = inspect.Parameter(
+                        n, inspect.Parameter.POSITIONAL_ONLY, default=None)
+            # TODO: process non-positional arguments in `rest`
+
+            # scan for annotations and determine returns
+            mode = 'none'
+            for line in obj.__doc__.splitlines():
+                if line in ['Parameters', 'Returns', 'Notes', 'See Also',
+                            'Examples']:
+                    mode = line
+                    continue
+                if mode == 'Parameters':
+                    m = _annot_match(line)
+                    if m is not None:
+                        n = m['name']
+                        if n in parameters:
+                            annot = m['annotation'].strip()
+                            parameters[n] = parameters[n].replace(
+                                annotation=annot)
+                if mode == 'Returns':
+                    m = _annot_match(line)
+                    if m is not None:
+                        n = m['name']
+                        annot = m['annotation'].strip()
+                        returns[n] = annot
+
+            sig = inspect.Signature(parameters=parameters.values())
+            if len(returns) == 1:
+                sig = sig.replace(return_annotation=list(returns.values())[0])
+            elif returns:
+                sig = sig.replace(return_annotation=returns)
+            return sig
+
+    raise NotImplementedError(obj)

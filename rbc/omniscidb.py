@@ -148,17 +148,7 @@ class RemoteOmnisci(RemoteJIT):
 
     Use pymapd, for instance, to make a SQL query `select add(c1,
     c2) from table`
-
-    Attributes
-    ----------
-    forbidden_names : list
-        A list of forbidden function names. See
-        https://github.com/xnd-project/rbc/issues/32
-
     """
-
-    forbidden_names = ['sinh', 'cosh', 'tanh', 'rint', 'trunc',
-                       'expm1', 'exp2', 'log2', 'log1p', 'fmod']
     converters = [array_type_converter]
     multiplexed = False
     mangle_prefix = ''
@@ -182,11 +172,12 @@ class RemoteOmnisci(RemoteJIT):
         for p in ['common.', 'extension_functions.']:
             content = content.replace(p, '')
         self.thrift_content = content
+
         RemoteJIT.__init__(self, host=host, port=port, **options)
 
         self._version = None
-        self._session_id = None
         self._thrift_client = None
+        self._session_id = None
         self._targets = None
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
@@ -209,7 +200,7 @@ class RemoteOmnisci(RemoteJIT):
                 raise RuntimeError('Could not parse OmniSci version=%r'
                                    % (version))
             major, minor, micro, dev = m.groups()
-            self._version = int(major), int(minor), int(micro), dev
+            self._version = (int(major), int(minor), int(micro), dev)
         return self._version
 
     @property
@@ -374,6 +365,16 @@ class RemoteOmnisci(RemoteJIT):
             targets[device] = target_info
         return targets
 
+    @property
+    def forbidden_names(self):
+        """Return a list of forbidden function names. See
+        https://github.com/xnd-project/rbc/issues/32
+        """
+        if self.version < (5, 2):
+            return ['sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1',
+                    'exp2', 'log2', 'log1p', 'fmod']
+        return []
+
     def register(self):
         if self.have_last_compile:
             return
@@ -410,7 +411,7 @@ class RemoteOmnisci(RemoteJIT):
                                   f' in {f2}#{n2}.')
                         continue
                     function_signatures[name].append(sig)
-                    if i == 0:
+                    if i == 0 and self.version < (5, 2):
                         sig.set_mangling('')
                     else:
                         sig.set_mangling('__%s' % (i))
