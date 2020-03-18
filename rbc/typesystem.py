@@ -1140,9 +1140,7 @@ def _demangle(s):
         elif kind == 'A':
             return block, rest
         elif kind == 'M':
-            assert len(block) == 1, repr(block)
-            # XXX: format brackets
-            typ = Type(block[0], '[:]')
+            raise NotImplementedError(repr((kind, s)))
         else:
             raise NotImplementedError(repr((kind, s)))
     else:
