@@ -2,7 +2,11 @@ import os
 from rbc import errors
 import numpy as np
 import pytest
+
+
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
+available_version, reason = rbc_omnisci.is_available()
+pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 def test_get_client_config(tmpdir):
@@ -43,26 +47,6 @@ use_host_target: False
             del os.environ['OMNISCI_CLIENT_CONF']
         else:
             os.environ['OMNISCI_CLIENT_CONF'] = old_conf
-
-
-def omnisci_is_available():
-    """Return True if Omnisci server is accessible.
-    """
-    config = rbc_omnisci.get_client_config()
-    omnisci = rbc_omnisci.RemoteOmnisci(**config)
-    try:
-        version = omnisci.version
-    except Exception as msg:
-        return False, 'failed to get OmniSci version: %s' % (msg)
-    print('OmniSci version', version)
-    if version[:2] >= (4, 6):
-        return True, None
-    return False, ('expected OmniSci version 4.6 or greater, got %s'
-                   % (version,))
-
-
-is_available, reason = omnisci_is_available()
-pytestmark = pytest.mark.skipif(not is_available, reason=reason)
 
 
 @pytest.fixture(scope='module')

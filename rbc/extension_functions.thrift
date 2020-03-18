@@ -1,6 +1,10 @@
 namespace java com.mapd.thrift.calciteserver
 
-/* See QueryEngine/ExtensionFunctionsWhitelist.h for required values */
+/* See QueryEngine/ExtensionFunctionsWhitelist.h for required
+values. It is ok if the following definition is out-of-date as
+get_device_parameters will contain up-to-date mapping of type names
+and enum values [OmnisciDB >= 5.2]. */
+
 enum TExtArgumentType {
   Int8,
   Int16,
@@ -26,7 +30,9 @@ enum TExtArgumentType {
   Cursor
 }
 
-/* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required values */
+/* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required
+values. Same comments apply as for TExtArgumentType in above. */
+
 enum TOutputBufferSizeType {
   kUserSpecifiedConstantParameter,
   kUserSpecifiedRowMultiplier,
@@ -59,4 +65,3 @@ struct TUserDefinedTableFunction {
   5: list<TExtArgumentType> outputArgTypes,
   6: list<TExtArgumentType> sqlArgTypes
 }
-
