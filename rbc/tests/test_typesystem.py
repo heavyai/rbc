@@ -53,6 +53,8 @@ def test_commasplit():
     assert '^'.join(commasplit('(a, b)')) == '(a, b)'
     assert '^'.join(commasplit('{a, b}')) == '{a, b}'
     assert '^'.join(commasplit('(a, b) , {d, e}')) == '(a, b)^{d, e}'
+    assert '^'.join(commasplit('(a[:, :])')) == '(a[:, :])'
+    assert '^'.join(commasplit('a[:, :], b[:, :, :], c')) == 'a[:, :]^b[:, :, :]^c'
 
 
 def test_fromstring():
@@ -404,11 +406,10 @@ def test_fromcallable():
 
     assert Type_fromcallable(bar) == Type_fromstring('void(f64[:])')
 
-    # needs to adjust parameters split
-    # def baz(a: 'float64[:, :]'):  # noqa: F821
-    #     pass
+    def baz(a: 'float64[:, :]'):  # noqa: F821
+        pass
 
-    # assert Type_fromcallable(bar) == Type_fromstring('void(f64[:, :])')
+    assert Type_fromcallable(baz) == Type_fromstring('void(f64[:, :])')
 
     with pytest.raises(
             ValueError,

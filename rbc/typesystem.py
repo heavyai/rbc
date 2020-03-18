@@ -55,17 +55,18 @@ def _commasplit(s):
     """
     lst = s.split(',')
     ac = ''
-    p1, p2 = 0, 0
+    p1, p2, p3 = 0, 0, 0
     rlst = []
     for i in lst:
         p1 += i.count('(') - i.count(')')
         p2 += i.count('{') - i.count('}')
-        if p1 == p2 == 0:
+        p3 += i.count('[') - i.count(']')
+        if p1 == p2 == p3 == 0:
             rlst.append((ac + ',' + i if ac else i).strip())
             ac = ''
         else:
             ac = ac + ',' + i if ac else i
-    if p1 == p2 == 0:
+    if p1 == p2 == p3 == 0:
         return rlst
     raise TypeParseError('failed to comma-split `%s`' % s)
 
