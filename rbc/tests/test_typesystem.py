@@ -54,7 +54,7 @@ def test_commasplit():
     assert '^'.join(commasplit('{a, b}')) == '{a, b}'
     assert '^'.join(commasplit('(a, b) , {d, e}')) == '(a, b)^{d, e}'
     assert '^'.join(commasplit('(a[:, :])')) == '(a[:, :])'
-    assert '^'.join(commasplit('a[:, :], b[:, :, :], c')) == 'a[:, :]^b[:, :, :]^c'
+    assert '^'.join(commasplit('a[:, :], b[:, :, :]')) == 'a[:, :]^b[:, :, :]'
 
 
 def test_fromstring():
