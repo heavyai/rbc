@@ -48,7 +48,8 @@ def _findparen(s):
 
 
 def _commasplit(s):
-    """Split a comma-separated items taking into account parenthesis.
+    """Split a comma-separated items taking into account parenthesis
+    and brackets.
 
     Used internally.
     """
@@ -115,7 +116,7 @@ _longdouble_match = re.compile(r'\A(long\s*double)\Z').match
 
 _complex_match = re.compile(r'\A(complex|c)\Z').match
 
-_array_match = re.compile(r'\A(\w+)(\[\])').match
+_array_match = re.compile(r'\A(\w+)(\[(\W+)+\])').match
 
 
 # For `Type.fromstring('<typespec> <name>')` support:
@@ -216,7 +217,6 @@ if nb is not None:
 # numpy mapping
 _numpy_imap = {}
 if np is not None:
-
     for v in set(np.typeDict.values()):
         name = np.dtype(v).name
         _numpy_imap[v] = name
@@ -387,8 +387,13 @@ class Type(tuple):
 
     @property
     def is_array(self):
-        # to-do: change this
-        return '[]' in self
+        # XXX: Change this
+        if len(self) == 2 and isinstance(self[1], str):
+            rule = r'\[(\W+)+\]'  # [:, :, :]
+            m = re.match(rule, self[1])
+            if m is not None:
+                return True
+        return False
 
     @property
     def is_int(self):
@@ -572,8 +577,7 @@ class Type(tuple):
             return nb.types.CPointer(
                 self[0].tonumba(bool_is_int8=bool_is_int8))
         if self.is_array:
-            return nb.types.Array(
-                self[0].tonumba(bool_is_int8=bool_is_int8), 1, 'C')
+            raise NotImplementedError(repr(self))
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -629,7 +633,7 @@ class Type(tuple):
                         (ctypes.Structure, ),
                         dict(_fields_=fields))
         if self.is_array:
-            return ctypes.Array
+            return NotImplementedError(repr((self, self.is_array)))
         if self.is_function:
             rtype = self[0].toctypes()
             atypes = [t.toctypes() for t in self[1] if not t.is_void]
@@ -703,12 +707,34 @@ class Type(tuple):
         except TypeParseError as msg:
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
 
+    @staticmethod
+    def _prepare_brackets(arr):
+        """Return a string containing the brackets formatted
+
+        Parameters
+        ----------
+        arr : np.ndarray
+
+        Examples
+        --------
+        >>> arr = np.arange(10, np.dtype=np.int64).reshape(5, 2)
+        >>> _prepare_brackets(arr)
+        int64[:, :]
+        """
+        return '[' + ', '.join(':' * arr.ndim) + ']'
+
     @classmethod
     def fromnumpy(cls, t, target_info):
         """Return new Type instance from numpy type object.
         """
         if np is None:
             raise RuntimeError('importing numpy failed: %s' % (np_NA_message))
+
+        if isinstance(t, np.ndarray):
+            brackets = cls._prepare_brackets(t)
+            dt = cls.fromnumpy(t.dtype.type, target_info)
+            n = '%s%s' % (dt, brackets)  # int32[:], float32[:, :], ...
+            return cls.fromstring(n, target_info)
 
         n = _numpy_imap.get(t)
         if n is not None:
@@ -732,6 +758,9 @@ class Type(tuple):
             return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype, target_info), '*')
+        if isinstance(t, nb.types.npytypes.Array):
+            brackets = cls._prepare_brackets(t)
+            return cls(cls.fromnumba(t.dtype, target_info), brackets)
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -794,8 +823,8 @@ class Type(tuple):
         """Return Type instance that corresponds to given value.
         """
         if isinstance(obj, np.ndarray):
-            n = '%s[]' % obj.dtype
-            return cls.fromstring(n, target_info)
+            return cls.fromnumpy(obj, target_info)
+
         for mapping in [_python_imap, _numpy_imap]:
             n = mapping.get(type(obj))
             if n is not None:
@@ -1085,9 +1114,6 @@ def _demangle(s):
 
     Algorithm invented by Pearu Peterson, February 2019
     """
-    print('\n-----', s, '=====')
-    # import pytest
-    # pytest.set_trace()
     if not s:
         return (Type(),), ''
     if s[0] == 'V':
@@ -1114,7 +1140,8 @@ def _demangle(s):
             return block, rest
         elif kind == 'M':
             assert len(block) == 1, repr(block)
-            typ = Type(block[0], '[]')
+            # XXX: format brackets
+            typ = Type(block[0], '[:]')
         else:
             raise NotImplementedError(repr((kind, s)))
     else:
