@@ -42,16 +42,12 @@ def test_exp2f(rjit):
 def test_logaddexp(rjit):
     # ref:
     # https://github.com/numpy/numpy/blob/2fd9ff8277ad25aa386c3432b6ebc35322879d91/numpy/core/tests/test_umath.py#L818-L860
+
     @rjit('double(double, double)')
     def logaddexp(x, y):
         return np.logaddexp(x, y)
 
-    # https://github.com/numpy/numpy/blob/2fd9ff8277ad25aa386c3432b6ebc35322879d91/numpy/core/tests/test_umath.py#L580-L619
-    @rjit('double(double, double)')
-    def logaddexp2(x, y):
-        return np.logaddexp2(x, y)
-
-    def test_values(fn):
+    def test_values():
         x = [1, 2, 3, 4, 5]
         y = [5, 4, 3, 2, 1]
         z = [6, 6, 6, 6, 6]
@@ -60,9 +56,9 @@ def test_logaddexp(rjit):
                 logxf = np.log(np.array(_x, dtype=dt))
                 logyf = np.log(np.array(_y, dtype=dt))
                 logzf = np.log(np.array(_z, dtype=dt))
-                assert(np.allclose(fn(logxf, logyf), logzf))
+                assert(np.allclose(logaddexp(logxf, logyf), logzf))
 
-    def test_range(fn):
+    def test_range():
         x = [1000000, -1000000, 1000200, -1000200]
         y = [1000200, -1000200, 1000000, -1000000]
         z = [1000200, -1000000, 1000200, -1000000]
@@ -72,9 +68,9 @@ def test_logaddexp(rjit):
                 xf = np.array(_x, dtype=dt)[()]
                 yf = np.array(_y, dtype=dt)[()]
                 zf = np.array(_z, dtype=dt)[()]
-                assert(np.allclose(fn(xf, yf), zf))
+                assert(np.allclose(logaddexp(xf, yf), zf))
 
-    def test_inf(fn):
+    def test_inf():
         # logaddexp inf
         inf = np.inf
         x = [inf, -inf,  inf, -inf, inf, 1,  -inf,  1]
@@ -84,20 +80,77 @@ def test_logaddexp(rjit):
             for _x, _y, _z in zip(x, y, z):
                 for dt in ['f', 'd', 'g']:
                     # [()] ~> quick hack! rbc doesn't support passing arrays
-                    logxf = np.array(_x, dtype=dt)[()]
-                    logyf = np.array(_y, dtype=dt)[()]
-                    logzf = np.array(_z, dtype=dt)[()]
-                    np.allclose(fn(logxf, logyf), logzf)
+                    xf = np.array(_x, dtype=dt)[()]
+                    yf = np.array(_y, dtype=dt)[()]
+                    zf = np.array(_z, dtype=dt)[()]
+                    assert(np.allclose(logaddexp(xf, yf), zf))
 
-    def test_nan(fn):
-        assert(np.isnan(fn(np.nan, np.inf)))
-        assert(np.isnan(fn(np.inf, np.nan)))
-        assert(np.isnan(fn(np.nan, 0)))
-        assert(np.isnan(fn(0, np.nan)))
-        assert(np.isnan(fn(np.nan, np.nan)))
+    def test_nan():
+        assert(np.isnan(logaddexp(np.nan, np.inf)))
+        assert(np.isnan(logaddexp(np.inf, np.nan)))
+        assert(np.isnan(logaddexp(np.nan, 0)))
+        assert(np.isnan(logaddexp(0, np.nan)))
+        assert(np.isnan(logaddexp(np.nan, np.nan)))
 
-    for fn in [logaddexp, logaddexp2]:
-        test_values(fn)
-        test_range(fn)
-        test_inf(fn)
-        test_nan(fn)
+    test_values()
+    test_range()
+    test_inf()
+    test_nan()
+
+
+def test_logaddexp2(rjit):
+    # ref:
+    # https://github.com/numpy/numpy/blob/2fd9ff8277ad25aa386c3432b6ebc35322879d91/numpy/core/tests/test_umath.py#L580-L619
+    @rjit('double(double, double)')
+    def logaddexp2(x, y):
+        return np.logaddexp2(x, y)
+
+    def test_values():
+        x = [1, 2, 3, 4, 5]
+        y = [5, 4, 3, 2, 1]
+        z = [6, 6, 6, 6, 6]
+        for _x, _y, _z in zip(x, y, z):
+            for dt in ['f', 'd', 'g']:
+                logxf = np.log2(np.array(_x, dtype=dt))
+                logyf = np.log2(np.array(_y, dtype=dt))
+                logzf = np.log2(np.array(_z, dtype=dt))
+                assert(np.allclose(logaddexp2(logxf, logyf), logzf))
+
+    def test_range():
+        x = [1000000, -1000000, 1000200, -1000200]
+        y = [1000200, -1000200, 1000000, -1000000]
+        z = [1000200, -1000000, 1000200, -1000000]
+        for _x, _y, _z in zip(x, y, z):
+            for dt in ['f', 'd', 'g']:
+                # [()] ~> quick hack! rbc doesn't support passing arrays
+                xf = np.array(_x, dtype=dt)[()]
+                yf = np.array(_y, dtype=dt)[()]
+                zf = np.array(_z, dtype=dt)[()]
+                assert(np.allclose(logaddexp2(xf, yf), zf))
+
+    def test_inf():
+        # logaddexp2 inf
+        inf = np.inf
+        x = [inf, -inf,  inf, -inf, inf, 1,  -inf,  1]
+        y = [inf,  inf, -inf, -inf, 1,   inf, 1,   -inf]
+        z = [inf,  inf,  inf, -inf, inf, inf, 1,    1]
+        with np.errstate(invalid='raise'):
+            for _x, _y, _z in zip(x, y, z):
+                for dt in ['f', 'd', 'g']:
+                    # [()] ~> quick hack! rbc doesn't support passing arrays
+                    xf = np.array(_x, dtype=dt)[()]
+                    yf = np.array(_y, dtype=dt)[()]
+                    zf = np.array(_z, dtype=dt)[()]
+                    assert(np.allclose(logaddexp2(xf, yf), zf))
+
+    def test_nan():
+        assert(np.isnan(logaddexp2(np.nan, np.inf)))
+        assert(np.isnan(logaddexp2(np.inf, np.nan)))
+        assert(np.isnan(logaddexp2(np.nan, 0)))
+        assert(np.isnan(logaddexp2(0, np.nan)))
+        assert(np.isnan(logaddexp2(np.nan, np.nan)))
+
+    test_values()
+    test_range()
+    test_inf()
+    test_nan()
