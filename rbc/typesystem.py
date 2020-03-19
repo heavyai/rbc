@@ -48,23 +48,25 @@ def _findparen(s):
 
 
 def _commasplit(s):
-    """Split a comma-separated items taking into account parenthesis.
+    """Split a comma-separated items taking into account parenthesis
+    and brackets.
 
     Used internally.
     """
     lst = s.split(',')
     ac = ''
-    p1, p2 = 0, 0
+    p1, p2, p3 = 0, 0, 0
     rlst = []
     for i in lst:
         p1 += i.count('(') - i.count(')')
         p2 += i.count('{') - i.count('}')
-        if p1 == p2 == 0:
+        p3 += i.count('[') - i.count(']')
+        if p1 == p2 == p3 == 0:
             rlst.append((ac + ',' + i if ac else i).strip())
             ac = ''
         else:
             ac = ac + ',' + i if ac else i
-    if p1 == p2 == 0:
+    if p1 == p2 == p3 == 0:
         return rlst
     raise TypeParseError('failed to comma-split `%s`' % s)
 
@@ -212,20 +214,20 @@ if nb is not None:
                 _numba_imap[_t] = _k + str(_b)
 
 # numpy mapping
+_numpy_imap = {}
 if np is not None:
-    _numpy_imap = {np.float32: 'float32', np.double: 'float64',
-                   np.longdouble: 'float128'}
-else:
-    _numpy_imap = {}
+    for v in set(np.typeDict.values()):
+        name = np.dtype(v).name
+        _numpy_imap[v] = name
 
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
-                str: 'string', bytes: 'char*', **_numpy_imap}
+                str: 'string', bytes: 'char*'}
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
 _mangling_suffices = '_V'
-_mangling_prefixes = 'PKaA'
+_mangling_prefixes = 'PKaAM'
 _mangling_map = dict(
     void='v', bool='b',
     char8='c', char16='z', char32='w',
@@ -450,7 +452,8 @@ class Type(tuple):
     @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
-            or self.is_struct or (self.is_function and len(self[1]) > 0)
+            or self.is_struct \
+            or (self.is_function and len(self[1]) > 0)
 
     def __repr__(self):
         return '%s%s' % (type(self).__name__, tuple.__repr__(self))
@@ -681,6 +684,19 @@ class Type(tuple):
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
 
     @classmethod
+    def fromnumpy(cls, t, target_info):
+        """Return new Type instance from numpy type object.
+        """
+        if np is None:
+            raise RuntimeError('importing numpy failed: %s' % (np_NA_message))
+
+        n = _numpy_imap.get(t)
+        if n is not None:
+            return cls.fromstring(n, target_info)
+
+        raise NotImplementedError(repr(t))
+
+    @classmethod
     def fromnumba(cls, t, target_info):
         """Return new Type instance from numba type object.
         """
@@ -755,11 +771,12 @@ class Type(tuple):
 
     @classmethod
     def fromvalue(cls, obj, target_info):
-        """Return Type instance that corresponds to given Python value.
+        """Return Type instance that corresponds to given value.
         """
-        n = _python_imap.get(type(obj))
-        if n is not None:
-            return cls.fromstring(n, target_info)
+        for mapping in [_python_imap, _numpy_imap]:
+            n = mapping.get(type(obj))
+            if n is not None:
+                return cls.fromstring(n, target_info)
         raise NotImplementedError('%s.fromvalue(%r)'
                                   % (cls.__name__, obj))
 
@@ -796,6 +813,8 @@ class Type(tuple):
                 return cls.fromnumba(obj, target_info)
             if obj.__module__.startswith('ctypes'):
                 return cls.fromctypes(obj, target_info)
+            if obj.__module__.startswith('numpy'):
+                return cls.fromnumpy(obj, target_info)
         if inspect.isclass(obj):
             if obj is int:
                 return cls('int64')
