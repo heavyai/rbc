@@ -108,6 +108,10 @@ def test_redefine(omnisci):
 
 
 def test_forbidden_define(omnisci):
+    if omnisci.version > (5, 1):
+        pytest.skip(
+            f'forbidden defines not required for OmnisciDB {omnisci.version}')
+
     omnisci.reset()
 
     msg = "Attempt to define function with name `{name}`"

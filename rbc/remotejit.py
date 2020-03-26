@@ -5,12 +5,19 @@ __all__ = ['RemoteJIT', 'Signature', 'Caller']
 
 import os
 import inspect
-
 from . import irtools
-from .typesystem import Type
+from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
 from .targetinfo import TargetInfo
+
+
+def isfunctionlike(obj):
+    """Return True if object is function alike.
+    """
+    if obj is None or isinstance(obj, (Signature, list, tuple, str, Caller)):
+        return False
+    return True
 
 
 class Signature(object):
@@ -95,7 +102,7 @@ class Signature(object):
             final(self)  # copies the signatures from self to final
             final(obj.signature)  # copies the signatures from obj to final
             return Caller(obj.func, final)
-        if inspect.isfunction(obj):
+        if isfunctionlike(obj):
             final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             return Caller(obj, final)
@@ -202,7 +209,7 @@ class Caller(object):
         self.remotejit = signature.remotejit
         self.signature = signature
         self.func = func
-        self.nargs = len(inspect.signature(func).parameters)
+        self.nargs = len(get_signature(func).parameters)
 
         # Attributes used in RBC user-interface
         self._is_compiled = set()  # items are (fname, ftype)

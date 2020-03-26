@@ -1,7 +1,16 @@
 try:
     import numba as nb
-except ImportError:
+    nb_NA_message = None
+except ImportError as msg:
     nb = None
+    nb_NA_message = str(msg)
+
+try:
+    import numpy as np
+    np_NA_message = None
+except ImportError as msg:
+    np = None
+    np_NA_message = str(msg)
 
 try:
     import numpy as np
@@ -9,7 +18,7 @@ except ImportError:
     np = None
 
 import pytest
-from rbc.typesystem import Type
+from rbc.typesystem import Type, get_signature
 from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
@@ -295,7 +304,7 @@ def test_fromctypes():
         == fromstr('f(i)')
 
 
-@pytest.mark.skipif(nb is None, reason='numba is not available')
+@pytest.mark.skipif(nb is None, reason=nb_NA_message)
 def test_tonumba():
     def tonumba(a):
         return Type_fromstring(a).tonumba()
@@ -320,7 +329,7 @@ def test_tonumba():
     # assert tonumba('{i,d}')  # numba does not support C struct
 
 
-@pytest.mark.skipif(nb is None, reason='numba is not available')
+@pytest.mark.skipif(nb is None, reason=nb_NA_message)
 def test_fromnumba():
     import numba as nb
 
@@ -507,3 +516,19 @@ def test_annotation():
     t = Type_fromstring('int')
     assert (t | 'a').tostring() == 'int32 | a'
     assert (t | dict(b=1, c=2)).tostring() == 'int32 | b=1 | c=2'
+
+
+@pytest.mark.skipif(np is None, reason=np_NA_message)
+def test_get_signature_ufunc():
+
+    # Make sure that all get_signature can be applied to all numpy
+    # ufuncs
+    for name, func in np.__dict__.items():
+        if isinstance(func, np.ufunc):
+            get_signature(func)
+
+    sig = get_signature(np.trunc)
+    assert len(sig.parameters) == 1
+
+    sig = get_signature(np.modf)
+    assert len(sig.parameters) == 3
