@@ -1099,9 +1099,6 @@ if nb is not None:
         def can_convert_from(self, typingctx, other):
             return isinstance(other, numba.types.Boolean)
 
-        def unify(self, context, other):
-            print('UNIFY', other)
-
     @numba.datamodel.register_default(Boolean8)
     class Boolean8Model(numba.datamodel.models.BooleanModel):
 
@@ -1121,10 +1118,6 @@ if nb is not None:
     def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
         llty = context.get_value_type(toty)
         return builder.zext(val, llty)
-
-    @numba.extending.unbox(Boolean8)
-    def unbox_boolean8(typ, obj, c):
-        print('unbox_boolean8', typ, obj)
 
 
 def make_numba_struct(name, members, _cache={}):
@@ -1163,7 +1156,7 @@ def get_signature(obj):
             m = _ufunc_pos_args_match(sigline)
             name = m['name']
             assert name == obj.__name__, (name, obj.__name__)
-            # rest = m['rest']
+
             # positional arguments
             m = _req_opt_args_match(m['pos_args'])
             req_pos_names, opt_pos_names = [], []
@@ -1180,7 +1173,7 @@ def get_signature(obj):
                     opt_pos_names.append(n)
                     parameters[n] = inspect.Parameter(
                         n, inspect.Parameter.POSITIONAL_ONLY, default=None)
-            # TODO: process non-positional arguments in `rest`
+            # TODO: process non-positional arguments in `m['rest']`
 
             # scan for annotations and determine returns
             mode = 'none'
