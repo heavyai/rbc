@@ -4,6 +4,18 @@ sys.path.insert(0, os.path.abspath('../'))
 import docutils  # noqa: E402
 
 
+def get_version():
+    setup_py = os.path.join(os.path.dirname(__file__), '..', 'setup.py')
+    for line in open(setup_py).readlines():
+        line = line.strip().replace(' ', '')
+        if line.startswith('VERSION='):
+            q = line[8]
+            assert q in '\'"', (line, q)
+            line = line[9:]
+            return line[:line.index(q)]
+    return '0.0.0'
+
+
 extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
@@ -26,9 +38,9 @@ autodoc_default_options = {
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'rbc'
-copyright = '2019, Xnd-Project'
-version = 'v0.1.0'
-release = 'v0.1.0'
+copyright = '2020, Xnd-Project'
+version = get_version()
+release = version
 exclude_patterns = ['doc', '_build']
 pygments_style = 'sphinx'
 
