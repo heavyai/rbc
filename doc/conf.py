@@ -3,6 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../'))
 import docutils  # noqa: E402
 
+
 def get_version():
     setup_py = os.path.join(os.path.dirname(__file__), '..', 'setup.py')
     for line in open(setup_py).readlines():
@@ -12,6 +13,8 @@ def get_version():
             assert q in '\'"', (line, q)
             line = line[9:]
             return line[:line.index(q)]
+    return '0.0.0'
+
 
 extensions = [
     'sphinx.ext.intersphinx',
