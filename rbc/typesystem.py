@@ -7,9 +7,10 @@
 import re
 import ctypes
 import inspect
+from .utils import get_version
 try:
     import numba as nb
-    if tuple(nb.__version__.split('.')) >= ('0', '49'):
+    if get_version('numba') >= (0, 49):
         from numba.core import typing, datamodel
         from numba.core.imputils import lower_cast
     else:

@@ -1,7 +1,7 @@
 import numpy as np
-import numba as nb
 from numba.extending import register_jitable
-if tuple(nb.__version__.split('.')) >= ('0', '49'):
+from .utils import get_version
+if get_version('numba') >= (0, 49):
     from numba.cpython import mathimpl
     from numba.np import ufunc_db
 else:

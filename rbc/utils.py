@@ -12,7 +12,8 @@ def get_version(package):
     """
     if package == 'numba':
         import numba
-        return tuple(map(int, numba.__version__.split('.')[:3]))
+        v = numba.__version__.replace('rc', '.').replace('dev', '.').split('.')
+        return tuple(map(int, v[:3]))
     raise NotImplementedError(f'get version of package {package}')
 
 

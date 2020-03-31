@@ -2,12 +2,12 @@
 # Created: February 2019
 
 import re
-import numba as nb
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .npy_mathimpl import *  # noqa: F403, F401
-if tuple(nb.__version__.split('.')) >= ('0', '49'):
+from .utils import get_version
+if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils
 else:

@@ -62,7 +62,7 @@ def omnisci_array_getitem_(typingctx, data, index):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        rawptr = numba.core.cgutils.alloca_once_value(builder, value=data)
+        rawptr = cgutils.alloca_once_value(builder, value=data)
         arr = builder.load(builder.gep(rawptr,
                                        [ir.Constant(ir.IntType(32), 0)]))
         ptr = builder.load(builder.gep(
