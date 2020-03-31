@@ -10,6 +10,7 @@ import inspect
 try:
     import numba as nb
     import numba.core.typing.ctypes_utils
+    from numba.core import datamodel
     nb_NA_message = None
 except ImportError as msg:
     nb = None
@@ -1104,8 +1105,8 @@ if nb is not None:
         def can_convert_from(self, typingctx, other):
             return isinstance(other, numba.types.Boolean)
 
-    @numba.core.datamodel.register_default(Boolean1)
-    class Boolean1Model(numba.core.datamodel.models.BooleanModel):
+    @datamodel.register_default(Boolean1)
+    class Boolean1Model(datamodel.models.BooleanModel):
 
         def get_data_type(self):
             return self._bit_type
@@ -1118,8 +1119,8 @@ if nb is not None:
         def can_convert_from(self, typingctx, other):
             return isinstance(other, numba.types.Boolean)
 
-    @numba.core.datamodel.register_default(Boolean8)
-    class Boolean8Model(numba.core.datamodel.models.BooleanModel):
+    @datamodel.register_default(Boolean8)
+    class Boolean8Model(datamodel.models.BooleanModel):
 
         def get_value_type(self):
             return self._byte_type
@@ -1145,13 +1146,13 @@ def make_numba_struct(name, members, _cache={}):
     t = _cache.get(name)
     if t is None:
         def model__init__(self, dmm, fe_type):
-            numba.core.datamodel.StructModel.__init__(self, dmm, fe_type, members)
+            datamodel.StructModel.__init__(self, dmm, fe_type, members)
         struct_model = type(name+'Model',
-                            (numba.core.datamodel.StructModel,),
+                            (datamodel.StructModel,),
                             dict(__init__=model__init__))
         struct_type = type(name+'Type', (numba.types.Type,),
                            dict(members=[t for n, t in members]))
-        numba.core.datamodel.registry.register_default(struct_type)(struct_model)
+        datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
     return t
 

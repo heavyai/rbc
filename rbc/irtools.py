@@ -153,13 +153,13 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
             args, return_type = nb.core.sigutils.normalize_signature(
                 sig.tonumba(bool_is_int8=True))
             cres = nb.core.compiler.compile_extra(typingctx=typing_context,
-                                                 targetctx=target_context,
-                                                 func=func,
-                                                 args=args,
-                                                 return_type=return_type,
-                                                 flags=flags,
-                                                 library=main_library,
-                                                 locals={})
+                                                  targetctx=target_context,
+                                                  func=func,
+                                                  args=args,
+                                                  return_type=return_type,
+                                                  flags=flags,
+                                                  library=main_library,
+                                                  locals={})
             # The compilation result contains a function with
             # prototype `<function name>(<rtype>* result,
             # <arguments>)`. In the following we add a new function
