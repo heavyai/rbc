@@ -4,8 +4,8 @@ import numba
 from llvmlite import ir
 import numpy as np
 from . import typesystem
-
-if tuple(numba.__version__.split('.')) >= ('0', '49'):
+from .utils import get_version
+if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils
 else:
     from numba import datamodel, cgutils
