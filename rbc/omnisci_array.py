@@ -5,6 +5,11 @@ from llvmlite import ir
 import numpy as np
 from . import typesystem
 
+if tuple(numba.__version__.split('.')) >= ('0', '49'):
+    from numba.core import datamodel, cgutils
+else:
+    from numba import datamodel, cgutils
+
 
 class ArrayPointer(numba.types.Type):
     """Type class for pointers to :code:`Omnisci Array<T>` structure.
@@ -25,8 +30,8 @@ class ArrayPointer(numba.types.Type):
         return self.dtype
 
 
-@numba.core.datamodel.register_default(ArrayPointer)
-class ArrayPointerModel(numba.core.datamodel.models.PointerModel):
+@datamodel.register_default(ArrayPointer)
+class ArrayPointerModel(datamodel.models.PointerModel):
     pass
 
 
@@ -36,7 +41,7 @@ def omnisci_array_len_(typingctx, data):
 
     def codegen(context, builder, signature, args):
         data, = args
-        rawptr = numba.core.cgutils.alloca_once_value(builder, value=data)
+        rawptr = cgutils.alloca_once_value(builder, value=data)
         struct = builder.load(builder.gep(rawptr,
                                           [ir.Constant(ir.IntType(32), 0)]))
         return builder.load(builder.gep(
