@@ -9,7 +9,7 @@ import ctypes
 import inspect
 try:
     import numba as nb
-    import numba.typing.ctypes_utils
+    import numba.core.typing.ctypes_utils
     nb_NA_message = None
 except ImportError as msg:
     nb = None
@@ -707,7 +707,7 @@ class Type(tuple):
         n = _numba_imap.get(t)
         if n is not None:
             return cls.fromstring(n, target_info)
-        if isinstance(t, nb.typing.templates.Signature):
+        if isinstance(t, nb.core.typing.templates.Signature):
             atypes = (cls.fromnumba(a, target_info)
                       for a in t.args)
             rtype = cls.fromnumba(t.return_type, target_info)
@@ -1104,8 +1104,8 @@ if nb is not None:
         def can_convert_from(self, typingctx, other):
             return isinstance(other, numba.types.Boolean)
 
-    @numba.datamodel.register_default(Boolean1)
-    class Boolean1Model(numba.datamodel.models.BooleanModel):
+    @numba.core.datamodel.register_default(Boolean1)
+    class Boolean1Model(numba.core.datamodel.models.BooleanModel):
 
         def get_data_type(self):
             return self._bit_type
@@ -1118,8 +1118,8 @@ if nb is not None:
         def can_convert_from(self, typingctx, other):
             return isinstance(other, numba.types.Boolean)
 
-    @numba.datamodel.register_default(Boolean8)
-    class Boolean8Model(numba.datamodel.models.BooleanModel):
+    @numba.core.datamodel.register_default(Boolean8)
+    class Boolean8Model(numba.core.datamodel.models.BooleanModel):
 
         def get_value_type(self):
             return self._byte_type
@@ -1127,13 +1127,13 @@ if nb is not None:
     boolean1 = Boolean1('boolean1')
     boolean8 = Boolean8('boolean8')
 
-    @numba.targets.imputils.lower_cast(Boolean1, numba.types.Boolean)
-    @numba.targets.imputils.lower_cast(Boolean8, numba.types.Boolean)
+    @numba.core.imputils.lower_cast(Boolean1, numba.types.Boolean)
+    @numba.core.imputils.lower_cast(Boolean8, numba.types.Boolean)
     def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
         return builder.icmp_signed('!=', val, val.type(0))
 
-    @numba.targets.imputils.lower_cast(numba.types.Boolean, Boolean1)
-    @numba.targets.imputils.lower_cast(numba.types.Boolean, Boolean8)
+    @numba.core.imputils.lower_cast(numba.types.Boolean, Boolean1)
+    @numba.core.imputils.lower_cast(numba.types.Boolean, Boolean8)
     def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
         llty = context.get_value_type(toty)
         return builder.zext(val, llty)
@@ -1145,13 +1145,13 @@ def make_numba_struct(name, members, _cache={}):
     t = _cache.get(name)
     if t is None:
         def model__init__(self, dmm, fe_type):
-            numba.datamodel.StructModel.__init__(self, dmm, fe_type, members)
+            numba.core.datamodel.StructModel.__init__(self, dmm, fe_type, members)
         struct_model = type(name+'Model',
-                            (numba.datamodel.StructModel,),
+                            (numba.core.datamodel.StructModel,),
                             dict(__init__=model__init__))
         struct_type = type(name+'Type', (numba.types.Type,),
                            dict(members=[t for n, t in members]))
-        numba.datamodel.registry.register_default(struct_type)(struct_model)
+        numba.core.datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
     return t
 

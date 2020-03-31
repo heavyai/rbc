@@ -54,9 +54,9 @@ def get_function_dependencies(module, funcname, _deps=None):
     return _deps
 
 
-class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
+class JITRemoteCPUCodegen(nb.core.codegen.JITCPUCodegen):
     # TODO: introduce JITRemoteCodeLibrary?
-    _library_class = nb.targets.codegen.JITCodeLibrary
+    _library_class = nb.core.codegen.JITCodeLibrary
 
     def __init__(self, name, target_info):
         self.target_info = target_info
@@ -83,13 +83,13 @@ class JITRemoteCPUCodegen(nb.targets.codegen.JITCPUCodegen):
         options['reloc'] = reloc_model
 
 
-class RemoteCPUContext(nb.targets.cpu.CPUContext):
+class RemoteCPUContext(nb.core.cpu.CPUContext):
 
     def __init__(self, typing_context, target_info):
         self.target_info = target_info
         super(RemoteCPUContext, self).__init__(typing_context)
 
-    @nb.compiler_lock.global_compiler_lock
+    @nb.core.compiler_lock.global_compiler_lock
     def init(self):
         self.address_size = self.target_info.bits
         self.is32bit = (self.address_size == 32)
@@ -97,11 +97,11 @@ class RemoteCPUContext(nb.targets.cpu.CPUContext):
                                                      self.target_info)
 
         # Map external C functions.
-        # nb.targets.externals.c_math_functions.install(self)
+        # nb.core.externals.c_math_functions.install(self)
         # TODO, seems problematic only for 32bit cases
 
         # Initialize NRT runtime
-        # nb.targets.cpu.rtsys.initialize(self)
+        # nb.core.argets.cpu.rtsys.initialize(self)
         # TODO: is this needed for LLVM IR generation?
 
         # import numba.unicode  # unicode support is not relevant here
@@ -126,13 +126,13 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    target_desc = nb.targets.registry.cpu_target
+    target_desc = nb.core.registry.cpu_target
     if target is None:
         target = TargetInfo.host()
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
-        typing_context = nb.typing.Context()
+        typing_context = nb.core.typing.Context()
         target_context = RemoteCPUContext(typing_context, target)
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
@@ -141,7 +141,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
     main_module = main_library._final_module
 
-    flags = nb.compiler.Flags()
+    flags = nb.core.compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
 
@@ -150,16 +150,16 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
         for sig in signatures:
             fname = func.__name__ + sig.mangling
             function_names.append(fname)
-            args, return_type = nb.sigutils.normalize_signature(
+            args, return_type = nb.core.sigutils.normalize_signature(
                 sig.tonumba(bool_is_int8=True))
-            cres = nb.compiler.compile_extra(typingctx=typing_context,
-                                             targetctx=target_context,
-                                             func=func,
-                                             args=args,
-                                             return_type=return_type,
-                                             flags=flags,
-                                             library=main_library,
-                                             locals={})
+            cres = nb.core.compiler.compile_extra(typingctx=typing_context,
+                                                 targetctx=target_context,
+                                                 func=func,
+                                                 args=args,
+                                                 return_type=return_type,
+                                                 flags=flags,
+                                                 library=main_library,
+                                                 locals={})
             # The compilation result contains a function with
             # prototype `<function name>(<rtype>* result,
             # <arguments>)`. In the following we add a new function

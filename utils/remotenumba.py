@@ -89,7 +89,7 @@ def get_llvm_ir(func, sig=None,
     if target == 'host':
         # triple = llvm.get_default_triple()
         # there is also get_process_triple
-        target_desc = nb.targets.registry.cpu_target
+        target_desc = nb.core.registry.cpu_target
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     elif target == 'cuda':

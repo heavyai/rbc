@@ -1,5 +1,6 @@
 import numpy as np
-from numba.targets import mathimpl, ufunc_db
+from numba.cpython import mathimpl
+from numba.np import ufunc_db
 from numba.extending import register_jitable
 
 # tell numba to wire np.exp2 to libm exp2.
