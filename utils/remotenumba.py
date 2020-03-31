@@ -116,7 +116,7 @@ def get_llvm_ir(func, sig=None,
     main_mod.name = func.__name__
 
     for fname, _sig in sig.items():
-        args, return_type = nb.sigutils.normalize_signature(_sig)
+        args, return_type = sigutils.normalize_signature(_sig)
         cres = nb.compiler.compile_extra(typingctx=typing_context,
                                          targetctx=target_context,
                                          func=func,
