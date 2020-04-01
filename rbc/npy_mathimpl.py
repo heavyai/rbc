@@ -1,6 +1,11 @@
 import numpy as np
-from numba.targets import mathimpl, ufunc_db
 from numba.extending import register_jitable
+from .utils import get_version
+if get_version('numba') >= (0, 49):
+    from numba.cpython import mathimpl
+    from numba.np import ufunc_db
+else:
+    from numba.targets import mathimpl, ufunc_db
 
 # tell numba to wire np.exp2 to libm exp2.
 mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")

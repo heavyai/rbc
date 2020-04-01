@@ -4,6 +4,11 @@ import numba
 from llvmlite import ir
 import numpy as np
 from . import typesystem
+from .utils import get_version
+if get_version('numba') >= (0, 49):
+    from numba.core import datamodel, cgutils
+else:
+    from numba import datamodel, cgutils
 
 
 class ArrayPointer(numba.types.Type):
@@ -25,8 +30,8 @@ class ArrayPointer(numba.types.Type):
         return self.dtype
 
 
-@numba.datamodel.register_default(ArrayPointer)
-class ArrayPointerModel(numba.datamodel.models.PointerModel):
+@datamodel.register_default(ArrayPointer)
+class ArrayPointerModel(datamodel.models.PointerModel):
     pass
 
 
@@ -36,7 +41,7 @@ def omnisci_array_len_(typingctx, data):
 
     def codegen(context, builder, signature, args):
         data, = args
-        rawptr = numba.cgutils.alloca_once_value(builder, value=data)
+        rawptr = cgutils.alloca_once_value(builder, value=data)
         struct = builder.load(builder.gep(rawptr,
                                           [ir.Constant(ir.IntType(32), 0)]))
         return builder.load(builder.gep(
@@ -57,7 +62,7 @@ def omnisci_array_getitem_(typingctx, data, index):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        rawptr = numba.cgutils.alloca_once_value(builder, value=data)
+        rawptr = cgutils.alloca_once_value(builder, value=data)
         arr = builder.load(builder.gep(rawptr,
                                        [ir.Constant(ir.IntType(32), 0)]))
         ptr = builder.load(builder.gep(
