@@ -252,3 +252,22 @@ def test_even_sum(omnisci):
     desrc, result = omnisci.sql_execute(query)
     for b, i4, s in result:
         assert sum([i_ for b_, i_ in zip(b, i4) if b_]) == s
+
+
+def test_array_ret(omnisci):
+    omnisci.reset()
+
+    @omnisci('void(double[], int32[], double)')
+    def foo(a, b, c):
+        n = len(b)
+        for i in range(n):
+            a[i] = b[i] * c
+
+    # print(str(foo))
+
+    # query = (
+    #     'select foo(f4, i4, 3.14) from {omnisci.table_name}'
+    #     .format(**locals()))
+    # omnisci.sql_execute(query)
+
+
