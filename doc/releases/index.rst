@@ -43,7 +43,7 @@ How to make a new RBC release?
 - Make sure that all tests pass.
   + ``pytest -sv rbc/``
 
-- Remove ``dev?`` part from the ``VERSION`` string in ``setup.py``
+- Remove ``dev?`` part from the ``VERSION`` string in ``setup.py`` and in ``rbc/__init__.py``
 
   + ``git add -u .``
   + ``git commit -m "Prepare for release"``
@@ -101,7 +101,7 @@ How to make a new RBC release?
 
   + ``cd rbc``
   + ``git checkout master``
-  + Bump up RBC version in master, see ``VERSION`` in ``setup.py``
+  + Bump up RBC version in master, see ``VERSION`` in ``setup.py`` and ``rbc/__init__.py``
   + ``git add -u .``
   + ``git commit -m "Bump up version after release"``
   + ``git push -u origin master``

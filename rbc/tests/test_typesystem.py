@@ -1,7 +1,16 @@
 try:
     import numba as nb
-except ImportError:
+    nb_NA_message = None
+except ImportError as msg:
     nb = None
+    nb_NA_message = str(msg)
+
+try:
+    import numpy as np
+    np_NA_message = None
+except ImportError as msg:
+    np = None
+    np_NA_message = str(msg)
 
 try:
     import numpy as np
@@ -9,7 +18,7 @@ except ImportError:
     np = None
 
 import pytest
-from rbc.typesystem import Type
+from rbc.typesystem import Type, get_signature
 from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
@@ -295,7 +304,7 @@ def test_fromctypes():
         == fromstr('f(i)')
 
 
-@pytest.mark.skipif(nb is None, reason='numba is not available')
+@pytest.mark.skipif(nb is None, reason=nb_NA_message)
 def test_tonumba():
     def tonumba(a):
         return Type_fromstring(a).tonumba()
@@ -320,7 +329,7 @@ def test_tonumba():
     # assert tonumba('{i,d}')  # numba does not support C struct
 
 
-@pytest.mark.skipif(nb is None, reason='numba is not available')
+@pytest.mark.skipif(nb is None, reason=nb_NA_message)
 def test_fromnumba():
     import numba as nb
 
@@ -346,8 +355,6 @@ def test_fromnumba():
     assert fromnumba(nb.complex128) == fromstr('complex128')
     assert fromnumba(nb.types.CPointer(nb.float64)) == fromstr('double*')
     assert fromnumba(nb.double(nb.int64, nb.float_)) == fromstr('d(i64, f)')
-    assert fromnumba(nb.int32[:]) == fromstr('int32[:]')
-    assert fromnumba(nb.int32[:, :, :]) == fromstr('int32[:, :, :]')
 
 
 @pytest.mark.skipif(np is None, reason='NumPy is not available')
@@ -401,16 +408,6 @@ def test_fromcallable():
 
     assert Type_fromcallable(foo) == Type_fromstring('void(i32,<type of b>)')
 
-    def bar(a: 'float64[:]'):  # noqa: F821
-        pass
-
-    assert Type_fromcallable(bar) == Type_fromstring('void(f64[:])')
-
-    def baz(a: 'float64[:, :]'):  # noqa: F821
-        pass
-
-    assert Type_fromcallable(baz) == Type_fromstring('void(f64[:, :])')
-
     with pytest.raises(
             ValueError,
             match=(r'constructing Type instance from'
@@ -434,10 +431,6 @@ def test_fromvalue():
     assert Type_fromvalue(x) == Type_fromstring('float64')
     y = np.dtype(np.complex64).type((1+2j))
     assert Type_fromvalue(y) == Type_fromstring('complex64')
-    z = np.array([1, 2, 3], dtype=np.uint64)
-    assert Type_fromvalue(z) == Type_fromstring('uint64[:]')
-    w = np.arange(10, dtype=np.float64).reshape(5, 2)
-    assert Type_fromvalue(w) == Type_fromstring('float64[:, :]')
 
 
 def test_fromobject():
@@ -523,3 +516,19 @@ def test_annotation():
     t = Type_fromstring('int')
     assert (t | 'a').tostring() == 'int32 | a'
     assert (t | dict(b=1, c=2)).tostring() == 'int32 | b=1 | c=2'
+
+
+@pytest.mark.skipif(np is None, reason=np_NA_message)
+def test_get_signature_ufunc():
+
+    # Make sure that all get_signature can be applied to all numpy
+    # ufuncs
+    for name, func in np.__dict__.items():
+        if isinstance(func, np.ufunc):
+            get_signature(func)
+
+    sig = get_signature(np.trunc)
+    assert len(sig.parameters) == 1
+
+    sig = get_signature(np.modf)
+    assert len(sig.parameters) == 3

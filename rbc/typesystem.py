@@ -7,15 +7,23 @@
 import re
 import ctypes
 import inspect
+from .utils import get_version
 try:
     import numba as nb
-    import numba.typing.ctypes_utils
+    if get_version('numba') >= (0, 49):
+        from numba.core import typing, datamodel
+        from numba.core.imputils import lower_cast
+    else:
+        from numba import typing, datamodel
+        from numba.targets.imputils import lower_cast
+    nb_NA_message = None
 except ImportError as msg:
     nb = None
     nb_NA_message = str(msg)
 
 try:
     import numpy as np
+    np_NA_message = None
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)
@@ -116,8 +124,6 @@ _double_match = re.compile(r'\A(double|d)\Z').match
 _longdouble_match = re.compile(r'\A(long\s*double)\Z').match
 
 _complex_match = re.compile(r'\A(complex|c)\Z').match
-
-_array_match = re.compile(r'\A(\w+)(\[(\W+)+\])').match
 
 
 # For `Type.fromstring('<typespec> <name>')` support:
@@ -383,18 +389,7 @@ class Type(tuple):
 
     @property
     def is_atomic(self):
-        return len(self) == 1 and isinstance(self[0], str) \
-            and not(self.is_array)
-
-    @property
-    def is_array(self):
-        # XXX: Change this
-        if len(self) == 2 and isinstance(self[1], str):
-            rule = r'\[(\W+)+\]'  # [:, :, :]
-            m = re.match(rule, self[1])
-            if m is not None:
-                return True
-        return False
+        return len(self) == 1 and isinstance(self[0], str)
 
     @property
     def is_int(self):
@@ -444,8 +439,6 @@ class Type(tuple):
         """
         if self.is_atomic:
             return not self[0].startswith('<type of')
-        elif self.is_array:
-            return self[0].is_complete
         elif self.is_pointer:
             return self[0].is_complete
         elif self.is_struct:
@@ -467,7 +460,7 @@ class Type(tuple):
     @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
-            or self.is_struct or self.is_array \
+            or self.is_struct \
             or (self.is_function and len(self[1]) > 0)
 
     def __repr__(self):
@@ -504,8 +497,6 @@ class Type(tuple):
                 return typename + suffix
         if self.is_atomic:
             return self[0] + suffix
-        if self.is_array:
-            return self[0].tostring() + self[1]
         if self.is_pointer:
             return self[0].tostring(use_typename=use_typename) + '*' + suffix
         if self.is_struct:
@@ -577,8 +568,6 @@ class Type(tuple):
         if self.is_pointer:
             return nb.types.CPointer(
                 self[0].tonumba(bool_is_int8=bool_is_int8))
-        if self.is_array:
-            raise NotImplementedError(repr(self))
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -633,8 +622,6 @@ class Type(tuple):
             return type('struct%s' % (id(self)),
                         (ctypes.Structure, ),
                         dict(_fields_=fields))
-        if self.is_array:
-            return NotImplementedError(repr((self, self.is_array)))
         if self.is_function:
             rtype = self[0].toctypes()
             atypes = [t.toctypes() for t in self[1] if not t.is_void]
@@ -646,10 +633,6 @@ class Type(tuple):
     @classmethod
     def _fromstring(cls, s):
         s = s.strip()
-        if s.endswith(']'):       # array
-            m = _array_match(s)
-            if m is not None:
-                return cls(cls._fromstring(m.group(1)), m.group(2))
         if s.endswith('*'):       # pointer
             return cls(cls._fromstring(s[:-1]), '*')
         if s.endswith('}'):       # struct
@@ -708,34 +691,12 @@ class Type(tuple):
         except TypeParseError as msg:
             raise ValueError('failed to parse `%s`: %s' % (s, msg))
 
-    @staticmethod
-    def _prepare_brackets(arr):
-        """Return a string containing the brackets formatted
-
-        Parameters
-        ----------
-        arr : np.ndarray
-
-        Examples
-        --------
-        >>> arr = np.arange(10, np.dtype=np.int64).reshape(5, 2)
-        >>> _prepare_brackets(arr)
-        int64[:, :]
-        """
-        return '[' + ', '.join(':' * arr.ndim) + ']'
-
     @classmethod
     def fromnumpy(cls, t, target_info):
         """Return new Type instance from numpy type object.
         """
         if np is None:
             raise RuntimeError('importing numpy failed: %s' % (np_NA_message))
-
-        if isinstance(t, np.ndarray):
-            brackets = cls._prepare_brackets(t)
-            dt = cls.fromnumpy(t.dtype.type, target_info)
-            n = '%s%s' % (dt, brackets)  # int32[:], float32[:, :], ...
-            return cls.fromstring(n, target_info)
 
         n = _numpy_imap.get(t)
         if n is not None:
@@ -752,16 +713,13 @@ class Type(tuple):
         n = _numba_imap.get(t)
         if n is not None:
             return cls.fromstring(n, target_info)
-        if isinstance(t, nb.typing.templates.Signature):
+        if isinstance(t, typing.templates.Signature):
             atypes = (cls.fromnumba(a, target_info)
                       for a in t.args)
             rtype = cls.fromnumba(t.return_type, target_info)
             return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype, target_info), '*')
-        if isinstance(t, nb.types.npytypes.Array):
-            brackets = cls._prepare_brackets(t)
-            return cls(cls.fromnumba(t.dtype, target_info), brackets)
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -794,7 +752,7 @@ class Type(tuple):
             # lambda function cannot carry annotations, hence:
             raise ValueError('constructing Type instance from '
                              'a lambda function is not supported')
-        sig = inspect.signature(func)
+        sig = get_signature(func)
         annot = sig.return_annotation
         if isinstance(annot, dict):
             rtype = cls() | annot  # void
@@ -823,9 +781,6 @@ class Type(tuple):
     def fromvalue(cls, obj, target_info):
         """Return Type instance that corresponds to given value.
         """
-        if isinstance(obj, np.ndarray):
-            return cls.fromnumpy(obj, target_info)
-
         for mapping in [_python_imap, _numpy_imap]:
             n = mapping.get(type(obj))
             if n is not None:
@@ -951,9 +906,6 @@ class Type(tuple):
         if self.is_struct:
             return self.__class__(
                 *(t._normalize(target_info) for t in self), **params)
-        if self.is_array:
-            return self.__class__(
-                self[0]._normalize(target_info), self[1], **params)
         if self.is_function:
             return self.__class__(
                 self[0]._normalize(target_info),
@@ -977,9 +929,6 @@ class Type(tuple):
             r = self[0].mangle()
             a = ''.join([a.mangle() for a in self[1]])
             return '_' + r + 'a' + a + 'A'
-        if self.is_array:
-            r = self[0].mangle()
-            return '_' + r + 'M'
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
@@ -1139,8 +1088,6 @@ def _demangle(s):
             typ = Type(rtype, atypes)
         elif kind == 'A':
             return block, rest
-        elif kind == 'M':
-            raise NotImplementedError(repr((kind, s)))
         else:
             raise NotImplementedError(repr((kind, s)))
     else:
@@ -1158,20 +1105,27 @@ def _demangle(s):
 
 
 if nb is not None:
-    class Boolean1(numba.types.Boolean):
-        pass
+    class Boolean1(nb.types.Boolean):
 
-    @numba.datamodel.register_default(Boolean1)
-    class Boolean1Model(numba.datamodel.models.BooleanModel):
+        def can_convert_from(self, typingctx, other):
+            return isinstance(other, nb.types.Boolean)
+
+    @datamodel.register_default(Boolean1)
+    class Boolean1Model(datamodel.models.BooleanModel):
 
         def get_data_type(self):
             return self._bit_type
 
-    class Boolean8(numba.types.Boolean):
-        pass
+    class Boolean8(nb.types.Boolean):
 
-    @numba.datamodel.register_default(Boolean8)
-    class Boolean8Model(numba.datamodel.models.BooleanModel):
+        def can_convert_to(self, typingctx, other):
+            return isinstance(other, nb.types.Boolean)
+
+        def can_convert_from(self, typingctx, other):
+            return isinstance(other, nb.types.Boolean)
+
+    @datamodel.register_default(Boolean8)
+    class Boolean8Model(datamodel.models.BooleanModel):
 
         def get_value_type(self):
             return self._byte_type
@@ -1179,10 +1133,16 @@ if nb is not None:
     boolean1 = Boolean1('boolean1')
     boolean8 = Boolean8('boolean8')
 
-    @numba.targets.imputils.lower_cast(Boolean1, numba.types.Boolean)
-    @numba.targets.imputils.lower_cast(Boolean8, numba.types.Boolean)
+    @lower_cast(Boolean1, nb.types.Boolean)
+    @lower_cast(Boolean8, nb.types.Boolean)
     def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
         return builder.icmp_signed('!=', val, val.type(0))
+
+    @lower_cast(nb.types.Boolean, Boolean1)
+    @lower_cast(nb.types.Boolean, Boolean8)
+    def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
+        llty = context.get_value_type(toty)
+        return builder.zext(val, llty)
 
 
 def make_numba_struct(name, members, _cache={}):
@@ -1191,12 +1151,82 @@ def make_numba_struct(name, members, _cache={}):
     t = _cache.get(name)
     if t is None:
         def model__init__(self, dmm, fe_type):
-            numba.datamodel.StructModel.__init__(self, dmm, fe_type, members)
+            datamodel.StructModel.__init__(self, dmm, fe_type, members)
         struct_model = type(name+'Model',
-                            (numba.datamodel.StructModel,),
+                            (datamodel.StructModel,),
                             dict(__init__=model__init__))
-        struct_type = type(name+'Type', (numba.types.Type,),
+        struct_type = type(name+'Type', (nb.types.Type,),
                            dict(members=[t for n, t in members]))
-        numba.datamodel.registry.register_default(struct_type)(struct_model)
+        datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
     return t
+
+
+_ufunc_pos_args_match = re.compile(
+    r'(?P<name>\w[\w\d_]*)\s*[(](?P<pos_args>[^/)]*)[/]?(?P<rest>.*)[)]').match
+_req_opt_args_match = re.compile(r'(?P<req_args>[^[]*)(?P<opt_args>.*)').match
+_annot_match = re.compile(
+    r'\s*(?P<name>\w[\w\d_]*)\s*[:](?P<annotation>.*)').match
+
+
+def get_signature(obj):
+    if inspect.isfunction(obj):
+        return inspect.signature(obj)
+    if np is not None:
+        if isinstance(obj, np.ufunc):
+            parameters = dict()
+            returns = dict()
+
+            sigline = obj.__doc__.lstrip().splitlines(1)[0]
+            m = _ufunc_pos_args_match(sigline)
+            name = m['name']
+            assert name == obj.__name__, (name, obj.__name__)
+
+            # positional arguments
+            m = _req_opt_args_match(m['pos_args'])
+            req_pos_names, opt_pos_names = [], []
+            for n in m.group('req_args').split(','):
+                n = n.strip()
+                if n:
+                    req_pos_names.append(n)
+                    parameters[n] = inspect.Parameter(
+                        n, inspect.Parameter.POSITIONAL_ONLY)
+            for n in (m.group('opt_args').replace('[', '')
+                      .replace(']', '').split(',')):
+                n = n.strip()
+                if n:
+                    opt_pos_names.append(n)
+                    parameters[n] = inspect.Parameter(
+                        n, inspect.Parameter.POSITIONAL_ONLY, default=None)
+            # TODO: process non-positional arguments in `m['rest']`
+
+            # scan for annotations and determine returns
+            mode = 'none'
+            for line in obj.__doc__.splitlines():
+                if line in ['Parameters', 'Returns', 'Notes', 'See Also',
+                            'Examples']:
+                    mode = line
+                    continue
+                if mode == 'Parameters':
+                    m = _annot_match(line)
+                    if m is not None:
+                        n = m['name']
+                        if n in parameters:
+                            annot = m['annotation'].strip()
+                            parameters[n] = parameters[n].replace(
+                                annotation=annot)
+                if mode == 'Returns':
+                    m = _annot_match(line)
+                    if m is not None:
+                        n = m['name']
+                        annot = m['annotation'].strip()
+                        returns[n] = annot
+
+            sig = inspect.Signature(parameters=parameters.values())
+            if len(returns) == 1:
+                sig = sig.replace(return_annotation=list(returns.values())[0])
+            elif returns:
+                sig = sig.replace(return_annotation=returns)
+            return sig
+
+    raise NotImplementedError(obj)

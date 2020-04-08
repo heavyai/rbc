@@ -8,9 +8,14 @@ import re
 import inspect
 from llvmlite import ir
 import llvmlite.binding as llvm
-import numba as nb
-import numba.sigutils
 import numba.cuda
+import numba as nb
+from .utils import get_version
+if get_version('numba') >= (0, 49):
+    from numba.core import sigutils, registry
+else:
+    from numba import sigutils
+    from numba.targets import registry
 
 
 def initialize_llvm():
@@ -89,7 +94,7 @@ def get_llvm_ir(func, sig=None,
     if target == 'host':
         # triple = llvm.get_default_triple()
         # there is also get_process_triple
-        target_desc = nb.targets.registry.cpu_target
+        target_desc = registry.cpu_target
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     elif target == 'cuda':
@@ -111,7 +116,7 @@ def get_llvm_ir(func, sig=None,
     main_mod.name = func.__name__
 
     for fname, _sig in sig.items():
-        args, return_type = nb.sigutils.normalize_signature(_sig)
+        args, return_type = sigutils.normalize_signature(_sig)
         cres = nb.compiler.compile_extra(typingctx=typing_context,
                                          targetctx=target_context,
                                          func=func,
