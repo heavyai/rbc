@@ -284,7 +284,9 @@ class RemoteOmnisci(RemoteJIT):
             'float32*': typemap['TExtArgumentType']['PFloat'],
             'float64*': typemap['TExtArgumentType']['PDouble'],
             'bool': typemap['TExtArgumentType']['Bool'],
-            'Array<bool>': typemap['TExtArgumentType']['ArrayInt8'],
+            'bool*': typemap['TExtArgumentType']['PBool'],
+            'Array<bool>': typemap['TExtArgumentType'].get(
+                'ArrayBool', typemap['TExtArgumentType']['ArrayInt8']),
             'Array<int8_t>': typemap['TExtArgumentType']['ArrayInt8'],
             'Array<int16_t>': typemap['TExtArgumentType']['ArrayInt16'],
             'Array<int32_t>': typemap['TExtArgumentType']['ArrayInt32'],
@@ -293,7 +295,11 @@ class RemoteOmnisci(RemoteJIT):
             'Array<double>': typemap['TExtArgumentType']['ArrayDouble'],
             'Cursor': typemap['TExtArgumentType']['Cursor'],
             'void': typemap['TExtArgumentType']['Void'],
-            'GeoPoint': typemap['TExtArgumentType']['GeoPoint'],
+            'GeoPoint': typemap['TExtArgumentType'].get('GeoPoint'),
+            'GeoLineString': typemap['TExtArgumentType'].get('GeoLineString'),
+            'GeoPolygon': typemap['TExtArgumentType'].get('GeoPolygon'),
+            'GeoMultiPolygon': typemap['TExtArgumentType'].get(
+                'GeoMultiPolygon'),
         }
         ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
             = ext_arguments_map['Array<bool>']
@@ -312,15 +318,15 @@ class RemoteOmnisci(RemoteJIT):
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
             if v not in values:
-                warnings.warn('Adding (%r, thrift.TExtArgumentType.%s) '
-                              'to ext_arguments_map in %s' % (n, n, __file__))
-                ext_arguments_map[n] = v
+                warnings.warn('thrift.TExtArgumentType.%s(=%s) value not '
+                              'in ext_arguments_map' % (n, v))
         self._ext_arguments_map = ext_arguments_map
         return ext_arguments_map
 
     def retrieve_targets(self):
         device_params = self.thrift_call('get_device_parameters',
                                          self.session_id)
+        thrift = self.thrift_client.thrift
         typemap = self.thrift_typemap
         device_target_map = {}
         messages = []
@@ -348,6 +354,11 @@ class RemoteOmnisci(RemoteJIT):
                 else:
                     continue
                 typemap[typ][member] = ivalue
+                thrift_type = getattr(thrift, typ, None)
+                if thrift_type is not None:
+                    thrift_type._VALUES_TO_NAMES[ivalue] = member
+                    thrift_type._NAMES_TO_VALUES[member] = ivalue
+                self._ext_arguments_map = None
         if messages:
             warnings.warn('\n  '.join([''] + messages))
 
@@ -378,6 +389,7 @@ class RemoteOmnisci(RemoteJIT):
     def register(self):
         if self.have_last_compile:
             return
+
         thrift = self.thrift_client.thrift
 
         udfs = []
@@ -411,11 +423,12 @@ class RemoteOmnisci(RemoteJIT):
                                   f' in {f2}#{n2}.')
                         continue
                     function_signatures[name].append(sig)
-                    if i == 0 and self.version < (5, 2):
+                    is_udtf = 'table' in sig[0].annotation()
+                    if i == 0 and (self.version < (5, 2) or is_udtf):
                         sig.set_mangling('')
                     else:
                         sig.set_mangling('__%s' % (i))
-                    if 'table' in sig[0].annotation():  # UDTF
+                    if is_udtf:
                         sizer = None
                         sizer_index = -1
                         inputArgTypes = []
