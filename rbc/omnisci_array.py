@@ -1,17 +1,16 @@
 import re
 import operator
-import numba
 from llvmlite import ir
 import numpy as np
 from . import typesystem
 from .utils import get_version
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils
+    from numba.core import datamodel, cgutils, extending, types
 else:
-    from numba import datamodel, cgutils
+    from numba import datamodel, cgutils, extending, types
 
 
-class ArrayPointer(numba.types.Type):
+class ArrayPointer(types.Type):
     """Type class for pointers to :code:`Omnisci Array<T>` structure.
 
     We are not deriving from CPointer because ArrayPointer getitem is
@@ -35,9 +34,9 @@ class ArrayPointerModel(datamodel.models.PointerModel):
     pass
 
 
-@numba.extending.intrinsic
+@extending.intrinsic
 def omnisci_array_len_(typingctx, data):
-    sig = numba.types.int64(data)
+    sig = types.int64(data)
 
     def codegen(context, builder, signature, args):
         data, = args
@@ -50,13 +49,13 @@ def omnisci_array_len_(typingctx, data):
     return sig, codegen
 
 
-@numba.extending.overload(len)
+@extending.overload(len)
 def omnisci_array_len(x):
     if isinstance(x, ArrayPointer):
         return lambda x: omnisci_array_len_(x)
 
 
-@numba.extending.intrinsic
+@extending.intrinsic
 def omnisci_array_getitem_(typingctx, data, index):
     sig = data.eltype(data, index)
 
@@ -74,22 +73,38 @@ def omnisci_array_getitem_(typingctx, data, index):
     return sig, codegen
 
 
-@numba.extending.overload(operator.getitem)
+@extending.overload(operator.getitem)
 def omnisci_array_getitem(x, i):
     if isinstance(x, ArrayPointer):
         return lambda x, i: omnisci_array_getitem_(x, i)
 
 
-@numba.extending.overload(operator.setitem)
-def omnisci_array_setitem(a, k, v):
+@extending.intrinsic
+def omnisci_array_setitem_(typingctx, data, index, value):
+    sig = types.none(data, index, value)
+
+    def codegen(context, builder, signature, args):
+        zero = ir.Constant(ir.IntType(32), 0)
+
+        data, index, value = args
+
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        ptr = builder.load(rawptr)
+
+        arr = builder.load(builder.gep(ptr, [zero, zero]))
+        builder.store(value, builder.gep(arr, [index]))
+
+    return sig, codegen
+
+
+@extending.overload(operator.setitem)
+def omnisci_array_setitem(a, i, v):
     if isinstance(a, ArrayPointer):
-        def impl(a, k, v):
-            return
-        return impl
+        return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
-@numba.extending.overload(np.sum)
-@numba.extending.overload(sum)
+@extending.overload(np.sum)
+@extending.overload(sum)
 def omnisci_np_sum(a):
     if isinstance(a, ArrayPointer):
         def impl(a):
@@ -101,7 +116,7 @@ def omnisci_np_sum(a):
         return impl
 
 
-@numba.extending.overload(np.prod)
+@extending.overload(np.prod)
 def omnisci_np_prod(a):
     if isinstance(a, ArrayPointer):
         def impl(a):
