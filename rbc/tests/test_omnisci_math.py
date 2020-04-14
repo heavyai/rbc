@@ -217,6 +217,16 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         fn_name += 'FIX'
         np_func.__name__ = fn_name
 
+    if omnisci.version < (5, 2) and omnisci.has_cuda and fn_name in [
+            'fmax', 'fmin', 'power', 'sqrt', 'tan', 'radians', 'degrees'
+    ]:
+        # NativeCodegen.cpp:849 use of undefined value '@llvm.maxnum.f64'
+        # NativeCodegen.cpp:849 invalid redefinition of function 'power'
+        # NativeCodegen.cpp:849 invalid redefinition of function
+        #                       'llvm.lifetime.start.p0i8'
+        # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
+        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
+
     omnisci(signature)(np_func)
 
     omnisci.register()
