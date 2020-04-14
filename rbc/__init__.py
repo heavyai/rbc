@@ -1,4 +1,4 @@
-__version__ = '0.2.2'
+__version__ = '0.3.0dev1'
 
 # Expose a temporary prototype. It will be replaced by proper
 # implementation soon.
