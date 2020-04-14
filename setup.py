@@ -14,7 +14,7 @@ CONDA_BUILD = int(os.environ.get('CONDA_BUILD', '0'))
 
 from setuptools import setup, find_packages  # noqa: E402
 
-VERSION = '0.3.0dev0'  # for release, remove dev? part
+VERSION = '0.2.2'  # for release, remove dev? part
 DESCRIPTION = "RBC - Remote Backend Compiler Project"
 LONG_DESCRIPTION = """
 The aim of the Remote Backend Compiler project is to distribute the

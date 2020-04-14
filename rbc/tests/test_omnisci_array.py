@@ -202,6 +202,9 @@ def test_getitem_float(omnisci):
         assert type(a[2]) == type(item)
 
 
+@pytest.mark.skipif(available_version[:2] == (5, 1),
+                    reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
+                        available_version,))
 def test_getitem_bool(omnisci):
     omnisci.reset()
 
@@ -234,6 +237,9 @@ def test_sum(omnisci):
         assert sum(a) == s
 
 
+@pytest.mark.skipif(available_version[:2] == (5, 1),
+                    reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
+                        available_version,))
 def test_even_sum(omnisci):
     omnisci.reset()
 
