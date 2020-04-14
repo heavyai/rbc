@@ -181,6 +181,7 @@ class RemoteOmnisci(RemoteJIT):
         self._targets = None
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
+        self.has_cuda = None
 
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.
@@ -370,6 +371,7 @@ class RemoteOmnisci(RemoteJIT):
                     continue
                 target_info.set(prop[len(device)+1:], value)
             if device == 'gpu':
+                self.has_cuda = True
                 # TODO: remove this hack
                 # see https://github.com/numba/numba/issues/4546
                 target_info.set('name', 'skylake')

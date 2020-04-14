@@ -196,6 +196,20 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     if fn_name in ['ldexp', 'spacing', 'nextafter', 'signbit']:
         pytest.skip(f'{fn_name}: FIXME')
 
+    if omnisci.has_cuda and fn_name in [
+            'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
+            'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
+            'log1p', 'logaddexp2']:
+        # https://github.com/xnd-project/rbc/issues/59
+        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 59]')
+
+    if omnisci.has_cuda and fn_name in [
+            'logaddexp']:
+        # https://github.com/xnd-project/rbc/issues/60
+        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 60]')
+
     if omnisci.version < (5, 2) and fn_name in [
             'sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1', 'exp2', 'log2',
             'log1p', 'gcd', 'lcm', 'around', 'fmod', 'hypot']:
