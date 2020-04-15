@@ -262,7 +262,7 @@ def test_even_sum(omnisci):
 
 def test_array_setitem(omnisci):
     omnisci.reset()
-
+    
     @omnisci('double(double[], int32)')
     def array_setitem_sum(b, c):
         n = len(b)
@@ -280,3 +280,23 @@ def test_array_setitem(omnisci):
 
     for f8, s in result:
         assert sum(f8) * 4 == s
+
+
+def test_array_constructor(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array, ArrayPointer
+    from numba import types
+
+    @omnisci('int64(int64)')
+    def array_constructor(size):
+        a = Array('int64[]', size)
+        return len(a)
+
+    query = (
+        'select array_constructor(5) from {omnisci.table_name}'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    print(list(result))
+

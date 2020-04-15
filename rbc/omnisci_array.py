@@ -4,6 +4,7 @@ from llvmlite import ir
 import numpy as np
 from . import typesystem
 from .utils import get_version
+from .targetinfo import TargetInfo
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
 else:
@@ -19,14 +20,36 @@ class ArrayPointer(types.Type):
     mutable = True
 
     def __init__(self, dtype, eltype):
-        self.dtype = dtype
-        self.eltype = eltype
+        self.dtype = dtype # i.e. STRUCT__lPLBK
+        self.eltype = eltype # i.e. int64. Base type for dtype: Array<int64>
         name = "(%s)*" % dtype
         super(ArrayPointer, self).__init__(name)
 
     @property
     def key(self):
         return self.dtype
+
+
+class Array(object):
+    pass
+
+
+@extending.lower_builtin(Array, types.Any, types.Any)
+def omnisci_array_constructor(context, builder, sig, args):
+    typ = sig.return_type.dtype
+    _, sz = args
+    fa = cgutils.create_struct_proxy(typ)(context, builder) 
+    fa.sz = sz
+    return fa._getpointer()
+
+
+@extending.type_callable(Array)
+def type_omnisci_array(context):
+    def typer(dtype, size):
+        targetinfo = TargetInfo.host()
+        conv = array_type_converter(targetinfo, dtype.literal_value)
+        return conv._params['tonumba']
+    return typer
 
 
 @datamodel.register_default(ArrayPointer)
