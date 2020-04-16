@@ -289,11 +289,11 @@ def test_array_constructor_len(omnisci):
 
     @omnisci('int64(int64)')
     def array_len(size):
-        a = Array('double[]', size)
+        a = Array('int64[]', size)
         return len(a)
 
     query = (
-        'select array_len(3) from {omnisci.table_name}'
+        'array_len(30)'
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 
@@ -307,9 +307,9 @@ def test_array_constructor_ptr(omnisci):
 
     @omnisci('int32(int32)')
     def array_ptr(size):
-        a = Array('int32[]', size)
+        a = Array(size, 'double')
         for i in range(size):
-            a[i] = i
+            a[i] = i + 0.0
         return a[2]
 
     query = (
@@ -327,7 +327,7 @@ def test_array_constructor_sz(omnisci):
 
     @omnisci('int64(int64)')
     def array_size(size):
-        a = Array('double[]', size)
+        a = Array('int8[]', size)
         return len(a)
 
     query = (
@@ -345,11 +345,11 @@ def test_array_constructor_is_null(omnisci):
 
     @omnisci('int8(int64)')
     def array_is_null(size):
-        a = Array('double[]', size)
-        return a.is_null
+        a = Array(size, 'double')
+        return a.is_null()
 
     query = (
-        'select array_is_null(3) from {omnisci.table_name}'
+        'select array_is_null(3);'
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 

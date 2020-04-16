@@ -34,48 +34,41 @@ class Array(object):
     pass
 
 
-# XXX there should be a better way to find element size
-bytes_map = {
-    'int8': 1,
-    'int16': 2,
-    'int32': 4,
-    'int64': 8
-}
-
-
-@extending.lower_builtin(Array, types.StringLiteral, types.Integer)
-def omnisci_array_constructor(context, builder, sig, args):
+@extending.lower_builtin(Array, types.Integer, types.StringLiteral)
+def omnisci_array_constructor(context, builder, signature, args):
     pyapi = context.get_python_api(builder)
+    targetinfo = TargetInfo.host()
 
     # integer types used
     i8 = ir.IntType(8)
     i64 = ir.IntType(64)
 
     # grab args
-    _, sz = args
-    dtype = sig.args[0].literal_value.strip('[]')
-    elsize = bytes_map[dtype]  # element size in bytes
+    sz, _ = args
+    dtype = signature.args[1].literal_value
+    elsize = typesystem.Type.fromstring(dtype, targetinfo)  # element size
+    elsize_ir = context.get_value_type(elsize.tonumba())  # get the llvmlite correspondent type
 
     # fill 'sz' and 'is_null'
-    typ = sig.return_type.dtype
+    typ = signature.return_type.dtype
     fa = cgutils.create_struct_proxy(typ)(context, builder)
     fa.sz = builder.zext(sz, i64)  # zero-extend the size to i64
-    fa.is_null = ir.Constant(i8, 0)
+    fa.is_null = i8(0)
 
     # fill 'ptr' with the return value of 'allocate_varlen_buffer'
     fnty = ir.FunctionType(i8.as_pointer(), [i64, i64])
     fn = pyapi._get_function(fnty, name="allocate_varlen_buffer")
-    call = builder.call(fn, [fa.sz, ir.Constant(i64, elsize)])
-    fa.ptr = builder.bitcast(call, ir.IntType(elsize * 8).as_pointer())
+    call = builder.call(fn, [fa.sz, i64(elsize.bits)])
+    fa.ptr = builder.bitcast(call, elsize_ir.as_pointer())
 
     return fa._getpointer()
 
 
 @extending.type_callable(Array)
 def type_omnisci_array(context):
-    def typer(dtype, size):
+    def typer(size, dtype):
         targetinfo = TargetInfo.host()
-        conv = array_type_converter(targetinfo, dtype.literal_value)
+        conv = array_type_converter(targetinfo, dtype.literal_value + '[]')
         return conv._params['tonumba']
     return typer
 
@@ -83,6 +76,33 @@ def type_omnisci_array(context):
 @datamodel.register_default(ArrayPointer)
 class ArrayPointerModel(datamodel.models.PointerModel):
     pass
+
+
+@extending.intrinsic
+def omnisci_array_is_null_(typingctx, data):
+    sig = types.int8(data)
+
+    def codegen(context, builder, signature, args):
+        i32 = ir.IntType(32)
+        zero = i32(0)
+        two = i32(2)
+
+        data, = args
+
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        ptr = builder.load(rawptr)
+
+        return builder.load(builder.gep(ptr, [zero, two]))
+
+    return sig, codegen
+
+
+@extending.overload_method(ArrayPointer, 'is_null')
+def omnisci_array_is_null(x):
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            return omnisci_array_is_null_(x)
+        return impl
 
 
 @extending.intrinsic
