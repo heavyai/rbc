@@ -289,53 +289,35 @@ def test_array_constructor_len(omnisci):
 
     @omnisci('int64(int64)')
     def array_len(size):
-        a = Array('int64[]', size)
+        a = Array(size, 'int64')
         return len(a)
 
     query = (
-        'array_len(30)'
+        'select array_len(30)'
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 
-    print(list(result))
+    assert list(result)[0] == (30,)
 
 
-def test_array_constructor_ptr(omnisci):
+def test_array_constructor_getitem(omnisci):
     omnisci.reset()
 
     from rbc.omnisci_array import Array
 
-    @omnisci('int32(int32)')
-    def array_ptr(size):
+    @omnisci('double(int32, int32)')
+    def array_ptr(size, pos):
         a = Array(size, 'double')
         for i in range(size):
             a[i] = i + 0.0
-        return a[2]
+        return a[pos]
 
     query = (
-        'select array_ptr(3) from {omnisci.table_name}'
+        'select array_ptr(5, 3)'
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 
-    print(list(result))
-
-
-def test_array_constructor_sz(omnisci):
-    omnisci.reset()
-
-    from rbc.omnisci_array import Array
-
-    @omnisci('int64(int64)')
-    def array_size(size):
-        a = Array('int8[]', size)
-        return len(a)
-
-    query = (
-        'select array_size(3) from {omnisci.table_name}'
-        .format(**locals()))
-    _, result = omnisci.sql_execute(query)
-
-    print(list(result))
+    assert list(result)[0] == (3.0,)
 
 
 def test_array_constructor_is_null(omnisci):
@@ -353,4 +335,4 @@ def test_array_constructor_is_null(omnisci):
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 
-    print(list(result))
+    assert list(result)[0] == (0,)
