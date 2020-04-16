@@ -282,21 +282,75 @@ def test_array_setitem(omnisci):
         assert sum(f8) * 4 == s
 
 
-def test_array_constructor(omnisci):
+def test_array_constructor_len(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_array import Array, ArrayPointer
-    from numba import types
+    from rbc.omnisci_array import Array
 
     @omnisci('int64(int64)')
-    def array_constructor(size):
-        a = Array('int64[]', size)
+    def array_len(size):
+        a = Array('double[]', size)
         return len(a)
 
     query = (
-        'select array_constructor(5) from {omnisci.table_name}'
+        'select array_len(3) from {omnisci.table_name}'
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 
     print(list(result))
 
+
+def test_array_constructor_ptr(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+
+    @omnisci('int32(int32)')
+    def array_ptr(size):
+        a = Array('int32[]', size)
+        for i in range(size):
+            a[i] = i
+        return a[2]
+
+    query = (
+        'select array_ptr(3) from {omnisci.table_name}'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    print(list(result))
+
+
+def test_array_constructor_sz(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+
+    @omnisci('int64(int64)')
+    def array_size(size):
+        a = Array('double[]', size)
+        return len(a)
+
+    query = (
+        'select array_size(3) from {omnisci.table_name}'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    print(list(result))
+
+
+def test_array_constructor_is_null(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+
+    @omnisci('int8(int64)')
+    def array_is_null(size):
+        a = Array('double[]', size)
+        return a.is_null
+
+    query = (
+        'select array_is_null(3) from {omnisci.table_name}'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    print(list(result))

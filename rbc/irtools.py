@@ -52,6 +52,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                 elif f.is_declaration:
                     if name in libm_funcs:
                         _deps[name] = 'libm'
+                    elif name == 'allocate_varlen_buffer':
+                        _deps[name] = 'omnisci_internal'
                     else:
                         _deps[name] = 'undefined'
                 else:

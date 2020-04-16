@@ -33,13 +33,40 @@ class ArrayPointer(types.Type):
 class Array(object):
     pass
 
+# XXX there should be a better way to find element size
+bytes_map = {
+    'int8': 1,
+    'int16': 2,
+    'int32': 4,
+    'int64': 8
+}
+
 
 @extending.lower_builtin(Array, types.Any, types.Any)
 def omnisci_array_constructor(context, builder, sig, args):
-    typ = sig.return_type.dtype
+    pyapi = context.get_python_api(builder)
+
+    # integer types used
+    i8 = ir.IntType(8)
+    i64 = ir.IntType(64)
+
+    # grab args
     _, sz = args
+    dtype = sig.args[0].literal_value.strip('[]')
+    elsize = bytes_map[dtype] # element size in bytes
+
+    # fill 'sz' and 'is_null'
+    typ = sig.return_type.dtype
     fa = cgutils.create_struct_proxy(typ)(context, builder) 
-    fa.sz = sz
+    fa.sz = builder.zext(sz, i64) # zero-extend the size to i64
+    fa.is_null = ir.Constant(i8, 0)
+
+    # fill 'ptr' with the return value of 'allocate_varlen_buffer'
+    fnty = ir.FunctionType(i8.as_pointer(), [i64, i64])
+    fn = pyapi._get_function(fnty, name="allocate_varlen_buffer")
+    call = builder.call(fn, [fa.sz, ir.Constant(i64, elsize)])
+    fa.ptr = builder.bitcast(call, ir.IntType(elsize * 8).as_pointer())
+
     return fa._getpointer()
 
 
