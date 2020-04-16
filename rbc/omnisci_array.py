@@ -47,7 +47,7 @@ def omnisci_array_constructor(context, builder, signature, args):
     sz, _ = args
     dtype = signature.args[1].literal_value
     elsize = typesystem.Type.fromstring(dtype, targetinfo)  # element size
-    elsize_ir = context.get_value_type(elsize.tonumba())  # get the llvmlite correspondent type
+    elsize_ir = context.get_value_type(elsize.tonumba())  # get the ir type
 
     # fill 'sz' and 'is_null'
     typ = signature.return_type.dtype
