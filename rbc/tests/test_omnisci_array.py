@@ -262,7 +262,7 @@ def test_even_sum(omnisci):
 
 def test_array_setitem(omnisci):
     omnisci.reset()
-    
+
     @omnisci('double(double[], int32)')
     def array_setitem_sum(b, c):
         n = len(b)

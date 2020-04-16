@@ -20,8 +20,8 @@ class ArrayPointer(types.Type):
     mutable = True
 
     def __init__(self, dtype, eltype):
-        self.dtype = dtype # i.e. STRUCT__lPLBK
-        self.eltype = eltype # i.e. int64. Base type for dtype: Array<int64>
+        self.dtype = dtype  # i.e. STRUCT__lPLBK
+        self.eltype = eltype  # i.e. int64. Base type for dtype: Array<int64>
         name = "(%s)*" % dtype
         super(ArrayPointer, self).__init__(name)
 
@@ -32,6 +32,7 @@ class ArrayPointer(types.Type):
 
 class Array(object):
     pass
+
 
 # XXX there should be a better way to find element size
 bytes_map = {
@@ -53,12 +54,12 @@ def omnisci_array_constructor(context, builder, sig, args):
     # grab args
     _, sz = args
     dtype = sig.args[0].literal_value.strip('[]')
-    elsize = bytes_map[dtype] # element size in bytes
+    elsize = bytes_map[dtype]  # element size in bytes
 
     # fill 'sz' and 'is_null'
     typ = sig.return_type.dtype
-    fa = cgutils.create_struct_proxy(typ)(context, builder) 
-    fa.sz = builder.zext(sz, i64) # zero-extend the size to i64
+    fa = cgutils.create_struct_proxy(typ)(context, builder)
+    fa.sz = builder.zext(sz, i64)  # zero-extend the size to i64
     fa.is_null = ir.Constant(i8, 0)
 
     # fill 'ptr' with the return value of 'allocate_varlen_buffer'
