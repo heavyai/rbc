@@ -43,7 +43,7 @@ bytes_map = {
 }
 
 
-@extending.lower_builtin(Array, types.Any, types.Any)
+@extending.lower_builtin(Array, types.StringLiteral, types.Integer)
 def omnisci_array_constructor(context, builder, sig, args):
     pyapi = context.get_python_api(builder)
 
