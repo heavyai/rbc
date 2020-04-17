@@ -34,7 +34,7 @@ class Array(object):
     pass
 
 
-def omnisci_array_constructor(context, builder, signature, args, elsize):
+def omnisci_array_constructor(context, builder, sig, args, elsize):
     pyapi = context.get_python_api(builder)
 
     # integer types used
@@ -46,7 +46,7 @@ def omnisci_array_constructor(context, builder, signature, args, elsize):
     elsize_ir = context.get_value_type(elsize.tonumba())  # get the ir type
 
     # fill 'sz' and 'is_null'
-    typ = signature.return_type.dtype
+    typ = sig.return_type.dtype
     fa = cgutils.create_struct_proxy(typ)(context, builder)
     fa.sz = builder.zext(sz, i64)  # zero-extend the size to i64
     fa.is_null = i8(0)
@@ -61,23 +61,23 @@ def omnisci_array_constructor(context, builder, signature, args, elsize):
 
 
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
-def omnisci_array_constructor_string_literal(context, builder, signature, args):
+def omnisci_array_constructor_string_literal(context, builder, sig, args):
     targetinfo = TargetInfo.host()
 
-    dtype = signature.args[1].literal_value
+    dtype = sig.args[1].literal_value
     elsize = typesystem.Type.fromstring(dtype, targetinfo)  # element size
 
-    return omnisci_array_constructor(context, builder, signature, args, elsize)
+    return omnisci_array_constructor(context, builder, sig, args, elsize)
 
 
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
-def omnisci_array_constructor_numba_type(context, builder, signature, args):
+def omnisci_array_constructor_numba_type(context, builder, sig, args):
     targetinfo = TargetInfo.host()
 
-    it = signature.args[1].instance_type
+    it = sig.args[1].instance_type
     elsize = typesystem.Type.fromnumba(it, targetinfo)
 
-    return omnisci_array_constructor(context, builder, signature, args, elsize)
+    return omnisci_array_constructor(context, builder, sig, args, elsize)
 
 
 @extending.type_callable(Array)
