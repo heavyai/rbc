@@ -34,10 +34,8 @@ class Array(object):
     pass
 
 
-@extending.lower_builtin(Array, types.Integer, types.StringLiteral)
-def omnisci_array_constructor(context, builder, signature, args):
+def omnisci_array_constructor(context, builder, signature, args, elsize):
     pyapi = context.get_python_api(builder)
-    targetinfo = TargetInfo.host()
 
     # integer types used
     i8 = ir.IntType(8)
@@ -45,8 +43,6 @@ def omnisci_array_constructor(context, builder, signature, args):
 
     # grab args
     sz, _ = args
-    dtype = signature.args[1].literal_value
-    elsize = typesystem.Type.fromstring(dtype, targetinfo)  # element size
     elsize_ir = context.get_value_type(elsize.tonumba())  # get the ir type
 
     # fill 'sz' and 'is_null'
@@ -64,11 +60,38 @@ def omnisci_array_constructor(context, builder, signature, args):
     return fa._getpointer()
 
 
+@extending.lower_builtin(Array, types.Integer, types.StringLiteral)
+def omnisci_array_constructor_string_literal(context, builder, signature, args):
+    targetinfo = TargetInfo.host()
+
+    dtype = signature.args[1].literal_value
+    elsize = typesystem.Type.fromstring(dtype, targetinfo)  # element size
+
+    return omnisci_array_constructor(context, builder, signature, args, elsize)
+
+
+@extending.lower_builtin(Array, types.Integer, types.NumberClass)
+def omnisci_array_constructor_numba_type(context, builder, signature, args):
+    targetinfo = TargetInfo.host()
+
+    it = signature.args[1].instance_type
+    elsize = typesystem.Type.fromnumba(it, targetinfo)
+
+    return omnisci_array_constructor(context, builder, signature, args, elsize)
+
+
 @extending.type_callable(Array)
 def type_omnisci_array(context):
     def typer(size, dtype):
         targetinfo = TargetInfo.host()
-        conv = array_type_converter(targetinfo, dtype.literal_value + '[]')
+
+        if isinstance(dtype, types.NumberClass):
+            it = dtype.instance_type
+            typ = typesystem.Type.fromnumba(it, targetinfo).tostring() + '[]'
+        elif isinstance(dtype, types.StringLiteral):
+            typ = dtype.literal_value + '[]'
+
+        conv = array_type_converter(targetinfo, typ)
         return conv._params['tonumba']
     return typer
 

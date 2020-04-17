@@ -286,10 +286,11 @@ def test_array_constructor_len(omnisci):
     omnisci.reset()
 
     from rbc.omnisci_array import Array
+    from numba import types
 
     @omnisci('int64(int64)')
     def array_len(size):
-        a = Array(size, 'int64')
+        a = Array(size, types.int32)
         return len(a)
 
     query = (
@@ -304,10 +305,11 @@ def test_array_constructor_getitem(omnisci):
     omnisci.reset()
 
     from rbc.omnisci_array import Array
+    import numpy as np
 
     @omnisci('double(int32, int32)')
     def array_ptr(size, pos):
-        a = Array(size, 'double')
+        a = Array(size, np.double)
         for i in range(size):
             a[i] = i + 0.0
         return a[pos]
