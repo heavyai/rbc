@@ -4,7 +4,6 @@ from llvmlite import ir
 import numpy as np
 from . import typesystem
 from .utils import get_version
-from .targetinfo import TargetInfo
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
 else:
@@ -62,36 +61,31 @@ def omnisci_array_constructor(context, builder, sig, args, elsize):
 
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 def omnisci_array_constructor_string_literal(context, builder, sig, args):
-    targetinfo = TargetInfo.host()
-
     dtype = sig.args[1].literal_value
-    elsize = typesystem.Type.fromstring(dtype, targetinfo)  # element size
+    eltype = typesystem.Type.fromstring(dtype, context.target_info)
 
-    return omnisci_array_constructor(context, builder, sig, args, elsize)
+    return omnisci_array_constructor(context, builder, sig, args, eltype)
 
 
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
 def omnisci_array_constructor_numba_type(context, builder, sig, args):
-    targetinfo = TargetInfo.host()
-
     it = sig.args[1].instance_type
-    elsize = typesystem.Type.fromnumba(it, targetinfo)
+    eltype = typesystem.Type.fromnumba(it, context.target_info)
 
-    return omnisci_array_constructor(context, builder, sig, args, elsize)
+    return omnisci_array_constructor(context, builder, sig, args, eltype)
 
 
 @extending.type_callable(Array)
 def type_omnisci_array(context):
     def typer(size, dtype):
-        targetinfo = TargetInfo.host()
-
         if isinstance(dtype, types.NumberClass):
             it = dtype.instance_type
-            typ = typesystem.Type.fromnumba(it, targetinfo).tostring() + '[]'
+            typ = typesystem.Type.fromnumba(
+                it, context.target_info).tostring() + '[]'
         elif isinstance(dtype, types.StringLiteral):
             typ = dtype.literal_value + '[]'
 
-        conv = array_type_converter(targetinfo, typ)
+        conv = array_type_converter(context.target_info, typ)
         return conv._params['tonumba']
     return typer
 
