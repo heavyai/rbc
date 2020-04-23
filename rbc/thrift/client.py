@@ -139,42 +139,6 @@ class Client(object):
 
     def _result_from_thrift(self, spec, result):
         return from_thrift(self.thrift, spec, result)
-        if not spec.thrift_spec:
-            assert result is None, repr(type(result))
-            return result
-        t = spec.thrift_spec[0]
-        if t[0] == thr.thrift.TType.STRING:
-            assert isinstance(result, str), repr(type(result))
-            return result
-        elif t[0] in [
-                thr.thrift.TType.I08,
-                thr.thrift.TType.I16,
-                thr.thrift.TType.I32,
-                thr.thrift.TType.I64]:
-            assert isinstance(result, int), repr(type(result))
-            return result
-        elif t[0] == thr.thrift.TType.BOOL:
-            assert isinstance(result, bool), repr(type(result))
-            return result
-        elif t[0] == thr.thrift.TType.DOUBLE:
-            assert isinstance(result, float), repr(type(result))
-            return result
-        elif t[0] == thr.thrift.TType.SET:
-            return set(result)
-        elif t[0] == thr.thrift.TType.LIST:
-            assert isinstance(result, list), repr(type(result))
-            return result
-        elif t[0] == thr.thrift.TType.MAP:
-            assert isinstance(result, dict), repr(type(result))
-            return result
-        elif t[0] == thr.thrift.TType.STRUCT:
-            # _i, status, tcls, _b = t
-            assert t[1] == 'success', repr(t)
-            assert isinstance(result, t[2]), repr(type(result))
-            print(dir(result))
-            print(spec)
-            return types.toobject(self.thrift, result)
-        raise NotImplementedError(repr((t, type(result))))
 
     def __call__(self, **services):
         """Perform a RPC call to thrift server.
