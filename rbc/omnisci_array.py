@@ -191,8 +191,18 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
+@extending.overload_method(ArrayPointer, 'fill')
+def omnisci_array_fill(x, v):
+    if isinstance(x, ArrayPointer):
+        def impl(x, v):
+            for i in range(len(x)):
+                x[i] = v
+        return impl
+
+
 @extending.overload(np.sum)
 @extending.overload(sum)
+@extending.overload_method(ArrayPointer, 'sum')
 def omnisci_np_sum(a):
     if isinstance(a, ArrayPointer):
         def impl(a):
@@ -205,6 +215,7 @@ def omnisci_np_sum(a):
 
 
 @extending.overload(np.prod)
+@extending.overload_method(ArrayPointer, 'prod')
 def omnisci_np_prod(a):
     if isinstance(a, ArrayPointer):
         def impl(a):
