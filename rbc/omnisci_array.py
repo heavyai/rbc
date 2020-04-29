@@ -191,6 +191,32 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
+@extending.overload(all)
+@extending.overload(np.all)
+@extending.overload_method(ArrayPointer, 'all')
+def omnisci_array_any(x):
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            r = False
+            for i in range(len(x)):
+                r = r or x[i]
+            return r
+        return impl
+
+
+@extending.overload(any)
+@extending.overload(np.all)
+@extending.overload_method(ArrayPointer, 'any')
+def omnisci_array_any(x):
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            r = True
+            for i in range(len(x)):
+                r = r and x[i]
+            return r
+        return impl
+
+
 @extending.overload_method(ArrayPointer, 'fill')
 def omnisci_array_fill(x, v):
     if isinstance(x, ArrayPointer):
@@ -200,8 +226,33 @@ def omnisci_array_fill(x, v):
         return impl
 
 
-@extending.overload(np.sum)
+@extending.overload(max)
+@extending.overload(np.max)
+@extending.overload_method(ArrayPointer, 'max')
+def omnisci_array_max(x):
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            m = x[0]
+            for i in range(len(x)):
+                m = x[i] if x[i] > m else m
+            return m
+        return impl
+
+
+@extending.overload(min)
+@extending.overload_method(ArrayPointer, 'min')
+def omnisci_array_min(x):
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            m = x[0]
+            for i in range(len(x)):
+                m = x[i] if x[i] < m else m
+            return m
+        return impl
+
+
 @extending.overload(sum)
+@extending.overload(np.sum)
 @extending.overload_method(ArrayPointer, 'sum')
 def omnisci_np_sum(a):
     if isinstance(a, ArrayPointer):
@@ -224,6 +275,15 @@ def omnisci_np_prod(a):
             for i in range(n):
                 s *= a[i]
             return s
+        return impl
+
+
+# @extending.overload(np.mean)
+@extending.overload_method(ArrayPointer, 'mean')
+def omnisci_array_mean(x):
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            return sum(x) / len(x)
         return impl
 
 
