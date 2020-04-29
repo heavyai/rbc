@@ -194,7 +194,7 @@ def omnisci_array_setitem(a, i, v):
 @extending.overload(all)
 @extending.overload(np.all)
 @extending.overload_method(ArrayPointer, 'all')
-def omnisci_array_any(x):
+def omnisci_array_all(x):
     if isinstance(x, ArrayPointer):
         def impl(x):
             r = False
