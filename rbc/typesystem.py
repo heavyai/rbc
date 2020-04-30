@@ -957,7 +957,7 @@ class Type(tuple):
         if self.is_float:
             return int(self[0][5:])
         if self.is_complex:
-            return int(self[0][6:])
+            return int(self[0][7:])
         if self.is_struct:
             return sum([m.bits for m in self])
         return NotImplemented
