@@ -204,6 +204,10 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
         for fn, descr in deps.items():
             used_functions.add(fn)
             if descr == 'undefined':
+                if fn.startswith('numba_') and target.has_numba:
+                    continue
+                if fn.startswith('Py') and target.has_cpython:
+                    continue
                 raise RuntimeError('function `%s` is undefined' % (fn))
 
     # for global_variable in main_module.global_variables:
