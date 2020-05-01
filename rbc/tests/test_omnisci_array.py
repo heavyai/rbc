@@ -293,8 +293,6 @@ def test_array_constructor_len(omnisci):
         a = Array(size, types.int32)
         return len(a)
 
-    print(str(array_len))
-
     query = (
         'select array_len(30)'
         .format(**locals()))

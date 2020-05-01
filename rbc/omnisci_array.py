@@ -61,7 +61,6 @@ def omnisci_array_constructor(context, builder, sig, args, elsize):
         ir.FunctionType(i8.as_pointer(), []),
         name='executor')
     c = builder.call(fn_executor, [])
-    # cgutils.printf(builder, "result: %d\n", c)
 
     return fa._getpointer()
 
