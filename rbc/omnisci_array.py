@@ -213,10 +213,13 @@ def omnisci_array_fill(x, v):
 @extending.overload(max)
 @extending.overload(np.max)
 @extending.overload_method(ArrayPointer, 'max')
-def omnisci_array_max(x):
+def omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
-        def impl(x):
-            m = x[0]
+        def impl(x, initial=None):
+            if initial is not None:
+                m = initial
+            else: # XXX: check if len(array) > 0
+                m = x[0]
             for i in range(len(x)):
                 m = x[i] if x[i] > m else m
             return m
@@ -225,10 +228,13 @@ def omnisci_array_max(x):
 
 @extending.overload(min)
 @extending.overload_method(ArrayPointer, 'min')
-def omnisci_array_min(x):
+def omnisci_array_min(x, initial=None):
     if isinstance(x, ArrayPointer):
-        def impl(x):
-            m = x[0]
+        def impl(x, initial=None):
+            if initial is not None:
+                m = initial
+            else: # XXX: check if len(array) > 0
+                m = x[0]
             for i in range(len(x)):
                 m = x[i] if x[i] < m else m
             return m
@@ -238,10 +244,13 @@ def omnisci_array_min(x):
 @extending.overload(sum)
 @extending.overload(np.sum)
 @extending.overload_method(ArrayPointer, 'sum')
-def omnisci_np_sum(a):
+def omnisci_np_sum(a, initial=None):
     if isinstance(a, ArrayPointer):
-        def impl(a):
-            s = 0
+        def impl(a, initial=None):
+            if initial is not None:
+                s = initial
+            else:
+                s = 0
             n = len(a)
             for i in range(n):
                 s += a[i]
@@ -251,10 +260,13 @@ def omnisci_np_sum(a):
 
 @extending.overload(np.prod)
 @extending.overload_method(ArrayPointer, 'prod')
-def omnisci_np_prod(a):
+def omnisci_np_prod(a, initial=None):
     if isinstance(a, ArrayPointer):
-        def impl(a):
-            s = 1
+        def impl(a, initial=None):
+            if initial is not None:
+                s = initial
+            else:
+                s = 1
             n = len(a)
             for i in range(n):
                 s *= a[i]
@@ -267,7 +279,9 @@ def omnisci_np_prod(a):
 def omnisci_array_mean(x):
     if isinstance(x, ArrayPointer):
         def impl(x):
-            return sum(x) / len(x)
+            s = sum(x)
+            l = len(x)
+            return s / l
         return impl
 
 
