@@ -36,7 +36,6 @@ fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
                 *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
 libm_funcs = [*fp_funcs, *classification_funcs]
 
-omnisci_funcs = ['allocate_varlen_buffer', 'executor']
 
 def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
@@ -53,7 +52,7 @@ def get_function_dependencies(module, funcname, _deps=None):
                 elif f.is_declaration:
                     if name in libm_funcs:
                         _deps[name] = 'libm'
-                    elif name in omnisci_funcs:
+                    elif name == 'allocate_varlen_buffer':
                         _deps[name] = 'omnisci_internal'
                     else:
                         _deps[name] = 'undefined'

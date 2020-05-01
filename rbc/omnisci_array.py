@@ -56,13 +56,6 @@ def omnisci_array_constructor(context, builder, sig, args, elsize):
     call = builder.call(fn, [fa.sz, i64(elsize.bits)])
     fa.ptr = builder.bitcast(call, elsize_ir.as_pointer())
 
-    # executor call
-    fn_executor = pyapi._get_function(
-        ir.FunctionType(i8.as_pointer(), []),
-        name='executor')
-    c = builder.call(fn_executor, [])
-    # cgutils.printf(builder, "result: %d\n", c)
-
     return fa._getpointer()
 
 
