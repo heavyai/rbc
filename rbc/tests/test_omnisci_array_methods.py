@@ -18,22 +18,13 @@ def test_ndarray_methods(omnisci):
     omnisci.reset()
     from rbc.omnisci_array import Array
 
-    # @omnisci('double(int64, bool)')
-    # def ndarray_any(size, v):
-    #     a = Array(size, 'bool')
-    #     a.fill(v)
-    #     return a.any()
-
-    # @omnisci('double(int64, bool)')
-    # def ndarray_all(size, v):
-    #     a = Array(size, 'bool')
-    #     a.fill(v)
-
-    # @omnisci('double(int64, double)')
-    # def ndarray_fill(size, v):
-    #     a = Array(size, 'double')
-    #     a.fill(v)
-    #     return a
+    @omnisci('double(int64, double)')
+    def ndarray_fill(size, v):
+        a = Array(size, 'double')
+        a.fill(v)
+        # XXX currently it's not possible to return the array
+        # thus, we return it's sum
+        return a.sum()
 
     @omnisci('double(int64, double)')
     def ndarray_max(size, v):
@@ -66,11 +57,7 @@ def test_ndarray_methods(omnisci):
         return a.prod()
 
     ndarray_methods = [
-        # ('any', (5, 0), 0),
-        # ('any', (5, 1), 1),
-        # ('all', (5, 0), 0),
-        # ('all', (5, 1), 1),
-        # ('fill', (5, 4.0), [4.0, 4.0, 4.0, 4.0, 4.0]),
+        ('fill', (5, 4.0), 20.0),
         ('max', (5, 4.0), 4.0),
         ('mean', (5, 2.0), 2.0),
         ('min', (5, 4.0), 4.0),

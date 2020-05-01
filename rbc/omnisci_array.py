@@ -191,30 +191,14 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
-@extending.overload(all)
-@extending.overload(np.all)
-@extending.overload_method(ArrayPointer, 'all')
-def omnisci_array_all(x):
-    if isinstance(x, ArrayPointer):
-        def impl(x):
-            r = False
-            for i in range(len(x)):
-                r = r or x[i]
-            return r
-        return impl
+@extending.intrinsic
+def omnisci_array_logical_and_(typingctx, a, b):
+    sig = types.boolean8(a, b)
 
+    def codegen(context, builder, signature, args):
+        breakpoint()
 
-@extending.overload(any)
-@extending.overload(np.all)
-@extending.overload_method(ArrayPointer, 'any')
-def omnisci_array_any(x):
-    if isinstance(x, ArrayPointer):
-        def impl(x):
-            r = True
-            for i in range(len(x)):
-                r = r and x[i]
-            return r
-        return impl
+    return sig, codegen
 
 
 @extending.overload_method(ArrayPointer, 'fill')
@@ -278,7 +262,7 @@ def omnisci_np_prod(a):
         return impl
 
 
-# @extending.overload(np.mean)
+@extending.overload(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
     if isinstance(x, ArrayPointer):
