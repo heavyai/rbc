@@ -720,6 +720,8 @@ class Type(tuple):
             return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype, target_info), '*')
+        if isinstance(t, nb.types.NumberClass):
+            return cls.fromnumba(t.instance_type, target_info)
         raise NotImplementedError(repr(t))
 
     @classmethod

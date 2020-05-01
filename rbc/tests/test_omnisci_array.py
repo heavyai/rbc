@@ -211,7 +211,7 @@ def test_getitem_bool(omnisci):
     @omnisci('bool(bool[], int64)')
     def array_getitem_bool(x, i):
         return x[i]
-    print(array_getitem_bool)
+
     query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
              .format(**locals()))
     desrc, result = omnisci.sql_execute(query)
@@ -280,3 +280,61 @@ def test_array_setitem(omnisci):
 
     for f8, s in result:
         assert sum(f8) * 4 == s
+
+
+def test_array_constructor_len(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+    from numba import types
+
+    @omnisci('int64(int32)')
+    def array_len(size):
+        a = Array(size, types.float64)
+        return len(a)
+
+    query = (
+        'select array_len(30)'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    assert list(result)[0] == (30,)
+
+
+def test_array_constructor_getitem(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+    import numpy as np
+
+    @omnisci('double(int32, int32)')
+    def array_ptr(size, pos):
+        a = Array(size, np.double)
+        for i in range(size):
+            a[i] = i + 0.0
+        return a[pos]
+
+    query = (
+        'select array_ptr(5, 3)'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    assert list(result)[0] == (3.0,)
+
+
+def test_array_constructor_is_null(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+
+    @omnisci('int8(int64)')
+    def array_is_null(size):
+        a = Array(size, 'double')
+        return a.is_null()
+
+    query = (
+        'select array_is_null(3);'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    assert list(result)[0] == (0,)

@@ -52,6 +52,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                 elif f.is_declaration:
                     if name in libm_funcs:
                         _deps[name] = 'libm'
+                    elif name == 'allocate_varlen_buffer':
+                        _deps[name] = 'omnisci_internal'
                     else:
                         _deps[name] = 'undefined'
                 else:
@@ -143,6 +145,9 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
         target_context = RemoteCPUContext(typing_context, target)
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
+
+    typing_context.target_info = target
+    target_context.target_info = target
 
     codegen = target_context.codegen()
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
