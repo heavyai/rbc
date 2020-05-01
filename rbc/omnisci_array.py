@@ -218,7 +218,7 @@ def omnisci_array_max(x, initial=None):
         def impl(x, initial=None):
             if initial is not None:
                 m = initial
-            else: # XXX: check if len(array) > 0
+            else:  # XXX: check if len(array) > 0
                 m = x[0]
             for i in range(len(x)):
                 m = x[i] if x[i] > m else m
@@ -233,7 +233,7 @@ def omnisci_array_min(x, initial=None):
         def impl(x, initial=None):
             if initial is not None:
                 m = initial
-            else: # XXX: check if len(array) > 0
+            else:  # XXX: check if len(array) > 0
                 m = x[0]
             for i in range(len(x)):
                 m = x[i] if x[i] < m else m
@@ -279,9 +279,7 @@ def omnisci_np_prod(a, initial=None):
 def omnisci_array_mean(x):
     if isinstance(x, ArrayPointer):
         def impl(x):
-            s = sum(x)
-            l = len(x)
-            return s / l
+            return sum(x) / len(x)
         return impl
 
 
