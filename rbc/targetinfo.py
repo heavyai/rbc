@@ -92,7 +92,8 @@ class TargetInfo(object):
         """Set a target device property to given value.
         """
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
-                          'compute_capability', 'count', 'threads', 'cores')
+                          'compute_capability', 'count', 'threads', 'cores',
+                          'has_cpython', 'has_numba')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
@@ -159,6 +160,18 @@ class TargetInfo(object):
         """Return the name of target device.
         """
         return self.info['name']
+
+    @property
+    def has_numba(self):
+        """Check if target supports numba symbols
+        """
+        return self.info.get('has_numba', False)
+
+    @property
+    def has_cpython(self):
+        """Check if target supports Python C/API symbols
+        """
+        return self.info.get('has_cpython', False)
 
     # TODO: info may also contain: count, threads, cores
 

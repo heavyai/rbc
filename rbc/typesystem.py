@@ -720,6 +720,8 @@ class Type(tuple):
             return cls(rtype, tuple(atypes) or (Type(),))
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype, target_info), '*')
+        if isinstance(t, nb.types.NumberClass):
+            return cls.fromnumba(t.instance_type, target_info)
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -957,7 +959,7 @@ class Type(tuple):
         if self.is_float:
             return int(self[0][5:])
         if self.is_complex:
-            return int(self[0][6:])
+            return int(self[0][7:])
         if self.is_struct:
             return sum([m.bits for m in self])
         return NotImplemented

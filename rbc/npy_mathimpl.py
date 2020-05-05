@@ -12,7 +12,7 @@ mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
 mathimpl.unary_math_extern(np.log2, "log2f", "log2")
 
 
-def np_logaddexpr_impl(context, builder, sig, args):
+def np_logaddexp_impl(context, builder, sig, args):
     # based on NumPy impl.
     # https://github.com/numpy/numpy/blob/30f985499b77381ab4748692cc76c55048ca0548/numpy/core/src/npymath/npy_math_internal.h.src#L585-L604
     def impl(x, y):
@@ -39,7 +39,6 @@ def log2_1p(x):
 
 
 def impl(x, y):
-    # return np.log2(np.power(2, x) + np.power(2, y))
     if x == y:
         return x + 1
     else:
@@ -53,10 +52,9 @@ def impl(x, y):
             return tmp
 
 
-def np_logaddexpr2_impl(context, builder, sig, args):
+def np_logaddexp2_impl(context, builder, sig, args):
 
     def impl(x, y):
-        # return np.log2(np.power(2, x) + np.power(2, y))
         if x == y:
             return x + 1
         else:
@@ -76,12 +74,12 @@ ufunc_db._lazy_init_db()
 
 # logaddexp
 ufunc_db._ufunc_db[np.logaddexp] = {
-    'ff->f': np_logaddexpr_impl,
-    'dd->d': np_logaddexpr_impl,
+    'ff->f': np_logaddexp_impl,
+    'dd->d': np_logaddexp_impl,
 }
 
 # logaddexp2
 ufunc_db._ufunc_db[np.logaddexp2] = {
-    'ff->f': np_logaddexpr2_impl,
-    'dd->d': np_logaddexpr2_impl,
+    'ff->f': np_logaddexp2_impl,
+    'dd->d': np_logaddexp2_impl,
 }

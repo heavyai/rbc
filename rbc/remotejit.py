@@ -434,12 +434,18 @@ class RemoteJIT(object):
         thrift_file = os.path.join(os.path.dirname(__file__),
                                    'remotejit.thrift')
         print('staring rpc.thrift server: %s' % (thrift_file), end='')
+
+        if self.debug:
+            print()
+            dispatcher = DebugDispatcherRJIT
+        else:
+            dispatcher = DispatcherRJIT
         if background:
-            ps = Server.run_bg(DispatcherRJIT, thrift_file,
+            ps = Server.run_bg(dispatcher, thrift_file,
                                dict(host=self.host, port=self.port))
             self.server_process = ps
         else:
-            Server.run(DispatcherRJIT, thrift_file,
+            Server.run(dispatcher, thrift_file,
                        dict(host=self.host, port=self.port))
             print('... rpc.thrift server stopped')
 
@@ -487,6 +493,8 @@ class DispatcherRJIT(Dispatcher):
     """Implements remotejit service methods.
     """
 
+    debug = False
+
     def __init__(self, server):
         Dispatcher.__init__(self, server)
         self.compiled_functions = dict()
@@ -501,7 +509,10 @@ class DispatcherRJIT(Dispatcher):
         info : dict
           Map of target devices and their properties.
         """
-        return dict(cpu=TargetInfo.host().tojson())
+        target_info = TargetInfo.host()
+        target_info.set('has_numba', True)
+        target_info.set('has_cpython', True)
+        return dict(cpu=target_info.tojson())
 
     @dispatchermethod
     def compile(self, name: str, signatures: str, ir: str) -> int:
@@ -521,6 +532,8 @@ class DispatcherRJIT(Dispatcher):
             sig = Type.demangle(msig)
             fullname = name + msig
             addr = engine.get_function_address(fullname)
+            if self.debug:
+                print(f'compile({name}, {sig}) -> {hex(addr)}')
             # storing engine as the owner of function addresses
             self.compiled_functions[fullname] = engine, sig.toctypes()(addr)
         return True
@@ -537,6 +550,8 @@ class DispatcherRJIT(Dispatcher):
         arguments : tuple
           Speficy the arguments to the function.
         """
+        if self.debug:
+            print(f'call({fullname}, {arguments})')
         ef = self.compiled_functions.get(fullname)
         if ef is None:
             raise RuntimeError('no such compiled function `%s`' % (fullname))
@@ -544,6 +559,13 @@ class DispatcherRJIT(Dispatcher):
         if hasattr(r, 'topython'):
             return r.topython()
         return r
+
+
+class DebugDispatcherRJIT(DispatcherRJIT):
+    """
+    Enables debug messages.
+    """
+    debug = True
 
 
 class LocalClient(object):

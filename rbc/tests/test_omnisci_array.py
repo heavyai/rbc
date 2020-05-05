@@ -211,7 +211,7 @@ def test_getitem_bool(omnisci):
     @omnisci('bool(bool[], int64)')
     def array_getitem_bool(x, i):
         return x[i]
-    print(array_getitem_bool)
+
     query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
              .format(**locals()))
     desrc, result = omnisci.sql_execute(query)
@@ -288,9 +288,9 @@ def test_array_constructor_len(omnisci):
     from rbc.omnisci_array import Array
     from numba import types
 
-    @omnisci('int64(int64)')
+    @omnisci('int64(int32)')
     def array_len(size):
-        a = Array(size, types.int32)
+        a = Array(size, types.float64)
         return len(a)
 
     query = (
