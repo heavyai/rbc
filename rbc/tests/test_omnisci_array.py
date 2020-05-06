@@ -287,12 +287,15 @@ def test_array_constructor_return(omnisci):
 
     from rbc.omnisci_array import Array
     from numba import types
+    from rbc.irtools import printf
 
     @omnisci('float64[](int32)')
     def array_return(size):
+        printf("entering array_return(%i)\n", size)
         a = Array(size, types.float64)
         for i in range(size):
             a[i] = float(i)
+        printf("returning array with length %i\n", len(a))
         return a
 
     query = (

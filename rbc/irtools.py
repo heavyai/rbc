@@ -9,11 +9,14 @@ from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
-        registry, typing, compiler, sigutils, cgutils
+        registry, typing, compiler, sigutils, cgutils, \
+        extending
+    from numba.core import types as nb_types
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
-        sigutils, cgutils
+        sigutils, cgutils, extending
+    from numba import types as nb_types
 
 int32_t = ir.IntType(32)
 
@@ -38,7 +41,7 @@ fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
                 *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
 libm_funcs = [*fp_funcs, *classification_funcs]
 
-stdio_funcs = ['printf']
+stdio_funcs = ['printf', 'puts']
 
 
 def get_function_dependencies(module, funcname, _deps=None):
@@ -352,3 +355,20 @@ def compile_IR(ir):
     engine.run_static_constructors()
 
     return engine
+
+
+@extending.intrinsic
+def printf(typingctx, format_type, arg0=nb_types.void,
+           arg1=nb_types.void, arg2=nb_types.void, arg3=nb_types.void,
+           arg4=nb_types.void, arg5=nb_types.void, arg6=nb_types.void,
+           arg7=nb_types.void, arg8=nb_types.void, arg9=nb_types.void):
+    """printf that can be called from Numba jit-decorated functions.
+    """
+    if isinstance(format_type, nb_types.StringLiteral):
+        sig = nb_types.void(format_type, arg0, arg1, arg2, arg3, arg4, arg5,
+                            arg6, arg7, arg8, arg9)
+
+        def codegen(context, builder, signature, args):
+            cgutils.printf(builder, format_type.literal_value, *args[1:])
+
+        return sig, codegen
