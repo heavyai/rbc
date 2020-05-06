@@ -282,6 +282,27 @@ def test_array_setitem(omnisci):
         assert sum(f8) * 4 == s
 
 
+def test_array_constructor_return(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+    from numba import types
+
+    @omnisci('float64[](int32)')
+    def array_return(size):
+        a = Array(size, types.float64)
+        for i in range(size):
+            a[i] = float(i)
+        return a
+
+    query = (
+        'select array_return(10)'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    assert list(result)[0] == (list(map(float, range(10))),)
+
+
 def test_array_constructor_len(omnisci):
     omnisci.reset()
 

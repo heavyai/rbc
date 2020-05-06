@@ -13,6 +13,7 @@ else:
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
+void_t = ir.VoidType()
 
 
 class ArrayPointer(types.Type):
@@ -52,12 +53,24 @@ def omnisci_array_constructor(context, builder, sig, args):
     QueryEngine/ArrayOps.cpp:
     int8_t* allocate_varlen_buffer(int64_t element_count, int64_t element_size)
     '''
-    fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
-    fn = builder.module.get_or_insert_function(
-        fnty, name="allocate_varlen_buffer")
-    ptr8 = builder.call(fn, [element_count, element_size])
+    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+    alloc_fn = builder.module.get_or_insert_function(
+        alloc_fnty, name="allocate_varlen_buffer")
+    ptr8 = builder.call(alloc_fn, [element_count, element_size])
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
+
+    '''
+    ExtensionsIR.cpp:
+    void register_buffer_with_executor_rsm(int64_t exec, int8_t* buffer)
+    '''
+    if 0:
+        # TODO: enable the following only for returning arrays
+        reg_fnty = ir.FunctionType(void_t, [int64_t, int8_t.as_pointer()])
+        reg_fn = builder.module.get_or_insert_function(
+            reg_fnty, name="register_buffer_with_executor_rsm")
+        builder.call(reg_fn, [int64_t(0), ptr8])  # TODO: replace 0
+        # TODO: impl dealloc for non returning arrays
 
     # construct array
     fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
@@ -76,7 +89,11 @@ def type_omnisci_array(context):
 
 @datamodel.register_default(ArrayPointer)
 class ArrayPointerModel(datamodel.models.PointerModel):
-    pass
+
+    def as_return(self, builder, value):
+        # TODO: insert register_buffer_with_executor_rsm call here
+        # print('as_return', value)
+        return value
 
 
 @extending.intrinsic

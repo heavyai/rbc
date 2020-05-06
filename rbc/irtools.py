@@ -15,6 +15,8 @@ else:
     from numba import compiler_lock, typing, compiler, \
         sigutils
 
+int32_t = ir.IntType(32)
+
 
 def _lf(lst):
     return lst + [e + 'f' for e in lst] + [e + 'l' for e in lst]
@@ -36,6 +38,8 @@ fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
                 *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
 libm_funcs = [*fp_funcs, *classification_funcs]
 
+stdio_funcs = ['printf']
+
 
 def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
@@ -52,7 +56,10 @@ def get_function_dependencies(module, funcname, _deps=None):
                 elif f.is_declaration:
                     if name in libm_funcs:
                         _deps[name] = 'libm'
-                    elif name == 'allocate_varlen_buffer':
+                    elif name in stdio_funcs:
+                        _deps[name] = 'stdio'
+                    elif name in ['allocate_varlen_buffer',
+                                  'register_buffer_with_executor_rsm']:
                         _deps[name] = 'omnisci_internal'
                     else:
                         _deps[name] = 'undefined'
@@ -118,6 +125,67 @@ class RemoteCPUContext(cpu.CPUContext):
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
 
+def make_wrapper(fname, atypes, rtype, cres):
+    """Make wrapper function to numba compile result.
+
+    The compilation result contains a function with prototype::
+
+      <status> <function name>(<rtype>** result, <arguments>)
+
+    This function adds a new function to compilation result library
+    with the following prototype::
+
+      <rtype> <fname>(<arguments>)
+
+    or in the case when rtype is Omnisci Array, then
+
+      void <fname>(<rtype>* <arguments>)
+
+    Parameters
+    ----------
+    fname : str
+      Function name.
+    atypes : tuple
+      A tuple of argument Numba types.
+    rtype : numba.Type
+      The return Numba type
+    cres : CompileResult
+      Numba compilation result.
+
+    """
+    fndesc = cres.fndesc
+    module = cres.library.create_ir_module(fndesc.unique_name)
+    context = cres.target_context
+    ll_argtypes = [context.get_value_type(ty) for ty in atypes]
+    ll_return_type = context.get_value_type(rtype)
+
+    # TODO: design a API for custom wrapping
+    if type(rtype).__name__ == 'ArrayPointer':
+        wrapty = ir.FunctionType(ir.VoidType(),
+                                 [ll_return_type] + ll_argtypes)
+        wrapfn = module.add_function(wrapty, fname)
+        builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
+        fnty = context.call_conv.get_function_type(rtype, atypes)
+        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+        status, out = context.call_conv.call_function(
+            builder, fn, rtype, atypes, wrapfn.args[1:])
+        # TODO: check status and when fail, then skip store and report
+        builder.store(builder.load(out), wrapfn.args[0])
+        builder.ret_void()
+    else:
+        wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
+        wrapfn = module.add_function(wrapty, fname)
+        builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
+        fnty = context.call_conv.get_function_type(rtype, atypes)
+        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+        status, out = context.call_conv.call_function(
+            builder, fn, rtype, atypes, wrapfn.args)
+        # TODO: check status and when fail, then report
+        builder.ret(out)
+
+    cres.library.add_ir_module(module)
+
+
 def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
@@ -172,25 +240,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
                                           flags=flags,
                                           library=main_library,
                                           locals={})
-            # The compilation result contains a function with
-            # prototype `<function name>(<rtype>* result,
-            # <arguments>)`. In the following we add a new function
-            # with a prototype `<rtype> <fname>(<arguments>)`:
-            fndesc = cres.fndesc
-            module = cres.library.create_ir_module(fndesc.unique_name)
-            context = cres.target_context
-            ll_argtypes = [context.get_value_type(ty) for ty in args]
-            ll_return_type = context.get_value_type(return_type)
-
-            wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
-            wrapfn = module.add_function(wrapty, fname)
-            builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
-            fnty = context.call_conv.get_function_type(return_type, args)
-            fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
-            status, out = context.call_conv.call_function(
-                builder, fn, return_type, args, wrapfn.args)
-            builder.ret(out)
-            cres.library.add_ir_module(module)
+            make_wrapper(fname, args, return_type, cres)
 
     seen = set()
     for _library in main_library._linking_libraries:
