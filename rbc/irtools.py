@@ -9,11 +9,11 @@ from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
-        registry, typing, compiler, sigutils
+        registry, typing, compiler, sigutils, cgutils
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
-        sigutils
+        sigutils, cgutils
 
 int32_t = ir.IntType(32)
 
@@ -45,7 +45,7 @@ def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
         _deps = dict()
     func = module.get_function(funcname)
-    assert func.name == funcname
+    assert func.name == funcname, (func.name, funcname)
     for block in func.blocks:
         for instruction in block.instructions:
             if instruction.opcode == 'call':
@@ -64,8 +64,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                     else:
                         _deps[name] = 'undefined'
                 else:
-                    _deps[name] = 'defined'
                     if name not in _deps:
+                        _deps[name] = 'defined'
                         get_function_dependencies(module, name, _deps=_deps)
     return _deps
 
@@ -169,7 +169,11 @@ def make_wrapper(fname, atypes, rtype, cres):
         fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args[1:])
-        # TODO: check status and when fail, then skip store and report
+        with cgutils.if_unlikely(builder, status.is_error):
+            cgutils.printf(builder,
+                           f"rbc: {fname} failed with status code %i\n",
+                           status.code)
+            builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
     else:
@@ -180,7 +184,10 @@ def make_wrapper(fname, atypes, rtype, cres):
         fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args)
-        # TODO: check status and when fail, then report
+        with cgutils.if_unlikely(builder, status.is_error):
+            cgutils.printf(builder,
+                           f"rbc: {fname} failed with status code %i\n",
+                           status.code)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
