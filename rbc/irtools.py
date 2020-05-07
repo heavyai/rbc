@@ -43,6 +43,8 @@ libm_funcs = [*fp_funcs, *classification_funcs]
 
 stdio_funcs = ['printf', 'puts']
 
+stdlib_funcs = ['free']
+
 
 def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
@@ -61,6 +63,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'libm'
                     elif name in stdio_funcs:
                         _deps[name] = 'stdio'
+                    elif name in stdlib_funcs:
+                        _deps[name] = 'stdlib'
                     elif name in ['allocate_varlen_buffer',
                                   'register_buffer_with_executor_rsm']:
                         _deps[name] = 'omnisci_internal'

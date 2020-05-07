@@ -1,5 +1,6 @@
 import re
 import operator
+from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
@@ -39,6 +40,9 @@ class Array(object):
     pass
 
 
+builder_buffers = defaultdict(list)
+
+
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
 def omnisci_array_constructor(context, builder, sig, args):
@@ -57,6 +61,7 @@ def omnisci_array_constructor(context, builder, sig, args):
     alloc_fn = builder.module.get_or_insert_function(
         alloc_fnty, name="allocate_varlen_buffer")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
 
@@ -70,7 +75,6 @@ def omnisci_array_constructor(context, builder, sig, args):
         reg_fn = builder.module.get_or_insert_function(
             reg_fnty, name="register_buffer_with_executor_rsm")
         builder.call(reg_fn, [int64_t(0), ptr8])  # TODO: replace 0
-        # TODO: impl dealloc for non returning arrays
 
     # construct array
     fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
@@ -91,8 +95,23 @@ def type_omnisci_array(context):
 class ArrayPointerModel(datamodel.models.PointerModel):
 
     def as_return(self, builder, value):
-        # TODO: insert register_buffer_with_executor_rsm call here
-        # print('as_return', value)
+        buffers = builder_buffers[builder]
+        ptr = builder.load(builder.gep(value, [int32_t(0), int32_t(0)]))
+        ptr = builder.bitcast(ptr, int8_t.as_pointer())
+        free_fnty = ir.FunctionType(void_t, [int8_t.as_pointer()])
+        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
+        for ptr8 in buffers:
+            pred = builder.icmp_signed('==', ptr, ptr8)
+            with builder.if_else(pred) as (then, otherwise):
+                with then:
+                    # TODO: register ptr8 to omniscdb memory manager
+                    cgutils.printf(
+                        builder,
+                        'rbc allocated memory at %p that needs to deallocated'
+                        ' by omniscidb\n', ptr8)
+                with otherwise:
+                    builder.call(free_fn, [ptr8])
+        del builder_buffers[builder]
         return value
 
 

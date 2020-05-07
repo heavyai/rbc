@@ -126,7 +126,7 @@ def test_len_f64(omnisci):
     @omnisci('int64(float64[])')
     def array_sz_double(x):
         return len(x)
-    print(array_sz_double)
+
     desrc, result = omnisci.sql_execute(
         'select f8, array_sz_double(f8) from {omnisci.table_name}'
         .format(**locals()))
@@ -293,17 +293,25 @@ def test_array_constructor_return(omnisci):
     def array_return(size):
         printf("entering array_return(%i)\n", size)
         a = Array(size, types.float64)
+        b = Array(size, types.float64)
         for i in range(size):
             a[i] = float(i)
-        printf("returning array with length %i\n", len(a))
-        return a
+            b[i] = float(size - i - 1)
+        if size % 2:
+            c = a
+        else:
+            c = b
+        printf("returning array with length %i\n", len(c))
+        return c
 
     query = (
-        'select array_return(10)'
+        'select array_return(9), array_return(10)'
         .format(**locals()))
     _, result = omnisci.sql_execute(query)
 
-    assert list(result)[0] == (list(map(float, range(10))),)
+    r = list(result)[0]
+    assert r == (list(map(float, range(9))),
+                 list(map(float, reversed(range(10)))))
 
 
 def test_array_constructor_len(omnisci):
