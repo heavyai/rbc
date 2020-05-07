@@ -358,15 +358,11 @@ def compile_IR(ir):
 
 
 @extending.intrinsic
-def printf(typingctx, format_type, arg0=nb_types.void,
-           arg1=nb_types.void, arg2=nb_types.void, arg3=nb_types.void,
-           arg4=nb_types.void, arg5=nb_types.void, arg6=nb_types.void,
-           arg7=nb_types.void, arg8=nb_types.void, arg9=nb_types.void):
+def printf(typingctx, format_type, *args):
     """printf that can be called from Numba jit-decorated functions.
     """
     if isinstance(format_type, nb_types.StringLiteral):
-        sig = nb_types.void(format_type, arg0, arg1, arg2, arg3, arg4, arg5,
-                            arg6, arg7, arg8, arg9)
+        sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
 
         def codegen(context, builder, signature, args):
             cgutils.printf(builder, format_type.literal_value, *args[1:])
