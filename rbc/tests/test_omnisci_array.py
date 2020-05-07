@@ -261,6 +261,10 @@ def test_even_sum(omnisci):
 
 
 def test_array_setitem(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(
+            'test_array_setitem: crashes CUDA enabled omniscidb server'
+            ' [rbc issue 72]')
     omnisci.reset()
 
     @omnisci('double(double[], int32)')
@@ -334,6 +338,10 @@ def test_array_constructor_len(omnisci):
 
 
 def test_array_constructor_getitem(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(
+            'test_array_constructor_getitem: crashes CUDA enabled omniscidb'
+            ' server [rbc issue 72]')
     omnisci.reset()
 
     from rbc.omnisci_array import Array

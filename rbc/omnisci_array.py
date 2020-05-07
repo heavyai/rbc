@@ -1,5 +1,6 @@
 import re
 import operator
+import warnings
 from collections import defaultdict
 from llvmlite import ir
 import numpy as np
@@ -46,6 +47,10 @@ builder_buffers = defaultdict(list)
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
 def omnisci_array_constructor(context, builder, sig, args):
+    if not context.target_info.is_cpu:
+        warnings.warn(
+            f'allocating arrays in {context.target_info.name}'
+            ' is not supported')
     ptr_type, sz_type, null_type = sig.return_type.dtype.members
 
     # zero-extend the element count to int64_t
@@ -97,6 +102,8 @@ class ArrayPointerModel(datamodel.models.PointerModel):
         ptr = builder.load(builder.gep(value, [int32_t(0), int32_t(0)]))
         ptr = builder.bitcast(ptr, int8_t.as_pointer())
         free_fnty = ir.FunctionType(void_t, [int8_t.as_pointer()])
+        # TODO: using stdlib `free` that works only for CPU. For CUDA
+        # devices, we need to use omniscidb provided deallocator.
         free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
         for ptr8 in buffers:
             with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):

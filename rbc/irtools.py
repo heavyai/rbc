@@ -65,8 +65,7 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'stdio'
                     elif name in stdlib_funcs:
                         _deps[name] = 'stdlib'
-                    elif name in ['allocate_varlen_buffer',
-                                  'register_buffer_with_executor_rsm']:
+                    elif name in ['allocate_varlen_buffer']:
                         _deps[name] = 'omnisci_internal'
                     else:
                         _deps[name] = 'undefined'
@@ -139,12 +138,12 @@ def make_wrapper(fname, atypes, rtype, cres):
 
       <status> <function name>(<rtype>** result, <arguments>)
 
-    This function adds a new function to compilation result library
-    with the following prototype::
+    The make_wrapper adds a wrapper function to compilation result
+    library with the following prototype::
 
       <rtype> <fname>(<arguments>)
 
-    or in the case when rtype is Omnisci Array, then
+    or, if <rtype> is Omnisci Array, then
 
       void <fname>(<rtype>* <arguments>)
 
