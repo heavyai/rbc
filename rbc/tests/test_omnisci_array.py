@@ -126,7 +126,7 @@ def test_len_f64(omnisci):
     @omnisci('int64(float64[])')
     def array_sz_double(x):
         return len(x)
-    print(array_sz_double)
+
     desrc, result = omnisci.sql_execute(
         'select f8, array_sz_double(f8) from {omnisci.table_name}'
         .format(**locals()))
@@ -261,6 +261,10 @@ def test_even_sum(omnisci):
 
 
 def test_array_setitem(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(
+            'test_array_setitem: crashes CUDA enabled omniscidb server'
+            ' [rbc issue 72]')
     omnisci.reset()
 
     @omnisci('double(double[], int32)')
@@ -280,6 +284,38 @@ def test_array_setitem(omnisci):
 
     for f8, s in result:
         assert sum(f8) * 4 == s
+
+
+def test_array_constructor_return(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+    from numba import types
+    from rbc.irtools import printf
+
+    @omnisci('float64[](int32)')
+    def array_return(size):
+        printf("entering array_return(%i)\n", size)
+        a = Array(size, types.float64)
+        b = Array(size, types.float64)
+        for i in range(size):
+            a[i] = float(i)
+            b[i] = float(size - i - 1)
+        if size % 2:
+            c = a
+        else:
+            c = b
+        printf("returning array with length %i\n", len(c))
+        return c
+
+    query = (
+        'select array_return(9), array_return(10)'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    r = list(result)[0]
+    assert r == (list(map(float, range(9))),
+                 list(map(float, reversed(range(10)))))
 
 
 def test_array_constructor_len(omnisci):
@@ -302,6 +338,10 @@ def test_array_constructor_len(omnisci):
 
 
 def test_array_constructor_getitem(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(
+            'test_array_constructor_getitem: crashes CUDA enabled omniscidb'
+            ' server [rbc issue 72]')
     omnisci.reset()
 
     from rbc.omnisci_array import Array

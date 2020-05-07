@@ -1,5 +1,7 @@
 import re
 import operator
+import warnings
+from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
@@ -13,6 +15,7 @@ else:
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
+void_t = ir.VoidType()
 
 
 class ArrayPointer(types.Type):
@@ -38,9 +41,16 @@ class Array(object):
     pass
 
 
+builder_buffers = defaultdict(list)
+
+
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
 def omnisci_array_constructor(context, builder, sig, args):
+    if not context.target_info.is_cpu:
+        warnings.warn(
+            f'allocating arrays in {context.target_info.name}'
+            ' is not supported')
     ptr_type, sz_type, null_type = sig.return_type.dtype.members
 
     # zero-extend the element count to int64_t
@@ -52,10 +62,11 @@ def omnisci_array_constructor(context, builder, sig, args):
     QueryEngine/ArrayOps.cpp:
     int8_t* allocate_varlen_buffer(int64_t element_count, int64_t element_size)
     '''
-    fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
-    fn = builder.module.get_or_insert_function(
-        fnty, name="allocate_varlen_buffer")
-    ptr8 = builder.call(fn, [element_count, element_size])
+    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+    alloc_fn = builder.module.get_or_insert_function(
+        alloc_fnty, name="allocate_varlen_buffer")
+    ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
 
@@ -76,7 +87,29 @@ def type_omnisci_array(context):
 
 @datamodel.register_default(ArrayPointer)
 class ArrayPointerModel(datamodel.models.PointerModel):
-    pass
+
+    def as_return(self, builder, value):
+        """This method is called on `return a` statement where `a` is Omnisci
+        Array instance. The method is used to free the buffers of all
+        Omnisci Array instances except `a`. The buffer of `a` will be
+        managed by omniscidb server.
+
+        BUG: when `a` is not Omnisci Array instance then the buffers
+        of all Omnisci Array instances are not freed leading to memory
+        leaks.
+        """
+        buffers = builder_buffers[builder]
+        ptr = builder.load(builder.gep(value, [int32_t(0), int32_t(0)]))
+        ptr = builder.bitcast(ptr, int8_t.as_pointer())
+        free_fnty = ir.FunctionType(void_t, [int8_t.as_pointer()])
+        # TODO: using stdlib `free` that works only for CPU. For CUDA
+        # devices, we need to use omniscidb provided deallocator.
+        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
+        for ptr8 in buffers:
+            with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
+                builder.call(free_fn, [ptr8])
+        del builder_buffers[builder]
+        return value
 
 
 @extending.intrinsic
