@@ -65,17 +65,6 @@ def omnisci_array_constructor(context, builder, sig, args):
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
 
-    '''
-    ExtensionsIR.cpp:
-    void register_buffer_with_executor_rsm(int64_t exec, int8_t* buffer)
-    '''
-    if 0:
-        # TODO: enable the following only for returning arrays
-        reg_fnty = ir.FunctionType(void_t, [int64_t, int8_t.as_pointer()])
-        reg_fn = builder.module.get_or_insert_function(
-            reg_fnty, name="register_buffer_with_executor_rsm")
-        builder.call(reg_fn, [int64_t(0), ptr8])  # TODO: replace 0
-
     # construct array
     fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
     fa.ptr = ptr              # T*
@@ -95,22 +84,23 @@ def type_omnisci_array(context):
 class ArrayPointerModel(datamodel.models.PointerModel):
 
     def as_return(self, builder, value):
+        """This method is called on `return a` statement where `a` is Omnisci
+        Array instance. The method is used to free the buffers of all
+        Omnisci Array instances except `a`. The buffer of `a` will be
+        managed by omniscidb server.
+
+        BUG: when `a` is not Omnisci Array instance then the buffers
+        of all Omnisci Array instances are not freed leading to memory
+        leaks.
+        """
         buffers = builder_buffers[builder]
         ptr = builder.load(builder.gep(value, [int32_t(0), int32_t(0)]))
         ptr = builder.bitcast(ptr, int8_t.as_pointer())
         free_fnty = ir.FunctionType(void_t, [int8_t.as_pointer()])
         free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
         for ptr8 in buffers:
-            pred = builder.icmp_signed('==', ptr, ptr8)
-            with builder.if_else(pred) as (then, otherwise):
-                with then:
-                    # TODO: register ptr8 to omniscdb memory manager
-                    cgutils.printf(
-                        builder,
-                        'rbc allocated memory at %p that needs to deallocated'
-                        ' by omniscidb\n', ptr8)
-                with otherwise:
-                    builder.call(free_fn, [ptr8])
+            with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
+                builder.call(free_fn, [ptr8])
         del builder_buffers[builder]
         return value
 
