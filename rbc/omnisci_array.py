@@ -1,5 +1,7 @@
 import re
 import operator
+import warnings
+from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
@@ -8,6 +10,12 @@ if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
 else:
     from numba import datamodel, cgutils, extending, types
+
+
+int8_t = ir.IntType(8)
+int32_t = ir.IntType(32)
+int64_t = ir.IntType(64)
+void_t = ir.VoidType()
 
 
 class ArrayPointer(types.Type):
@@ -19,7 +27,7 @@ class ArrayPointer(types.Type):
     mutable = True
 
     def __init__(self, dtype, eltype):
-        self.dtype = dtype  # i.e. STRUCT__lPLBK
+        self.dtype = dtype    # i.e. STRUCT__lPLBK
         self.eltype = eltype  # i.e. int64. Base type for dtype: Array<int64>
         name = "(%s)*" % dtype
         super(ArrayPointer, self).__init__(name)
@@ -33,72 +41,75 @@ class Array(object):
     pass
 
 
-def omnisci_array_constructor(context, builder, sig, args, elsize):
-    pyapi = context.get_python_api(builder)
-
-    # integer types used
-    i8 = ir.IntType(8)
-    i64 = ir.IntType(64)
-
-    # grab args
-    sz, _ = args
-    elsize_ir = context.get_value_type(elsize.tonumba())  # get the ir type
-
-    # fill 'sz' and 'is_null'
-    typ = sig.return_type.dtype
-    fa = cgutils.create_struct_proxy(typ)(context, builder)
-    fa.sz = builder.zext(sz, i64)  # zero-extend the size to i64
-    fa.is_null = i8(0)
-
-    # fill 'ptr' with the return value of 'allocate_varlen_buffer'
-    fnty = ir.FunctionType(i8.as_pointer(), [i64, i64])
-    fn = pyapi._get_function(fnty, name="allocate_varlen_buffer")
-    call = builder.call(fn, [fa.sz, i64(elsize.bits)])
-    fa.ptr = builder.bitcast(call, elsize_ir.as_pointer())
-
-    # executor call
-    fn_executor = pyapi._get_function(
-        ir.FunctionType(i8.as_pointer(), []),
-        name='executor')
-    c = builder.call(fn_executor, [])
-
-    return fa._getpointer()
+builder_buffers = defaultdict(list)
 
 
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
-def omnisci_array_constructor_string_literal(context, builder, sig, args):
-    dtype = sig.args[1].literal_value
-    eltype = typesystem.Type.fromstring(dtype, context.target_info)
-
-    return omnisci_array_constructor(context, builder, sig, args, eltype)
-
-
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
-def omnisci_array_constructor_numba_type(context, builder, sig, args):
-    it = sig.args[1].instance_type
-    eltype = typesystem.Type.fromnumba(it, context.target_info)
+def omnisci_array_constructor(context, builder, sig, args):
+    if not context.target_info.is_cpu:
+        warnings.warn(
+            f'allocating arrays in {context.target_info.name}'
+            ' is not supported')
+    ptr_type, sz_type, null_type = sig.return_type.dtype.members
 
-    return omnisci_array_constructor(context, builder, sig, args, eltype)
+    # zero-extend the element count to int64_t
+    assert isinstance(args[0].type, ir.IntType), (args[0].type)
+    element_count = builder.zext(args[0], int64_t)
+    element_size = int64_t(ptr_type.dtype.bitwidth // 8)
+
+    '''
+    QueryEngine/ArrayOps.cpp:
+    int8_t* allocate_varlen_buffer(int64_t element_count, int64_t element_size)
+    '''
+    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+    alloc_fn = builder.module.get_or_insert_function(
+        alloc_fnty, name="allocate_varlen_buffer")
+    ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    builder_buffers[builder].append(ptr8)
+    ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
+    is_null = context.get_value_type(null_type)(0)
+
+    # construct array
+    fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
+    fa.ptr = ptr              # T*
+    fa.sz = element_count     # size_t
+    fa.is_null = is_null      # int8_t
+    return fa._getpointer()
 
 
 @extending.type_callable(Array)
 def type_omnisci_array(context):
     def typer(size, dtype):
-        if isinstance(dtype, types.NumberClass):
-            it = dtype.instance_type
-            typ = typesystem.Type.fromnumba(
-                it, context.target_info).tostring() + '[]'
-        elif isinstance(dtype, types.StringLiteral):
-            typ = dtype.literal_value + '[]'
-
-        conv = array_type_converter(context.target_info, typ)
-        return conv._params['tonumba']
+        return array_type_converter(context.target_info, dtype).tonumba()
     return typer
 
 
 @datamodel.register_default(ArrayPointer)
 class ArrayPointerModel(datamodel.models.PointerModel):
-    pass
+
+    def as_return(self, builder, value):
+        """This method is called on `return a` statement where `a` is Omnisci
+        Array instance. The method is used to free the buffers of all
+        Omnisci Array instances except `a`. The buffer of `a` will be
+        managed by omniscidb server.
+
+        BUG: when `a` is not Omnisci Array instance then the buffers
+        of all Omnisci Array instances are not freed leading to memory
+        leaks.
+        """
+        buffers = builder_buffers[builder]
+        ptr = builder.load(builder.gep(value, [int32_t(0), int32_t(0)]))
+        ptr = builder.bitcast(ptr, int8_t.as_pointer())
+        free_fnty = ir.FunctionType(void_t, [int8_t.as_pointer()])
+        # TODO: using stdlib `free` that works only for CPU. For CUDA
+        # devices, we need to use omniscidb provided deallocator.
+        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
+        for ptr8 in buffers:
+            with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
+                builder.call(free_fn, [ptr8])
+        del builder_buffers[builder]
+        return value
 
 
 @extending.intrinsic
@@ -106,16 +117,11 @@ def omnisci_array_is_null_(typingctx, data):
     sig = types.int8(data)
 
     def codegen(context, builder, signature, args):
-        i32 = ir.IntType(32)
-        zero = i32(0)
-        two = i32(2)
 
-        data, = args
-
-        rawptr = cgutils.alloca_once_value(builder, value=data)
+        rawptr = cgutils.alloca_once_value(builder, value=args[0])
         ptr = builder.load(rawptr)
 
-        return builder.load(builder.gep(ptr, [zero, two]))
+        return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
 
     return sig, codegen
 
@@ -136,10 +142,9 @@ def omnisci_array_len_(typingctx, data):
         data, = args
         rawptr = cgutils.alloca_once_value(builder, value=data)
         struct = builder.load(builder.gep(rawptr,
-                                          [ir.Constant(ir.IntType(32), 0)]))
+                                          [int32_t(0)]))
         return builder.load(builder.gep(
-            struct, [ir.Constant(ir.IntType(32), 0),
-                     ir.Constant(ir.IntType(32), 1)]))
+            struct, [int32_t(0), int32_t(1)]))
     return sig, codegen
 
 
@@ -156,11 +161,9 @@ def omnisci_array_getitem_(typingctx, data, index):
     def codegen(context, builder, signature, args):
         data, index = args
         rawptr = cgutils.alloca_once_value(builder, value=data)
-        arr = builder.load(builder.gep(rawptr,
-                                       [ir.Constant(ir.IntType(32), 0)]))
+        arr = builder.load(builder.gep(rawptr, [int32_t(0)]))
         ptr = builder.load(builder.gep(
-            arr, [ir.Constant(ir.IntType(32), 0),
-                  ir.Constant(ir.IntType(32), 0)]))
+            arr, [int32_t(0), int32_t(0)]))
         res = builder.load(builder.gep(ptr, [index]))
 
         return res
@@ -178,7 +181,7 @@ def omnisci_array_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
     def codegen(context, builder, signature, args):
-        zero = ir.Constant(ir.IntType(32), 0)
+        zero = int32_t(0)
 
         data, index, value = args
 
@@ -239,33 +242,39 @@ def array_type_converter(target_info, obj):
 
     Parameters
     ----------
-    obj : str
-      Specify a string in the form `T[]` where `T` specifies the Array
-      items type.
+    obj : {str, numba.Type}
+      If `obj` is a string then it must be in the form `T[]` where `T`
+      specifies the Array items type. Otherwise, `obj` can be any
+      object that can be converted to a typesystem.Type object.
+
     """
+    if isinstance(obj, types.StringLiteral):
+        obj = obj.literal_value + '[]'
     if isinstance(obj, str):
         m = _array_type_match(obj)
-        if m is not None:
-            t = typesystem.Type.fromstring(m.group(1), target_info=target_info)
-            ptr_t = typesystem.Type(t, '*', name='ptr')
-            typename = 'Array<%s>' % (t.toprototype())
-            size_t = typesystem.Type.fromstring('size_t sz',
-                                                target_info=target_info)
-            array_type = typesystem.Type(
-                ptr_t,
-                size_t,
-                typesystem.Type.fromstring('bool is_null',
-                                           target_info=target_info),
-            )
-            array_type_ptr = array_type.pointer()
+        t = typesystem.Type.fromstring(m.group(1), target_info)
+    else:
+        t = typesystem.Type.fromobject(obj, target_info)
 
-            # In omniscidb, boolean values are stored as int8 because
-            # boolean has three states: false, true, and null.
-            numba_type_ptr = ArrayPointer(
-                array_type.tonumba(bool_is_int8=True),
-                t.tonumba(bool_is_int8=True))
+    ptr_t = typesystem.Type(t, '*', name='ptr')
+    typename = 'Array<%s>' % (t.toprototype())
+    size_t = typesystem.Type.fromstring('size_t sz',
+                                        target_info=target_info)
+    array_type = typesystem.Type(
+        ptr_t,
+        size_t,
+        typesystem.Type.fromstring('bool is_null',
+                                   target_info=target_info),
+    )
+    array_type_ptr = array_type.pointer()
 
-            array_type_ptr._params['typename'] = typename
-            array_type_ptr._params['tonumba'] = numba_type_ptr
+    # In omniscidb, boolean values are stored as int8 because
+    # boolean has three states: false, true, and null.
+    numba_type_ptr = ArrayPointer(
+        array_type.tonumba(bool_is_int8=True),
+        t.tonumba(bool_is_int8=True))
 
-            return array_type_ptr
+    array_type_ptr._params['typename'] = typename
+    array_type_ptr._params['tonumba'] = numba_type_ptr
+
+    return array_type_ptr
