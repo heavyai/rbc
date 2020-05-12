@@ -66,6 +66,7 @@ def omnisci_array_constructor(context, builder, sig, args):
     alloc_fn = builder.module.get_or_insert_function(
         alloc_fnty, name="allocate_varlen_buffer")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    cgutils.printf(builder, "allocating array %p\n", ptr8)
     builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
@@ -90,25 +91,8 @@ class ArrayPointerModel(datamodel.models.PointerModel):
 
     def as_return(self, builder, value):
         """This method is called on `return a` statement where `a` is Omnisci
-        Array instance. The method is used to free the buffers of all
-        Omnisci Array instances except `a`. The buffer of `a` will be
-        managed by omniscidb server.
-
-        BUG: when `a` is not Omnisci Array instance then the buffers
-        of all Omnisci Array instances are not freed leading to memory
-        leaks.
+        Array instance.
         """
-        buffers = builder_buffers[builder]
-        ptr = builder.load(builder.gep(value, [int32_t(0), int32_t(0)]))
-        ptr = builder.bitcast(ptr, int8_t.as_pointer())
-        free_fnty = ir.FunctionType(void_t, [int8_t.as_pointer()])
-        # TODO: using stdlib `free` that works only for CPU. For CUDA
-        # devices, we need to use omniscidb provided deallocator.
-        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
-        for ptr8 in buffers:
-            with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
-                builder.call(free_fn, [ptr8])
-        del builder_buffers[builder]
         return value
 
 

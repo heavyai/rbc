@@ -10,45 +10,45 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
-    # table_name = 'rbc_test_omnisci_array'
-    # m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
-    # sqltypes = ['FLOAT[]', 'DOUBLE[]',
-    #             'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
-    #             'BOOLEAN[]']
-    # # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
-    # # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
-    # # MULTIPOLYGON, See
-    # # https://www.omnisci.com/docs/latest/5_datatypes.html
-    # colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-    # table_defn = ',\n'.join('%s %s' % (n, t)
-    #                         for t, n in zip(sqltypes, colnames))
-    # m.sql_execute(
-    #     'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-    #     .format(**locals()))
+    table_name = 'rbc_test_omnisci_array'
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    sqltypes = ['FLOAT[]', 'DOUBLE[]',
+                'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
+                'BOOLEAN[]']
+    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
+    # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
+    # MULTIPOLYGON, See
+    # https://www.omnisci.com/docs/latest/5_datatypes.html
+    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+    table_defn = ',\n'.join('%s %s' % (n, t)
+                            for t, n in zip(sqltypes, colnames))
+    m.sql_execute(
+        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
+        .format(**locals()))
 
-    # def row_value(row, col, colname):
-    #     if colname == 'b':
-    #         return 'ARRAY[%s]' % (', '.join(
-    #             ("'true'" if i % 2 == 0 else "'false'")
-    #             for i in range(-3, 3)))
-    #     if colname.startswith('f'):
-    #         return 'ARRAY[%s]' % (', '.join(
-    #             str(row * 10 + i + 0.5) for i in range(-3, 3)))
-    #     return 'ARRAY[%s]' % (', '.join(
-    #         str(row * 10 + i) for i in range(-3, 3)))
+    def row_value(row, col, colname):
+        if colname == 'b':
+            return 'ARRAY[%s]' % (', '.join(
+                ("'true'" if i % 2 == 0 else "'false'")
+                for i in range(-3, 3)))
+        if colname.startswith('f'):
+            return 'ARRAY[%s]' % (', '.join(
+                str(row * 10 + i + 0.5) for i in range(-3, 3)))
+        return 'ARRAY[%s]' % (', '.join(
+            str(row * 10 + i) for i in range(-3, 3)))
 
-    # rows = 5
-    # for i in range(rows):
-    #     table_row = ', '.join(str(row_value(i, j, n))
-    #                           for j, n in enumerate(colnames))
-    #     m.sql_execute(
-    #         'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
-    # m.table_name = table_name
+    rows = 5
+    for i in range(rows):
+        table_row = ', '.join(str(row_value(i, j, n))
+                              for j, n in enumerate(colnames))
+        m.sql_execute(
+            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+    m.table_name = table_name
     yield m
-    # try:
-    #     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
-    # except Exception as msg:
-    #     print('%s in deardown' % (type(msg)))
+    try:
+        m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    except Exception as msg:
+        print('%s in deardown' % (type(msg)))
 
 
 def _test_get_array_size_ir1(omnisci):
@@ -284,6 +284,34 @@ def test_array_setitem(omnisci):
 
     for f8, s in result:
         assert sum(f8) * 4 == s
+
+
+def test_array_constructor_noreturn(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+    from numba import types
+
+    @omnisci('float64(int32)')
+    def array_noreturn(size):
+        a = Array(size, types.float64)
+        b = Array(size, types.float64)
+        c = Array(size, types.float64)
+        for i in range(size):
+            a[i] = b[i] = c[i] = i + 3.0
+        s = 0.0
+        for i in range(size):
+            s += a[i] + b[i] + c[i] - a[i] * b[i]
+        return s
+
+    query = (
+        'select array_noreturn(10)'
+        .format(**locals())
+    )
+
+    _, result = omnisci.sql_execute(query)
+    r = list(result)[0]
+    assert (r == (-420.0,))
 
 
 def test_array_constructor_return(omnisci):
