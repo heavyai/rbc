@@ -7,6 +7,7 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
+from .omnisci_pipeline import OmnisciCompilerPipeline
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
@@ -252,7 +253,8 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
                                           return_type=return_type,
                                           flags=flags,
                                           library=main_library,
-                                          locals={})
+                                          locals={},
+                                          pipeline_class=OmnisciCompilerPipeline)
             make_wrapper(fname, args, return_type, cres)
 
     seen = set()
