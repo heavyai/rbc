@@ -239,6 +239,8 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
 
+    pipeline_class = OmnisciCompilerPipeline
+
     function_names = []
     for func, signatures in functions_and_signatures:
         for sig in signatures:
@@ -254,8 +256,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
                                           flags=flags,
                                           library=main_library,
                                           locals={},
-                                        #   pipeline_class=Pipeline,)
-                                          pipeline_class=OmnisciCompilerPipeline)
+                                          pipeline_class=pipeline_class)
             make_wrapper(fname, args, return_type, cres)
 
     seen = set()

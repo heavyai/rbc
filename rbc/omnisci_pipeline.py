@@ -64,8 +64,8 @@ class FreeOmnisciArray(FunctionPass):
 
         for blk in func_ir.blocks.values():
             for stmt in blk.find_insts(ir.Assign):
-                if isinstance(stmt.value, ir.FreeVar) and \
-                    stmt.value.name == 'Array':
+                if isinstance(stmt.value, ir.FreeVar) \
+                   and stmt.value.name == 'Array':
                     found = True
 
         if not found:
