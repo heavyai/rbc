@@ -90,7 +90,7 @@ def get_client_config(**config):
 
     conf_file = os.environ.get('OMNISCI_CLIENT_CONF', None)
     if conf_file is not None and not os.path.isfile(conf_file):
-        print(f'rbc.omnisci.get_client_config:'
+        print(f'rbc.omnisci.get_client_config:'  # noqa: F541
               ' OMNISCI_CLIENT_CONF={conf_file!r}'
               ' is not a file, ignoring.')
         conf_file = None
