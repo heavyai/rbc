@@ -66,7 +66,6 @@ def omnisci_array_constructor(context, builder, sig, args):
     alloc_fn = builder.module.get_or_insert_function(
         alloc_fnty, name="allocate_varlen_buffer")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
-    cgutils.printf(builder, "[Malloc] allocating array %p\n", ptr8)
     builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
