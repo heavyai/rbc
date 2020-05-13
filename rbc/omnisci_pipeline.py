@@ -1,10 +1,16 @@
-from numba.core import ir, extending, cgutils
-from numba.core.compiler import CompilerBase, DefaultPassBuilder
-from numba.core.compiler_machinery import FunctionPass, register_pass
-from numba.core.untyped_passes import IRProcessing
-from numba import types
+from .utils import get_version
 from llvmlite import ir as llvm_ir
 from .omnisci_array import builder_buffers, ArrayPointer
+if get_version('numba') >= (0, 49):
+    from numba.core import ir, extending, cgutils, types
+    from numba.core.compiler import CompilerBase, DefaultPassBuilder
+    from numba.core.compiler_machinery import FunctionPass, register_pass
+    from numba.core.untyped_passes import IRProcessing
+else:
+    from numba import ir, extending, cgutils, types
+    from numba.compiler import CompilerBase, DefaultPassBuilder
+    from numba.compiler_machinery import FunctionPass, register_pass
+    from numba.untyped_passes import IRProcessing
 
 int8_t = llvm_ir.IntType(8)
 int32_t = llvm_ir.IntType(32)
@@ -60,16 +66,17 @@ class FreeOmnisciArray(FunctionPass):
     # state from the CompilerBase instance.
     def run_pass(self, state):
         func_ir = state.func_ir  # get the FunctionIR object
-        found = False
 
         for blk in func_ir.blocks.values():
             for stmt in blk.find_insts(ir.Assign):
                 if isinstance(stmt.value, ir.FreeVar) \
                    and stmt.value.name == 'Array':
-                    found = True
-
-        if not found:
-            return False  # we do not change the IR
+                    break
+            else:
+                continue
+            break
+        else:
+            return False  # one does not changes the IR
 
         for blk in func_ir.blocks.values():
             loc = blk.loc

@@ -200,7 +200,8 @@ def make_wrapper(fname, atypes, rtype, cres):
     cres.library.add_ir_module(module)
 
 
-def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
+def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
+                    pipeline_class=compiler.Compiler, debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters

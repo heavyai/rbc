@@ -8,6 +8,7 @@ from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_array import array_type_converter
+from .omnisci_pipeline import OmnisciCompilerPipeline
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError
@@ -472,7 +473,8 @@ class RemoteOmnisci(RemoteJIT):
                     signatures.append(sig)
                 functions_and_signatures.append((caller.func, signatures))
             llvm_module = compile_to_LLVM(functions_and_signatures,
-                                          target_info, self.debug)
+                                          target_info,
+                                          OmnisciCompilerPipeline, self.debug)
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout
             device_ir_map[device] = str(llvm_module)

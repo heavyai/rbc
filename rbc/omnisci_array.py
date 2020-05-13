@@ -88,12 +88,7 @@ def type_omnisci_array(context):
 
 @datamodel.register_default(ArrayPointer)
 class ArrayPointerModel(datamodel.models.PointerModel):
-
-    def as_return(self, builder, value):
-        """This method is called on `return a` statement where `a` is Omnisci
-        Array instance.
-        """
-        return value
+    pass
 
 
 @extending.intrinsic
