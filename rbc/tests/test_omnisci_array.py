@@ -286,6 +286,34 @@ def test_array_setitem(omnisci):
         assert sum(f8) * 4 == s
 
 
+def test_array_constructor_noreturn(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_array import Array
+    from numba import types
+
+    @omnisci('float64(int32)')
+    def array_noreturn(size):
+        a = Array(size, types.float64)
+        b = Array(size, types.float64)
+        c = Array(size, types.float64)
+        for i in range(size):
+            a[i] = b[i] = c[i] = i + 3.0
+        s = 0.0
+        for i in range(size):
+            s += a[i] + b[i] + c[i] - a[i] * b[i]
+        return s
+
+    query = (
+        'select array_noreturn(10)'
+        .format(**locals())
+    )
+
+    _, result = omnisci.sql_execute(query)
+    r = list(result)[0]
+    assert (r == (-420.0,))
+
+
 def test_array_constructor_return(omnisci):
     omnisci.reset()
 
