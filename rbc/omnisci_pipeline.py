@@ -38,13 +38,9 @@ def free_omnisci_array(typingctx, ret):
             ptr = builder.bitcast(ptr, int8_t.as_pointer())
             for ptr8 in buffers:
                 with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
-                    cgutils.printf(builder, "[Free] Deleting ptr: %p\n", ptr8)
                     builder.call(free_fn, [ptr8])
-                with builder.if_then(builder.icmp_signed('==', ptr, ptr8)):
-                    cgutils.printf(builder, "[Free] Skipping ptr %p\n", ptr)
         else:
             for ptr8 in buffers:
-                cgutils.printf(builder, "[Free] Deleting ptr: %p\n", ptr8)
                 builder.call(free_fn, [ptr8])
 
         del builder_buffers[builder]
