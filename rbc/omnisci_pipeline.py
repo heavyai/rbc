@@ -2,12 +2,12 @@ from .utils import get_version
 from llvmlite import ir as llvm_ir
 from .omnisci_array import builder_buffers, ArrayPointer
 if get_version('numba') >= (0, 49):
-    from numba.core import ir, extending, cgutils, types
+    from numba.core import ir, extending, types
     from numba.core.compiler import CompilerBase, DefaultPassBuilder
     from numba.core.compiler_machinery import FunctionPass, register_pass
     from numba.core.untyped_passes import IRProcessing
 else:
-    from numba import ir, extending, cgutils, types
+    from numba import ir, extending, types
     from numba.compiler import CompilerBase, DefaultPassBuilder
     from numba.compiler_machinery import FunctionPass, register_pass
     from numba.untyped_passes import IRProcessing
