@@ -60,7 +60,17 @@ class FreeOmnisciArray(FunctionPass):
     # state from the CompilerBase instance.
     def run_pass(self, state):
         func_ir = state.func_ir  # get the FunctionIR object
-        mutated = False  # used to record whether this pass mutates the IR
+        found = False
+
+        for blk in func_ir.blocks.values():
+            for stmt in blk.find_insts(ir.Assign):
+                if isinstance(stmt.value, ir.FreeVar) and \
+                    stmt.value.name == 'Array':
+                    found = True
+
+        if not found:
+            return False
+
         for blk in func_ir.blocks.values():
             loc = blk.loc
             scope = blk.scope
@@ -79,7 +89,7 @@ class FreeOmnisciArray(FunctionPass):
                 blk.insert_before_terminator(var)
                 break
 
-        return mutated
+        return True
 
 
 class OmnisciCompilerPipeline(CompilerBase):
