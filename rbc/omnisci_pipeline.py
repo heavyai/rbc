@@ -49,7 +49,7 @@ def free_omnisci_array(typingctx, ret):
 # Register this pass with the compiler framework, declare that it will not
 # mutate the control flow graph and that it is not an analysis_only pass (it
 # potentially mutates the IR).
-@register_pass(mutates_CFG=True, analysis_only=False)
+@register_pass(mutates_CFG=False, analysis_only=False)
 class FreeOmnisciArray(FunctionPass):
     _name = "free_omnisci_arrays"  # the common name for the pass
 
@@ -69,7 +69,7 @@ class FreeOmnisciArray(FunctionPass):
                     found = True
 
         if not found:
-            return False
+            return False  # we do not change the IR
 
         for blk in func_ir.blocks.values():
             loc = blk.loc
@@ -89,7 +89,7 @@ class FreeOmnisciArray(FunctionPass):
                 blk.insert_before_terminator(var)
                 break
 
-        return True
+        return True  # we changed the IR
 
 
 class OmnisciCompilerPipeline(CompilerBase):
