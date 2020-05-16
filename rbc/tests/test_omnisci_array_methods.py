@@ -29,7 +29,7 @@ def test_ndarray_methods(omnisci):
         a = Array(size, 'double')
         a.fill(v)
         return a.max()
-    
+
     @omnisci('int8(int32)')
     def ndarray_max_empty(size):
         a = Array(size, 'int8')
@@ -121,8 +121,9 @@ def test_ndarray_methods(omnisci):
         _, result = omnisci.sql_execute(query)
 
         out = list(result)[0]
-        
+
         if method == 'fill':
             assert np.array_equal(expected, out[0]), 'ndarray_' + method
         else:
-            assert np.isclose(expected, out, equal_nan=True), 'ndarray_' + method
+            assert np.isclose(expected, out, equal_nan=True), \
+                'ndarray_' + method

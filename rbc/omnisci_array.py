@@ -190,7 +190,7 @@ def get_type_limits(eltype):
         return np.finfo(np_dtype)
     else:
         msg = 'Type {} not supported'.format(eltype)
-        raise TypingError(msg)
+        raise errors.TypingError(msg)
 
 
 @extending.overload_method(ArrayPointer, 'fill')
@@ -208,9 +208,10 @@ def omnisci_array_fill(x, v):
 def omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
         min_value = get_type_limits(x.eltype).min
+
         def impl(x, initial=None):
             if len(x) <= 0:
-                printf("omnisci_array_max: cannot find max of zero-sized array")
+                printf("omnisci_array_max: cannot find max of zero-sized array")  # noqa: E501
                 return min_value
             if initial is not None:
                 m = initial
@@ -227,9 +228,10 @@ def omnisci_array_max(x, initial=None):
 def omnisci_array_min(x, initial=None):
     if isinstance(x, ArrayPointer):
         max_value = get_type_limits(x.eltype).max
+
         def impl(x, initial=None):
             if len(x) <= 0:
-                printf("omnisci_array_min: cannot find min of zero-sized array")
+                printf("omnisci_array_min: cannot find min of zero-sized array")  # noqa: E501
                 return max_value
             if initial is not None:
                 m = initial
@@ -281,7 +283,7 @@ def omnisci_array_mean(x):
         zero_value = 0
     elif isinstance(x.eltype, types.Float):
         zero_value = np.nan
-    
+
     if isinstance(x, ArrayPointer):
         def impl(x):
             if len(x) == 0:
