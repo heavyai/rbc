@@ -1,5 +1,7 @@
 import re
 import operator
+import warnings
+from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
@@ -13,6 +15,7 @@ else:
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
+void_t = ir.VoidType()
 
 
 class ArrayPointer(types.Type):
@@ -38,9 +41,16 @@ class Array(object):
     pass
 
 
+builder_buffers = defaultdict(list)
+
+
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
 def omnisci_array_constructor(context, builder, sig, args):
+    if not context.target_info.is_cpu:
+        warnings.warn(
+            f'allocating arrays in {context.target_info.name}'
+            ' is not supported')
     ptr_type, sz_type, null_type = sig.return_type.dtype.members
 
     # zero-extend the element count to int64_t
@@ -52,10 +62,11 @@ def omnisci_array_constructor(context, builder, sig, args):
     QueryEngine/ArrayOps.cpp:
     int8_t* allocate_varlen_buffer(int64_t element_count, int64_t element_size)
     '''
-    fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
-    fn = builder.module.get_or_insert_function(
-        fnty, name="allocate_varlen_buffer")
-    ptr8 = builder.call(fn, [element_count, element_size])
+    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+    alloc_fn = builder.module.get_or_insert_function(
+        alloc_fnty, name="allocate_varlen_buffer")
+    ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
     is_null = context.get_value_type(null_type)(0)
 

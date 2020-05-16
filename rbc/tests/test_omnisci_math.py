@@ -204,11 +204,15 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 59]')
 
-    if omnisci.has_cuda and fn_name in [
-            'logaddexp']:
+    if omnisci.has_cuda and fn_name in ['logaddexp']:
         # https://github.com/xnd-project/rbc/issues/60
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 60]')
+
+    if omnisci.has_cuda and fn_name in ['lcm']:
+        # https://github.com/xnd-project/rbc/issues/71
+        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 71]')
 
     if omnisci.version < (5, 2) and fn_name in [
             'sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1', 'exp2', 'log2',
