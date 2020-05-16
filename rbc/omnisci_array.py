@@ -5,11 +5,15 @@ from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
+from .irtools import printf
 from .utils import get_version
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils, extending, types
+    from numba.core import datamodel, cgutils, extending, types, \
+        errors
+    from numba.np import numpy_support
 else:
-    from numba import datamodel, cgutils, extending, types
+    from numba import datamodel, cgutils, extending, types, \
+        errors, numpy_support
 
 
 int8_t = ir.IntType(8)
@@ -178,6 +182,17 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
+def get_type_limits(eltype):
+    np_dtype = numpy_support.as_dtype(eltype)
+    if isinstance(eltype, types.Integer):
+        return np.iinfo(np_dtype)
+    elif isinstance(eltype, types.Float):
+        return np.finfo(np_dtype)
+    else:
+        msg = 'Type {} not supported'.format(eltype)
+        raise TypingError(msg)
+
+
 @extending.overload_method(ArrayPointer, 'fill')
 def omnisci_array_fill(x, v):
     if isinstance(x, ArrayPointer):
@@ -192,10 +207,14 @@ def omnisci_array_fill(x, v):
 @extending.overload_method(ArrayPointer, 'max')
 def omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
+        min_value = get_type_limits(x.eltype).min
         def impl(x, initial=None):
+            if len(x) <= 0:
+                printf("omnisci_array_max: cannot find max of zero-sized array")
+                return min_value
             if initial is not None:
                 m = initial
-            else:  # XXX: check if len(array) > 0
+            else:
                 m = x[0]
             for i in range(len(x)):
                 m = x[i] if x[i] > m else m
@@ -207,10 +226,14 @@ def omnisci_array_max(x, initial=None):
 @extending.overload_method(ArrayPointer, 'min')
 def omnisci_array_min(x, initial=None):
     if isinstance(x, ArrayPointer):
+        max_value = get_type_limits(x.eltype).max
         def impl(x, initial=None):
+            if len(x) <= 0:
+                printf("omnisci_array_min: cannot find min of zero-sized array")
+                return max_value
             if initial is not None:
                 m = initial
-            else:  # XXX: check if len(array) > 0
+            else:
                 m = x[0]
             for i in range(len(x)):
                 m = x[i] if x[i] < m else m
@@ -254,8 +277,16 @@ def omnisci_np_prod(a, initial=None):
 @extending.overload(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
+    if isinstance(x.eltype, types.Integer):
+        zero_value = 0
+    elif isinstance(x.eltype, types.Float):
+        zero_value = np.nan
+    
     if isinstance(x, ArrayPointer):
         def impl(x):
+            if len(x) == 0:
+                printf("Mean of empty array")
+                return zero_value
             return sum(x) / len(x)
         return impl
 
