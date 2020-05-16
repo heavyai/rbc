@@ -69,7 +69,7 @@ def test_simple(omnisci):
             print(i, r)
 
     def my_row_copier2(x,
-                       n_ptr: dict(sizer='kUserSpecifiedConstantParameter'),
+                       n_ptr: dict(sizer='kUserSpecifiedConstantParameter'),  # noqa: F821,E501
                        input_row_count_ptr, output_row_count, y):
         n = n_ptr[0]
         m = 5
@@ -103,7 +103,7 @@ def test_simple(omnisci):
     @omnisci('int32|table(double*|cursor, int32*|input, int64*, int64*,'
              ' double*|output)')
     def my_row_copier3(x,
-                       m_ptr: dict(sizer='kUserSpecifiedRowMultiplier'),
+                       m_ptr: dict(sizer='kUserSpecifiedRowMultiplier'),  # noqa: F821,E501
                        input_row_count_ptr, output_row_count, y):
         m = m_ptr[0]
         input_row_count = input_row_count_ptr[0]

@@ -162,6 +162,12 @@ class TargetInfo(object):
         return self.info['name']
 
     @property
+    def is_cpu(self):
+        """Return True if the target device is CPU.
+        """
+        return 'cpu' in self.name
+
+    @property
     def has_numba(self):
         """Check if target supports numba symbols
         """

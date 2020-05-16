@@ -9,11 +9,16 @@ from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
-        registry, typing, compiler, sigutils
+        registry, typing, compiler, sigutils, cgutils, \
+        extending
+    from numba.core import types as nb_types
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
-        sigutils
+        sigutils, cgutils, extending
+    from numba import types as nb_types
+
+int32_t = ir.IntType(32)
 
 
 def _lf(lst):
@@ -36,12 +41,16 @@ fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
                 *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
 libm_funcs = [*fp_funcs, *classification_funcs]
 
+stdio_funcs = ['printf', 'puts']
+
+stdlib_funcs = ['free']
+
 
 def get_function_dependencies(module, funcname, _deps=None):
     if _deps is None:
         _deps = dict()
     func = module.get_function(funcname)
-    assert func.name == funcname
+    assert func.name == funcname, (func.name, funcname)
     for block in func.blocks:
         for instruction in block.instructions:
             if instruction.opcode == 'call':
@@ -52,13 +61,17 @@ def get_function_dependencies(module, funcname, _deps=None):
                 elif f.is_declaration:
                     if name in libm_funcs:
                         _deps[name] = 'libm'
-                    elif name == 'allocate_varlen_buffer':
+                    elif name in stdio_funcs:
+                        _deps[name] = 'stdio'
+                    elif name in stdlib_funcs:
+                        _deps[name] = 'stdlib'
+                    elif name in ['allocate_varlen_buffer']:
                         _deps[name] = 'omnisci_internal'
                     else:
                         _deps[name] = 'undefined'
                 else:
-                    _deps[name] = 'defined'
                     if name not in _deps:
+                        _deps[name] = 'defined'
                         get_function_dependencies(module, name, _deps=_deps)
     return _deps
 
@@ -118,7 +131,76 @@ class RemoteCPUContext(cpu.CPUContext):
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
 
-def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
+def make_wrapper(fname, atypes, rtype, cres):
+    """Make wrapper function to numba compile result.
+
+    The compilation result contains a function with prototype::
+
+      <status> <function name>(<rtype>** result, <arguments>)
+
+    The make_wrapper adds a wrapper function to compilation result
+    library with the following prototype::
+
+      <rtype> <fname>(<arguments>)
+
+    or, if <rtype> is Omnisci Array, then
+
+      void <fname>(<rtype>* <arguments>)
+
+    Parameters
+    ----------
+    fname : str
+      Function name.
+    atypes : tuple
+      A tuple of argument Numba types.
+    rtype : numba.Type
+      The return Numba type
+    cres : CompileResult
+      Numba compilation result.
+
+    """
+    fndesc = cres.fndesc
+    module = cres.library.create_ir_module(fndesc.unique_name)
+    context = cres.target_context
+    ll_argtypes = [context.get_value_type(ty) for ty in atypes]
+    ll_return_type = context.get_value_type(rtype)
+
+    # TODO: design a API for custom wrapping
+    if type(rtype).__name__ == 'ArrayPointer':
+        wrapty = ir.FunctionType(ir.VoidType(),
+                                 [ll_return_type] + ll_argtypes)
+        wrapfn = module.add_function(wrapty, fname)
+        builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
+        fnty = context.call_conv.get_function_type(rtype, atypes)
+        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+        status, out = context.call_conv.call_function(
+            builder, fn, rtype, atypes, wrapfn.args[1:])
+        with cgutils.if_unlikely(builder, status.is_error):
+            cgutils.printf(builder,
+                           f"rbc: {fname} failed with status code %i\n",
+                           status.code)
+            builder.ret_void()
+        builder.store(builder.load(out), wrapfn.args[0])
+        builder.ret_void()
+    else:
+        wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
+        wrapfn = module.add_function(wrapty, fname)
+        builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
+        fnty = context.call_conv.get_function_type(rtype, atypes)
+        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+        status, out = context.call_conv.call_function(
+            builder, fn, rtype, atypes, wrapfn.args)
+        with cgutils.if_unlikely(builder, status.is_error):
+            cgutils.printf(builder,
+                           f"rbc: {fname} failed with status code %i\n",
+                           status.code)
+        builder.ret(out)
+
+    cres.library.add_ir_module(module)
+
+
+def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
+                    pipeline_class=compiler.Compiler, debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -171,26 +253,9 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo, debug=False):
                                           return_type=return_type,
                                           flags=flags,
                                           library=main_library,
-                                          locals={})
-            # The compilation result contains a function with
-            # prototype `<function name>(<rtype>* result,
-            # <arguments>)`. In the following we add a new function
-            # with a prototype `<rtype> <fname>(<arguments>)`:
-            fndesc = cres.fndesc
-            module = cres.library.create_ir_module(fndesc.unique_name)
-            context = cres.target_context
-            ll_argtypes = [context.get_value_type(ty) for ty in args]
-            ll_return_type = context.get_value_type(return_type)
-
-            wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
-            wrapfn = module.add_function(wrapty, fname)
-            builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
-            fnty = context.call_conv.get_function_type(return_type, args)
-            fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
-            status, out = context.call_conv.call_function(
-                builder, fn, return_type, args, wrapfn.args)
-            builder.ret(out)
-            cres.library.add_ir_module(module)
+                                          locals={},
+                                          pipeline_class=pipeline_class)
+            make_wrapper(fname, args, return_type, cres)
 
     seen = set()
     for _library in main_library._linking_libraries:
@@ -295,3 +360,16 @@ def compile_IR(ir):
     engine.run_static_constructors()
 
     return engine
+
+
+@extending.intrinsic
+def printf(typingctx, format_type, *args):
+    """printf that can be called from Numba jit-decorated functions.
+    """
+    if isinstance(format_type, nb_types.StringLiteral):
+        sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
+
+        def codegen(context, builder, signature, args):
+            cgutils.printf(builder, format_type.literal_value, *args[1:])
+
+        return sig, codegen
