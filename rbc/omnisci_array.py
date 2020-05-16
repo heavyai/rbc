@@ -178,16 +178,6 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
-@extending.intrinsic
-def omnisci_array_logical_and_(typingctx, a, b):
-    sig = types.boolean8(a, b)
-
-    def codegen(context, builder, signature, args):
-        breakpoint()
-
-    return sig, codegen
-
-
 @extending.overload_method(ArrayPointer, 'fill')
 def omnisci_array_fill(x, v):
     if isinstance(x, ArrayPointer):
