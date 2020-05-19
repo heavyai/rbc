@@ -362,58 +362,23 @@ def compile_IR(ir):
     return engine
 
 
-def _flush_buffers(builder):
-# %struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, 
-#                           i8*, i8*, i8*, i8*, %struct._IO_marker*, 
-#                           %struct._IO_FILE*, i32, i32, i64, i16, i8,
-#                           [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, 
-#                           i64, i32, [20 x i8] }
-# %struct._IO_marker = type { %struct._IO_marker*, %struct._IO_FILE*, i32 }
-
-    i8 = ir.IntType(8)
-    i8p = i8.as_pointer()
-    i16 = ir.IntType(16)
-    i32 = ir.IntType(32)
-    i64 = ir.IntType(64)
-    v1 = ir.VectorType(i8, 1)
-    v20 = ir.VectorType(i8, 20)
-
-    ir_context = ir.context.global_context
-    ID_struct_IO_marker = ir_context.get_identified_type('struct._IO_marker')
-    ID_struct_IO_FILE = ir_context.get_identified_type('struct._IO_FILE')
-
-    struct_IO_FILE = ir.LiteralStructType([
-        i32, i8p, i8p, i8p, i8p, i8p, i8p, i8p,
-        i8p, i8p, i8p, i8p,
-        ID_struct_IO_marker.as_pointer(),
-        ID_struct_IO_FILE.as_pointer(),
-        i32, i32, i64, i16, i8,
-        v1, i8p, i64, i8p, i8p, i8p, i8p,
-        i64, i32, v20,
-    ])
-
-    struct_IO_marker = ir.LiteralStructType([
-        ID_struct_IO_marker.as_pointer(),
-        ID_struct_IO_FILE.as_pointer(),
-        i32,
-    ])
-
-    fflush_fnty = ir.FunctionType(int32_t, [struct_IO_FILE.as_pointer()])
+def _fflush(builder):
+    int8_t = ir.IntType(8)
+    fflush_fnty = ir.FunctionType(int32_t, [int8_t.as_pointer()])
     fflush_fn = builder.module.get_or_insert_function(
         fflush_fnty, name='fflush')
 
-    builder.call(fflush_fn, [struct_IO_FILE.as_pointer()(None)])
+    builder.call(fflush_fn, [int8_t.as_pointer()(None)])
 
 
 @extending.intrinsic
 def fflush(typingctx):
     """fflush that can be called from Numba jit-decorated functions.
-    Note: this is machine/compiler dependent.
     """
-    sig = types.void(types.void)
+    sig = nb_types.void(nb_types.void)
 
     def codegen(context, builder, signature, args):
-        _fflush_buffer(builder)
+        _fflush(builder)
 
     return sig, codegen
 
