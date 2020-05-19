@@ -14,7 +14,27 @@ def omnisci():
     yield m
 
 
-def test_ndarray_methods(omnisci):
+ndarray_methods = [
+    ('fill', (5, 4), [4.0, 4.0, 4.0, 4.0, 4.0]),
+    ('max', (5, 4.0), 4.0),
+    ('max_empty', (0, ), -128),
+    ('max_initial', (5, 4.0, 30.0), 30.0),
+    ('mean', (5, 2.0), 2.0),
+    ('mean_empty_float', (0, ), np.nan),
+    ('mean_empty_int', (0, ), 0),
+    ('min', (5, 4.0), 4.0),
+    ('min_empty', (0, ), 32767),
+    ('min_initial', (5, 4.0, -3.0), -3.0),
+    ('sum', (5, 2.0), 10.0),
+    ('sum_initial', (5, 2.0, 2.0), 12.0),
+    ('prod', (5, 3.0), 243.0),
+    ('prod_initial', (5, 3.0, 2), 486.0),
+]
+
+
+@pytest.mark.parametrize("method, args, expected", ndarray_methods,
+                         ids=[item[0] for item in ndarray_methods])
+def test_ndarray_methods(omnisci, method, args, expected):
     omnisci.reset()
     from rbc.omnisci_array import Array
 
@@ -98,32 +118,13 @@ def test_ndarray_methods(omnisci):
         a.fill(v)
         return a.prod(initial=initial)
 
-    ndarray_methods = [
-        ('fill', (5, 4), [4.0, 4.0, 4.0, 4.0, 4.0]),
-        ('max', (5, 4.0), 4.0),
-        ('max_empty', (0, ), -128),
-        ('max_initial', (5, 4.0, 30.0), 30.0),
-        ('mean', (5, 2.0), 2.0),
-        ('mean_empty_float', (0, ), np.nan),
-        ('mean_empty_int', (0, ), 0),
-        ('min', (5, 4.0), 4.0),
-        ('min_empty', (0, ), 32767),
-        ('min_initial', (5, 4.0, -3.0), -3.0),
-        ('sum', (5, 2.0), 10.0),
-        ('sum_initial', (5, 2.0, 2.0), 12.0),
-        ('prod', (5, 3.0), 243.0),
-        ('prod_initial', (5, 3.0, 2), 486.0),
-    ]
-
-    for method, args, expected in ndarray_methods:
-        query = 'select ndarray_{method}'.format(**locals()) + \
+    query = 'select ndarray_{method}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')'
-        _, result = omnisci.sql_execute(query)
+    _, result = omnisci.sql_execute(query)
+    out = list(result)[0]
 
-        out = list(result)[0]
-
-        if method == 'fill':
-            assert np.array_equal(expected, out[0]), 'ndarray_' + method
-        else:
-            assert np.isclose(expected, out, equal_nan=True), \
-                'ndarray_' + method
+    if method == 'fill':
+        assert np.array_equal(expected, out[0]), 'ndarray_' + method
+    else:
+        assert np.isclose(expected, out, equal_nan=True), \
+            'ndarray_' + method
