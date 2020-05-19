@@ -362,7 +362,7 @@ def compile_IR(ir):
     return engine
 
 
-def _fflush(builder):
+def cg_fflush(builder):
     int8_t = ir.IntType(8)
     fflush_fnty = ir.FunctionType(int32_t, [int8_t.as_pointer()])
     fflush_fn = builder.module.get_or_insert_function(
@@ -378,7 +378,7 @@ def fflush(typingctx):
     sig = nb_types.void(nb_types.void)
 
     def codegen(context, builder, signature, args):
-        _fflush(builder)
+        cg_fflush(builder)
 
     return sig, codegen
 
