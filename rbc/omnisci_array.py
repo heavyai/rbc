@@ -218,7 +218,9 @@ def omnisci_array_max(x, initial=None):
             else:
                 m = x[0]
             for i in range(len(x)):
-                m = x[i] if x[i] > m else m
+                v = x[i]
+                if v > m:
+                    m = v
             return m
         return impl
 
@@ -238,7 +240,9 @@ def omnisci_array_min(x, initial=None):
             else:
                 m = x[0]
             for i in range(len(x)):
-                m = x[i] if x[i] < m else m
+                v = x[i]
+                if v < m:
+                    m = v
             return m
         return impl
 
