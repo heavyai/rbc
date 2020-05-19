@@ -5,12 +5,15 @@ from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
-from .targetinfo import TargetInfo
+from .irtools import printf
 from .utils import get_version
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils, extending, types
+    from numba.core import datamodel, cgutils, extending, types, \
+        errors
+    from numba.np import numpy_support
 else:
-    from numba import datamodel, cgutils, extending, types
+    from numba import datamodel, cgutils, extending, types, \
+        errors, numpy_support
 
 
 int8_t = ir.IntType(8)
@@ -179,12 +182,81 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
-@extending.overload(np.sum)
+def get_type_limits(eltype):
+    np_dtype = numpy_support.as_dtype(eltype)
+    if isinstance(eltype, types.Integer):
+        return np.iinfo(np_dtype)
+    elif isinstance(eltype, types.Float):
+        return np.finfo(np_dtype)
+    else:
+        msg = 'Type {} not supported'.format(eltype)
+        raise errors.TypingError(msg)
+
+
+@extending.overload_method(ArrayPointer, 'fill')
+def omnisci_array_fill(x, v):
+    if isinstance(x, ArrayPointer):
+        def impl(x, v):
+            for i in range(len(x)):
+                x[i] = v
+        return impl
+
+
+@extending.overload(max)
+@extending.overload(np.max)
+@extending.overload_method(ArrayPointer, 'max')
+def omnisci_array_max(x, initial=None):
+    if isinstance(x, ArrayPointer):
+        min_value = get_type_limits(x.eltype).min
+
+        def impl(x, initial=None):
+            if len(x) <= 0:
+                printf("omnisci_array_max: cannot find max of zero-sized array")  # noqa: E501
+                return min_value
+            if initial is not None:
+                m = initial
+            else:
+                m = x[0]
+            for i in range(len(x)):
+                v = x[i]
+                if v > m:
+                    m = v
+            return m
+        return impl
+
+
+@extending.overload(min)
+@extending.overload_method(ArrayPointer, 'min')
+def omnisci_array_min(x, initial=None):
+    if isinstance(x, ArrayPointer):
+        max_value = get_type_limits(x.eltype).max
+
+        def impl(x, initial=None):
+            if len(x) <= 0:
+                printf("omnisci_array_min: cannot find min of zero-sized array")  # noqa: E501
+                return max_value
+            if initial is not None:
+                m = initial
+            else:
+                m = x[0]
+            for i in range(len(x)):
+                v = x[i]
+                if v < m:
+                    m = v
+            return m
+        return impl
+
+
 @extending.overload(sum)
-def omnisci_np_sum(a):
+@extending.overload(np.sum)
+@extending.overload_method(ArrayPointer, 'sum')
+def omnisci_np_sum(a, initial=None):
     if isinstance(a, ArrayPointer):
-        def impl(a):
-            s = 0
+        def impl(a, initial=None):
+            if initial is not None:
+                s = initial
+            else:
+                s = 0
             n = len(a)
             for i in range(n):
                 s += a[i]
@@ -193,14 +265,50 @@ def omnisci_np_sum(a):
 
 
 @extending.overload(np.prod)
-def omnisci_np_prod(a):
+@extending.overload_method(ArrayPointer, 'prod')
+def omnisci_np_prod(a, initial=None):
     if isinstance(a, ArrayPointer):
-        def impl(a):
-            s = 1
+        def impl(a, initial=None):
+            if initial is not None:
+                s = initial
+            else:
+                s = 1
             n = len(a)
             for i in range(n):
                 s *= a[i]
             return s
+        return impl
+
+
+@extending.overload(np.mean)
+@extending.overload_method(ArrayPointer, 'mean')
+def omnisci_array_mean(x):
+    if isinstance(x.eltype, types.Integer):
+        zero_value = 0
+    elif isinstance(x.eltype, types.Float):
+        zero_value = np.nan
+
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            if len(x) == 0:
+                printf("Mean of empty array")
+                return zero_value
+            return sum(x) / len(x)
+        return impl
+
+
+@extending.overload(np.cumsum)
+def omnisci_np_cumsum(a):
+    if isinstance(a, ArrayPointer):
+        eltype = a.eltype
+
+        def impl(a):
+            sz = len(a)
+            out = Array(sz, eltype)
+            out[0] = a[0]
+            for i in range(1, sz):
+                out[i] = out[i-1] + a[i]
+            return out
         return impl
 
 

@@ -406,3 +406,22 @@ def test_array_constructor_is_null(omnisci):
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (0,)
+
+
+def test_np_cumsum(omnisci):
+    omnisci.reset()
+
+    import numpy as np
+
+    @omnisci('int64[](int64[])')
+    def np_cumsum(a):
+        return np.cumsum(a)
+
+    query = (
+        'select i8, np_cumsum(i8) from {omnisci.table_name};'
+        .format(**locals()))
+    _, result = omnisci.sql_execute(query)
+
+    inp, out = list(result)[0]
+    expected = np.cumsum(inp)
+    assert np.isclose(expected, out, equal_nan=True).all()
