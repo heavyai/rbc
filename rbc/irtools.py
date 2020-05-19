@@ -227,6 +227,9 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
         target_context = RemoteCPUContext(typing_context, target)
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
+        # Fixes rbc issue 74:
+        target_desc.typing_context.target_info = target
+        target_desc.target_context.target_info = target
 
     typing_context.target_info = target
     target_context.target_info = target

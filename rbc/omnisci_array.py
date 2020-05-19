@@ -297,6 +297,21 @@ def omnisci_array_mean(x):
         return impl
 
 
+@extending.overload(np.cumsum)
+def omnisci_np_cumsum(a):
+    if isinstance(a, ArrayPointer):
+        eltype = a.eltype
+
+        def impl(a):
+            sz = len(a)
+            out = Array(sz, eltype)
+            out[0] = a[0]
+            for i in range(1, sz):
+                out[i] = out[i-1] + a[i]
+            return out
+        return impl
+
+
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
 
 
