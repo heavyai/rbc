@@ -5,6 +5,7 @@ from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from . import typesystem
+from .targetinfo import TargetInfo
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
