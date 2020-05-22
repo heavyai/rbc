@@ -791,6 +791,18 @@ class Type(tuple):
                                   % (cls.__name__, obj))
 
     @classmethod
+    def fromany(cls, obj, target_info):
+        from_methods = [getattr(Type, m) for m in dir(Type) if m.startswith('from') and m != 'fromany']
+        for m in from_methods:
+            try:
+                return m(obj, target_info)
+            except:
+                pass
+        # XXX: Change Exception to TypingError
+        raise Exception('fromany: Type {} not supported'.format(obj))
+
+
+    @classmethod
     def fromobject(cls, obj, target_info):
         """Return new Type instance from any object.
 

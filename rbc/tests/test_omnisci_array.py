@@ -426,3 +426,69 @@ def test_np_cumsum(omnisci):
     inp, out = list(result)[0]
     expected = np.cumsum(inp)
     assert np.isclose(expected, out, equal_nan=True).all()
+
+
+def test_np_zeros(omnisci):
+    omnisci.reset()
+
+    import numpy as np
+    import rbc.omnisci_array as omni
+    from numba.core import types
+
+    @omnisci('double[](int64)')
+    def np_zeros(sz):
+        return omni.zeros(sz)
+
+    query = (
+        'select np_zeros(3);'
+        .format(**locals())
+    )
+    _, result = omnisci.sql_execute(query)
+
+    out = list(result)[0]
+    expected = np.zeros(3)
+    assert np.isclose(expected, out).all()
+
+
+def test_np_ones(omnisci):
+    omnisci.reset()
+
+    import numpy as np
+    import rbc.omnisci_array as omni
+    from numba.core import types
+
+    @omnisci('double[](int64)')
+    def np_ones(sz):
+        return omni.ones(sz)
+
+    query = (
+        'select np_ones(3);'
+        .format(**locals())
+    )
+    _, result = omnisci.sql_execute(query)
+
+    out = list(result)[0]
+    expected = np.ones(3)
+    assert np.isclose(expected, out).all()
+
+
+def test_np_full(omnisci):
+    omnisci.reset()
+
+    import numpy as np
+    import rbc.omnisci_array as omni
+    from numba.core import types
+
+    @omnisci('double[](int64, double)')
+    def np_full(sz, fill_value):
+        return omni.full(sz, fill_value)
+
+    query = (
+        'select np_full(5, 3);' # XXX: Replace 3 by 3.0
+        .format(**locals())
+    )
+    _, result = omnisci.sql_execute(query)
+
+    out = list(result)[0]
+    expected = np.full(5, 3.0)
+    assert np.isclose(expected, out).all()

@@ -8,12 +8,12 @@ from . import typesystem
 from .irtools import printf
 from .utils import get_version
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils, extending, types, \
-        errors
+    from numba.core import datamodel, cgutils, extending, errors
+    from numba.core import types as nb_types
     from numba.np import numpy_support
 else:
-    from numba import datamodel, cgutils, extending, types, \
-        errors, numpy_support
+    from numba import datamodel, cgutils, extending, errors, \
+        numpy_support
 
 
 int8_t = ir.IntType(8)
@@ -22,7 +22,7 @@ int64_t = ir.IntType(64)
 void_t = ir.VoidType()
 
 
-class ArrayPointer(types.Type):
+class ArrayPointer(nb_types.Type):
     """Type class for pointers to :code:`Omnisci Array<T>` structure.
 
     We are not deriving from CPointer because ArrayPointer getitem is
@@ -48,8 +48,8 @@ class Array(object):
 builder_buffers = defaultdict(list)
 
 
-@extending.lower_builtin(Array, types.Integer, types.StringLiteral)
-@extending.lower_builtin(Array, types.Integer, types.NumberClass)
+@extending.lower_builtin(Array, nb_types.Integer, nb_types.StringLiteral)
+@extending.lower_builtin(Array, nb_types.Integer, nb_types.NumberClass)
 def omnisci_array_constructor(context, builder, sig, args):
     if not context.target_info.is_cpu:
         warnings.warn(
@@ -96,7 +96,7 @@ class ArrayPointerModel(datamodel.models.PointerModel):
 
 @extending.intrinsic
 def omnisci_array_is_null_(typingctx, data):
-    sig = types.int8(data)
+    sig = nb_types.int8(data)
 
     def codegen(context, builder, signature, args):
 
@@ -118,7 +118,7 @@ def omnisci_array_is_null(x):
 
 @extending.intrinsic
 def omnisci_array_len_(typingctx, data):
-    sig = types.int64(data)
+    sig = nb_types.int64(data)
 
     def codegen(context, builder, signature, args):
         data, = args
@@ -160,7 +160,7 @@ def omnisci_array_getitem(x, i):
 
 @extending.intrinsic
 def omnisci_array_setitem_(typingctx, data, index, value):
-    sig = types.none(data, index, value)
+    sig = nb_types.none(data, index, value)
 
     def codegen(context, builder, signature, args):
         zero = int32_t(0)
@@ -184,9 +184,9 @@ def omnisci_array_setitem(a, i, v):
 
 def get_type_limits(eltype):
     np_dtype = numpy_support.as_dtype(eltype)
-    if isinstance(eltype, types.Integer):
+    if isinstance(eltype, nb_types.Integer):
         return np.iinfo(np_dtype)
-    elif isinstance(eltype, types.Float):
+    elif isinstance(eltype, nb_types.Float):
         return np.finfo(np_dtype)
     else:
         msg = 'Type {} not supported'.format(eltype)
@@ -283,9 +283,9 @@ def omnisci_np_prod(a, initial=None):
 @extending.overload(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
-    if isinstance(x.eltype, types.Integer):
+    if isinstance(x.eltype, nb_types.Integer):
         zero_value = 0
-    elif isinstance(x.eltype, types.Float):
+    elif isinstance(x.eltype, nb_types.Float):
         zero_value = np.nan
 
     if isinstance(x, ArrayPointer):
@@ -312,6 +312,74 @@ def omnisci_np_cumsum(a):
         return impl
 
 
+def zeros(shape, dtype=None):
+    pass
+
+
+def ones(shape, dtype=None):
+    pass
+
+
+def empty(shape, dtype=None):
+    pass
+
+def full(shape, fill_value, dtype=None):
+    pass
+
+
+@extending.overload(full)
+def omnisci_np_full(shape, fill_value, dtype=None):
+
+    if dtype is None:
+        nb_dtype = fill_value # fill_value here holds the type and not the data
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, fill_value, dtype=None):
+        a = empty(shape, nb_dtype)
+        a.fill(nb_dtype(fill_value))
+        return a
+    return impl
+
+
+@extending.overload(empty)
+def omnisci_np_empty(shape, dtype=None):
+
+    if dtype is None:
+        nb_dtype = nb_types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, dtype=None):
+        return Array(shape, nb_dtype)
+    return impl
+
+@extending.overload(zeros)
+def omnisci_np_zeros(shape, dtype=None):
+
+    if dtype is None:
+        nb_dtype = nb_types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, dtype=None):
+        return full(shape, 0, nb_dtype)
+    return impl
+
+
+@extending.overload(ones)
+def omnisci_np_ones(shape, dtype=None):
+
+    if dtype is None:
+        nb_dtype = nb_types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, dtype=None):
+        return full(shape, 1, nb_dtype)
+    return impl
+
+
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
 
 
@@ -335,7 +403,7 @@ def array_type_converter(target_info, obj):
       object that can be converted to a typesystem.Type object.
 
     """
-    if isinstance(obj, types.StringLiteral):
+    if isinstance(obj, nb_types.StringLiteral):
         obj = obj.literal_value + '[]'
     if isinstance(obj, str):
         m = _array_type_match(obj)
