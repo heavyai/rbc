@@ -45,7 +45,6 @@ def omnisci():
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
-    m.reset()
     try:
         m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     except Exception as msg:
@@ -477,11 +476,12 @@ def test_np_full(omnisci):
 
     import numpy as np
     import rbc.omnisci_array as omni
-    from numba.core import types
+    from numba.core import nb_types
 
     @omnisci('double[](int64, double)')
     def np_full(sz, fill_value):
-        return omni.full(sz, fill_value)
+        a = omni.full(sz, fill_value, nb_types.double)
+        return a
 
     query = (
         'select np_full(5, 3);' # XXX: Replace 3 by 3.0

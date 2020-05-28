@@ -68,7 +68,7 @@ def omnisci_array_constructor(context, builder, sig, args):
     '''
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
     alloc_fn = builder.module.get_or_insert_function(
-        alloc_fnty, name="allocate_varlen_buffer")
+        alloc_fnty, name="calloc")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
@@ -312,73 +312,64 @@ def omnisci_np_cumsum(a):
         return impl
 
 
-def zeros(shape, dtype=None):
-    pass
+# @extending.overload(empty)
+# def omnisci_np_empty(shape, dtype=None):
+
+#     if dtype is None:
+#         nb_dtype = nb_types.double
+#     else:
+#         nb_dtype = dtype
+
+#     def impl(shape, dtype=None):
+#         a = Array(shape, nb_dtype)
+#         a[0] = nb_dtype(0)
+#         # a.fill(nb_dtype(0))
+#         return a
+#         # return Array(shape, nb_dtype)
+#     return impl
 
 
-def ones(shape, dtype=None):
-    pass
+class OmnisciNamespace:
+
+    @extending.overload(np.full)
+    def full(shape, fill_value, dtype=None):
+        if dtype is None:
+            nb_dtype = fill_value # fill_value here holds the type and not the data
+        else:
+            nb_dtype = dtype
+
+        def impl(shape, fill_value, dtype=None):
+            a = Array(shape, nb_dtype)
+            a.fill(nb_dtype(fill_value))
+            return a
+        return impl
+
+    @extending.overload(np.ones)
+    def ones(shape, dtype=None):
+
+        if dtype is None:
+            nb_dtype = nb_types.double
+        else:
+            nb_dtype = dtype
+
+        def impl(shape, dtype=None):
+            return full(shape, 1, nb_dtype)
+        return impl
+
+    @extending.overload(np.zeros)
+    def zeros(shape, dtype=None):
+
+        if dtype is None:
+            nb_dtype = nb_types.double
+        else:
+            nb_dtype = dtype
+
+        def impl(shape, dtype=None):
+            return full(shape, 0, nb_dtype)
+        return impl
 
 
-def empty(shape, dtype=None):
-    pass
-
-def full(shape, fill_value, dtype=None):
-    pass
-
-
-@extending.overload(full)
-def omnisci_np_full(shape, fill_value, dtype=None):
-
-    if dtype is None:
-        nb_dtype = fill_value # fill_value here holds the type and not the data
-    else:
-        nb_dtype = dtype
-
-    def impl(shape, fill_value, dtype=None):
-        a = empty(shape, nb_dtype)
-        a.fill(nb_dtype(fill_value))
-        return a
-    return impl
-
-
-@extending.overload(empty)
-def omnisci_np_empty(shape, dtype=None):
-
-    if dtype is None:
-        nb_dtype = nb_types.double
-    else:
-        nb_dtype = dtype
-
-    def impl(shape, dtype=None):
-        return Array(shape, nb_dtype)
-    return impl
-
-@extending.overload(zeros)
-def omnisci_np_zeros(shape, dtype=None):
-
-    if dtype is None:
-        nb_dtype = nb_types.double
-    else:
-        nb_dtype = dtype
-
-    def impl(shape, dtype=None):
-        return full(shape, 0, nb_dtype)
-    return impl
-
-
-@extending.overload(ones)
-def omnisci_np_ones(shape, dtype=None):
-
-    if dtype is None:
-        nb_dtype = nb_types.double
-    else:
-        nb_dtype = dtype
-
-    def impl(shape, dtype=None):
-        return full(shape, 1, nb_dtype)
-    return impl
-
+omnisci_numpy_api = OmnisciNamespace()
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
 

@@ -43,7 +43,7 @@ libm_funcs = [*fp_funcs, *classification_funcs]
 
 stdio_funcs = ['printf', 'puts', 'fflush']
 
-stdlib_funcs = ['free']
+stdlib_funcs = ['free', 'calloc']
 
 
 def get_function_dependencies(module, funcname, _deps=None):
