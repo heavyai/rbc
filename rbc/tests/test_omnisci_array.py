@@ -436,7 +436,7 @@ def test_np_zeros(omnisci):
 
     @omnisci('double[](int64)')
     def np_zeros(sz):
-        return omni.zeros(sz)
+        return omni.zeros(sz, types.double)
 
     query = (
         'select np_zeros(3);'
@@ -454,7 +454,6 @@ def test_np_ones(omnisci):
 
     import numpy as np
     import rbc.omnisci_array as omni
-    from numba.core import types
 
     @omnisci('double[](int64)')
     def np_ones(sz):
@@ -476,15 +475,15 @@ def test_np_full(omnisci):
 
     import numpy as np
     import rbc.omnisci_array as omni
-    from numba.core import nb_types
+    from numba.core import types
 
     @omnisci('double[](int64, double)')
     def np_full(sz, fill_value):
-        a = omni.full(sz, fill_value, nb_types.double)
+        a = omni.full(sz, fill_value, types.double)
         return a
 
     query = (
-        'select np_full(5, 3);' # XXX: Replace 3 by 3.0
+        'select np_full(5, 3);'  # XXX: Replace 3 by 3.0
         .format(**locals())
     )
     _, result = omnisci.sql_execute(query)

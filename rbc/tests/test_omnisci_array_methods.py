@@ -117,7 +117,7 @@ def test_ndarray_methods(omnisci, method, args, expected):
         a = Array(size, 'double')
         a.fill(v)
         return a.prod(initial=initial)
-    
+
     query = 'select ndarray_{method}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')'
     _, result = omnisci.sql_execute(query)
