@@ -14,6 +14,7 @@ if get_version('numba') >= (0, 49):
 else:
     from numba import datamodel, cgutils, extending, errors, \
         numpy_support
+    from numba import types as nb_types
 
 
 int8_t = ir.IntType(8)
