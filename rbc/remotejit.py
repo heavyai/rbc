@@ -335,7 +335,7 @@ class RemoteJIT(object):
         # A collection of Caller instances. Each represents a function
         # that have many argument type dependent implementations.
         self._callers = []
-        self._last_ir_map = None
+        self._last_compile = None
         self._targets = None
 
         if local:
@@ -364,10 +364,57 @@ class RemoteJIT(object):
 
     @property
     def have_last_compile(self):
-        return self._last_ir_map is not None
+        """Check if compile data exists.
+
+        See `set_last_compile` method for more information.
+        """
+        return self._last_compile is not None
 
     def discard_last_compile(self):
-        self._last_ir_map = None
+        """Discard compile data.
+
+        See `set_last_compile` method for more information.
+        """
+        self._last_compile = None
+
+    def set_last_compile(self, compile_data):
+        """Save compile data.
+
+        The caller is responsible for discarding previous compiler
+        data by calling `discard_last_compile` method.
+
+        Parameters
+        ----------
+        compile_data : object
+          Compile data can be any Python objecty. When None, it is
+          interpreted as no compile data is available.
+
+        Usage
+        -----
+
+        The have/discard/set_last_compile methods provide a way to
+        avoid unnecessary compilations when the remote server supports
+        registration of compiled functions. The corresponding
+        `register` method is expected to use the following pattern:
+
+        ```
+          def register(self):
+              if self.have_last_compile:
+                  return
+              <compile defined functions>
+              self.set_last_compile(<compilation results>)
+        ```
+
+        The `discard_last_compile()` method is called when the compile
+        data becomes obsolete or needs to be discarded. For instance,
+        the compile data will be discarded when calling the following
+        methods: `reset`, `add_caller`. Note that the `add_caller`
+        call is triggered when applying the remotejit decorator to a
+        Python function to be compiled.
+
+        """
+        assert self._last_compile is None
+        self._last_compile = compile_data
 
     def retrieve_targets(self):
         """Retrieve target device information from remote client.
@@ -431,6 +478,8 @@ class RemoteJIT(object):
         return s
 
     def start_server(self, background=False):
+        """Start remotejit server from client.
+        """
         thrift_file = os.path.join(os.path.dirname(__file__),
                                    'remotejit.thrift')
         print('staring rpc.thrift server: %s' % (thrift_file), end='')
@@ -450,6 +499,8 @@ class RemoteJIT(object):
             print('... rpc.thrift server stopped')
 
     def stop_server(self):
+        """Stop remotejit server from client.
+        """
         if self.server_process is not None and self.server_process.is_alive():
             print('... stopping rpc.thrift server')
             self.server_process.terminate()
@@ -457,6 +508,8 @@ class RemoteJIT(object):
 
     @property
     def client(self):
+        """Return remote host connection as Client instance.
+        """
         if self._client is None:
             self._client = Client(
                 host=self.host,
@@ -469,7 +522,11 @@ class RemoteJIT(object):
     def remote_compile(self, func, ftype: Type, target_info: TargetInfo):
         """Remote compile function and signatures to machine code.
 
-        Returns the corresponding LLVM IR module instance which may be
+        The input function `func` is compiled to LLVM IR module, the
+        LLVM IR module is sent to remote host where the remote host is
+        expected to complete the compilation process.
+
+        Return the corresponding LLVM IR module instance which may be
         useful for debugging.
         """
         llvm_module = irtools.compile_to_LLVM(
@@ -483,6 +540,11 @@ class RemoteJIT(object):
 
     def remote_call(self, func, ftype: Type, arguments: tuple):
         """Call function remotely on given arguments.
+
+        The input function `func` is called remotely by sending the
+        arguments data to remote host where the previously compiled
+        function (see `remote_compile` method) is applied to the
+        arguments, and the result is returned to local process.
         """
         fullname = func.__name__ + ftype.mangle()
         response = self.client(remotejit=dict(call=(fullname, arguments)))
