@@ -425,23 +425,3 @@ def test_np_cumsum(omnisci):
     inp, out = list(result)[0]
     expected = np.cumsum(inp)
     assert np.isclose(expected, out, equal_nan=True).all()
-
-
-def test_np_operator_ne(omnisci):
-    omnisci.reset()
-
-    import numpy as np
-
-    @omnisci('int64[](int64[])')
-    def np_cumsum(a):
-        x = a != 3
-        return np.cumsum(a)
-
-    query = (
-        'select i8, np_cumsum(i8) from {omnisci.table_name};'
-        .format(**locals()))
-    _, result = omnisci.sql_execute(query)
-
-    inp, out = list(result)[0]
-    expected = np.cumsum(inp)
-    assert np.isclose(expected, out, equal_nan=True).all()

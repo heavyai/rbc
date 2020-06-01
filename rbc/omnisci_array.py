@@ -183,14 +183,105 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
+@extending.overload(np.invert)
+def omnisci_np_invert(a):
+    if isinstance(a, ArrayPointer):
+        def impl(a):
+            sz = len(a)
+            for i in range(sz):
+                a[i] = typesystem.boolean8(not a[i])
+            return a
+        return impl
+
+
+@extending.overload(operator.eq)
+def omnisci_array_eq(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            sz = len(a)
+            x = Array(sz, 'int8')
+            for i in range(sz):
+                x[i] = typesystem.boolean8(a[i] == e)
+            return x
+        return impl
+
+
 @extending.overload(operator.ne)
 def omnisci_array_ne(a, e):
     if isinstance(a, ArrayPointer):
         def impl(a, e):
-            x = Array(len(a), typesystem.boolean8)
-            for i in range(len(a)):
-                x[i] = typesystem.boolean8(operator.ne(a[i], e))
+            return np.invert(a == e)
+        return impl
+
+
+@extending.overload(operator.lt)
+def omnisci_array_lt(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            sz = len(a)
+            x = Array(sz, 'int8')
+            for i in range(sz):
+                x[i] = typesystem.boolean8(a[i] < e)
             return x
+        return impl
+
+
+@extending.overload(operator.le)
+def omnisci_array_le(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            sz = len(a)
+            x = Array(sz, 'int8')
+            for i in range(sz):
+                x[i] = typesystem.boolean8(a[i] <= e)
+            return x
+        return impl
+
+
+@extending.overload(operator.gt)
+def omnisci_array_gt(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            return np.invert(a <= e)
+        return impl
+
+
+@extending.overload(operator.ge)
+def omnisci_array_ge(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            return np.invert(a < e)
+        return impl
+
+
+@extending.lower_builtin(operator.is_, ArrayPointer, ArrayPointer)
+def _omnisci_array_is(context, builder, sig, args):
+    [a, b] = args
+    return builder.icmp_signed('==', a, b)
+
+
+@extending.lower_builtin(operator.is_not, ArrayPointer, ArrayPointer)
+def _omnisci_array_is_not(context, builder, sig, args):
+    [a, b] = args
+    return builder.icmp_signed('!=', a, b)
+
+
+@extending.overload(operator.is_)
+def omnisci_array_is(a, b):
+    breakpoint()
+    if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
+        return lambda a, b: _omnisci_array_is(a, b)
+
+
+@extending.overload(operator.contains)
+def omnisci_array_contains(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            sz = len(a)
+            for i in range(sz):
+                if a[i] == e:
+                    return True
+            return False
         return impl
 
 
