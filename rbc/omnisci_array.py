@@ -182,6 +182,17 @@ def omnisci_array_setitem(a, i, v):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
 
+@extending.overload(operator.ne)
+def omnisci_array_ne(a, e):
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            x = Array(len(a), typesystem.boolean8)
+            for i in range(len(a)):
+                x[i] = typesystem.boolean8(operator.ne(a[i], e))
+            return x
+        return impl
+
+
 def get_type_limits(eltype):
     np_dtype = numpy_support.as_dtype(eltype)
     if isinstance(eltype, types.Integer):
