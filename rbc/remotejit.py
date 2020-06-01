@@ -386,7 +386,7 @@ class RemoteJIT(object):
         Parameters
         ----------
         compile_data : object
-          Compile data can be any Python objecty. When None, it is
+          Compile data can be any Python object. When None, it is
           interpreted as no compile data is available.
 
         Usage
