@@ -266,13 +266,6 @@ def _omnisci_array_is_not(context, builder, sig, args):
     return builder.icmp_signed('!=', a, b)
 
 
-@extending.overload(operator.is_)
-def omnisci_array_is(a, b):
-    breakpoint()
-    if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
-        return lambda a, b: _omnisci_array_is(a, b)
-
-
 @extending.overload(operator.contains)
 def omnisci_array_contains(a, e):
     if isinstance(a, ArrayPointer):
