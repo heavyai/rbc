@@ -392,7 +392,6 @@ class RemoteOmnisci(RemoteJIT):
     def register(self):
         if self.have_last_compile:
             return
-
         thrift = self.thrift_client.thrift
 
         udfs = []
@@ -478,6 +477,8 @@ class RemoteOmnisci(RemoteJIT):
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout
             device_ir_map[device] = str(llvm_module)
+
+        self.set_last_compile(device_ir_map)
         return self.thrift_call('register_runtime_extension_functions',
                                 self.session_id,
                                 udfs, udtfs, device_ir_map)
