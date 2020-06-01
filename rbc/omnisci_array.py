@@ -185,6 +185,8 @@ def omnisci_array_setitem(a, i, v):
 
 @extending.overload(np.invert)
 def omnisci_np_invert(a):
+    """Implements `np.invert(expr)` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a):
             sz = len(a)
@@ -196,6 +198,8 @@ def omnisci_np_invert(a):
 
 @extending.overload(operator.eq)
 def omnisci_array_eq(a, e):
+    """Implements `a == e` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             sz = len(a)
@@ -208,6 +212,8 @@ def omnisci_array_eq(a, e):
 
 @extending.overload(operator.ne)
 def omnisci_array_ne(a, e):
+    """Implements `a != e` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             return np.invert(a == e)
@@ -216,6 +222,8 @@ def omnisci_array_ne(a, e):
 
 @extending.overload(operator.lt)
 def omnisci_array_lt(a, e):
+    """Implements `a < e` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             sz = len(a)
@@ -228,6 +236,8 @@ def omnisci_array_lt(a, e):
 
 @extending.overload(operator.le)
 def omnisci_array_le(a, e):
+    """Implements `a <= e` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             sz = len(a)
@@ -240,6 +250,8 @@ def omnisci_array_le(a, e):
 
 @extending.overload(operator.gt)
 def omnisci_array_gt(a, e):
+    """Implements `a > e` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             return np.invert(a <= e)
@@ -248,6 +260,8 @@ def omnisci_array_gt(a, e):
 
 @extending.overload(operator.ge)
 def omnisci_array_ge(a, e):
+    """Implements `a >= e` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             return np.invert(a < e)
@@ -256,18 +270,24 @@ def omnisci_array_ge(a, e):
 
 @extending.lower_builtin(operator.is_, ArrayPointer, ArrayPointer)
 def _omnisci_array_is(context, builder, sig, args):
+    """Implements `a is b` operation
+    """
     [a, b] = args
     return builder.icmp_signed('==', a, b)
 
 
 @extending.lower_builtin(operator.is_not, ArrayPointer, ArrayPointer)
 def _omnisci_array_is_not(context, builder, sig, args):
+    """Implements `a is not b` operation
+    """
     [a, b] = args
     return builder.icmp_signed('!=', a, b)
 
 
 @extending.overload(operator.contains)
 def omnisci_array_contains(a, e):
+    """Implements `e in a` operation
+    """
     if isinstance(a, ArrayPointer):
         def impl(a, e):
             sz = len(a)
