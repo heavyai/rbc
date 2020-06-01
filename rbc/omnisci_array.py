@@ -67,8 +67,9 @@ def omnisci_array_constructor(context, builder, sig, args):
     int8_t* allocate_varlen_buffer(int64_t element_count, int64_t element_size)
     '''
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+    # see https://github.com/xnd-project/rbc/issues/75
     alloc_fn = builder.module.get_or_insert_function(
-        alloc_fnty, name="allocate_varlen_buffer")
+        alloc_fnty, name="calloc")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))

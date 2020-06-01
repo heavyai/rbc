@@ -45,7 +45,6 @@ def omnisci():
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
-    m.reset()
     try:
         m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     except Exception as msg:
