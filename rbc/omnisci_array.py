@@ -329,11 +329,32 @@ def full(shape, fill_value, dtype=None):
     pass
 
 
+def full_like(a, fill_value, dtype=None):
+    pass
+
+
+@extending.overload(full_like)
+def omnisci_np_full_like(a, fill_value, dtype=None):
+
+    if dtype is None:
+        nb_dtype = a.eltype
+    else:
+        nb_dtype = dtype
+
+    def impl(a, fill_value, dtype=None):
+        sz = len(a)
+        other = Array(sz, nb_dtype)
+        other.fill(nb_dtype(fill_value))
+        return other
+    return impl
+
+
 @extending.overload(full)
 def omnisci_np_full(shape, fill_value, dtype=None):
 
+    # XXX: dtype should be infered from fill_value
     if dtype is None:
-        nb_dtype = fill_value
+        nb_dtype = nb_types.double
     else:
         nb_dtype = dtype
 
