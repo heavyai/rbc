@@ -437,6 +437,7 @@ def omnisci_np_ones_like(a, dtype=None):
             return full_like(a, 1, nb_dtype)
         return impl
 
+
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
 
 
