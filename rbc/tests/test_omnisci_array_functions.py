@@ -62,12 +62,28 @@ def np_ones_dtype(sz):
     return omni.ones(sz)
 
 
+def np_ones_like_dtype(i4):
+    return omni.ones_like(i4, dtype=types.double)
+
+
+def np_ones_like(i4):
+    return omni.ones_like(i4)
+
+
 def np_zeros(sz):
     return omni.zeros(sz, types.int32)
 
 
 def np_zeros_dtype(sz):
     return omni.zeros(sz)
+
+
+def np_zeros_like(i4):
+    return omni.zeros_like(i4)
+
+
+def np_zeros_like_dtype(i4):
+    return omni.zeros_like(i4, dtype=types.double)
 
 
 def np_full(sz, fill_value):
@@ -100,7 +116,11 @@ array_methods = [
     ('full_like_dtype', 'double[](int8[], double)', ('i1', 3.0), np.full(6, 3, dtype='q')),  # noqa: E501
     ('ones', 'int32[](int64)', (5,), np.ones(5, dtype=np.int32)),
     ('ones_dtype', 'double[](int64)', (5,), np.ones(5)),
+    ('ones_like', 'int32[](int32[])', ('i4',), np.ones(6, dtype='i')),
+    ('ones_like_dtype', 'double[](int32[])', ('i4',), np.ones(6, dtype='q')),
     ('zeros', 'int32[](int64)', (5,), np.zeros(5, dtype=np.int32)),
+    ('zeros_like', 'int32[](int32[])', ('i4',), np.zeros(6, dtype='i')),
+    ('zeros_like_dtype', 'double[](int32[])', ('i4',), np.zeros(6, dtype='q')),
     ('zeros_dtype', 'double[](int64)', (5,), np.zeros(5)),
     ('cumsum', 'double[](int32)', (5,), np.arange(1, 6)),
 ]

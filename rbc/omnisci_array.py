@@ -317,7 +317,15 @@ def zeros(shape, dtype=None):
     pass
 
 
+def zeros_like(a, dtype=None):
+    pass
+
+
 def ones(shape, dtype=None):
+    pass
+
+
+def ones_like(a, dtype=None):
     pass
 
 
@@ -331,22 +339,6 @@ def full(shape, fill_value, dtype=None):
 
 def full_like(a, fill_value, dtype=None):
     pass
-
-
-@extending.overload(full_like)
-def omnisci_np_full_like(a, fill_value, dtype=None):
-
-    if dtype is None:
-        nb_dtype = a.eltype
-    else:
-        nb_dtype = dtype
-
-    def impl(a, fill_value, dtype=None):
-        sz = len(a)
-        other = Array(sz, nb_dtype)
-        other.fill(nb_dtype(fill_value))
-        return other
-    return impl
 
 
 @extending.overload(full)
@@ -363,6 +355,22 @@ def omnisci_np_full(shape, fill_value, dtype=None):
         a.fill(nb_dtype(fill_value))
         return a
     return impl
+
+
+@extending.overload(full_like)
+def omnisci_np_full_like(a, fill_value, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, fill_value, dtype=None):
+            sz = len(a)
+            other = Array(sz, nb_dtype)
+            other.fill(nb_dtype(fill_value))
+            return other
+        return impl
 
 
 @extending.overload(empty)
@@ -391,6 +399,19 @@ def omnisci_np_zeros(shape, dtype=None):
     return impl
 
 
+@extending.overload(zeros_like)
+def omnisci_np_zeros_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, dtype=None):
+            return full_like(a, 0, nb_dtype)
+        return impl
+
+
 @extending.overload(ones)
 def omnisci_np_ones(shape, dtype=None):
 
@@ -403,6 +424,18 @@ def omnisci_np_ones(shape, dtype=None):
         return full(shape, 1, nb_dtype)
     return impl
 
+
+@extending.overload(ones_like)
+def omnisci_np_ones_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, dtype=None):
+            return full_like(a, 1, nb_dtype)
+        return impl
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
 
