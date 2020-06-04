@@ -287,6 +287,10 @@ def test_array_setitem(omnisci):
 
 
 def test_array_constructor_noreturn(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(
+            'crashes CUDA enabled omniscidb server [issue 94]')
+
     omnisci.reset()
 
     from rbc.omnisci_array import Array
