@@ -289,7 +289,7 @@ def test_array_setitem(omnisci):
 def test_array_constructor_noreturn(omnisci):
     if omnisci.has_cuda:
         pytest.skip(
-            f'crashes CUDA enabled omniscidb server [issue 94]')
+            'crashes CUDA enabled omniscidb server [issue 94]')
 
     omnisci.reset()
 
