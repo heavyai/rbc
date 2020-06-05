@@ -1,5 +1,5 @@
 numba
-llvmlite>=0.29
+llvmlite>=0.33
 pytest
 tblib
 pymapd
