@@ -1,4 +1,4 @@
-numba
+numba>=0.49
 llvmlite>=0.29
 pytest
 tblib
