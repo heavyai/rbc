@@ -137,52 +137,6 @@ def omnisci_array_len(x):
         return lambda x: omnisci_array_len_(x)
 
 
-@extending.intrinsic
-def omnisci_array_getitem_(typingctx, data, index):
-    sig = data.eltype(data, index)
-
-    def codegen(context, builder, signature, args):
-        data, index = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        arr = builder.load(builder.gep(rawptr, [int32_t(0)]))
-        ptr = builder.load(builder.gep(
-            arr, [int32_t(0), int32_t(0)]))
-        res = builder.load(builder.gep(ptr, [index]))
-
-        return res
-    return sig, codegen
-
-
-@extending.overload(operator.getitem)
-def omnisci_array_getitem(x, i):
-    if isinstance(x, ArrayPointer):
-        return lambda x, i: omnisci_array_getitem_(x, i)
-
-
-@extending.intrinsic
-def omnisci_array_setitem_(typingctx, data, index, value):
-    sig = types.none(data, index, value)
-
-    def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
-        data, index, value = args
-
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        ptr = builder.load(rawptr)
-
-        arr = builder.load(builder.gep(ptr, [zero, zero]))
-        builder.store(value, builder.gep(arr, [index]))
-
-    return sig, codegen
-
-
-@extending.overload(operator.setitem)
-def omnisci_array_setitem(a, i, v):
-    if isinstance(a, ArrayPointer):
-        return lambda a, i, v: omnisci_array_setitem_(a, i, v)
-
-
 @extending.overload(np.invert)
 def omnisci_np_invert(a):
     """Implements `np.invert(expr)` operation
@@ -193,108 +147,6 @@ def omnisci_np_invert(a):
             for i in range(sz):
                 a[i] = typesystem.boolean8(not a[i])
             return a
-        return impl
-
-
-@extending.overload(operator.eq)
-def omnisci_array_eq(a, e):
-    """Implements `a == e` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            sz = len(a)
-            x = Array(sz, 'int8')
-            for i in range(sz):
-                x[i] = typesystem.boolean8(a[i] == e)
-            return x
-        return impl
-
-
-@extending.overload(operator.ne)
-def omnisci_array_ne(a, e):
-    """Implements `a != e` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            return np.invert(a == e)
-        return impl
-
-
-@extending.overload(operator.lt)
-def omnisci_array_lt(a, e):
-    """Implements `a < e` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            sz = len(a)
-            x = Array(sz, 'int8')
-            for i in range(sz):
-                x[i] = typesystem.boolean8(a[i] < e)
-            return x
-        return impl
-
-
-@extending.overload(operator.le)
-def omnisci_array_le(a, e):
-    """Implements `a <= e` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            sz = len(a)
-            x = Array(sz, 'int8')
-            for i in range(sz):
-                x[i] = typesystem.boolean8(a[i] <= e)
-            return x
-        return impl
-
-
-@extending.overload(operator.gt)
-def omnisci_array_gt(a, e):
-    """Implements `a > e` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            return np.invert(a <= e)
-        return impl
-
-
-@extending.overload(operator.ge)
-def omnisci_array_ge(a, e):
-    """Implements `a >= e` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            return np.invert(a < e)
-        return impl
-
-
-@extending.lower_builtin(operator.is_, ArrayPointer, ArrayPointer)
-def _omnisci_array_is(context, builder, sig, args):
-    """Implements `a is b` operation
-    """
-    [a, b] = args
-    return builder.icmp_signed('==', a, b)
-
-
-@extending.lower_builtin(operator.is_not, ArrayPointer, ArrayPointer)
-def _omnisci_array_is_not(context, builder, sig, args):
-    """Implements `a is not b` operation
-    """
-    [a, b] = args
-    return builder.icmp_signed('!=', a, b)
-
-
-@extending.overload(operator.contains)
-def omnisci_array_contains(a, e):
-    """Implements `e in a` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a, e):
-            sz = len(a)
-            for i in range(sz):
-                if a[i] == e:
-                    return True
-            return False
         return impl
 
 
@@ -426,6 +278,121 @@ def omnisci_np_cumsum(a):
                 out[i] = out[i-1] + a[i]
             return out
         return impl
+
+
+def overload_binary_operator(op):
+
+    def omnisci_operator_impl(a, e):
+        if isinstance(a, ArrayPointer):
+            if isinstance(e, ArrayPointer):
+                def impl(a, e):
+                    if len(a) != len(e):
+                        return False
+                    for i in range(len(a)):
+                        if not op(a[i], e[i]):
+                            return False
+                    return True
+            elif isinstance(e, types.Number): # e is Number
+                def impl(a, e):
+                    sz = len(a)
+                    x = Array(sz, 'int8')
+                    for i in range(sz):
+                        x[i] = typesystem.boolean8(op(a[i], e)) 
+                    return x
+            return impl
+
+    decorate = extending.overload(op)
+
+    def wrapper(overload_func):
+        return decorate(omnisci_operator_impl)
+
+    return wrapper
+
+@overload_binary_operator(operator.eq)
+@overload_binary_operator(operator.ne)
+@overload_binary_operator(operator.lt)
+@overload_binary_operator(operator.le)
+@overload_binary_operator(operator.gt)
+@overload_binary_operator(operator.ge)
+def omnisci_binary_operator_fn(a, e):
+    pass
+
+
+@extending.lower_builtin(operator.is_, ArrayPointer, ArrayPointer)
+def _omnisci_array_is(context, builder, sig, args):
+    """Implements `a is b` operation
+    """
+    [a, b] = args
+    return builder.icmp_signed('==', a, b)
+
+
+@extending.lower_builtin(operator.is_not, ArrayPointer, ArrayPointer)
+def _omnisci_array_is_not(context, builder, sig, args):
+    """Implements `a is not b` operation
+    """
+    [a, b] = args
+    return builder.icmp_signed('!=', a, b)
+
+
+@extending.overload(operator.contains)
+def omnisci_array_contains(a, e):
+    """Implements `e in a` operation
+    """
+    if isinstance(a, ArrayPointer):
+        def impl(a, e):
+            sz = len(a)
+            for i in range(sz):
+                if a[i] == e:
+                    return True
+            return False
+        return impl
+
+
+@extending.intrinsic
+def omnisci_array_getitem_(typingctx, data, index):
+    sig = data.eltype(data, index)
+
+    def codegen(context, builder, signature, args):
+        data, index = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        arr = builder.load(builder.gep(rawptr, [int32_t(0)]))
+        ptr = builder.load(builder.gep(
+            arr, [int32_t(0), int32_t(0)]))
+        res = builder.load(builder.gep(ptr, [index]))
+
+        return res
+    return sig, codegen
+
+
+@extending.overload(operator.getitem)
+def omnisci_array_getitem(x, i):
+    if isinstance(x, ArrayPointer):
+        return lambda x, i: omnisci_array_getitem_(x, i)
+
+
+@extending.intrinsic
+def omnisci_array_setitem_(typingctx, data, index, value):
+    sig = types.none(data, index, value)
+
+    def codegen(context, builder, signature, args):
+        zero = int32_t(0)
+
+        data, index, value = args
+
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        ptr = builder.load(rawptr)
+
+        arr = builder.load(builder.gep(ptr, [zero, zero]))
+        builder.store(value, builder.gep(arr, [index]))
+
+    return sig, codegen
+
+
+@extending.overload(operator.setitem)
+def omnisci_array_setitem(a, i, v):
+    if isinstance(a, ArrayPointer):
+        return lambda a, i, v: omnisci_array_setitem_(a, i, v)
+
 
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match

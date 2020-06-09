@@ -23,6 +23,12 @@ operator_methods = [
     ('le', 'int8[](int64, int32)', (6, 3), [1, 1, 1, 1, 0, 0]),
     ('gt', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 0, 1, 1]),
     ('ge', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 1, 1, 1]),
+    ('eq_array', 'bool(int64, int32)', (6, 3), True),
+    ('ne_array', 'bool(int64, int32)', (6, 3), False),
+    ('lt_array', 'bool(int64, int32)', (6, 3), False),
+    ('le_array', 'bool(int64, int32)', (6, 3), True),
+    ('gt_array', 'bool(int64, int32)', (6, 3), False),
+    ('ge_array', 'bool(int64, int32)', (6, 3), True),
     ('in', 'int8(int64, int32)', (6, 3), True),
     ('not_in', 'int8(int64, int32)', (6, 3), False),
     ('is', 'int8(int64, int32)', (6, 3), True),
@@ -38,11 +44,25 @@ def operator_eq(size, v):
     return a == v
 
 
+def operator_eq_array(size, v):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return a == a
+
+
 def operator_ne(size, v):
     a = Array(size, 'int32')
     for i in range(size):
         a[i] = nb_types.int32(i)
     return a != v
+
+
+def operator_ne_array(size, v):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return a != a
 
 
 def operator_lt(size, v):
@@ -52,11 +72,25 @@ def operator_lt(size, v):
     return a < v
 
 
+def operator_lt_array(size, v):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return a < a
+
+
 def operator_le(size, v):
     a = Array(size, 'int32')
     for i in range(size):
         a[i] = nb_types.int32(i)
     return a <= v
+
+
+def operator_le_array(size, v):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return a <= a
 
 
 def operator_gt(size, v):
@@ -66,11 +100,25 @@ def operator_gt(size, v):
     return a > v
 
 
+def operator_gt_array(size, v):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return a > a
+
+
 def operator_ge(size, v):
     a = Array(size, 'int32')
     for i in range(size):
         a[i] = nb_types.int32(i)
     return a >= v
+
+
+def operator_ge_array(size, v):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return a >= a
 
 
 def operator_in(size, v):
@@ -120,6 +168,8 @@ def test_array_operators(omnisci, suffix, signature, args, expected):
     out = list(result)[0]
 
     if suffix in ['in', 'not_in']:
+        assert (expected == out[0]), 'operator_' + suffix
+    elif '_array' in suffix:
         assert (expected == out[0]), 'operator_' + suffix
     else:
         assert np.array_equal(expected, out[0]), 'operator_' + suffix
