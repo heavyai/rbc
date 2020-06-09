@@ -292,12 +292,12 @@ def overload_binary_operator(op):
                         if not op(a[i], e[i]):
                             return False
                     return True
-            elif isinstance(e, types.Number): # e is Number
+            elif isinstance(e, types.Number):
                 def impl(a, e):
                     sz = len(a)
                     x = Array(sz, 'int8')
                     for i in range(sz):
-                        x[i] = typesystem.boolean8(op(a[i], e)) 
+                        x[i] = typesystem.boolean8(op(a[i], e))
                     return x
             return impl
 
@@ -307,6 +307,7 @@ def overload_binary_operator(op):
         return decorate(omnisci_operator_impl)
 
     return wrapper
+
 
 @overload_binary_operator(operator.eq)
 @overload_binary_operator(operator.ne)
@@ -392,7 +393,6 @@ def omnisci_array_setitem_(typingctx, data, index, value):
 def omnisci_array_setitem(a, i, v):
     if isinstance(a, ArrayPointer):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
-
 
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
