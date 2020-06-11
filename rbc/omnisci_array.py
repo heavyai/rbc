@@ -280,7 +280,7 @@ def omnisci_np_cumsum(a):
         return impl
 
 
-def overload_binary_operator(op):
+def overload_binary_cmp_op(op):
 
     def omnisci_operator_impl(a, e):
         if isinstance(a, ArrayPointer):
@@ -309,13 +309,52 @@ def overload_binary_operator(op):
     return wrapper
 
 
-@overload_binary_operator(operator.eq)
-@overload_binary_operator(operator.ne)
-@overload_binary_operator(operator.lt)
-@overload_binary_operator(operator.le)
-@overload_binary_operator(operator.gt)
-@overload_binary_operator(operator.ge)
-def omnisci_binary_operator_fn(a, e):
+@overload_binary_cmp_op(operator.eq)
+@overload_binary_cmp_op(operator.ne)
+@overload_binary_cmp_op(operator.lt)
+@overload_binary_cmp_op(operator.le)
+@overload_binary_cmp_op(operator.gt)
+@overload_binary_cmp_op(operator.ge)
+def omnisci_binary_cmp_operator_fn(a, e):
+    pass
+
+
+def overload_binary_op(op):
+
+    def omnisci_operator_impl(a, b):
+        if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
+            nb_dtype = a.eltype
+
+            def impl(a, b):
+                # XXX: raise exception if len(a) != len(b)
+                sz = len(a)
+                x = Array(sz, nb_dtype)
+                for i in range(sz):
+                    x[i] = nb_dtype(op(a[i], b[i]))
+                return x
+            return impl
+
+    decorate = extending.overload(op)
+
+    def wrapper(overload_func):
+        return decorate(omnisci_operator_impl)
+
+    return wrapper
+
+
+@overload_binary_op(operator.add)
+@overload_binary_op(operator.and_)
+@overload_binary_op(operator.floordiv)
+@overload_binary_op(operator.lshift)
+@overload_binary_op(operator.mod)
+@overload_binary_op(operator.mul)
+@overload_binary_op(operator.or_)
+@overload_binary_op(operator.pow)
+@overload_binary_op(operator.rshift)
+@overload_binary_op(operator.sub)
+@overload_binary_op(operator.truediv)
+@overload_binary_op(operator.xor)
+def omnisci_binary_operator_fn(a, b):
     pass
 
 
