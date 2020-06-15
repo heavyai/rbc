@@ -319,7 +319,7 @@ def omnisci_binary_cmp_operator_fn(a, e):
     pass
 
 
-def overload_binary_op(op):
+def overload_binary_op(op, inplace=False):
 
     def omnisci_operator_impl(a, b):
         if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
@@ -328,7 +328,12 @@ def overload_binary_op(op):
             def impl(a, b):
                 # XXX: raise exception if len(a) != len(b)
                 sz = len(a)
-                x = Array(sz, nb_dtype)
+
+                if inplace:
+                    x = a
+                else:
+                    x = Array(sz, nb_dtype)
+
                 for i in range(sz):
                     x[i] = nb_dtype(op(a[i], b[i]))
                 return x
@@ -354,6 +359,18 @@ def overload_binary_op(op):
 @overload_binary_op(operator.sub)
 @overload_binary_op(operator.truediv)
 @overload_binary_op(operator.xor)
+@overload_binary_op(operator.iadd, inplace=True)
+@overload_binary_op(operator.iand, inplace=True)
+@overload_binary_op(operator.ifloordiv, inplace=True)
+@overload_binary_op(operator.ilshift, inplace=True)
+@overload_binary_op(operator.imod, inplace=True)
+@overload_binary_op(operator.imul, inplace=True)
+@overload_binary_op(operator.ior, inplace=True)
+@overload_binary_op(operator.ipow, inplace=True)
+@overload_binary_op(operator.irshift, inplace=True)
+@overload_binary_op(operator.isub, inplace=True)
+@overload_binary_op(operator.itruediv, inplace=True)
+@overload_binary_op(operator.ixor, inplace=True)
 def omnisci_binary_operator_fn(a, b):
     pass
 

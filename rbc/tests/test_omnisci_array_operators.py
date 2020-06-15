@@ -28,6 +28,19 @@ operator_methods = [
     ('ge_array', 'bool(int64, int32)', (6, 3), True),
     ('gt', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 0, 1, 1]),
     ('gt_array', 'bool(int64, int32)', (6, 3), False),
+    ('iadd', 'int32[](int64)', (6,), [1, 2, 3, 4, 5, 6]),
+    ('iand', 'int32[](int64)', (6,), [0, 0, 2, 2, 0, 0]),
+    ('ifloordiv', 'int32[](int64)', (6,), [3, 2, 2, 2, 2, 1]),
+    ('ifloordiv2', 'double[](int64)', (6,), [3, 2, 2, 2, 2, 1]),
+    ('ilshift', 'int32[](int64)', (6,), [0, 16, 16, 12, 8, 5]),
+    ('imul', 'int32[](int64)', (6,), [0, 4, 6, 6, 4, 0]),
+    ('ior', 'int32[](int64)', (6,), [5, 5, 3, 3, 5, 5]),
+    ('isub', 'int32[](int64)', (6,), [-5, -3, -1, 1, 3, 5]),
+    ('ipow', 'int32[](int64)', (6,), [1, 32, 81, 64, 25, 6]),
+    ('irshift', 'int32[](int64)', (6,), [0, 0, 0, 0, 2, 5]),
+    ('itruediv', 'int32[](int64)', (6,), [3, 2, 2, 2, 2, 1]),
+    ('itruediv2', 'double[](int64)', (6,), [3.3333333333333335, 2.75, 2.4, 2.1666666666666665, 2.0, 1.875]),  # noqa: E501
+    ('ixor', 'int32[](int64)', (6,), [5, 5, 1, 1, 5, 5]),
     ('in', 'int8(int64, int32)', (6, 3), True),
     ('is', 'int8(int64, int32)', (6, 3), True),
     ('is_not', 'int8(int64, int32)', (6, 3), False),
@@ -38,6 +51,8 @@ operator_methods = [
     ('lt', 'int8[](int64, int32)', (6, 3), [1, 1, 1, 0, 0, 0]),
     ('lt_array', 'bool(int64, int32)', (6, 3), False),
     ('mul', 'int32[](int64)', (6,), [0, 4, 6, 6, 4, 0]),
+    ('mod', 'int32[](int64)', (6,), [0, 4, 1, 5, 2, 6]),
+    ('imod', 'int32[](int64)', (6,), [0, 4, 1, 5, 2, 6]),
     ('ne', 'int8[](int64, int32)', (6, 3), [1, 1, 1, 0, 1, 1]),
     ('ne_array', 'bool(int64, int32)', (6, 3), False),
     ('not_in', 'int8(int64, int32)', (6, 3), False),
@@ -60,6 +75,16 @@ def operator_rshift(size):
     return operator.rshift(a, b)
 
 
+def operator_irshift(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.irshift(a, b)
+    return a
+
+
 def operator_lshift(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
@@ -67,6 +92,16 @@ def operator_lshift(size):
         a[i] = nb_types.int32(i)
         b[i] = nb_types.int32(size-i-1)
     return operator.lshift(a, b)
+
+
+def operator_ilshift(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.ilshift(a, b)
+    return a
 
 
 def operator_floordiv(size):
@@ -78,6 +113,16 @@ def operator_floordiv(size):
     return operator.floordiv(a, b)
 
 
+def operator_ifloordiv(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i+10)
+        b[i] = nb_types.int32(i+3)
+    operator.ifloordiv(a, b)
+    return a
+
+
 def operator_floordiv2(size):
     a = Array(size, 'double')
     b = Array(size, 'double')
@@ -85,6 +130,16 @@ def operator_floordiv2(size):
         a[i] = nb_types.double(i+10)
         b[i] = nb_types.double(i+3)
     return operator.floordiv(a, b)
+
+
+def operator_ifloordiv2(size):
+    a = Array(size, 'double')
+    b = Array(size, 'double')
+    for i in range(size):
+        a[i] = nb_types.double(i+10)
+        b[i] = nb_types.double(i+3)
+    operator.ifloordiv(a, b)
+    return a
 
 
 def operator_truediv(size):
@@ -96,6 +151,16 @@ def operator_truediv(size):
     return operator.truediv(a, b)
 
 
+def operator_itruediv(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i+10)
+        b[i] = nb_types.int32(i+3)
+    operator.itruediv(a, b)
+    return a
+
+
 def operator_truediv2(size):
     a = Array(size, 'double')
     b = Array(size, 'double')
@@ -103,6 +168,16 @@ def operator_truediv2(size):
         a[i] = nb_types.double(i+10)
         b[i] = nb_types.double(i+3)
     return operator.truediv(a, b)
+
+
+def operator_itruediv2(size):
+    a = Array(size, 'double')
+    b = Array(size, 'double')
+    for i in range(size):
+        a[i] = nb_types.double(i+10)
+        b[i] = nb_types.double(i+3)
+    operator.itruediv(a, b)
+    return a
 
 
 def operator_pow(size):
@@ -114,6 +189,16 @@ def operator_pow(size):
     return operator.pow(a, b)
 
 
+def operator_ipow(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i+1)
+        b[i] = nb_types.int32(size-i)
+    operator.ipow(a, b)
+    return a
+
+
 def operator_mul(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
@@ -121,6 +206,35 @@ def operator_mul(size):
         a[i] = nb_types.int32(i)
         b[i] = nb_types.int32(size-i-1)
     return operator.mul(a, b)
+
+
+def operator_imul(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.imul(a, b)
+    return a
+
+
+def operator_mod(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i * 123)
+        b[i] = nb_types.int32(7)
+    return operator.mod(a, b)
+
+
+def operator_imod(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i * 123)
+        b[i] = nb_types.int32(7)
+    operator.imod(a, b)
+    return a
 
 
 def operator_sub(size):
@@ -132,6 +246,16 @@ def operator_sub(size):
     return operator.sub(a, b)
 
 
+def operator_isub(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.isub(a, b)
+    return a
+
+
 def operator_add(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
@@ -139,6 +263,16 @@ def operator_add(size):
         a[i] = nb_types.int32(i)
         b[i] = nb_types.int32(size-i-1)
     return operator.add(a, b)
+
+
+def operator_iadd(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(1)
+    operator.iadd(a, b)
+    return a
 
 
 def operator_xor(size):
@@ -150,6 +284,16 @@ def operator_xor(size):
     return operator.xor(a, b)
 
 
+def operator_ixor(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.ixor(a, b)
+    return a
+
+
 def operator_or_(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
@@ -159,6 +303,16 @@ def operator_or_(size):
     return operator.or_(a, b)
 
 
+def operator_ior(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.ior(a, b)
+    return a
+
+
 def operator_and_(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
@@ -166,6 +320,16 @@ def operator_and_(size):
         a[i] = nb_types.int32(i)
         b[i] = nb_types.int32(size-i-1)
     return operator.and_(a, b)
+
+
+def operator_iand(size):
+    a = Array(size, 'int32')
+    b = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+        b[i] = nb_types.int32(size-i-1)
+    operator.iand(a, b)
+    return a
 
 
 def operator_eq(size, v):
