@@ -118,6 +118,10 @@ def ndarray_prod_initial(size, v, initial):
 def test_ndarray_methods(omnisci, method, signature, args, expected):
     omnisci.reset()
 
+    if omnisci.has_cuda:
+        pytest.skip(
+            f'{method}: crashes CUDA enabled omniscidb server [issue 93]')
+
     omnisci(signature)(eval('ndarray_{}'.format(method)))
 
     query = 'select ndarray_{method}'.format(**locals()) + \
