@@ -420,6 +420,7 @@ def omnisci_array_countOf(a, b):
             return cnt
         return impl_countOf
 
+
 @extending.lower_builtin(operator.is_, ArrayPointer, ArrayPointer)
 def _omnisci_array_is(context, builder, sig, args):
     """Implements `a is b` operation
