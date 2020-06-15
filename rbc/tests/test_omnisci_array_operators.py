@@ -18,6 +18,7 @@ def omnisci():
 
 
 operator_methods = [
+    ('abs', 'int32[](int64)', (6,), np.arange(6)),
     ('add', 'int32[](int64)', (6,), np.full(6, 5)),
     ('and_', 'int32[](int64)', (6,), [0, 0, 2, 2, 0, 0]),
     ('eq', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 1, 0, 0]),
@@ -40,8 +41,10 @@ operator_methods = [
     ('mul', 'int32[](int64)', (6,), [0, 4, 6, 6, 4, 0]),
     ('ne', 'int8[](int64, int32)', (6, 3), [1, 1, 1, 0, 1, 1]),
     ('ne_array', 'bool(int64, int32)', (6, 3), False),
-    ('not_in', 'int8(int64, int32)', (6, 3), False),
+    ('neg', 'int32[](int64)', (6,), operator.neg(np.arange(6))),
+    ('notin', 'int8(int64, int32)', (6, 3), False),
     ('or_', 'int32[](int64)', (6,), [5, 5, 3, 3, 5, 5]),
+    ('pos', 'int32[](int64)', (6,), operator.pos(operator.neg(np.arange(6)))),
     ('pow', 'int32[](int64)', (6,), [1, 32, 81, 64, 25, 6]),
     ('rshift', 'int32[](int64)', (6,), [0, 0, 0, 0, 2, 5]),
     ('sub', 'int32[](int64)', (6,), [-5, -3, -1, 1, 3, 5]),
@@ -49,6 +52,27 @@ operator_methods = [
     ('truediv2', 'double[](int64)', (6,), [3.3333333333333335, 2.75, 2.4, 2.1666666666666665, 2.0, 1.875]),  # noqa: E501
     ('xor', 'int32[](int64)', (6,), [5, 5, 1, 1, 5, 5]),
 ]
+
+
+def operator_neg(size):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return operator.neg(a)
+
+
+def operator_abs(size):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(-i)
+    return abs(a)
+
+
+def operator_pos(size):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(-i)
+    return operator.pos(a)
 
 
 def operator_rshift(size):
@@ -259,7 +283,7 @@ def operator_in(size, v):
     return v in a
 
 
-def operator_not_in(size, v):
+def operator_notin(size, v):
     a = Array(size, 'int32')
     for i in range(size):
         a[i] = nb_types.int32(i)
@@ -298,7 +322,7 @@ def test_array_operators(omnisci, suffix, signature, args, expected):
     _, result = omnisci.sql_execute(query)
     out = list(result)[0]
 
-    if suffix in ['in', 'not_in']:
+    if suffix in ['in', 'notin']:
         assert (expected == out[0]), 'operator_' + suffix
     elif '_array' in suffix:
         assert (expected == out[0]), 'operator_' + suffix

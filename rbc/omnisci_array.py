@@ -358,6 +358,36 @@ def omnisci_binary_operator_fn(a, b):
     pass
 
 
+def overload_unary_op(op):
+
+    def omnisci_operator_impl(a):
+        if isinstance(a, ArrayPointer):
+            nb_dtype = a.eltype
+
+            def impl(a):
+                sz = len(a)
+                x = Array(sz, nb_dtype)
+                for i in range(sz):
+                    x[i] = nb_dtype(op(a[i]))
+                return x
+            return impl
+
+    decorate = extending.overload(op)
+
+    def wrapper(overload_func):
+        return decorate(omnisci_operator_impl)
+
+    return wrapper
+
+
+@overload_unary_op(abs)
+@overload_unary_op(operator.abs)
+@overload_unary_op(operator.neg)
+@overload_unary_op(operator.pos)
+def omnisci_unary_op(a):
+    pass
+
+
 @extending.lower_builtin(operator.is_, ArrayPointer, ArrayPointer)
 def _omnisci_array_is(context, builder, sig, args):
     """Implements `a is b` operation
