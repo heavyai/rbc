@@ -18,6 +18,7 @@ def omnisci():
 
 
 operator_methods = [
+    ('abs', 'int32[](int64)', (6,), np.arange(6)),
     ('add', 'int32[](int64)', (6,), np.full(6, 5)),
     ('and_', 'int32[](int64)', (6,), [0, 0, 2, 2, 0, 0]),
     ('eq', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 1, 0, 0]),
@@ -40,6 +41,7 @@ operator_methods = [
     ('irshift', 'int32[](int64)', (6,), [0, 0, 0, 0, 2, 5]),
     ('itruediv', 'int32[](int64)', (6,), [3, 2, 2, 2, 2, 1]),
     ('itruediv2', 'double[](int64)', (6,), [3.3333333333333335, 2.75, 2.4, 2.1666666666666665, 2.0, 1.875]),  # noqa: E501
+    ('imod', 'int32[](int64)', (6,), [0, 4, 1, 5, 2, 6]),
     ('ixor', 'int32[](int64)', (6,), [5, 5, 1, 1, 5, 5]),
     ('in', 'int8(int64, int32)', (6, 3), True),
     ('is', 'int8(int64, int32)', (6, 3), True),
@@ -52,11 +54,12 @@ operator_methods = [
     ('lt_array', 'bool(int64, int32)', (6, 3), False),
     ('mul', 'int32[](int64)', (6,), [0, 4, 6, 6, 4, 0]),
     ('mod', 'int32[](int64)', (6,), [0, 4, 1, 5, 2, 6]),
-    ('imod', 'int32[](int64)', (6,), [0, 4, 1, 5, 2, 6]),
     ('ne', 'int8[](int64, int32)', (6, 3), [1, 1, 1, 0, 1, 1]),
+    ('neg', 'int32[](int64)', (6,), [0, -1, -2, -3, -4, -5]),
     ('ne_array', 'bool(int64, int32)', (6, 3), False),
     ('not_in', 'int8(int64, int32)', (6, 3), False),
     ('or_', 'int32[](int64)', (6,), [5, 5, 3, 3, 5, 5]),
+    ('pos', 'int32[](int64)', (6,), [0, -1, -2, -3, -4, -5]),
     ('pow', 'int32[](int64)', (6,), [1, 32, 81, 64, 25, 6]),
     ('rshift', 'int32[](int64)', (6,), [0, 0, 0, 0, 2, 5]),
     ('sub', 'int32[](int64)', (6,), [-5, -3, -1, 1, 3, 5]),
@@ -64,6 +67,27 @@ operator_methods = [
     ('truediv2', 'double[](int64)', (6,), [3.3333333333333335, 2.75, 2.4, 2.1666666666666665, 2.0, 1.875]),  # noqa: E501
     ('xor', 'int32[](int64)', (6,), [5, 5, 1, 1, 5, 5]),
 ]
+
+
+def operator_neg(size):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(i)
+    return operator.neg(a)
+
+
+def operator_abs(size):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(-i)
+    return abs(a)
+
+
+def operator_pos(size):
+    a = Array(size, 'int32')
+    for i in range(size):
+        a[i] = nb_types.int32(-i)
+    return operator.pos(a)
 
 
 def operator_rshift(size):
