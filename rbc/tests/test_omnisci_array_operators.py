@@ -21,6 +21,8 @@ operator_methods = [
     ('abs', 'int32[](int64)', (6,), np.arange(6)),
     ('add', 'int32[](int64)', (6,), np.full(6, 5)),
     ('and_', 'int32[](int64)', (6,), [0, 0, 2, 2, 0, 0]),
+    ('countOf', 'int64(int64, int64, int64)', (6, 3, 4), 0),
+    ('countOf', 'int64(int64, int64, int64)', (6, 3, 3), 6),
     ('eq', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 1, 0, 0]),
     ('eq_array', 'bool(int64, int32)', (6, 3), True),
     ('floordiv', 'int32[](int64)', (6,), [3, 2, 2, 2, 2, 1]),
@@ -67,6 +69,13 @@ operator_methods = [
     ('truediv2', 'double[](int64)', (6,), [3.3333333333333335, 2.75, 2.4, 2.1666666666666665, 2.0, 1.875]),  # noqa: E501
     ('xor', 'int32[](int64)', (6,), [5, 5, 1, 1, 5, 5]),
 ]
+
+
+def operator_countOf(size, fill_value, b):
+    a = Array(size, 'int64')
+    for i in range(size):
+        a[i] = fill_value
+    return operator.countOf(a, b)
 
 
 def operator_neg(size):
