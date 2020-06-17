@@ -7,8 +7,8 @@ from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
-from .omnisci_array import array_type_converter
-from .omnisci_pipeline import OmnisciCompilerPipeline
+from .omnisci_array import array_type_converter, OmnisciCompilerPipeline
+# from .omnisci_array.omnisci_pipeline import OmnisciCompilerPipeline
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError
