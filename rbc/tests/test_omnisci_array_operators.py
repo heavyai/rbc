@@ -20,7 +20,7 @@ def omnisci():
 operator_methods = [
     ('abs', 'int32[](int64)', (6,), np.arange(6)),
     ('add', 'int32[](int64)', (6,), np.full(6, 5)),
-    ('and_', 'int32[](int64)', (6,), [0, 0, 2, 2, 0, 0]),
+    ('and_bw', 'int32[](int64)', (6,), [0, 0, 2, 2, 0, 0]),
     ('countOf', 'int64(int64, int64, int64)', (6, 3, 4), 0),
     ('countOf', 'int64(int64, int64, int64)', (6, 3, 3), 6),
     ('eq', 'int8[](int64, int32)', (6, 3), [0, 0, 0, 1, 0, 0]),
@@ -60,7 +60,7 @@ operator_methods = [
     ('neg', 'int32[](int64)', (6,), [0, -1, -2, -3, -4, -5]),
     ('ne_array', 'bool(int64, int32)', (6, 3), False),
     ('not_in', 'int8(int64, int32)', (6, 3), False),
-    ('or_', 'int32[](int64)', (6,), [5, 5, 3, 3, 5, 5]),
+    ('or_bw', 'int32[](int64)', (6,), [5, 5, 3, 3, 5, 5]),
     ('pos', 'int32[](int64)', (6,), [0, -1, -2, -3, -4, -5]),
     ('pow', 'int32[](int64)', (6,), [1, 32, 81, 64, 25, 6]),
     ('rshift', 'int32[](int64)', (6,), [0, 0, 0, 0, 2, 5]),
@@ -327,7 +327,7 @@ def operator_ixor(size):
     return a
 
 
-def operator_or_(size):
+def operator_or_bw(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
     for i in range(size):
@@ -346,7 +346,7 @@ def operator_ior(size):
     return a
 
 
-def operator_and_(size):
+def operator_and_bw(size):
     a = Array(size, 'int32')
     b = Array(size, 'int32')
     for i in range(size):
