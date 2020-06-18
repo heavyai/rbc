@@ -1135,9 +1135,6 @@ if nb is not None:
     boolean1 = Boolean1('boolean1')
     boolean8 = Boolean8('boolean8')
 
-    _numba_imap[boolean1] = 'bool'
-    _numba_imap[boolean8] = 'int8'
-
     @lower_cast(Boolean1, nb.types.Boolean)
     @lower_cast(Boolean8, nb.types.Boolean)
     def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
