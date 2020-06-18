@@ -274,9 +274,11 @@ def omnisci_np_cumsum(a):
         def impl(a):
             sz = len(a)
             out = Array(sz, eltype)
-            out[0] = a[0]
-            for i in range(1, sz):
-                out[i] = out[i-1] + a[i]
+            for i in range(sz):
+                out[i] = a[i]
+            # out[0] = a[0]
+            # for i in range(1, sz):
+            #     out[i] = out[i-1] + a[i]
             return out
         return impl
 
@@ -391,6 +393,21 @@ def omnisci_np_ones(shape, dtype=None):
     def impl(shape, dtype=None):
         return full(shape, 1, nb_dtype)
     return impl
+
+
+@extending.overload(ones_like)
+def omnisci_np_ones_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, dtype=None):
+            return full_like(a, 1, nb_dtype)
+        return impl
+
+
 def overload_binary_cmp_op(op):
 
     def omnisci_operator_impl(a, e):
@@ -606,19 +623,6 @@ def omnisci_array_setitem_(typingctx, data, index, value):
 def omnisci_array_setitem(a, i, v):
     if isinstance(a, ArrayPointer):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
-
-
-@extending.overload(ones_like)
-def omnisci_np_ones_like(a, dtype=None):
-    if isinstance(a, ArrayPointer):
-        if dtype is None:
-            nb_dtype = a.eltype
-        else:
-            nb_dtype = dtype
-
-        def impl(a, dtype=None):
-            return full_like(a, 1, nb_dtype)
-        return impl
 
 
 _array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
