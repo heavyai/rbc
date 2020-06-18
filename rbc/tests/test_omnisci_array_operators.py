@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from rbc._omnisci import Array
+from rbc.omnisci_backend import Array
 from numba import types as nb_types
 import operator
 
