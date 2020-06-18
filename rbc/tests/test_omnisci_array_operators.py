@@ -486,6 +486,12 @@ def operator_is_not2(size, v):
 @pytest.mark.parametrize("suffix, signature, args, expected", operator_methods,
                          ids=[item[0] for item in operator_methods])
 def test_array_operators(omnisci, suffix, signature, args, expected):
+
+    if omnisci.has_cuda and suffix in ['countOf', 'in', 'not_in']:
+        # https://github.com/xnd-project/rbc/issues/107
+        pytest.skip(f'operator_{suffix}: crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 107]')
+
     omnisci.reset()
 
     omnisci(signature)(eval('operator_{}'.format(suffix)))
