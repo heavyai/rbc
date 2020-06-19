@@ -48,10 +48,10 @@ def omnisci():
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
-    try:
-        m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
-    except Exception as msg:
-        print('%s in deardown' % (type(msg)))
+    # try:
+    #     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    # except Exception as msg:
+    #     print('%s in deardown' % (type(msg)))
 
 
 def np_ones(sz):
@@ -87,13 +87,11 @@ def np_zeros_like_dtype(i4):
 
 
 def np_full(sz, fill_value):
-    a = omni.full(sz, fill_value, types.double)
-    return a
+    return omni.full(sz, fill_value, types.double)
 
 
 def np_full_dtype(sz, fill_value):
-    a = omni.full(sz, fill_value)
-    return a
+    return omni.full(sz, fill_value)
 
 
 def np_full_like(i1, fill_value):
@@ -131,7 +129,7 @@ array_methods = [
 def test_array_methods(omnisci, method, signature, args, expected):
     omnisci.reset()
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    fn = omnisci(signature)(eval('np_{}'.format(method)))
 
     query = 'select np_{method}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')' + \
@@ -139,5 +137,7 @@ def test_array_methods(omnisci, method, signature, args, expected):
 
     _, result = omnisci.sql_execute(query)
     out = list(result)[0]
+    print(out)
 
     assert np.array_equal(expected, out[0]), 'np_' + method
+

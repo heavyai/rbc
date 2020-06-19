@@ -138,7 +138,38 @@ def omnisci_array_len(x):
         return lambda x: omnisci_array_len_(x)
 
 
-@extending.overload(np.invert)
+def overload_numpy_api(npyfunc):
+    '''
+    This decorator reduces the amount of work necessary to expose
+    overload methods as 'omnisci.*function_name*' namespace. For instance,
+    in order to use our version of `np.full` as omnisci.full, it requires one
+    to declare the function first.
+
+    def full(*args, **kwargs):
+        pass
+
+    @extending.overload(full):
+        ...
+
+    
+    Using this decorator, the first method is declared for us and we only
+    need to provide the implementation.
+    '''
+
+    # globals()[npyfunc.__name__] = npyfunc
+    s = 'def {}(*args, **kwargs): pass'.format(npyfunc.__name__)
+    exec(s, globals())
+    fn = globals()[npyfunc.__name__]
+
+    decorate = extending.overload(fn)
+
+    def wrapper(overload_func):
+        return decorate(overload_func)
+
+    return wrapper
+
+
+@overload_numpy_api(np.invert)
 def omnisci_np_invert(a):
     """Implements `np.invert(expr)` operation
     """
@@ -172,7 +203,7 @@ def omnisci_array_fill(x, v):
 
 
 @extending.overload(max)
-@extending.overload(np.max)
+@overload_numpy_api(np.max)
 @extending.overload_method(ArrayPointer, 'max')
 def omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
@@ -217,7 +248,7 @@ def omnisci_array_min(x, initial=None):
 
 
 @extending.overload(sum)
-@extending.overload(np.sum)
+@overload_numpy_api(np.sum)
 @extending.overload_method(ArrayPointer, 'sum')
 def omnisci_np_sum(a, initial=None):
     if isinstance(a, ArrayPointer):
@@ -233,7 +264,7 @@ def omnisci_np_sum(a, initial=None):
         return impl
 
 
-@extending.overload(np.prod)
+@overload_numpy_api(np.prod)
 @extending.overload_method(ArrayPointer, 'prod')
 def omnisci_np_prod(a, initial=None):
     if isinstance(a, ArrayPointer):
@@ -249,7 +280,7 @@ def omnisci_np_prod(a, initial=None):
         return impl
 
 
-@extending.overload(np.mean)
+@overload_numpy_api(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
     if isinstance(x.eltype, nb_types.Integer):
@@ -266,7 +297,7 @@ def omnisci_array_mean(x):
         return impl
 
 
-@extending.overload(np.cumsum)
+@overload_numpy_api(np.cumsum)
 def omnisci_np_cumsum(a):
     if isinstance(a, ArrayPointer):
         eltype = a.eltype
@@ -274,44 +305,14 @@ def omnisci_np_cumsum(a):
         def impl(a):
             sz = len(a)
             out = Array(sz, eltype)
-            for i in range(sz):
-                out[i] = a[i]
-            # out[0] = a[0]
-            # for i in range(1, sz):
-            #     out[i] = out[i-1] + a[i]
+            out[0] = a[0]
+            for i in range(1, sz):
+                out[i] = out[i-1] + a[i]
             return out
         return impl
 
 
-def zeros(shape, dtype=None):
-    pass
-
-
-def zeros_like(a, dtype=None):
-    pass
-
-
-def ones(shape, dtype=None):
-    pass
-
-
-def ones_like(a, dtype=None):
-    pass
-
-
-def empty(shape, dtype=None):
-    pass
-
-
-def full(shape, fill_value, dtype=None):
-    pass
-
-
-def full_like(a, fill_value, dtype=None):
-    pass
-
-
-@extending.overload(full)
+@overload_numpy_api(np.full)
 def omnisci_np_full(shape, fill_value, dtype=None):
 
     # XXX: dtype should be infered from fill_value
@@ -327,7 +328,7 @@ def omnisci_np_full(shape, fill_value, dtype=None):
     return impl
 
 
-@extending.overload(full_like)
+@overload_numpy_api(np.full_like)
 def omnisci_np_full_like(a, fill_value, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
@@ -343,7 +344,7 @@ def omnisci_np_full_like(a, fill_value, dtype=None):
         return impl
 
 
-@extending.overload(empty)
+@overload_numpy_api(np.empty)
 def omnisci_np_empty(shape, dtype=None):
 
     if dtype is None:
@@ -356,7 +357,7 @@ def omnisci_np_empty(shape, dtype=None):
     return impl
 
 
-@extending.overload(zeros)
+@overload_numpy_api(np.zeros)
 def omnisci_np_zeros(shape, dtype=None):
 
     if dtype is None:
@@ -369,7 +370,7 @@ def omnisci_np_zeros(shape, dtype=None):
     return impl
 
 
-@extending.overload(zeros_like)
+@overload_numpy_api(np.zeros_like)
 def omnisci_np_zeros_like(a, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
@@ -382,7 +383,7 @@ def omnisci_np_zeros_like(a, dtype=None):
         return impl
 
 
-@extending.overload(ones)
+@overload_numpy_api(np.ones)
 def omnisci_np_ones(shape, dtype=None):
 
     if dtype is None:
@@ -395,7 +396,7 @@ def omnisci_np_ones(shape, dtype=None):
     return impl
 
 
-@extending.overload(ones_like)
+@overload_numpy_api(np.ones_like)
 def omnisci_np_ones_like(a, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
