@@ -1,4 +1,4 @@
-from .utils import get_version
+from rbc.utils import get_version
 from llvmlite import ir as llvm_ir
 from .omnisci_array import builder_buffers, ArrayPointer
 if get_version('numba') >= (0, 49):

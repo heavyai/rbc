@@ -293,7 +293,7 @@ def test_array_constructor_noreturn(omnisci):
 
     omnisci.reset()
 
-    from rbc.omnisci_array import Array
+    from rbc.omnisci_backend import Array
     from numba import types
 
     @omnisci('float64(int32)')
@@ -321,7 +321,7 @@ def test_array_constructor_noreturn(omnisci):
 def test_array_constructor_return(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_array import Array
+    from rbc.omnisci_backend import Array
     from numba import types
     from rbc.irtools import printf
 
@@ -353,7 +353,7 @@ def test_array_constructor_return(omnisci):
 def test_array_constructor_len(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_array import Array
+    from rbc.omnisci_backend import Array
     from numba import types
 
     @omnisci('int64(int32)')
@@ -376,7 +376,7 @@ def test_array_constructor_getitem(omnisci):
             ' server [rbc issue 72]')
     omnisci.reset()
 
-    from rbc.omnisci_array import Array
+    from rbc.omnisci_backend import Array
     import numpy as np
 
     @omnisci('double(int32, int32)')
@@ -397,7 +397,7 @@ def test_array_constructor_getitem(omnisci):
 def test_array_constructor_is_null(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_array import Array
+    from rbc.omnisci_backend import Array
 
     @omnisci('int8(int64)')
     def array_is_null(size):

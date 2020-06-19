@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from rbc.omnisci_array import Array
+from rbc.omnisci_backend import Array
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
