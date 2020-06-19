@@ -107,7 +107,7 @@ def np_full_like_dtype(i1, fill_value):
 
 
 def np_cumsum(sz):
-    a = omni.ones(5)
+    a = omni.ones(sz)
     return omni.cumsum(a)
 
 
