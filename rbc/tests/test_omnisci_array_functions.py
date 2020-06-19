@@ -1,7 +1,11 @@
 import pytest
 import numpy as np
-import rbc.omnisci_array as omni
-from numba import types
+import rbc.omnisci_backend as omni
+from rbc.utils import get_version
+if get_version('numba') >= (0, 49):
+    from numba.core import types
+else:
+    from numba import types
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -104,7 +108,7 @@ def np_full_like_dtype(i1, fill_value):
 
 def np_cumsum(sz):
     a = omni.ones(5)
-    return np.cumsum(a)
+    return omni.cumsum(a)
 
 
 array_methods = [
@@ -137,7 +141,5 @@ def test_array_methods(omnisci, method, signature, args, expected):
 
     _, result = omnisci.sql_execute(query)
     out = list(result)[0]
-    print(out)
 
     assert np.array_equal(expected, out[0]), 'np_' + method
-
