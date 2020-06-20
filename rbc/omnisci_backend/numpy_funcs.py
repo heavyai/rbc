@@ -1,4 +1,3 @@
-from llvmlite import ir
 import numpy as np
 from rbc import typesystem
 from rbc.irtools import printf
@@ -13,13 +12,118 @@ else:
         errors, numpy_support
 
 
-int8_t = ir.IntType(8)
-int32_t = ir.IntType(32)
-int64_t = ir.IntType(64)
-void_t = ir.VoidType()
+def expose_and_overload(func):
+    name = func.__name__
+    s = f'def {name}(*args, **kwargs): pass'
+    exec(s, globals())
+
+    fn = globals()[name]
+    decorate = extending.overload(fn)
+
+    def wrapper(overload_func):
+        return decorate(overload_func)
+
+    return wrapper
 
 
-@extending.overload(np.invert)
+@expose_and_overload(np.full)
+def omnisci_np_full(shape, fill_value, dtype=None):
+
+    # XXX: dtype should be infered from fill_value
+    if dtype is None:
+        nb_dtype = types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, fill_value, dtype=None):
+        a = Array(shape, nb_dtype)
+        a.fill(nb_dtype(fill_value))
+        return a
+    return impl
+
+
+@expose_and_overload(np.full_like)
+def omnisci_np_full_like(a, fill_value, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, fill_value, dtype=None):
+            sz = len(a)
+            other = Array(sz, nb_dtype)
+            other.fill(nb_dtype(fill_value))
+            return other
+        return impl
+
+
+@expose_and_overload(np.empty)
+def omnisci_np_empty(shape, dtype=None):
+
+    if dtype is None:
+        nb_dtype = types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, dtype=None):
+        return Array(shape, nb_dtype)
+    return impl
+
+
+@expose_and_overload(np.zeros)
+def omnisci_np_zeros(shape, dtype=None):
+
+    if dtype is None:
+        nb_dtype = types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, dtype=None):
+        return full(shape, 0, nb_dtype)  # noqa: F821
+    return impl
+
+
+@expose_and_overload(np.zeros_like)
+def omnisci_np_zeros_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, dtype=None):
+            return full_like(a, 0, nb_dtype)  # noqa: F821
+        return impl
+
+
+@expose_and_overload(np.ones)
+def omnisci_np_ones(shape, dtype=None):
+
+    if dtype is None:
+        nb_dtype = types.double
+    else:
+        nb_dtype = dtype
+
+    def impl(shape, dtype=None):
+        return full(shape, 1, nb_dtype)  # noqa: F821
+    return impl
+
+
+@expose_and_overload(np.ones_like)
+def omnisci_np_ones_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, dtype=None):
+            return full_like(a, 1, nb_dtype)  # noqa: F821
+        return impl
+
+
+@expose_and_overload(np.invert)
 def omnisci_np_invert(a):
     """Implements `np.invert(expr)` operation
     """
@@ -53,7 +157,7 @@ def omnisci_array_fill(x, v):
 
 
 @extending.overload(max)
-@extending.overload(np.max)
+@expose_and_overload(np.max)
 @extending.overload_method(ArrayPointer, 'max')
 def omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
@@ -98,7 +202,7 @@ def omnisci_array_min(x, initial=None):
 
 
 @extending.overload(sum)
-@extending.overload(np.sum)
+@expose_and_overload(np.sum)
 @extending.overload_method(ArrayPointer, 'sum')
 def omnisci_np_sum(a, initial=None):
     if isinstance(a, ArrayPointer):
@@ -114,7 +218,7 @@ def omnisci_np_sum(a, initial=None):
         return impl
 
 
-@extending.overload(np.prod)
+@expose_and_overload(np.prod)
 @extending.overload_method(ArrayPointer, 'prod')
 def omnisci_np_prod(a, initial=None):
     if isinstance(a, ArrayPointer):
@@ -130,7 +234,7 @@ def omnisci_np_prod(a, initial=None):
         return impl
 
 
-@extending.overload(np.mean)
+@expose_and_overload(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
     if isinstance(x.eltype, types.Integer):
@@ -147,7 +251,7 @@ def omnisci_array_mean(x):
         return impl
 
 
-@extending.overload(np.cumsum)
+@expose_and_overload(np.cumsum)
 def omnisci_np_cumsum(a):
     if isinstance(a, ArrayPointer):
         eltype = a.eltype
@@ -156,7 +260,7 @@ def omnisci_np_cumsum(a):
             sz = len(a)
             out = Array(sz, eltype)
             out[0] = a[0]
-            for i in range(1, sz):
+            for i in range(sz):
                 out[i] = out[i-1] + a[i]
             return out
         return impl
