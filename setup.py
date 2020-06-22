@@ -1,6 +1,7 @@
 import os
 import sys
 import builtins
+import versioneer
 
 if sys.version_info[:2] < (3, 4):
     raise RuntimeError("Python version >= 3.4 required.")
@@ -14,7 +15,6 @@ CONDA_BUILD = int(os.environ.get('CONDA_BUILD', '0'))
 
 from setuptools import setup, find_packages  # noqa: E402
 
-VERSION = '0.3.0dev1'  # for release, remove dev? part
 DESCRIPTION = "RBC - Remote Backend Compiler Project"
 LONG_DESCRIPTION = """
 The aim of the Remote Backend Compiler project is to distribute the
@@ -38,8 +38,7 @@ def setup_package():
         setup_requires = []
         tests_require = []
     else:
-        install_requires = ["numba", "llvmlite>=0.29", "tblib",
-                            "thriftpy2", "six", "netifaces", "numpy"]
+        install_requires = open('requirements.txt', 'r').read().splitlines()
         setup_requires = ['pytest-runner']
         tests_require = ['pytest']
 
@@ -48,7 +47,8 @@ def setup_package():
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         license='BSD',
-        version=VERSION,
+        version=versioneer.get_version(),
+        cmdclass=versioneer.get_cmdclass(),
         author='Pearu Peterson',
         maintainer='Pearu Peterson',
         author_email='pearu.peterson@quansight.com',
