@@ -25,8 +25,8 @@ git push -f -u xnd-project
 git branch release-${TAG_STR}
 git checkout release-${TAG_STR}
 
-# XXX: to-do 
 # + Update ``version`` to ``<tag version>`` and ``sha256`` in ``recipe.yaml``
+sed "s/{% set version = \".*\" %}/{% set version = \"${TAG}\" %}/g" recipe/meta.yaml > recipe/meta.yaml
 
 # XXX: to-do 
 # * For ``sha256``, download the tar-ball and run ``sha256sum`` on it.
