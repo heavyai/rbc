@@ -16,6 +16,11 @@ git checkout master
 echo "running tests..."
 pytest -sv rbc/
 
+if [[ $? -ne 0 ]]; then
+	echo "rbc tests failed!"
+	exit 1
+fi
+
 # tag a commit
 echo "Creating a new tag"
 git tag -a ${TAG_STR} -m "Bumping rbc to version ${TAG_STR}"
