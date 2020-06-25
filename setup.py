@@ -25,6 +25,12 @@ computer. The compiler frontend will send the program code to compiler
 backend in IR form where it will be compiled to machine code.
 """
 
+versioneer.VCS = 'git'
+versioneer.style = 'pep440'
+versioneer.versionfile_source = 'rbc/_version.py'
+versioneer.versionfile_build = 'rbc/_version.py'
+versioneer.tag_prefix = ''
+versioneer.parentdir_prefix = ''
 
 def setup_package():
     src_path = os.path.dirname(os.path.abspath(sys.argv[0]))
