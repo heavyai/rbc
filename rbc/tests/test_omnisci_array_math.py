@@ -58,85 +58,24 @@ def omnisci():
         print('%s in deardown' % (type(msg)))
 
 
-def np_ones(sz):
-    return omni.ones(sz, types.int32)
-
-
-def np_ones_dtype(sz):
-    return omni.ones(sz)
-
-
-def np_ones_like_dtype(i4):
-    return omni.ones_like(i4, dtype=types.double)
-
-
-def np_ones_like(i4):
-    return omni.ones_like(i4)
-
-
-def np_zeros(sz):
-    return omni.zeros(sz, types.int32)
-
-
-def np_zeros_dtype(sz):
-    return omni.zeros(sz)
-
-
-def np_zeros_like(i4):
-    return omni.zeros_like(i4)
-
-
-def np_zeros_like_dtype(i4):
-    return omni.zeros_like(i4, dtype=types.double)
-
-
-def np_full(sz, fill_value):
-    return omni.full(sz, fill_value, types.double)
-
-
-def np_full_dtype(sz, fill_value):
-    return omni.full(sz, fill_value)
-
-
-def np_full_like(i1, fill_value):
-    return omni.full_like(i1, fill_value)
-
-
-def np_full_like_dtype(i1, fill_value):
-    return omni.full_like(i1, fill_value, dtype=types.double)
-
-
-def np_cumsum(sz):
-    a = omni.ones(sz)
-    return omni.cumsum(a)
+def np_add(a, b):
+    return omni.add(a, b)
 
 
 array_methods = [
-    ('full', 'double[](int64, double)', (5, 3), np.full(5, 3, dtype=np.int32)),
-    ('full_dtype', 'double[](int64, double)', (5, 3), np.full(5, 3)),
-    ('full_like', 'int8[](int8[], int32)', ('i1', 3), np.full(6, 3, dtype='b')),  # noqa: E501
-    ('full_like_dtype', 'double[](int8[], double)', ('i1', 3.0), np.full(6, 3, dtype='q')),  # noqa: E501
-    ('ones', 'int32[](int64)', (5,), np.ones(5, dtype=np.int32)),
-    ('ones_dtype', 'double[](int64)', (5,), np.ones(5)),
-    ('ones_like', 'int32[](int32[])', ('i4',), np.ones(6, dtype='i')),
-    ('ones_like_dtype', 'double[](int32[])', ('i4',), np.ones(6, dtype='q')),
-    ('zeros', 'int32[](int64)', (5,), np.zeros(5, dtype=np.int32)),
-    ('zeros_like', 'int32[](int32[])', ('i4',), np.zeros(6, dtype='i')),
-    ('zeros_like_dtype', 'double[](int32[])', ('i4',), np.zeros(6, dtype='q')),
-    ('zeros_dtype', 'double[](int64)', (5,), np.zeros(5)),
-    ('cumsum', 'double[](int32)', (5,), np.arange(1, 6)),
+    ('add', 'int32[](int32[], int32[])', '(i4, i4)', np.arange(1, 6)),
 ]
 
 
 @pytest.mark.parametrize("method, signature, args, expected", array_methods,
                          ids=[item[0] for item in array_methods])
-def test_array_methods(omnisci, method, signature, args, expected):
+def test_omnisci_array_math(omnisci, method, signature, args, expected):
     omnisci.reset()
 
     fn = omnisci(signature)(eval('np_{}'.format(method)))
 
     query = 'select np_{method}'.format(**locals()) + \
-            '(' + ', '.join(map(str, args)) + ')' + \
+            args + \
             ' from {omnisci.table_name};'.format(**locals())
 
     _, result = omnisci.sql_execute(query)
