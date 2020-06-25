@@ -57,28 +57,57 @@ def omnisci():
     except Exception as msg:
         print('%s in deardown' % (type(msg)))
 
-
-def np_add(a, b):
-    return omni.add(a, b)
-
-
-array_methods = [
-    ('add', 'int32[](int32[], int32[])', '(i4, i4)', np.arange(1, 6)),
+binary_fns = [
+    ('add', 'int32[](int32[], int32[])', 'i4'),
+    ('subtract', 'double[](double[], double[])', 'f8'),
+    ('multiply', 'double[](double[], double[])', 'f8'),
+    ('divide', 'double[](double[], double[])', 'f8'),
+    ('logaddexp', 'double[](double[], double[])', 'f8'),
+    ('logaddexp2', 'double[](double[], double[])', 'f8'),
+    ('true_divide', 'double[](double[], double[])', 'f8'),
+    ('floor_divide', 'double[](double[], double[])', 'f8'),
+    ('power', 'float[](float[], float[])', 'f4'),
+    ('remainder', 'double[](double[], double[])', 'f8'),
+    ('mod', 'double[](double[], double[])', 'f8'),
+    ('fmod', 'double[](double[], double[])', 'f8'),
+    ('gcd', 'int64[](int64[], int64[])', 'i8'),
+    ('lcm', 'int64[](int64[], int64[])', 'i8'),
+    ('arctan2', 'double[](double[], double[])', 'f8'),
+    ('hypot', 'double[](double[], double[])', 'f8'),
+    ('maximum', 'double[](double[], double[])', 'f8'),
+    ('minimum', 'double[](double[], double[])', 'f8'),
+    # XXX: return a bool[] should work
+    ('greater', 'int8[](int64[], int64[])', 'i8'),
+    ('greater_equal', 'int8[](int64[], int64[])', 'i8'),
+    ('less', 'int8[](int64[], int64[])', 'i8'),
+    ('less_equal', 'int8[](int64[], int64[])', 'i8'),
+    ('not_equal', 'int8[](int64[], int64[])', 'i8'),
+    ('equal', 'int8[](int64[], int64[])', 'i8'),
+    ('logical_and', 'int8[](int64[], int64[])', 'i8'),
+    ('logical_or', 'int8[](int64[], int64[])', 'i8'),
+    ('logical_xor', 'int8[](int64[], int64[])', 'i8'),
 ]
 
 
-@pytest.mark.parametrize("method, signature, args, expected", array_methods,
-                         ids=[item[0] for item in array_methods])
-def test_omnisci_array_math(omnisci, method, signature, args, expected):
+@pytest.mark.parametrize("method, signature, column", binary_fns,
+                         ids=[item[0] for item in binary_fns])
+def test_omnisci_array_binary_math_fns(omnisci, method, signature, column):
     omnisci.reset()
+
+    s = f'def np_{method}(a, b): return omni.{method}(a, b)'
+    exec(s, globals())
 
     fn = omnisci(signature)(eval('np_{}'.format(method)))
 
-    query = 'select np_{method}'.format(**locals()) + \
-            args + \
-            ' from {omnisci.table_name};'.format(**locals())
+    query = f'select {column}, ' + \
+            f'np_{method}({column}, {column})' + \
+            f' from {omnisci.table_name};'
 
     _, result = omnisci.sql_execute(query)
-    out = list(result)[0]
-
-    assert np.array_equal(expected, out[0]), 'np_' + method
+    
+    row, out = list(result)[0]
+    expected = getattr(np, method)(row, row)
+    if method == 'power':
+        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method
+    else:
+        assert np.array_equal(expected, out), 'omni_' + method
