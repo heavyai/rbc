@@ -10,7 +10,7 @@ if [[ ! $(which sha256sum) ]]; then
 fi
 
 TAG=$1
-TAG_STR='v${TAG}'
+TAG_STR="v${TAG}"
 
 # Update rbc-feedstock
 git clone git@github.com:xnd-project/rbc-feedstock.git

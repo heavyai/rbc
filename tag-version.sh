@@ -5,7 +5,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 TAG=$1
-TAG_STR='v${TAG}'
+TAG_STR="v${TAG}"
 
 # checkout to master
 echo "Checking out master"
