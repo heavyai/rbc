@@ -105,6 +105,7 @@ binary_fns = [
     ('right_shift', 'int64[](int64[], int64[])', 'i8'),
 ]
 
+
 @pytest.mark.parametrize("method, signature, column", binary_fns,
                          ids=[item[0] for item in binary_fns])
 def test_omnisci_array_binary_math(omnisci, method, signature, column):
