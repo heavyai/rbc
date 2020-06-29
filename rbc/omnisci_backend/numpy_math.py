@@ -55,6 +55,12 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 # @overload_elementwise_binary_ufunc(np.divmod) # not supported by numba
 @overload_elementwise_binary_ufunc(np.gcd)
 @overload_elementwise_binary_ufunc(np.lcm)
+# Bit-twiddling functions
+@overload_elementwise_binary_ufunc(np.bitwise_and)
+@overload_elementwise_binary_ufunc(np.bitwise_or)
+@overload_elementwise_binary_ufunc(np.bitwise_xor)
+@overload_elementwise_binary_ufunc(np.left_shift)
+@overload_elementwise_binary_ufunc(np.right_shift)
 # trigonometric functions
 @overload_elementwise_binary_ufunc(np.arctan2)
 @overload_elementwise_binary_ufunc(np.hypot)
@@ -129,6 +135,8 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.square)
 # @overload_elementwise_unary_ufunc(np.cbrt) # not supported
 @overload_elementwise_unary_ufunc(np.reciprocal)
+# Bit-twiddling functions
+@overload_elementwise_unary_ufunc(np.invert)
 # trigonometric functions
 @overload_elementwise_unary_ufunc(np.sin)
 @overload_elementwise_unary_ufunc(np.cos)

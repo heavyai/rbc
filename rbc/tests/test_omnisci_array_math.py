@@ -82,6 +82,11 @@ binary_fns = [
     ('logical_and', 'int8[](int64[], int64[])', 'i8'),
     ('logical_or', 'int8[](int64[], int64[])', 'i8'),
     ('logical_xor', 'int8[](int64[], int64[])', 'i8'),
+    ('bitwise_and', 'int64[](int64[], int64[])', 'i8'),
+    ('bitwise_or', 'int64[](int64[], int64[])', 'i8'),
+    ('bitwise_xor', 'int64[](int64[], int64[])', 'i8'),
+    ('left_shift', 'int64[](int64[], int64[])', 'i8'),
+    ('right_shift', 'int64[](int64[], int64[])', 'i8'),
 ]
 
 
@@ -131,6 +136,8 @@ unary_fns = [
     ('square', 'double[](double[])', 'f8'),
     # ('cbrt', 'double[](double[])', 'f8'),
     ('reciprocal', 'double[](double[])', 'f8'),
+    # Bit-twiddling functions
+    ('invert', 'int64[](int64[])', 'i8'),
     # trigonometric functions
     ('sin', 'double[](double[])', 'f8'),
     ('cos', 'double[](double[])', 'f8'),
