@@ -7,6 +7,14 @@ else:
     from numba import extending, types
 
 
+def determine_dtype(a, dtype):
+    if dtype is not None:
+        nb_dtype = dtype
+    else:
+        nb_dtype = a.eltype
+    return nb_dtype
+
+
 def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
     """
     Wrapper for binary ufuncs that returns an array
@@ -17,18 +25,43 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 
     def binary_ufunc_impl(a, b):
         # XXX: raise error if len(a) != len(b)
+        @extending.register_jitable
+        def binary_impl(a, b, nb_dtype):
+            sz = len(a)
+            x = Array(sz, nb_dtype)
+            for i in range(sz):
+                x[i] = nb_dtype(ufunc(a[i], b[i]))
+            return x
+
+        @extending.register_jitable
+        def broadcast(e, sz, dtype):
+            b = Array(sz, dtype)
+            b.fill(e)
+            return b
+
         if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
-            if dtype is None:
-                nb_dtype = a.eltype
-            else:
-                nb_dtype = dtype
+            nb_dtype = determine_dtype(a, dtype)
 
             def impl(a, b):
-                sz = len(a)
-                x = Array(sz, nb_dtype)
-                for i in range(sz):
-                    x[i] = nb_dtype(ufunc(a[i], b[i]))
-                return x
+                return binary_impl(a, b, nb_dtype)
+            return impl
+
+        if isinstance(a, ArrayPointer):
+            nb_dtype = determine_dtype(a, dtype)
+            eltype = a.eltype
+
+            def impl(a, b):
+                b = broadcast(b, len(a), eltype)
+                return binary_impl(a, b, nb_dtype)
+            return impl
+
+        if isinstance(b, ArrayPointer):
+            nb_dtype = determine_dtype(b, dtype)
+            eltype = b.eltype
+
+            def impl(a, b):
+                a = broadcast(a, len(b), eltype)
+                return binary_impl(a, b, nb_dtype)
             return impl
 
     decorate = extending.overload(ufunc)

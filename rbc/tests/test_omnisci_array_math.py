@@ -53,6 +53,22 @@ def omnisci():
         print('%s in deardown' % (type(msg)))
 
 
+def num(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
+def is_number(s):
+    try:
+        float(s)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
 binary_fns = [
     ('add', 'int32[](int32[], int32[])', 'i4'),
     ('subtract', 'double[](double[], double[])', 'f8'),
@@ -89,10 +105,9 @@ binary_fns = [
     ('right_shift', 'int64[](int64[], int64[])', 'i8'),
 ]
 
-
 @pytest.mark.parametrize("method, signature, column", binary_fns,
                          ids=[item[0] for item in binary_fns])
-def test_omnisci_array_binary_math_fns(omnisci, method, signature, column):
+def test_omnisci_array_binary_math(omnisci, method, signature, column):
     omnisci.reset()
 
     s = f'def np_{method}(a, b): return omni.{method}(a, b)'
@@ -107,7 +122,75 @@ def test_omnisci_array_binary_math_fns(omnisci, method, signature, column):
     _, result = omnisci.sql_execute(query)
 
     row, out = list(result)[0]
+
     expected = getattr(np, method)(row, row)
+
+    if method == 'power':
+        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
+    else:
+        assert np.array_equal(expected, out), 'omni_' + method
+
+
+binary_fn_scalar_input = [
+    ('add', 'int32[](int32[], int32)', 'i4,3'),
+    ('subtract', 'double[](double[], double)', 'f8,5.0'),
+    ('multiply', 'double[](double[], double)', 'f8,5.0'),
+    ('divide', 'double[](double[], double)', 'f8,2.0'),
+    ('logaddexp', 'double[](double[], double)', 'f8,2.0'),
+    ('logaddexp2', 'double[](double[], double)', 'f8,2.0'),
+    ('true_divide', 'double[](double[], double)', 'f8,2.0'),
+    ('floor_divide', 'double[](double[], double)', 'f8,2.0'),
+    ('power', 'int64[](int64[], int64)', 'i8,2'),
+    ('remainder', 'double[](double[], double)', 'f8,2.0'),
+    ('mod', 'double[](double[], double)', 'f8,2.0'),
+    ('fmod', 'double[](double[], double)', 'f8,2.0'),
+    ('gcd', 'int64[](int64[], int64)', 'i8,3'),
+    ('lcm', 'int64[](int64[], int64)', 'i8,3'),
+    ('arctan2', 'double[](double[], double)', 'f8,2.0'),
+    ('hypot', 'double[](double[], double)', 'f8,2.0'),
+    ('maximum', 'double[](double[], double)', 'f8,2.0'),
+    ('minimum', 'double[](double[], double)', 'f8,4.0'),
+    ('greater', 'int8[](int64[], int64)', 'i8,1'),
+    ('greater_equal', 'int8[](int64[], int64)', 'i8,1'),
+    ('less', 'int8[](int64[], int64)', 'i8,1'),
+    ('less_equal', 'int8[](int64[], int64)', 'i8,1'),
+    ('not_equal', 'int8[](int64[], int64)', 'i8,1'),
+    ('equal', 'int8[](int64[], int64)', 'i8,1'),
+    ('logical_and', 'int8[](int64[], int64)', 'i8,0'),
+    ('logical_or', 'int8[](int64[], int64)', 'i8,2'),
+    ('logical_xor', 'int8[](int64[], int64)', 'i8,2'),
+    ('bitwise_and', 'int64[](int64[], int64)', 'i8,1'),
+    ('bitwise_or', 'int64[](int64[], int64)', 'i8,2'),
+    ('bitwise_xor', 'int64[](int64[], int64)', 'i8,2'),
+    ('left_shift', 'int64[](int64[], int64)', 'i8,2'),
+    ('right_shift', 'int64[](int64[], int64)', 'i8,2'),
+]
+
+
+@pytest.mark.parametrize("method, signature, args", binary_fn_scalar_input,
+                         ids=[item[0] for item in binary_fn_scalar_input])
+def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
+    omnisci.reset()
+
+    s = f'def np_{method}(a, b): return omni.{method}(a, b)'
+    exec(s, globals())
+
+    omnisci(signature)(eval('np_{}'.format(method)))
+
+    t = tuple(args.split(','))
+    a, b = t[0], t[1]
+    column = a if is_number(b) else b
+    scalar = a if is_number(a) else b
+
+    query = f'select {column}, ' + \
+            f'np_{method}({a}, {b})' + \
+            f' from {omnisci.table_name};'
+
+    _, result = omnisci.sql_execute(query)
+
+    row, out = list(result)[0]
+    expected = getattr(np, method)(row, num(scalar))
+
     if method == 'power':
         assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
     else:
