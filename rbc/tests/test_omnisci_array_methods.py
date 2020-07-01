@@ -122,6 +122,14 @@ def test_ndarray_methods(omnisci, method, signature, args, expected):
         pytest.skip(
             f'{method}: crashes CUDA enabled omniscidb server [issue 93]')
 
+    if available_version[:2] == (5, 4) and method in ['fill']:
+        pytest.skip(
+            f'{method}: crashes CPU-only omniscidb server v 5.4 [issue 113]')
+
+    if available_version[:2] == (5, 4) and method in ['max_empty']:
+        pytest.skip(
+            f'{method}: fails on CPU-only omniscidb server v 5.4 [issue 114]')
+
     omnisci(signature)(eval('ndarray_{}'.format(method)))
 
     query = 'select ndarray_{method}'.format(**locals()) + \

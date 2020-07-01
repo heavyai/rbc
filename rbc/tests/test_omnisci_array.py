@@ -319,6 +319,10 @@ def test_array_constructor_noreturn(omnisci):
 
 
 def test_array_constructor_return(omnisci):
+    if available_version[:2] >= (5, 4):
+        pytest.skip(
+            'crashes CPU-only omniscidb server v 5.4 [issue 112]')
+
     omnisci.reset()
 
     from rbc.omnisci_backend import Array

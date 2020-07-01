@@ -131,6 +131,11 @@ array_methods = [
 @pytest.mark.parametrize("method, signature, args, expected", array_methods,
                          ids=[item[0] for item in array_methods])
 def test_array_methods(omnisci, method, signature, args, expected):
+    if (available_version[:2] == (5, 4)
+        and method in ['full', 'full_dtype', 'ones', 'ones_dtype', 'zeros',
+                       'zeros_dtype', 'cumsum']):
+        pytest.skip(
+            f'{method}: crashes CPU-only omniscidb server v 5.4 [issue 113]')
     omnisci.reset()
 
     fn = omnisci(signature)(eval('np_{}'.format(method)))
