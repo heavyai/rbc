@@ -4,9 +4,9 @@ from .omnisci_array import ArrayPointer, Array
 from rbc import typesystem
 from rbc.utils import get_version
 if get_version('numba') >= (0, 49):
-    from numba.core import cgutils, extending, types
+    from numba.core import extending, types
 else:
-    from numba import cgutils, extending, types
+    from numba import extending, types
 
 
 int8_t = ir.IntType(8)
@@ -184,49 +184,3 @@ def omnisci_array_contains(a, e):
                     return True
             return False
         return impl
-
-
-@extending.intrinsic
-def omnisci_array_getitem_(typingctx, data, index):
-    sig = data.eltype(data, index)
-
-    def codegen(context, builder, signature, args):
-        data, index = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        arr = builder.load(builder.gep(rawptr, [int32_t(0)]))
-        ptr = builder.load(builder.gep(
-            arr, [int32_t(0), int32_t(0)]))
-        res = builder.load(builder.gep(ptr, [index]))
-
-        return res
-    return sig, codegen
-
-
-@extending.overload(operator.getitem)
-def omnisci_array_getitem(x, i):
-    if isinstance(x, ArrayPointer):
-        return lambda x, i: omnisci_array_getitem_(x, i)
-
-
-@extending.intrinsic
-def omnisci_array_setitem_(typingctx, data, index, value):
-    sig = types.none(data, index, value)
-
-    def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
-        data, index, value = args
-
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        ptr = builder.load(rawptr)
-
-        arr = builder.load(builder.gep(ptr, [zero, zero]))
-        builder.store(value, builder.gep(arr, [index]))
-
-    return sig, codegen
-
-
-@extending.overload(operator.setitem)
-def omnisci_array_setitem(a, i, v):
-    if isinstance(a, ArrayPointer):
-        return lambda a, i, v: omnisci_array_setitem_(a, i, v)

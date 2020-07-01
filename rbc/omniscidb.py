@@ -7,7 +7,8 @@ from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from pymapd.cursor import make_row_results_set
 from pymapd._parsers import _extract_description  # , _bind_parameters
-from .omnisci_backend import array_type_converter, OmnisciCompilerPipeline
+from .omnisci_backend import (
+    array_type_converter, column_type_converter, OmnisciCompilerPipeline)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError
@@ -149,7 +150,7 @@ class RemoteOmnisci(RemoteJIT):
     Use pymapd, for instance, to make a SQL query `select add(c1,
     c2) from table`
     """
-    converters = [array_type_converter]
+    converters = [array_type_converter, column_type_converter]
     multiplexed = False
     mangle_prefix = ''
 
@@ -294,6 +295,13 @@ class RemoteOmnisci(RemoteJIT):
             'Array<int64_t>': typemap['TExtArgumentType']['ArrayInt64'],
             'Array<float>': typemap['TExtArgumentType']['ArrayFloat'],
             'Array<double>': typemap['TExtArgumentType']['ArrayDouble'],
+            'Column<bool>': typemap['TExtArgumentType'].get('ColumnBool'),
+            'Column<int8_t>': typemap['TExtArgumentType'].get('ColumnInt8'),
+            'Column<int16_t>': typemap['TExtArgumentType'].get('ColumnInt16'),
+            'Column<int32_t>': typemap['TExtArgumentType'].get('ColumnInt32'),
+            'Column<int64_t>': typemap['TExtArgumentType'].get('ColumnInt64'),
+            'Column<float>': typemap['TExtArgumentType'].get('ColumnFloat'),
+            'Column<double>': typemap['TExtArgumentType'].get('ColumnDouble'),
             'Cursor': typemap['TExtArgumentType']['Cursor'],
             'void': typemap['TExtArgumentType']['Void'],
             'GeoPoint': typemap['TExtArgumentType'].get('GeoPoint'),
@@ -316,6 +324,19 @@ class RemoteOmnisci(RemoteJIT):
             = ext_arguments_map['Array<float>']
         ext_arguments_map['{float64* ptr, uint64 sz, bool is_null}*'] \
             = ext_arguments_map['Array<double>']
+
+        for ptr_type, T in [
+                ('bool', 'bool'),
+                ('int8', 'int8_t'),
+                ('int16', 'int16_t'),
+                ('int32', 'int32_t'),
+                ('int64', 'int64_t'),
+                ('float32', 'float'),
+                ('float64', 'double'),
+        ]:
+            ext_arguments_map['{%s* ptr, uint64 sz}*' % ptr_type] \
+                = ext_arguments_map.get('Column<%s>' % T)
+
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
             if v not in values:
@@ -393,9 +414,15 @@ class RemoteOmnisci(RemoteJIT):
             return
         thrift = self.thrift_client.thrift
 
+        sizer_map = dict(
+            ConstantParameter='kUserSpecifiedConstantParameter',
+            RowMultiplier='kUserSpecifiedRowMultiplier',
+            Constant='kConstant')
+
         udfs = []
         udtfs = []
         device_ir_map = {}
+        unspecified = object()
         for device, target_info in self.targets.items():
             functions_and_signatures = []
             function_signatures = defaultdict(list)
@@ -429,7 +456,53 @@ class RemoteOmnisci(RemoteJIT):
                         sig.set_mangling('')
                     else:
                         sig.set_mangling('__%s' % (i))
-                    if is_udtf:
+
+                    outputArgTypes = []
+                    for a in reversed(sig[1]):
+                        if a.tostring(
+                                use_annotation=False,
+                                use_typename=True).startswith('Column<'):
+                            atype = ext_arguments_map[
+                                a.tostring(use_annotation=False)]
+                            outputArgTypes.insert(0, atype)
+                        else:
+                            break
+
+                    if outputArgTypes:
+                        # new style UDTF
+                        inputArgTypes = []
+                        sqlArgTypes = []
+                        sizer = None
+                        sizer_index = -1
+                        for i in range(len(sig[1]) - len(outputArgTypes)):
+                            a = sig[1][i]
+                            annot = a.annotation()
+                            _sizer = annot.get('sizer', unspecified)
+                            if _sizer is not unspecified:
+                                if _sizer is None:
+                                    _sizer = 'RowMultiplier'
+                                _sizer = sizer_map[_sizer]
+                                # cannot have multiple sizer arguments
+                                assert sizer_index == -1
+                                sizer_index = i + 1
+                                sizer = _sizer
+                            atype = ext_arguments_map[
+                                a.tostring(use_annotation=False)]
+                            if a.tostring(
+                                    use_annotation=False,
+                                    use_typename=True).startswith('Column<'):
+                                sqlArgTypes.append(ext_arguments_map['Cursor'])
+                            else:
+                                sqlArgTypes.append(atype)
+                            inputArgTypes.append(atype)
+                        assert sizer is not None  # need a sizer argument
+                        sizer_type = getattr(
+                            thrift.TOutputBufferSizeType, sizer)
+                        udtfs.append(thrift.TUserDefinedTableFunction(
+                            name + sig.mangling,
+                            sizer_type, sizer_index,
+                            inputArgTypes, outputArgTypes, sqlArgTypes))
+                    elif is_udtf:
                         sizer = None
                         sizer_index = -1
                         inputArgTypes = []

@@ -132,6 +132,9 @@ _type_name_match = re.compile(r'\A(.*)\s(\w+)\Z').match
 # `signed`, `unsigned`, `long`, etc.:
 _bad_names_match = re.compile(r'\A(char|byte|short|int|long|double)\Z').match
 
+# For the custom type support:
+_custom_type_name_params_match = re.compile(r'\A(\w+)\s*[<](.*)[>]\Z').match
+
 
 class Complex64(ctypes.Structure):
     _fields_ = [("real", ctypes.c_float), ("imag", ctypes.c_float)]
@@ -320,6 +323,22 @@ class Type(tuple):
     Also ``byte, short, int, long, long long, signed int, size_t,
     ssize_t``, etc are supported but their normalized names are system
     dependent.
+
+    Custom types
+    ------------
+
+    The typesystem supports processing custom types that are usually
+    named structures or C++ template specifications. The custom types
+    support is provided via `TargetInfo` instance that has a
+    `add_converter` method that can be used to register custom type
+    converters. A type converter is a function that takes takes
+    incomplete atomic `Type` instance, say
+    `Type("MyCustomType<double>")`, as input, and either returns a new
+    complete `Type` instance, say a struct type corresponding to
+    `MyCustomType<double>`, or `None` when conversion is not provided
+    for this particular input. One can add many type converter
+    functons to `TargetInfo` instance.
+
     """
 
     _mangling = None
@@ -450,6 +469,32 @@ class Type(tuple):
                 return False
             for a in self[1]:
                 if not a.is_complete:
+                    return False
+        elif self.is_void:
+            pass
+        else:
+            raise NotImplementedError(repr(self))
+        return True
+
+    @property
+    def is_concrete(self):
+        """Return True when the Type instance is concrete.
+        """
+        if self.is_atomic:
+            return (self.is_int or self.is_uint or self.is_float
+                    or self.is_complex or self.is_bool
+                    or self.is_string or self.is_char)
+        elif self.is_pointer:
+            return self[0].is_concrete
+        elif self.is_struct:
+            for m in self:
+                if not m.is_concrete:
+                    return False
+        elif self.is_function:
+            if not self[0].is_concrete:
+                return False
+            for a in self[1]:
+                if not a.is_concrete:
                     return False
         elif self.is_void:
             pass
@@ -896,7 +941,7 @@ class Type(tuple):
                     bits = str(target_info.sizeof(otype) * 8)
                     return self.__class__(ntype + bits, **params)
             if target_info is not None:
-                t = target_info.custom_type(s)
+                t = target_info.custom_type(self)
                 if t is not None:
                     return t
                 if target_info.strict:
@@ -1057,6 +1102,26 @@ class Type(tuple):
 
     def pointer(self):
         return self.__class__(self, '*')
+
+    def get_name_and_parameters(self):
+        """Return the name and the parameters of a custom type.
+
+        A custom type has a name in the following form::
+
+          CustomType<param1, param2, ...>
+
+        Return None, None if the `Type` instance is not a custom type.
+        """
+        if self.is_atomic:
+            if self[0].endswith('[]'):
+                return 'Array', (self[0][:-2].strip(),)
+
+            m = _custom_type_name_params_match(self[0])
+            if m is not None:
+                name = m.group(1).strip()
+                params = [p.strip() for p in m.group(2).split(',')]
+                return name, tuple(params)
+        return None, None
 
 
 def _demangle(s):
