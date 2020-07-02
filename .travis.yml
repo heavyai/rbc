@@ -25,7 +25,7 @@ install:
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - conda install omniscidb
+  - conda install omniscidb -c conda-forge
 
 before_script:
   - python setup.py develop
