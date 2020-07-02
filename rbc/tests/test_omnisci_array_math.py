@@ -135,6 +135,7 @@ def test_omnisci_array_binary_math(omnisci, method, signature, column):
 binary_fn_scalar_input = [
     ('add', 'int32[](int32[], int32)', 'i4,3'),
     ('subtract', 'double[](double[], double)', 'f8,5.0'),
+    # ('subtract', 'double[](double, double[])', '5.0,f8'),  # omnisci server crashes
     ('multiply', 'double[](double[], double)', 'f8,5.0'),
     ('divide', 'double[](double[], double)', 'f8,2.0'),
     ('logaddexp', 'double[](double[], double)', 'f8,2.0'),
