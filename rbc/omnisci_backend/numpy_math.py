@@ -1,10 +1,33 @@
 import numpy as np
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
+from rbc import typesystem
 if get_version('numba') >= (0, 49):
     from numba.core import extending, types
 else:
     from numba import extending, types
+
+
+def invert(a):
+    pass
+
+@extending.overload(invert)
+def impl_np_invert(a):
+    if isinstance(a, ArrayPointer):
+        def impl(a):
+            sz = len(a)
+            x = Array(sz, 'int8')
+            for i in range(sz):
+                x[i] = types.int8(invert(a[i]))
+            return x
+        return impl
+    if isinstance(a, typesystem.Boolean8):
+        def impl(a):
+            return types.int8(0)
+            # if a == True:
+            #     return types.int8(0)
+            # return types.int8(1)
+        return impl
 
 
 def determine_dtype(a, dtype):
@@ -165,7 +188,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 # @overload_elementwise_unary_ufunc(np.cbrt) # not supported
 @overload_elementwise_unary_ufunc(np.reciprocal)
 # Bit-twiddling functions
-@overload_elementwise_unary_ufunc(np.invert)
+# @overload_elementwise_unary_ufunc(np.invert)
 # trigonometric functions
 @overload_elementwise_unary_ufunc(np.sin)
 @overload_elementwise_unary_ufunc(np.cos)

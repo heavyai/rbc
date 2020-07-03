@@ -98,7 +98,7 @@ binary_fns = [
     ('less_equal', 'int8[](int64[], int64[])', 'i8'),
     ('not_equal', 'int8[](int64[], int64[])', 'i8'),
     ('equal', 'int8[](int64[], int64[])', 'i8'),
-    ('logical_and', 'bool[](int64[], int64[])', 'i8'),
+    ('logical_and', 'int64[](int64[], int64[])', 'i8'),
     ('logical_or', 'int8[](int64[], int64[])', 'i8'),
     ('logical_xor', 'int8[](int64[], int64[])', 'i8'),
     ('bitwise_and', 'int64[](int64[], int64[])', 'i8'),
@@ -228,7 +228,8 @@ unary_fns = [
     # ('cbrt', 'double[](double[])', 'f8'),
     ('reciprocal', 'double[](double[])', 'f8'),
     # Bit-twiddling functions
-    ('invert', 'int64[](int64[])', 'i8'),
+    # ('invert', 'int64[](int64[])', 'i8'),
+    ('invert', 'bool[](int8[])', 'b'),
     # trigonometric functions
     ('sin', 'double[](double[])', 'f8'),
     ('cos', 'double[](double[])', 'f8'),
