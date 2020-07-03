@@ -17,6 +17,7 @@ dependencies:
   - llvmlite
   - pytest
   - tblib
+  - pymapd
   - thriftpy2
   - netifaces
   - flake8
