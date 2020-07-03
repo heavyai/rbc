@@ -11,6 +11,7 @@ else:
 def invert(a):
     pass
 
+
 @extending.overload(invert)
 def impl_np_invert(a):
     if isinstance(a, ArrayPointer):

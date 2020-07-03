@@ -122,19 +122,17 @@ def test_omnisci_array_binary_math(omnisci, method, signature, column):
     query = f'select {column}, ' + \
             f'np_{method}({column}, {column})' + \
             f' from {omnisci.table_name};'
-    
-    print(str(fn))
 
-    # _, result = omnisci.sql_execute(query)
+    _, result = omnisci.sql_execute(query)
 
-    # row, out = list(result)[0]
+    row, out = list(result)[0]
 
-    # expected = getattr(np, method)(row, row)
+    expected = getattr(np, method)(row, row)
 
-    # if method == 'power':
-    #     assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
-    # else:
-    #     assert np.array_equal(expected, out), 'omni_' + method
+    if method == 'power':
+        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
+    else:
+        assert np.array_equal(expected, out), 'omni_' + method
 
 
 binary_fn_scalar_input = [
