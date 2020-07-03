@@ -18,14 +18,14 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update --quiet --yes conda
   - conda info -a
-  - conda env create --quiet --name rbc-ci --file .conda/environment.yml
   - conda config --add channels conda-forge
+  - conda env create --quiet --name rbc-ci --file .conda/environment.yml
   - conda activate rbc-ci
+  - conda install omniscidb -c conda-forge
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - conda install omniscidb -c conda-forge
 
 before_script:
   - python setup.py develop
