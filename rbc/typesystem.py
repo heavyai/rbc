@@ -1120,8 +1120,6 @@ if nb is not None:
 
     class Boolean8(nb.types.Boolean):
 
-        bitwidth = 8
-
         def can_convert_to(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
 

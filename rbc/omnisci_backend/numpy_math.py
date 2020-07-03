@@ -8,11 +8,7 @@ else:
 
 
 def determine_dtype(a, dtype):
-    if dtype is not None:
-        nb_dtype = dtype
-    else:
-        nb_dtype = a.eltype
-    return nb_dtype
+    return a.eltype if dtype is None else dtype
 
 
 def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
