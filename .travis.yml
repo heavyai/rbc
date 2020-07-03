@@ -20,8 +20,8 @@ install:
   - conda info -a
   - conda config --add channels conda-forge
   - conda env create --quiet --name rbc-ci --file .conda/environment.yml
+  - conda env create --quiet --name omnisci-ci omniscidb
   - conda activate rbc-ci
-  - conda install omniscidb -c conda-forge
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
@@ -29,8 +29,10 @@ install:
 
 before_script:
   - python setup.py develop
+  - conda activate omnisci-ci
   - mkdir data && omnisci_initdb data -f 
   - omnisci_server --enable-runtime-udf --enable-table-functions &
+  - conda deactivate omnisci-ci
 
 script:
   - flake8 .
