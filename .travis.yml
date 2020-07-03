@@ -19,8 +19,8 @@ install:
   - conda update --quiet --yes conda
   - conda info -a
   - conda config --add channels conda-forge
-  - conda create --quiet --name rbc-ci --file .conda/environment.yml
-  - conda create --quiet --name omnisci-ci omniscidb
+  - conda env create --quiet --name rbc-ci --file .conda/environment.yml
+  - conda env create --quiet --name omnisci-ci omniscidb
   - conda activate rbc-ci
   - export PREFIX=$CONDA_PREFIX
   - conda list
