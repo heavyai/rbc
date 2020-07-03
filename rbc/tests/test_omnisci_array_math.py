@@ -98,7 +98,7 @@ binary_fns = [
     ('less_equal', 'int8[](int64[], int64[])', 'i8'),
     ('not_equal', 'int8[](int64[], int64[])', 'i8'),
     ('equal', 'int8[](int64[], int64[])', 'i8'),
-    ('logical_and', 'bool[](int64[], int64[])', 'i8'),
+    ('logical_and', 'int64[](int64[], int64[])', 'i8'),
     ('logical_or', 'int8[](int64[], int64[])', 'i8'),
     ('logical_xor', 'int8[](int64[], int64[])', 'i8'),
     ('bitwise_and', 'int64[](int64[], int64[])', 'i8'),
