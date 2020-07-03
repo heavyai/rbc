@@ -16,12 +16,12 @@ def omnisci():
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
                 'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
-                'BOOLEAN[]']
+                'BOOLEAN[]', 'BIGINT[]']
     # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
     # https://www.omnisci.com/docs/latest/5_datatypes.html
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'u8']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
     m.sql_execute(
@@ -36,6 +36,9 @@ def omnisci():
         if colname.startswith('f'):
             return 'ARRAY[%s]' % (', '.join(
                 str(row * 10 + i + 0.5) for i in range(-3, 3)))
+        if colname.startswith('u'):
+            return 'ARRAY[%s]' % (', '.join(
+                str(row * 10 + i) for i in range(6)))
         return 'ARRAY[%s]' % (', '.join(
             str(row * 10 + i) for i in range(-3, 3)))
 
@@ -101,7 +104,7 @@ binary_fns = [
     ('bitwise_and', 'int64[](int64[], int64[])', 'i8'),
     ('bitwise_or', 'int64[](int64[], int64[])', 'i8'),
     ('bitwise_xor', 'int64[](int64[], int64[])', 'i8'),
-    ('left_shift', 'int64[](int64[], int64[])', 'i8'),
+    ('left_shift', 'int64[](int64[], int64[])', 'u8'),
     ('right_shift', 'int64[](int64[], int64[])', 'i8'),
 ]
 
@@ -135,7 +138,8 @@ def test_omnisci_array_binary_math(omnisci, method, signature, column):
 binary_fn_scalar_input = [
     ('add', 'int32[](int32[], int32)', 'i4,3'),
     ('subtract', 'double[](double[], double)', 'f8,5.0'),
-    # ('subtract', 'double[](double, double[])', '5.0,f8'),  # omnisci server crashes
+    # omnisci server crashes:
+    # ('subtract', 'double[](double, double[])', '5.0,f8'),
     ('multiply', 'double[](double[], double)', 'f8,5.0'),
     ('divide', 'double[](double[], double)', 'f8,2.0'),
     ('logaddexp', 'double[](double[], double)', 'f8,2.0'),
