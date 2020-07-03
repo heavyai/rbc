@@ -30,7 +30,7 @@ install:
 before_script:
   - python setup.py develop
   - mkdir data && omnisci_initdb data -f 
-  - omnisci_server --enable-runtime-udf --enable-table-functions
+  - omnisci_server --enable-runtime-udf --enable-table-functions &
 
 script:
   - flake8 .
