@@ -52,10 +52,10 @@ def omnisci():
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
-    # try:
-    #     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
-    # except Exception as msg:
-    #     print('%s in deardown' % (type(msg)))
+    try:
+        m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    except Exception as msg:
+        print('%s in deardown' % (type(msg)))
 
 
 def np_ones(sz):
