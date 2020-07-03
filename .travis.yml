@@ -32,7 +32,8 @@ before_script:
   - conda activate omnisci-ci
   - mkdir data && omnisci_initdb data -f 
   - omnisci_server --enable-runtime-udf --enable-table-functions &
-  - conda deactivate omnisci-ci
+  - conda deactivate
+  - conda activate rbc-ci
 
 script:
   - flake8 .
