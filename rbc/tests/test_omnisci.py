@@ -105,7 +105,6 @@ def test_redefine(omnisci):
         'select i4, incr(i4) from {omnisci.table_name}'.format(**locals()))
     for x, x1 in result:
         assert x1 == x + 2
-    assert 0
 
 
 def test_forbidden_define(omnisci):
