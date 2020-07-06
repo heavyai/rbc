@@ -9,8 +9,6 @@ jobs:
   include:
     - name: Conda omniscidb
       env: OMNISCIDB_CONDA=true OMNISCIDB_DOCKER=false
-    - name: Docker omniscidb
-      env: OMNISCIDB_CONDA=false OMNISCIDB_DOCKER=true
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ;fi
@@ -35,7 +33,6 @@ install:
   - pip install thriftpy2
   - pip install flake8
   - if [ "$OMNISCIDB_CONDA" == true ]; then conda create --quiet --name omnisci-ci omniscidb ; fi
-  - if [ "$OMNISCIDB_DOCKER" == true ]; then docker pull omnisci/core-os-cpu ; fi
 
 before_script:
   - python setup.py develop
@@ -45,15 +42,6 @@ before_script:
       omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt & ;
       conda deactivate ;
       conda activate rbc-ci ;
-  - if [ "$OMNISCIDB_DOCKER" == true ]; then
-      mkdir omnisci-storage ;
-      docker run \
-        -d \
-        --name omnisci \
-        -p 6274:6274 \
-        -v ${HOME}/omnisci-storage:/omnisci-storage \
-        omnisci/core-os-cpu ;
-      sleep 10 ;
     fi
 
 script:
@@ -62,6 +50,6 @@ script:
 
 after_script:
   - if [ "$OMNISCIDB_CONDA" == true ]; then
-      pkill -f omnisci_server
-      cat omniscidb-output.txt
+      pkill -f omnisci_server ;
+      cat omniscidb-output.txt ;
     fi
