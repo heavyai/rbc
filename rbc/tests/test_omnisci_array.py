@@ -237,27 +237,28 @@ def test_sum(omnisci):
         assert sum(a) == s
 
 
-@pytest.mark.skipif(available_version[:2] == (5, 1),
-                    reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
-                        available_version,))
-def test_even_sum(omnisci):
-    omnisci.reset()
 
-    @omnisci('int32(bool[], int32[])')
-    def array_even_sum_int32(b, x):
-        r = 0
-        n = len(x)
-        for i in range(n):
-            if b[i]:
-                r = r + x[i]
-        return r
+# @pytest.mark.skipif(available_version[:2] == (5, 1),
+#                     reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
+#                         available_version,))
+# def test_even_sum(omnisci):
+#     omnisci.reset()
 
-    query = (
-        'select b, i4, array_even_sum_int32(b, i4) from {omnisci.table_name}'
-        .format(**locals()))
-    desrc, result = omnisci.sql_execute(query)
-    for b, i4, s in result:
-        assert sum([i_ for b_, i_ in zip(b, i4) if b_]) == s
+#     @omnisci('int32(bool[], int32[])')
+#     def array_even_sum_int32(b, x):
+#         r = 0
+#         n = len(x)
+#         for i in range(n):
+#             if b[i]:
+#                 r = r + x[i]
+#         return r
+
+#     query = (
+#         'select b, i4, array_even_sum_int32(b, i4) from {omnisci.table_name}'
+#         .format(**locals()))
+#     desrc, result = omnisci.sql_execute(query)
+#     for b, i4, s in result:
+#         assert sum([i_ for b_, i_ in zip(b, i4) if b_]) == s
 
 
 def test_array_setitem(omnisci):
