@@ -237,7 +237,6 @@ def test_sum(omnisci):
         assert sum(a) == s
 
 
-
 @pytest.mark.skipif(available_version[:2] == (5, 1),
                     reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
                         available_version,))
