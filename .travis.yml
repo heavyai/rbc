@@ -34,11 +34,8 @@ install:
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - if [ "$CONDA_BUILD" == true ]; then
-      conda create --quiet --name omnisci-ci omniscidb
-    else if [ "$DOCKER_BUILD" == true ]; then
-      docker pull omnisci/core-os-cpu ;
-    fi
+  - if [ "$CONDA_BUILD" == true ]; then conda create --quiet --name omnisci-ci omniscidb ; fi
+  - if [ "$DOCKER_BUILD" == true ]; then docker pull omnisci/core-os-cpu ; fi
 
 before_script:
   - python setup.py develop
