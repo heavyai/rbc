@@ -37,7 +37,7 @@ before_script:
 
 script:
   - flake8 .
-  - pytest -v -r s rbc/
+  - pytest -v -r s rbc/ -x
 
 after_script:
   - pkill -f omnisci_server
