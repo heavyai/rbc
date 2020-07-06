@@ -15,7 +15,6 @@ before_install:
 
 install:
   - export MINICONDA=$HOME/miniconda
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then omnisci_server --enable-runtime-udf --enable-table-functions &> omniscidb-output.txt & ; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then wget https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe ; fi
   - if [ "$TRAVIS_OS_NAME" = "windows" ]; then sleep 10 ; fi
@@ -33,14 +32,14 @@ install:
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - conda create --quiet --name omnisci-ci omniscidb
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then conda create --quiet --name omnisci-ci omniscidb ; fi
 
 before_script:
   - python setup.py develop
-  - conda activate omnisci-ci
-  - mkdir data && omnisci_initdb data -f
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then conda activate omnisci-ci ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then mkdir data && omnisci_initdb data -f ; fi
   - if [ "$OMNISCIDB_FROM" = "conda" ]; then omnisci_server --enable-runtime-udf --enable-table-functions &> omniscidb-output.txt & ; fi
-  - conda deactivate
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then conda deactivate ; fi
   - conda activate rbc-ci
 
 script:
@@ -48,5 +47,5 @@ script:
   - pytest -v -r s rbc/ -x
 
 after_script:
-  - pkill -f omnisci_server
-  - cat omniscidb-output.txt
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then pkill -f omnisci_server ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then cat omniscidb-output.txt ; fi
