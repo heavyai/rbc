@@ -11,7 +11,8 @@ jobs:
       env: OMNISCIDB_FROM="conda"
 
 before_install:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ;fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then chmod +x ./start_omniscidb_bg.sh ; fi
 
 install:
   - export MINICONDA=$HOME/miniconda
