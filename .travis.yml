@@ -32,14 +32,11 @@ install:
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - conda create --quiet --name omnisci-ci omniscidb
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then conda create --quiet --name omnisci-ci omniscidb ; fi
 
 before_script:
   - python setup.py develop
-  - conda activate omnisci-ci
-  - mkdir data && omnisci_initdb data -f
-  - omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
-  - conda deactivate
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then ./start_omniscidb_bg.sh ; fi
   - conda activate rbc-ci
 
 script:
