@@ -9,6 +9,8 @@ jobs:
   include:
     - name: Conda omniscidb
       env: OMNISCIDB_FROM="conda"
+    - name: Docker omniscidb
+      env: OMNISCIDB_FROM="docker"
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ; fi
@@ -34,10 +36,12 @@ install:
   - pip install thriftpy2
   - pip install flake8
   - if [ "$OMNISCIDB_FROM" = "conda" ]; then mamba create --quiet --name omnisci-ci omniscidb ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker pull omnisci/core-os-cpu ; fi
 
 before_script:
   - python setup.py develop
   - if [ "$OMNISCIDB_FROM" = "conda" ]; then source start_omniscidb_bg.sh ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker run -d --name omnisci -p 6274:6274 -v /tmp:/omnisci-storage omnisci/core-os-cpu ; fi
   - conda activate rbc-ci
 
 script:
