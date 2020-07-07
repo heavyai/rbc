@@ -26,13 +26,14 @@ install:
   - conda update --quiet --yes conda
   - conda info -a
   - conda config --add channels conda-forge
-  - conda env create --quiet --name rbc-ci --file .conda/environment.yml
+  - conda install mamba -c conda-forge
+  - mamba env create --quiet --name rbc-ci --file .conda/environment.yml
   - conda activate rbc-ci
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then conda create --quiet --name omnisci-ci omniscidb ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then mamba create --quiet --name omnisci-ci omniscidb ; fi
 
 before_script:
   - python setup.py develop
