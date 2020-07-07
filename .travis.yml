@@ -3,8 +3,17 @@ os:
 
 language: bash
 
+services: docker
+
+jobs:
+  include:
+    - name: Conda omniscidb
+      env: OMNISCIDB_FROM="conda"
+    - name: Docker omniscidb
+      env: OMNISCIDB_FROM="docker"
+
 before_install:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ;fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ; fi
 
 install:
   - export MINICONDA=$HOME/miniconda
@@ -18,16 +27,29 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update --quiet --yes conda
   - conda info -a
-  - conda env create --quiet --name rbc-ci --file .conda/environment.yml
+  - conda config --add channels conda-forge
+  - conda install mamba -c conda-forge
+  - mamba env create --quiet --name rbc-ci --file .conda/environment.yml
   - conda activate rbc-ci
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
   - pip install flake8
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then mamba create --quiet --name omnisci-ci omniscidb ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker pull omnisci/core-os-cpu ; fi
 
 before_script:
   - python setup.py develop
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then source start_omniscidb_bg.sh ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker run -d --name omnisci -p 6274:6274 -v $(pwd)/.omnisci/:/omnisci-storage omnisci/core-os-cpu ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then sleep 10; fi
+  - conda activate rbc-ci
 
 script:
   - flake8 .
-  - pytest -v -r s rbc/
+  - pytest -v -r s rbc/ -x
+
+after_script:
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then pkill -f omnisci_server ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then cat omniscidb-output.txt ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker logs omnisci ; fi

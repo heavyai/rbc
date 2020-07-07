@@ -13,13 +13,12 @@ dependencies:
   #- c-compiler
   - setuptools
   #- pip
-  - numba
-  - llvmlite>=0.29
+  - numba==0.49.1
+  - llvmlite
   - pytest
   - tblib
   - pymapd
   - thriftpy2
   - netifaces
-  - ply
   - flake8
   # - cudatoolkit-dev   # disable temporary
