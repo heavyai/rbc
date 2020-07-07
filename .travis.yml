@@ -50,5 +50,6 @@ script:
   - pytest -v -r s rbc/ -x
 
 after_script:
-  - pkill -f omnisci_server
-  - cat omniscidb-output.txt
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then pkill -f omnisci_server ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then cat omniscidb-output.txt ; fi
+  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker logs omnisci ; fi
