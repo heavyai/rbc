@@ -13,7 +13,7 @@ dependencies:
   #- c-compiler
   - setuptools
   #- pip
-  - numba==0.49.1
+  - numba
   - llvmlite
   - pytest
   - tblib
