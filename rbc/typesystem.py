@@ -1145,8 +1145,7 @@ if nb is not None:
     def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
         llty = context.get_value_type(toty)
         return builder.zext(val, llty)
-    
-    
+
     @extending.lower_builtin(bool, Boolean8)
     def boolean8_to_bool(context, builder, sig, args):
         [val] = args
