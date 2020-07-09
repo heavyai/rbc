@@ -622,6 +622,9 @@ class Type(tuple):
                 name = member._params.get('name', '_%s' % (i+1))
                 members.append((name,
                                 member.tonumba(bool_is_int8=bool_is_int8)))
+            base = self._params.get('numba.Type')
+            if base is not None:
+                return make_numba_struct(struct_name, members, base=base)
             return make_numba_struct(struct_name, members)
         if self.is_function:
             rtype = self[0].tonumba(bool_is_int8=bool_is_int8)
@@ -1217,17 +1220,20 @@ if nb is not None:
         return builder.icmp_signed('!=', val, val.type(0))
 
 
-def make_numba_struct(name, members, _cache={}):
+def make_numba_struct(name, members, base=nb.types.Type, _cache={}):
     """Create numba struct type instance.
     """
     t = _cache.get(name)
     if t is None:
+        assert issubclass(base, nb.types.Type)
+
         def model__init__(self, dmm, fe_type):
             datamodel.StructModel.__init__(self, dmm, fe_type, members)
+
         struct_model = type(name+'Model',
                             (datamodel.StructModel,),
                             dict(__init__=model__init__))
-        struct_type = type(name+'Type', (nb.types.Type,),
+        struct_type = type(name+'Type', (base,),
                            dict(members=[t for n, t in members]))
         datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)

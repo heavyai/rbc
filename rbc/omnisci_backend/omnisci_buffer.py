@@ -39,6 +39,24 @@ int64_t = ir.IntType(64)
 void_t = ir.VoidType()
 
 
+class OmnisciBufferType(typesystem.Type):
+
+    @property
+    def _buffer_typename(self):
+        return self._params['typename']
+
+    def pointer(self):
+        ptr_type = self._params.get('pointer')
+        if ptr_type is not None:
+            return ptr_type
+        return typesystem.Type.pointer(self)
+
+
+class BufferType(types.Type):
+
+    pass
+
+
 class BufferPointer(types.Type):
     """Type class for pointers to Omnisci buffer structures.
 
@@ -59,7 +77,8 @@ class BufferPointer(types.Type):
 
 
 class Buffer(object):
-    pass
+    """Represents Omnisci Buffer that can be constructed within UDF/UDTFs.
+    """
 
 
 class BufferPointerModel(datamodel.models.PointerModel):
@@ -67,7 +86,7 @@ class BufferPointerModel(datamodel.models.PointerModel):
 
 
 @extending.intrinsic
-def omnisci_buffer_len_(typingctx, data):
+def omnisci_buffer_ptr_len_(typingctx, data):
     sig = types.int64(data)
 
     def codegen(context, builder, signature, args):
@@ -80,22 +99,56 @@ def omnisci_buffer_len_(typingctx, data):
     return sig, codegen
 
 
+@extending.intrinsic
+def omnisci_buffer_len_(typingctx, data):
+    sig = types.int64(data)
+
+    def codegen(context, builder, signature, args):
+        data, = args
+        assert data.opname == 'load'
+        struct = data.operands[0]
+        return builder.load(builder.gep(
+            struct, [int32_t(0), int32_t(1)]))
+
+    return sig, codegen
+
+
 @extending.overload(len)
 def omnisci_buffer_len(x):
     if isinstance(x, BufferPointer):
+        return lambda x: omnisci_buffer_ptr_len_(x)
+    if isinstance(x, BufferType):
         return lambda x: omnisci_buffer_len_(x)
 
 
 @extending.intrinsic
-def omnisci_buffer_getitem_(typingctx, data, index):
+def omnisci_buffer_ptr_getitem_(typingctx, data, index):
     sig = data.eltype(data, index)
 
     def codegen(context, builder, signature, args):
         data, index = args
         rawptr = cgutils.alloca_once_value(builder, value=data)
-        arr = builder.load(builder.gep(rawptr, [int32_t(0)]))
+        buf = builder.load(builder.gep(rawptr, [int32_t(0)]))
         ptr = builder.load(builder.gep(
-            arr, [int32_t(0), int32_t(0)]))
+            buf, [int32_t(0), int32_t(0)]))
+        res = builder.load(builder.gep(ptr, [index]))
+
+        return res
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_getitem_(typingctx, data, index):
+    eltype = data.members[0].dtype
+    sig = eltype(data, index)
+
+    def codegen(context, builder, signature, args):
+        data, index = args
+        assert data.opname == 'load'
+        buf = data.operands[0]
+
+        ptr = builder.load(builder.gep(
+            buf, [int32_t(0), int32_t(0)]))
         res = builder.load(builder.gep(ptr, [index]))
 
         return res
@@ -105,7 +158,27 @@ def omnisci_buffer_getitem_(typingctx, data, index):
 @extending.overload(operator.getitem)
 def omnisci_buffer_getitem(x, i):
     if isinstance(x, BufferPointer):
+        return lambda x, i: omnisci_buffer_ptr_getitem_(x, i)
+    if isinstance(x, BufferType):
         return lambda x, i: omnisci_buffer_getitem_(x, i)
+
+
+@extending.intrinsic
+def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
+    sig = types.none(data, index, value)
+
+    def codegen(context, builder, signature, args):
+        zero = int32_t(0)
+
+        data, index, value = args
+
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        ptr = builder.load(rawptr)
+
+        buf = builder.load(builder.gep(ptr, [zero, zero]))
+        builder.store(value, builder.gep(buf, [index]))
+
+    return sig, codegen
 
 
 @extending.intrinsic
@@ -117,11 +190,13 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
 
         data, index, value = args
 
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        ptr = builder.load(rawptr)
+        assert data.opname == 'load'
+        buf = data.operands[0]
 
-        arr = builder.load(builder.gep(ptr, [zero, zero]))
-        builder.store(value, builder.gep(arr, [index]))
+        ptr = builder.load(builder.gep(
+            buf, [zero, zero]))
+
+        builder.store(value, builder.gep(ptr, [index]))
 
     return sig, codegen
 
@@ -129,10 +204,25 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
 @extending.overload(operator.setitem)
 def omnisci_buffer_setitem(a, i, v):
     if isinstance(a, BufferPointer):
+        return lambda a, i, v: omnisci_buffer_ptr_setitem_(a, i, v)
+    if isinstance(a, BufferType):
         return lambda a, i, v: omnisci_buffer_setitem_(a, i, v)
 
 
-def buffer_type_converter(target_info, obj, buffer_cls, buffer_ptr_cls,
+def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
+    ptr_type = buffer_type.pointer()
+
+    numba_type = buffer_type.tonumba(bool_is_int8=True)
+    numba_eltype = buffer_type[0][0].tonumba(bool_is_int8=True)
+    numba_type_ptr = buffer_ptr_cls(numba_type, numba_eltype)
+
+    ptr_type._params['tonumba'] = numba_type_ptr
+    # todo: add * to typename
+    ptr_type._params['typename'] = buffer_type._params['typename']
+    return ptr_type
+
+
+def buffer_type_converter(target_info, obj, buffer_typename, buffer_ptr_cls,
                           extra_members=[]):
     """Template function for converting typesystem Type instances to
     Omnisci Buffer Type instance.
@@ -145,47 +235,60 @@ def buffer_type_converter(target_info, obj, buffer_cls, buffer_ptr_cls,
 
     Parameters
     ----------
-    obj : {str, numba.Type, typesystem.Type}
-      Any object that can be converted to typesystem custom Type instance.
-    buffer_cls : {Buffer subclass}
+    obj : {str, typesystem.Type}
+      Custom atomic type corresponding to Omnisci Buffer.
+    buffer_typename : str
+      The name of buffer type.
     buffer_ptr_cls : {BufferPointer subclass}
     extra_members : {list of typesystem Type instances}
       Additional members of the buffer structure.
 
     """
+    if isinstance(obj, str):
+        obj = typesystem.Type(obj,)
+
     if not isinstance(obj, typesystem.Type):
-        return typesystem.Type.fromobject(obj, target_info)
+        raise NotImplementedError(type(obj))
+
+    # A valid obj for buffer type is in the form
+    #   typesystem.Type('BufferTypeName<ElementType>', )
+    # In all other cases refuse by returning None.
 
     name, params = obj.get_name_and_parameters()
-    if name is None or name != buffer_cls.__name__:
+    if name is None or name != buffer_typename:
         return
     assert len(params) == 1, params
     t = typesystem.Type.fromstring(params[0], target_info)
     if not t.is_concrete:
         return
 
-    assert issubclass(buffer_cls, Buffer)
     assert issubclass(buffer_ptr_cls, BufferPointer)
 
+    # Construct buffer type as a struct with ptr and sz as members.
     ptr_t = typesystem.Type(t, '*', name='ptr')
-
     size_t = typesystem.Type.fromstring('size_t sz',
                                         target_info=target_info)
-    buffer_type = typesystem.Type(
+    buffer_type = OmnisciBufferType(
         ptr_t,
         size_t,
         *extra_members
     )
-    buffer_type_ptr = buffer_type.pointer()
+
+    # Converting buffer type to numba type results BufferType instance
+    # that simplifies checking types when overloading generic methods
+    # like len, getitem, setitem, etc.
+    buffer_type._params['numba.Type'] = BufferType
+
+    # Create alias to buffer type
+    typename = '%s<%s>' % (buffer_typename, t.toprototype())
+    buffer_type._params['typename'] = typename
 
     # In omniscidb, boolean values are stored as int8 because
     # boolean has three states: false, true, and null.
-    numba_type_ptr = buffer_ptr_cls(
-        buffer_type.tonumba(bool_is_int8=True),
-        t.tonumba(bool_is_int8=True))
+    numba_type = buffer_type.tonumba(bool_is_int8=True)
 
-    typename = '%s<%s>' % (buffer_cls.__name__, t.toprototype())
-    buffer_type_ptr._params['typename'] = typename
-    buffer_type_ptr._params['tonumba'] = numba_type_ptr
+    buffer_type._params['tonumba'] = numba_type
+    buffer_type._params['pointer'] = make_buffer_ptr_type(buffer_type,
+                                                          buffer_ptr_cls)
 
-    return buffer_type_ptr
+    return buffer_type

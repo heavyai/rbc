@@ -3,6 +3,11 @@ import pytest
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
+if available_version and available_version >= (5, 4):
+    reason = ('Old-style UDTFs are available for omniscidb 5.3 or older, '
+              'currently connected to omniscidb '
+              + '.'.join(map(str, available_version)))
+    available_version = ()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 

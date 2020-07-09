@@ -334,7 +334,7 @@ class RemoteOmnisci(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
         ]:
-            ext_arguments_map['{%s* ptr, uint64 sz}*' % ptr_type] \
+            ext_arguments_map['{%s* ptr, uint64 sz}' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
 
         values = list(ext_arguments_map.values())
@@ -419,6 +419,9 @@ class RemoteOmnisci(RemoteJIT):
             RowMultiplier='kUserSpecifiedRowMultiplier',
             Constant='kConstant')
 
+        def is_column_type(typ):
+            return typ._params.get('typename', '').startswith('Column<')
+
         udfs = []
         udtfs = []
         device_ir_map = {}
@@ -451,30 +454,44 @@ class RemoteOmnisci(RemoteJIT):
                                   f' in {f2}#{n2}.')
                         continue
                     function_signatures[name].append(sig)
-                    is_udtf = 'table' in sig[0].annotation()
-                    if i == 0 and (self.version < (5, 2) or is_udtf):
+
+                    is_udtf = any(a for a in sig[1] if is_column_type(a))
+
+                    is_old_udtf = 'table' in sig[0].annotation()
+                    if i == 0 and (self.version < (5, 2)
+                                   or is_old_udtf or is_udtf):
+                        # TODO: support __0 for UDTFs
                         sig.set_mangling('')
                     else:
                         sig.set_mangling('__%s' % (i))
 
-                    outputArgTypes = []
-                    for a in reversed(sig[1]):
-                        if a.tostring(
-                                use_annotation=False,
-                                use_typename=True).startswith('Column<'):
-                            atype = ext_arguments_map[
-                                a.tostring(use_annotation=False)]
-                            outputArgTypes.insert(0, atype)
-                        else:
-                            break
+                    if is_udtf:
+                        # new style UDTF, requires omniscidb version >= 5.4
 
-                    if outputArgTypes:
-                        # new style UDTF
+                        if self.version < (5, 4):
+                            v = '.'.join(map(str, self.version))
+                            raise RuntimeError(
+                                'UDTFs with Column arguments require '
+                                'omniscidb 5.4 or newer, currently '
+                                'connected to ', v)
+
+                        # scan the tail of arguments for Column
+                        # arguments that will be the output arguments
+                        # to UDTFs
+                        column_atypes = []
+                        for a in reversed(sig[1]):
+                            if is_column_type(a):
+                                atype = ext_arguments_map[
+                                    a.tostring(use_annotation=False)]
+                                column_atypes.insert(0, atype)
+                            else:
+                                break
+
                         inputArgTypes = []
                         sqlArgTypes = []
                         sizer = None
                         sizer_index = -1
-                        for i in range(len(sig[1]) - len(outputArgTypes)):
+                        for i in range(len(sig[1]) - len(column_atypes)):
                             a = sig[1][i]
                             annot = a.annotation()
                             _sizer = annot.get('sizer', unspecified)
@@ -488,9 +505,7 @@ class RemoteOmnisci(RemoteJIT):
                                 sizer = _sizer
                             atype = ext_arguments_map[
                                 a.tostring(use_annotation=False)]
-                            if a.tostring(
-                                    use_annotation=False,
-                                    use_typename=True).startswith('Column<'):
+                            if is_column_type(a):
                                 sqlArgTypes.append(ext_arguments_map['Cursor'])
                             else:
                                 sqlArgTypes.append(atype)
@@ -501,8 +516,17 @@ class RemoteOmnisci(RemoteJIT):
                         udtfs.append(thrift.TUserDefinedTableFunction(
                             name + sig.mangling,
                             sizer_type, sizer_index,
-                            inputArgTypes, outputArgTypes, sqlArgTypes))
-                    elif is_udtf:
+                            inputArgTypes, column_atypes, sqlArgTypes))
+                    elif is_old_udtf:
+                        # old style UDTF for omniscidb <= 5.3, to be deprecated
+
+                        if self.version >= (5, 4):
+                            v = '.'.join(map(str, self.version))
+                            raise RuntimeError(
+                                'Old-style UDTFs require '
+                                'omniscidb 5.3 or older, currently '
+                                'connected to ', v)
+
                         sizer = None
                         sizer_index = -1
                         inputArgTypes = []
@@ -535,6 +559,8 @@ class RemoteOmnisci(RemoteJIT):
                             sizer_type, sizer_index,
                             inputArgTypes, outputArgTypes, sqlArgTypes))
                     else:
+                        if [a for a in sig[1] if is_column_type(a)]:
+                            raise TypeError(repr(sig))  # unexpected Column
                         rtype = ext_arguments_map[sig[0].tostring(
                             use_annotation=False)]
                         atypes = [ext_arguments_map[a.tostring(

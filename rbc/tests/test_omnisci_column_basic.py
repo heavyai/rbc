@@ -3,6 +3,12 @@ import pytest
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
+if available_version and available_version < (5, 4):
+    reason = ('New-style UDTFs (with Column arguments) are available'
+              ' for omniscidb 5.4 or newer, '
+              'currently connected to omniscidb '
+              + '.'.join(map(str, available_version)))
+    available_version = ()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -38,14 +44,14 @@ def omnisci():
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
-def _test_simple(omnisci):
+def test_simple(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
     omnisci.register()
 
-    @omnisci('int32|table(Column<double>, int64|sizer=RowMultiplier,'
+    @omnisci('int32(Column<double>, int64|sizer=RowMultiplier,'
              ' Column<double>)')
     def my_row_copier(x, m, y):
         input_row_count = len(x)

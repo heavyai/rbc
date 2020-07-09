@@ -42,5 +42,5 @@ def column_type_converter(target_info, obj):
     See :code:`buffer_type_converter` for details.
     """
     return buffer_type_converter(
-        target_info, obj, Column, ColumnPointer,
+        target_info, obj, 'Column', ColumnPointer,
         extra_members=[])

@@ -124,8 +124,11 @@ def array_type_converter(target_info, obj):
 
     See :code:`buffer_type_converter` for details.
     """
-    return buffer_type_converter(
-        target_info, obj, Array, ArrayPointer,
+    buffer_type = buffer_type_converter(
+        target_info, obj, 'Array', ArrayPointer,
         extra_members=[
             typesystem.Type.fromstring('bool is_null',
                                        target_info=target_info)])
+    if buffer_type is not None:
+        return buffer_type.pointer()
+    return buffer_type
