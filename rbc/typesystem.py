@@ -11,10 +11,10 @@ from .utils import get_version
 try:
     import numba as nb
     if get_version('numba') >= (0, 49):
-        from numba.core import typing, datamodel
+        from numba.core import typing, datamodel, extending
         from numba.core.imputils import lower_cast
     else:
-        from numba import typing, datamodel
+        from numba import typing, datamodel, extending
         from numba.targets.imputils import lower_cast
     nb_NA_message = None
 except ImportError as msg:
@@ -1145,6 +1145,11 @@ if nb is not None:
     def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
         llty = context.get_value_type(toty)
         return builder.zext(val, llty)
+
+    @extending.lower_builtin(bool, Boolean8)
+    def boolean8_to_bool(context, builder, sig, args):
+        [val] = args
+        return builder.icmp_signed('!=', val, val.type(0))
 
 
 def make_numba_struct(name, members, _cache={}):
