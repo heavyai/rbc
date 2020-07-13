@@ -7,7 +7,7 @@ except ImportError as msg:
 
 try:
     import numpy as np
-    np_NA_message = None
+    np_NA_message = ''
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)
