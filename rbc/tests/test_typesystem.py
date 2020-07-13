@@ -1,6 +1,6 @@
 try:
     import numba as nb
-    nb_NA_message = None
+    nb_NA_message = ''
 except ImportError as msg:
     nb = None
     nb_NA_message = str(msg)
