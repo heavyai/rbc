@@ -241,7 +241,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
     flags = compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
-    flags.set('no_cfunc_wrapper')
+    # flags.set('no_cfunc_wrapper')
 
     function_names = []
     for func, signatures in functions_and_signatures:
