@@ -129,7 +129,7 @@ def test_omnisci_array_binary_math(omnisci, method, signature, column):
 
     expected = getattr(np, method)(row, row)
 
-    if method == 'power':
+    if method in ['power', 'logaddexp2']:
         assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
     else:
         assert np.array_equal(expected, out), 'omni_' + method
@@ -197,7 +197,7 @@ def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
     row, out = list(result)[0]
     expected = getattr(np, method)(row, num(scalar))
 
-    if method == 'power':
+    if method in ['power', 'logaddexp2']:
         assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
     else:
         assert np.array_equal(expected, out), 'omni_' + method
@@ -276,12 +276,7 @@ def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
 
     row, out = list(result)[0]
     expected = getattr(np, method)(row)
-    _isclose = ['log', 'log2', 'log10', 'log1p', 'sqrt',
-                'arcsin', 'arccos', 'arccosh', 'arctanh']
-    if method in _isclose:
-        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
-    else:
-        assert np.array_equal(expected, out), 'omni_' + method
+    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 
 
 def test_heaviside(omnisci):
