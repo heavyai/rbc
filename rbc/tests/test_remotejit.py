@@ -13,7 +13,7 @@ def Type_fromstring(s):
 
 @pytest.fixture(scope="module")
 def rjit(request):
-    rjit = RemoteJIT()
+    rjit = RemoteJIT(debug=True)
     rjit.start_server(background=True)
     request.addfinalizer(rjit.stop_server)
     atexit.register(rjit.stop_server)
