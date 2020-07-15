@@ -482,7 +482,8 @@ class RemoteJIT(object):
         """
         thrift_file = os.path.join(os.path.dirname(__file__),
                                    'remotejit.thrift')
-        print('staring rpc.thrift server: %s' % (thrift_file), end='', flush=True)
+        print('staring rpc.thrift server: %s' % (thrift_file), end='',
+              flush=True)
 
         if self.debug:
             print(flush=True)
