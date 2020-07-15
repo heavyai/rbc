@@ -1,13 +1,13 @@
 try:
     import numba as nb
-    nb_NA_message = None
+    nb_NA_message = ''
 except ImportError as msg:
     nb = None
     nb_NA_message = str(msg)
 
 try:
     import numpy as np
-    np_NA_message = None
+    np_NA_message = ''
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)

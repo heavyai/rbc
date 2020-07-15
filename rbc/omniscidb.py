@@ -33,7 +33,7 @@ def is_available(_cache={}):
                 _cache['reason'] = (
                     'expected OmniSci version 4.6 or greater, got %s'
                     % (version,))
-    return _cache.get('version', ()), _cache.get('reason')
+    return _cache.get('version', ()), _cache.get('reason', '')
 
 
 def get_client_config(**config):
