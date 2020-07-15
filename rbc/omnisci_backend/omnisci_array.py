@@ -10,7 +10,7 @@ from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
 from .omnisci_buffer import (BufferPointer, Buffer, BufferPointerModel,
-                             buffer_type_converter)
+                             buffer_type_converter, OmnisciBufferType)
 
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
@@ -22,6 +22,11 @@ int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
 void_t = ir.VoidType()
+
+
+class OmnisciArrayType(OmnisciBufferType):
+    """Omnisci Array type for RBC typesystem.
+    """
 
 
 class ArrayPointer(BufferPointer):
@@ -125,7 +130,8 @@ def array_type_converter(target_info, obj):
     See :code:`buffer_type_converter` for details.
     """
     buffer_type = buffer_type_converter(
-        target_info, obj, 'Array', ArrayPointer,
+        target_info, obj, OmnisciArrayType,
+        'Array', ArrayPointer,
         extra_members=[
             typesystem.Type.fromstring('bool is_null',
                                        target_info=target_info)])

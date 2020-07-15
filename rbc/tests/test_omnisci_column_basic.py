@@ -44,7 +44,7 @@ def omnisci():
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
-def test_simple(omnisci):
+def test_sizer_row_multiplier(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -52,8 +52,8 @@ def test_simple(omnisci):
     omnisci.register()
 
     @omnisci('int32(Column<double>, int64|sizer=RowMultiplier,'
-             ' Column<double>)')
-    def my_row_copier(x, m, y):
+             ' OutputColumn<double>)')
+    def my_row_copier_mul(x, m, y):
         input_row_count = len(x)
         for i in range(input_row_count):
             for c in range(m):
@@ -62,9 +62,89 @@ def test_simple(omnisci):
         return m * input_row_count
 
     descr, result = omnisci.sql_execute(
-        'select f8 from table(my_row_copier(cursor(select f8 '
+        'select f8 from table(my_row_copier_mul(cursor(select f8 '
         'from {omnisci.table_name}), 2));'
         .format(**locals()))
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2,)
+
+
+def _test_sizer_constant_parameter(omnisci):
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, int64|sizer=ConstantParameter,'
+             ' Column<double>)')
+    def my_row_copier_cp(x, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i] * 2
+        return m
+
+    descr, result = omnisci.sql_execute(
+        'select f8 from table(my_row_copier_cp(cursor(select f8 '
+        'from {omnisci.table_name}), 5));'
+        .format(**locals()))
+
+    print(result)
+
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * 2,)
+
+
+def _test_rowmul_add_columns(omnisci):
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, Column<double>, int64|sizer=RowMultiplier,'
+             ' Column<double>)')
+    def add_columns(x, y, m, r):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                r[j] = x[i] + y[i]
+        return m * input_row_count
+
+    descr, result = omnisci.sql_execute(
+        'select f8 from table(add_columns('
+        'cursor(select f8 from {omnisci.table_name}),'
+        ' cursor(select f8 from {omnisci.table_name}), 1));'
+        .format(**locals()))
+
+    print(result)
+
+
+def _test_rowmul_return_two_columns(omnisci):
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, int64|sizer=RowMultiplier,'
+             ' Column<double>, Column<double>)')
+    def ret_columns(x, m, y, z):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i]
+                z[j] = x[i]
+        return m * input_row_count
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(ret_columns('
+        'cursor(select f8 from {omnisci.table_name}), 1));'
+        .format(**locals()))
+
+    print(list(result))

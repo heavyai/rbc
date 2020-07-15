@@ -217,12 +217,12 @@ def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
     numba_type_ptr = buffer_ptr_cls(numba_type, numba_eltype)
 
     ptr_type._params['tonumba'] = numba_type_ptr
-    # todo: add * to typename
-    ptr_type._params['typename'] = buffer_type._params['typename']
+    ptr_type._params['typename'] = buffer_type._params['typename'] + '*'
     return ptr_type
 
 
-def buffer_type_converter(target_info, obj, buffer_typename, buffer_ptr_cls,
+def buffer_type_converter(target_info, obj, typesystem_buffer_type,
+                          buffer_typename, buffer_ptr_cls,
                           extra_members=[]):
     """Template function for converting typesystem Type instances to
     Omnisci Buffer Type instance.
@@ -237,6 +237,7 @@ def buffer_type_converter(target_info, obj, buffer_typename, buffer_ptr_cls,
     ----------
     obj : {str, typesystem.Type}
       Custom atomic type corresponding to Omnisci Buffer.
+    typesystem_buffer_type : {OmnisciBufferType subclass}
     buffer_typename : str
       The name of buffer type.
     buffer_ptr_cls : {BufferPointer subclass}
@@ -263,12 +264,13 @@ def buffer_type_converter(target_info, obj, buffer_typename, buffer_ptr_cls,
         return
 
     assert issubclass(buffer_ptr_cls, BufferPointer)
+    assert issubclass(typesystem_buffer_type, OmnisciBufferType)
 
     # Construct buffer type as a struct with ptr and sz as members.
     ptr_t = typesystem.Type(t, '*', name='ptr')
     size_t = typesystem.Type.fromstring('size_t sz',
                                         target_info=target_info)
-    buffer_type = OmnisciBufferType(
+    buffer_type = typesystem_buffer_type(
         ptr_t,
         size_t,
         *extra_members
