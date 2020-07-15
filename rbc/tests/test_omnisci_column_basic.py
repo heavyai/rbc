@@ -44,7 +44,7 @@ def omnisci():
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
-def test_sizer_row_multiplier(omnisci):
+def test_sizer_row_multiplier_orig(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -68,6 +68,71 @@ def test_sizer_row_multiplier(omnisci):
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2,)
+
+
+def test_sizer_row_multiplier_param1(omnisci):
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, double, int32, int64|sizer=RowMultiplier,'
+             'OutputColumn<double>)')
+    def my_row_copier_mul_param1(x, alpha, beta, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i] * alpha + beta
+        return m * input_row_count
+
+    alpha = 3
+
+    descr, result = omnisci.sql_execute(
+        'select f8 from table(my_row_copier_mul_param1('
+        'cursor(select f8 from {omnisci.table_name}),'
+        'cast({alpha} as double),'
+        'cast(4 as int), 2));'
+        .format(**locals()))
+
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * alpha + 4,)
+
+
+@pytest.mark.skipif(available_version[:2] < (5, 4),
+                    reason="test requires omniscidb 5.4 (got %s)" % (
+                        available_version,))
+def test_sizer_row_multiplier_param2(omnisci):
+    pytest.skip('fails, likely a bug of omniscidb [issue 131]')
+
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    @omnisci('int32(double, Column<double>, int32, int64|sizer=RowMultiplier,'
+             'OutputColumn<double>)')
+    def my_row_copier_mul_param2(alpha, x, beta, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i] * alpha + beta
+        return m * input_row_count
+
+    alpha = 3
+
+    descr, result = omnisci.sql_execute(
+        'select f8 from table(my_row_copier_mul_param2('
+        'cast({alpha} as double),'
+        'cursor(select f8 from {omnisci.table_name}),'
+        'cast(4 as int), 2));'
+        .format(**locals()))
+
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * alpha + 4,)
 
 
 def _test_sizer_constant_parameter(omnisci):
