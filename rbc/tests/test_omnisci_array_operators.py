@@ -492,7 +492,7 @@ def test_array_operators(omnisci, suffix, signature, args, expected):
         pytest.skip(f'operator_{suffix}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 107]')
 
-    if (available_version[:2] == (5, 4)
+    if (available_version[:3] >= (5, 3, 1)
         and suffix in ['abs', 'add', 'and_bw', 'eq', 'floordiv', 'floordiv2',
                        'ge', 'gt', 'iadd', 'iand', 'ifloordiv', 'ifloordiv2',
                        'ilshift', 'imul', 'ior', 'isub', 'ipow', 'irshift',
