@@ -13,7 +13,7 @@ def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     # issue https://github.com/xnd-project/rbc/issues/134
-    table_name = 'rbc_test_omnisci_array'
+    table_name = 'rbc_test_omnisci_array_methods'
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     yield m
 
