@@ -1,25 +1,10 @@
 import numpy as np
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
-from rbc import typesystem
 if get_version('numba') >= (0, 49):
     from numba.core import extending, types
 else:
     from numba import extending, types
-
-
-def expose_and_overload(func):
-    name = func.__name__
-    s = f'def {name}(*args, **kwargs): pass'
-    exec(s, globals())
-
-    fn = globals()[name]
-    decorate = extending.overload(fn)
-
-    def wrapper(overload_func):
-        return decorate(overload_func)
-
-    return wrapper
 
 
 def determine_dtype(a, dtype):

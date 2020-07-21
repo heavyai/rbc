@@ -230,4 +230,3 @@ def omnisci_array_setitem_(typingctx, data, index, value):
 def omnisci_array_setitem(a, i, v):
     if isinstance(a, ArrayPointer):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
-
