@@ -1123,7 +1123,6 @@ if nb is not None:
 
     class Boolean8(nb.types.Integer):
 
-        # bitwidth = 8
         def __init__(self, name):
             super().__init__(name, bitwidth=8, signed=True)
 

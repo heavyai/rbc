@@ -238,6 +238,6 @@ def impl_not_boolean8(b):
     if isinstance(b, typesystem.Boolean8):
         def impl(b):
             if b:
-                return True
-            return False
+                return typesystem.boolean8(0)
+            return typesystem.boolean8(1)
         return impl
