@@ -128,16 +128,6 @@ def dummy_binary_ufunc(a, b):
     pass
 
 
-@extending.overload(np.invert)
-def impl_invert_boolean8(b):
-    if isinstance(b, typesystem.Boolean8):
-        def impl(b):
-            if b:
-                return typesystem.boolean8(False)
-            return typesystem.boolean8(True)
-        return impl
-
-
 def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
     """
     Wrapper for unary ufuncs that returns an array

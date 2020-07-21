@@ -231,13 +231,3 @@ def omnisci_array_setitem(a, i, v):
     if isinstance(a, ArrayPointer):
         return lambda a, i, v: omnisci_array_setitem_(a, i, v)
 
-
-# overload of not_ for boolean8
-@extending.overload(operator.not_)
-def impl_not_boolean8(b):
-    if isinstance(b, typesystem.Boolean8):
-        def impl(b):
-            if b:
-                return typesystem.boolean8(0)
-            return typesystem.boolean8(1)
-        return impl
