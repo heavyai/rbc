@@ -8,27 +8,18 @@ else:
     from numba import extending, types
 
 
-def invert(a):
-    pass
+def expose_and_overload(func):
+    name = func.__name__
+    s = f'def {name}(*args, **kwargs): pass'
+    exec(s, globals())
 
+    fn = globals()[name]
+    decorate = extending.overload(fn)
 
-@extending.overload(invert)
-def impl_np_invert(a):
-    if isinstance(a, ArrayPointer):
-        def impl(a):
-            sz = len(a)
-            x = Array(sz, 'int8')
-            for i in range(sz):
-                x[i] = types.int8(invert(a[i]))
-            return x
-        return impl
-    if isinstance(a, typesystem.Boolean8):
-        def impl(a):
-            return types.int8(0)
-            # if a == True:
-            #     return types.int8(0)
-            # return types.int8(1)
-        return impl
+    def wrapper(overload_func):
+        return decorate(overload_func)
+
+    return wrapper
 
 
 def determine_dtype(a, dtype):
@@ -137,6 +128,16 @@ def dummy_binary_ufunc(a, b):
     pass
 
 
+@extending.overload(np.invert)
+def impl_invert_boolean8(b):
+    if isinstance(b, typesystem.Boolean8):
+        def impl(b):
+            if b:
+                return typesystem.boolean8(False)
+            return typesystem.boolean8(True)
+        return impl
+
+
 def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
     """
     Wrapper for unary ufuncs that returns an array
@@ -189,7 +190,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 # @overload_elementwise_unary_ufunc(np.cbrt) # not supported
 @overload_elementwise_unary_ufunc(np.reciprocal)
 # Bit-twiddling functions
-# @overload_elementwise_unary_ufunc(np.invert)
+@overload_elementwise_unary_ufunc(np.invert)
 # trigonometric functions
 @overload_elementwise_unary_ufunc(np.sin)
 @overload_elementwise_unary_ufunc(np.cos)

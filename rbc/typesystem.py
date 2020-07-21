@@ -377,10 +377,8 @@ class Type(tuple):
         """
         self._mangling = mangling
 
-    @property
-    def mangling(self):
+    def mangling(self, bool_is_int8=None):
         if self._mangling is None:
-            bool_is_int8 = self._params.get('bool_is_int8', None)
             self._mangling = self.mangle(bool_is_int8=bool_is_int8)
         return self._mangling
 
@@ -572,8 +570,7 @@ class Type(tuple):
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
-                self._params['bool_is_int8'] = bool_is_int8
-                struct_name = 'STRUCT'+self.mangling
+                struct_name = 'STRUCT'+self.mangling(bool_is_int8=bool_is_int8)
             members = []
             for i, member in enumerate(self):
                 name = member._params.get('name', '_%s' % (i+1))
@@ -923,12 +920,14 @@ class Type(tuple):
         Mangled type string is a string representation of the type
         that can be used for extending the function name.
         """
+
         if self.is_void:
             return 'v'
         if self.is_pointer:
             return '_' + self[0].mangle(bool_is_int8=bool_is_int8) + 'P'
         if self.is_struct:
-            return '_' + ''.join(m.mangle(bool_is_int8=bool_is_int8) for m in self) + 'K'
+            return '_' + ''.join(m.mangle(bool_is_int8=bool_is_int8)
+                                 for m in self) + 'K'
         if self.is_function:
             r = self[0].mangle(bool_is_int8=bool_is_int8)
             a = ''.join([a.mangle(bool_is_int8=bool_is_int8) for a in self[1]])
@@ -1122,7 +1121,11 @@ if nb is not None:
         def get_data_type(self):
             return self._bit_type
 
-    class Boolean8(nb.types.Boolean):
+    class Boolean8(nb.types.Integer):
+
+        # bitwidth = 8
+        def __init__(self, name):
+            super().__init__(name, bitwidth=8, signed=True)
 
         def can_convert_to(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
