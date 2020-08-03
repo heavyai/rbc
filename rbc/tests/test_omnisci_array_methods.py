@@ -125,9 +125,9 @@ def test_ndarray_methods(omnisci, method, signature, args, expected):
         pytest.skip(
             f'{method}: crashes CUDA enabled omniscidb server [issue 93]')
 
-    if available_version[:3] >= (5, 3, 1) and method in ['fill']:
+    if available_version[:3] == (5, 3, 1) and method in ['fill']:
         pytest.skip(
-            f'{method}: crashes CPU-only omniscidb server v 5.4 [issue 113]')
+            f'{method}: crashes CPU-only omniscidb server v 5.3 [issue 113]')
 
     if available_version[:3] >= (5, 3, 1) and method in ['max_empty']:
         pytest.skip(
