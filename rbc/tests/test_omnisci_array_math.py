@@ -267,6 +267,10 @@ def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
     _, result = omnisci.sql_execute(query)
 
     row, out = list(result)[0]
+    if method == 'invert' and column == 'b':
+        # invert on booleans is different from invert on int8 values
+        row = np.array(row) != 0
+
     expected = getattr(np, method)(row)
     assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 

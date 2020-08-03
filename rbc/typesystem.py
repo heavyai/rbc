@@ -721,6 +721,9 @@ class Type(tuple):
             return cls(cls.fromnumba(t.dtype, target_info), '*')
         if isinstance(t, nb.types.NumberClass):
             return cls.fromnumba(t.instance_type, target_info)
+        if isinstance(t, nb.types.Boolean):
+            # boolean1 and boolean8 map both to bool
+            return cls.fromstring('bool', target_info)
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -935,8 +938,6 @@ class Type(tuple):
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
-                if n == 'b' and bool_is_int8:
-                    return 'B'
                 return n
             n = self[0]
             return 'V' + str(len(n)) + 'V' + n
@@ -1121,10 +1122,9 @@ if nb is not None:
         def get_data_type(self):
             return self._bit_type
 
-    class Boolean8(nb.types.Integer):
+    class Boolean8(nb.types.Boolean):
 
-        def __init__(self, name):
-            super().__init__(name, bitwidth=8, signed=True)
+        bitwidth = 8
 
         def can_convert_to(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
@@ -1140,9 +1140,6 @@ if nb is not None:
 
     boolean1 = Boolean1('boolean1')
     boolean8 = Boolean8('boolean8')
-
-    _numba_imap[boolean1] = 'bool'
-    _numba_imap[boolean8] = 'int8'
 
     @lower_cast(Boolean1, nb.types.Boolean)
     @lower_cast(Boolean8, nb.types.Boolean)
