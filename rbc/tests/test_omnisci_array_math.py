@@ -235,14 +235,14 @@ unary_fns = [
     ('deg2rad', 'double[](double[])', 'f8'),
     ('rad2deg', 'double[](double[])', 'f8'),
     # comparison functions
-    ('logical_not', 'int8[](int64[])', 'i8'),
+    ('logical_not', 'bool[](int64[])', 'i8'),
     # floating functions
-    ('isfinite', 'int8[](int64[])', 'i8'),
-    ('isinf', 'int8[](int64[])', 'i8'),
-    ('isnan', 'int8[](int64[])', 'i8'),
-    # ('isnat', 'int8[](int64[])', 'i8'), # doesn't work
+    ('isfinite', 'bool[](int64[])', 'i8'),
+    ('isinf', 'bool[](int64[])', 'i8'),
+    ('isnan', 'bool[](int64[])', 'i8'),
+    # ('isnat', 'bool[](int64[])', 'i8'), # doesn't work
     ('fabs', 'double[](double[])', 'f8'),
-    # ('signbit', 'int8[](int64[])', 'i8'), # not supported
+    # ('signbit', 'bool[](int64[])', 'i8'), # not supported
     # ('spacing', 'double[](double[])', 'f8'), # not supported
     ('floor', 'double[](double[])', 'f8'),
     ('ceil', 'double[](double[])', 'f8'),

@@ -1,4 +1,5 @@
 import pytest
+import rbc.omnisci_backend as omni  # noqa: F401
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -6,6 +7,7 @@ np = pytest.importorskip('numpy')
 nb = pytest.importorskip('numba')
 available_version, reason = rbc_omnisci.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+
 
 
 @pytest.fixture(scope='module')
@@ -167,20 +169,23 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     if isinstance(np_func, np.ufunc):
         # numba does not support jitting ufunc-s directly
         if arity == 1:
-            np_func = eval(f'lambda x: np.{np_func.__name__}(x)', dict(np=np))
+            np_func = eval(f'lambda x: omni.{np_func.__name__}(x)', dict(omni=omni))
         elif arity == 2:
-            np_func = eval(f'lambda x, y: np.{np_func.__name__}(x, y)',
-                           dict(np=np))
+            np_func = eval(f'lambda x, y: omni.{np_func.__name__}(x, y)',
+                           dict(omni=omni))
         else:
             raise NotImplementedError((signature, arity))
     if np_func.__name__ == '<lambda>':
         # give lambda function a name
         np_func.__name__ = fn_name
 
-    if fn_name in ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
+    if available_version[:2] <= (5, 3) and fn_name in \
+        ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
         # Invalid use of Function(<ufunc 'logical_or'>) with
         # argument(s) of type(s): (boolean8, boolean8)
-        pytest.skip(f'using boolean8 as {fn_name} argument not implemented')
+        pytest.skip(
+            f'using boolean8 as {fn_name} argument not implemented for'
+            ' omniscidb server < v 5.4')
 
     if fn_name in ['positive', 'float_power', 'cbrt', 'divmod0', 'heaviside',
                    'frexp0']:
@@ -241,6 +246,9 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     elif kind.startswith('int'):
         assert arity <= 2, arity
         xs = ', '.join('ij'[:arity])
+    elif kind.startswith('bool'):
+        assert arity <= 2, arity
+        xs = ', '.join('ab'[:arity])
     else:
         raise NotImplementedError(kind)
     query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
