@@ -135,7 +135,7 @@ def test_array_methods(omnisci, method, signature, args, expected):
         and method in ['full', 'full_dtype', 'ones', 'ones_dtype', 'zeros',
                        'zeros_dtype', 'cumsum']):
         pytest.skip(
-            f'{method}: crashes CPU-only omniscidb server v 5.4 [issue 113]')
+            f'{method}: crashes CPU-only omniscidb server v 5.3.1 [issue 113]')
     omnisci.reset()
 
     fn = omnisci(signature)(eval('np_{}'.format(method)))
