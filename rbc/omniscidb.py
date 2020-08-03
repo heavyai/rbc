@@ -287,7 +287,7 @@ class RemoteOmnisci(RemoteJIT):
             'bool': typemap['TExtArgumentType']['Bool'],
             'bool*': typemap['TExtArgumentType'].get('PBool'),
             'Array<bool>': typemap['TExtArgumentType'].get(
-                'ArrayBool', typemap['TExtArgumentType']['ArrayInt8']),
+                'ArrayInt8', typemap['TExtArgumentType']['ArrayInt8']),
             'Array<int8_t>': typemap['TExtArgumentType']['ArrayInt8'],
             'Array<int16_t>': typemap['TExtArgumentType']['ArrayInt16'],
             'Array<int32_t>': typemap['TExtArgumentType']['ArrayInt32'],
@@ -458,7 +458,7 @@ class RemoteOmnisci(RemoteJIT):
                         sizer_type = getattr(
                             thrift.TOutputBufferSizeType, sizer)
                         udtfs.append(thrift.TUserDefinedTableFunction(
-                            name + sig.mangling,
+                            name + sig.mangling(bool_is_int8=True),
                             sizer_type, sizer_index,
                             inputArgTypes, outputArgTypes, sqlArgTypes))
                     else:
@@ -467,7 +467,8 @@ class RemoteOmnisci(RemoteJIT):
                         atypes = [ext_arguments_map[a.tostring(
                             use_annotation=False)] for a in sig[1]]
                         udfs.append(thrift.TUserDefinedFunction(
-                            name + sig.mangling, atypes, rtype))
+                            name + sig.mangling(bool_is_int8=True),
+                            atypes, rtype))
                     signatures.append(sig)
                 functions_and_signatures.append((caller.func, signatures))
             llvm_module = compile_to_LLVM(functions_and_signatures,

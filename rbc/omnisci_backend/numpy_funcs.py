@@ -1,5 +1,4 @@
 import numpy as np
-from rbc import typesystem
 from rbc.irtools import printf
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
@@ -120,19 +119,6 @@ def omnisci_np_ones_like(a, dtype=None):
 
         def impl(a, dtype=None):
             return full_like(a, 1, nb_dtype)  # noqa: F821
-        return impl
-
-
-@expose_and_overload(np.invert)
-def omnisci_np_invert(a):
-    """Implements `np.invert(expr)` operation
-    """
-    if isinstance(a, ArrayPointer):
-        def impl(a):
-            sz = len(a)
-            for i in range(sz):
-                a[i] = typesystem.boolean8(not a[i])
-            return a
         return impl
 
 

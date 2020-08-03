@@ -377,10 +377,9 @@ class Type(tuple):
         """
         self._mangling = mangling
 
-    @property
-    def mangling(self):
+    def mangling(self, bool_is_int8=None):
         if self._mangling is None:
-            self._mangling = self.mangle()
+            self._mangling = self.mangle(bool_is_int8=bool_is_int8)
         return self._mangling
 
     @property
@@ -571,7 +570,7 @@ class Type(tuple):
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
-                struct_name = 'STRUCT'+self.mangling
+                struct_name = 'STRUCT'+self.mangling(bool_is_int8=bool_is_int8)
             members = []
             for i, member in enumerate(self):
                 name = member._params.get('name', '_%s' % (i+1))
@@ -915,25 +914,29 @@ class Type(tuple):
                 **params)
         raise NotImplementedError(repr(self))
 
-    def mangle(self):
+    def mangle(self, bool_is_int8=None):
         """Return mangled type string.
 
         Mangled type string is a string representation of the type
         that can be used for extending the function name.
         """
+
         if self.is_void:
             return 'v'
         if self.is_pointer:
-            return '_' + self[0].mangle() + 'P'
+            return '_' + self[0].mangle(bool_is_int8=bool_is_int8) + 'P'
         if self.is_struct:
-            return '_' + ''.join(m.mangle() for m in self) + 'K'
+            return '_' + ''.join(m.mangle(bool_is_int8=bool_is_int8)
+                                 for m in self) + 'K'
         if self.is_function:
-            r = self[0].mangle()
-            a = ''.join([a.mangle() for a in self[1]])
+            r = self[0].mangle(bool_is_int8=bool_is_int8)
+            a = ''.join([a.mangle(bool_is_int8=bool_is_int8) for a in self[1]])
             return '_' + r + 'a' + a + 'A'
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
+                if n == 'b' and bool_is_int8:
+                    return 'B'
                 return n
             n = self[0]
             return 'V' + str(len(n)) + 'V' + n
@@ -1118,7 +1121,10 @@ if nb is not None:
         def get_data_type(self):
             return self._bit_type
 
-    class Boolean8(nb.types.Boolean):
+    class Boolean8(nb.types.Integer):
+
+        def __init__(self, name):
+            super().__init__(name, bitwidth=8, signed=True)
 
         def can_convert_to(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
@@ -1134,6 +1140,9 @@ if nb is not None:
 
     boolean1 = Boolean1('boolean1')
     boolean8 = Boolean8('boolean8')
+
+    _numba_imap[boolean1] = 'bool'
+    _numba_imap[boolean8] = 'int8'
 
     @lower_cast(Boolean1, nb.types.Boolean)
     @lower_cast(Boolean8, nb.types.Boolean)
