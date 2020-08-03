@@ -1,6 +1,7 @@
 import numpy as np
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
+from .. import typesystem
 if get_version('numba') >= (0, 49):
     from numba.core import extending, types
 else:
@@ -94,15 +95,15 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.arctan2)
 @overload_elementwise_binary_ufunc(np.hypot)
 # Comparison functions
-@overload_elementwise_binary_ufunc(np.greater, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.greater_equal, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.less, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.less_equal, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.not_equal, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.equal, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.logical_and, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.logical_or, dtype=types.int8)
-@overload_elementwise_binary_ufunc(np.logical_xor, dtype=types.int8)
+@overload_elementwise_binary_ufunc(np.greater, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.greater_equal, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.less, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.less_equal, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.not_equal, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.equal, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.logical_and, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.logical_or, dtype=typesystem.boolean8)
+@overload_elementwise_binary_ufunc(np.logical_xor, dtype=typesystem.boolean8)
 @overload_elementwise_binary_ufunc(np.maximum)
 @overload_elementwise_binary_ufunc(np.minimum)
 @overload_elementwise_binary_ufunc(np.fmax)
@@ -123,16 +124,17 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 
     def unary_elementwise_ufunc_impl(a):
         if isinstance(a, ArrayPointer):
-            if dtype is None:
-                nb_dtype = a.eltype
+            nb_dtype = determine_dtype(a, dtype)
+            if nb_dtype == typesystem.boolean8:
+                input_dtype = bool
             else:
-                nb_dtype = dtype
+                input_dtype = a.eltype
 
             def impl(a):
                 sz = len(a)
                 x = Array(sz, nb_dtype)
                 for i in range(sz):
-                    x[i] = nb_dtype(ufunc(a[i]))
+                    x[i] = nb_dtype(ufunc(input_dtype(a[i])))
                 return x
             return impl
 
