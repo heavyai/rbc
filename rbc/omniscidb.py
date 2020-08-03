@@ -286,6 +286,7 @@ class RemoteOmnisci(RemoteJIT):
             'float64*': typemap['TExtArgumentType']['PDouble'],
             'bool': typemap['TExtArgumentType']['Bool'],
             'bool*': typemap['TExtArgumentType'].get('PBool'),
+            # TODO: Replace ArrayInt8 by ArrayBool after issue #108 is solved
             'Array<bool>': typemap['TExtArgumentType'].get(
                 'ArrayInt8', typemap['TExtArgumentType']['ArrayInt8']),
             'Array<int8_t>': typemap['TExtArgumentType']['ArrayInt8'],

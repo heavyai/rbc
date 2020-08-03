@@ -933,10 +933,11 @@ class Type(tuple):
             a = ''.join([a.mangle(bool_is_int8=bool_is_int8) for a in self[1]])
             return '_' + r + 'a' + a + 'A'
         if self.is_atomic:
+            # issue https://github.com/xnd-project/rbc/issues/118
+            if self[0] == 'bool' and bool_is_int8:
+                return _mangling_map.get('int8')
             n = _mangling_map.get(self[0])
             if n is not None:
-                if n == 'b' and bool_is_int8:
-                    return 'B'
                 return n
             n = self[0]
             return 'V' + str(len(n)) + 'V' + n
