@@ -135,7 +135,13 @@ def test_sizer_row_multiplier_param2(omnisci):
         assert r == ((i % 5) * alpha + 4,)
 
 
-def _test_sizer_constant_parameter(omnisci):
+@pytest.mark.skipif(
+    available_version[:2] <= (5, 4),
+    reason=(
+        "test requires omniscidb 5.4 with constant parameter"
+        " support (got %s) [issue 124]" % (
+        available_version,)))
+def test_sizer_constant_parameter(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -163,7 +169,13 @@ def _test_sizer_constant_parameter(omnisci):
         assert r == ((i % 5) * 2,)
 
 
-def _test_rowmul_add_columns(omnisci):
+@pytest.mark.skipif(
+    available_version[:2] <= (5, 4),
+    reason=(
+        "test requires omniscidb 5.4 with multiple input"
+        " columns support (got %s) [issue 124]" % (
+        available_version,)))
+def test_rowmul_add_columns(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -189,7 +201,13 @@ def _test_rowmul_add_columns(omnisci):
     print(result)
 
 
-def _test_rowmul_return_two_columns(omnisci):
+@pytest.mark.skipif(
+    available_version[:2] <= (5, 4),
+    reason=(
+        "test requires omniscidb 5.4 with multiple output"
+        " columns support (got %s) [issue 124]" % (
+        available_version,)))
+def test_rowmul_return_two_columns(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
