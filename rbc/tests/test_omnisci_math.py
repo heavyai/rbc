@@ -163,6 +163,11 @@ if np is not None:
 def test_numpy_function(omnisci, fn_name, signature, np_func):
     omnisci.reset()
 
+    if fn_name == 'signbit':
+        pytest.skip('np.signbit requires numba runtime')
+    if fn_name in ['cbrt', 'float_power']:
+        pytest.skip(f'Numba does not support {fn_name}')
+
     arity = signature.count(',') + 1
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
     if isinstance(np_func, np.ufunc):
@@ -187,8 +192,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             f'using boolean8 as {fn_name} argument not implemented for'
             ' omniscidb server < v 5.4')
 
-    if fn_name in ['positive', 'float_power', 'cbrt', 'divmod0', 'heaviside',
-                   'frexp0']:
+    if fn_name in ['positive', 'divmod0', 'heaviside', 'frexp0']:
         try:
             if arity == 1:
                 nb.njit(np_func)(0.5)

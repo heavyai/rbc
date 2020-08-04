@@ -100,7 +100,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.true_divide)
 @overload_elementwise_binary_ufunc(np.floor_divide)
 @overload_elementwise_binary_ufunc(np.power)
-@overload_elementwise_binary_ufunc(np.float_power)
+# @overload_elementwise_binary_ufunc(np.float_power)  # not supported by numba
 @overload_elementwise_binary_ufunc(np.remainder)
 @overload_elementwise_binary_ufunc(np.mod, name='mod')
 @overload_elementwise_binary_ufunc(np.fmod)
@@ -192,7 +192,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.log1p)
 @overload_elementwise_unary_ufunc(np.sqrt)
 @overload_elementwise_unary_ufunc(np.square)
-@overload_elementwise_unary_ufunc(np.cbrt)
+# @overload_elementwise_unary_ufunc(np.cbrt)  # not supported by numba
 @overload_elementwise_unary_ufunc(np.reciprocal)
 # Bit-twiddling functions
 @overload_elementwise_unary_ufunc(np.invert)
@@ -225,7 +225,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.trunc, dtype=types.double)
 # not supported?
 # @overload_elementwise_unary_ufunc(np.isnat, dtype=types.int8)
-@overload_elementwise_unary_ufunc(np.signbit, dtype=types.int8)
+# @overload_elementwise_unary_ufunc(np.signbit, dtype=types.int8)
 @overload_elementwise_unary_ufunc(np.copysign, dtype=types.int8)
 # @overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
 def dummy_unary_ufunc(a):
