@@ -247,7 +247,7 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
     function_names = []
     for func, signatures in functions_and_signatures:
         for sig in signatures:
-            fname = func.__name__ + sig.mangling(bool_is_int8=True)
+            fname = func.__name__ + sig.mangling()
             function_names.append(fname)
             args, return_type = sigutils.normalize_signature(
                 sig.tonumba(bool_is_int8=True))

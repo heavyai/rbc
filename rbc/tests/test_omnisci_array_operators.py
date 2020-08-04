@@ -503,7 +503,7 @@ def test_array_operators(omnisci, suffix, signature, args, expected):
                        'lt', 'mul', 'mod', 'ne', 'neg', 'or_bw', 'pos', 'pow',
                        'rshift', 'sub', 'truediv', 'truediv2', 'xor']):
         pytest.skip(
-            f'operator_{suffix}: crashes CPU-only omniscidb server v 5.3'
+            f'operator_{suffix}: crashes CPU-only omniscidb server v 5.3.1'
             ' [issue 115]')
 
     omnisci.reset()

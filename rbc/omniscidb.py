@@ -458,7 +458,7 @@ class RemoteOmnisci(RemoteJIT):
                         sizer_type = getattr(
                             thrift.TOutputBufferSizeType, sizer)
                         udtfs.append(thrift.TUserDefinedTableFunction(
-                            name + sig.mangling(bool_is_int8=True),
+                            name + sig.mangling(),
                             sizer_type, sizer_index,
                             inputArgTypes, outputArgTypes, sqlArgTypes))
                     else:
@@ -467,7 +467,7 @@ class RemoteOmnisci(RemoteJIT):
                         atypes = [ext_arguments_map[a.tostring(
                             use_annotation=False)] for a in sig[1]]
                         udfs.append(thrift.TUserDefinedFunction(
-                            name + sig.mangling(bool_is_int8=True),
+                            name + sig.mangling(),
                             atypes, rtype))
                     signatures.append(sig)
                 functions_and_signatures.append((caller.func, signatures))

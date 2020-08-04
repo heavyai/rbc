@@ -377,9 +377,9 @@ class Type(tuple):
         """
         self._mangling = mangling
 
-    def mangling(self, bool_is_int8=None):
+    def mangling(self):
         if self._mangling is None:
-            self._mangling = self.mangle(bool_is_int8=bool_is_int8)
+            self._mangling = self.mangle()
         return self._mangling
 
     @property
@@ -570,7 +570,7 @@ class Type(tuple):
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
-                struct_name = 'STRUCT'+self.mangling(bool_is_int8=bool_is_int8)
+                struct_name = 'STRUCT'+self.mangling()
             members = []
             for i, member in enumerate(self):
                 name = member._params.get('name', '_%s' % (i+1))
@@ -917,7 +917,7 @@ class Type(tuple):
                 **params)
         raise NotImplementedError(repr(self))
 
-    def mangle(self, bool_is_int8=None):
+    def mangle(self):
         """Return mangled type string.
 
         Mangled type string is a string representation of the type
@@ -927,13 +927,13 @@ class Type(tuple):
         if self.is_void:
             return 'v'
         if self.is_pointer:
-            return '_' + self[0].mangle(bool_is_int8=bool_is_int8) + 'P'
+            return '_' + self[0].mangle() + 'P'
         if self.is_struct:
-            return '_' + ''.join(m.mangle(bool_is_int8=bool_is_int8)
+            return '_' + ''.join(m.mangle()
                                  for m in self) + 'K'
         if self.is_function:
-            r = self[0].mangle(bool_is_int8=bool_is_int8)
-            a = ''.join([a.mangle(bool_is_int8=bool_is_int8) for a in self[1]])
+            r = self[0].mangle()
+            a = ''.join([a.mangle() for a in self[1]])
             return '_' + r + 'a' + a + 'A'
         if self.is_atomic:
             n = _mangling_map.get(self[0])
