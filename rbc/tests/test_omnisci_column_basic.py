@@ -140,7 +140,7 @@ def test_sizer_row_multiplier_param2(omnisci):
     reason=(
         "test requires omniscidb 5.4 with constant parameter"
         " support (got %s) [issue 124]" % (
-        available_version,)))
+            available_version,)))
 def test_sizer_constant_parameter(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -174,7 +174,7 @@ def test_sizer_constant_parameter(omnisci):
     reason=(
         "test requires omniscidb 5.4 with multiple input"
         " columns support (got %s) [issue 124]" % (
-        available_version,)))
+            available_version,)))
 def test_rowmul_add_columns(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -206,7 +206,7 @@ def test_rowmul_add_columns(omnisci):
     reason=(
         "test requires omniscidb 5.4 with multiple output"
         " columns support (got %s) [issue 124]" % (
-        available_version,)))
+            available_version,)))
 def test_rowmul_return_two_columns(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
