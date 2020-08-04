@@ -134,6 +134,23 @@ def test_len_f64(omnisci):
         assert len(a) == sz
 
 
+@pytest.mark.skipif(available_version[:2] == (5, 1),
+                    reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
+                        available_version,))
+def test_getitem_bool(omnisci):
+    omnisci.reset()
+
+    @omnisci('bool(bool[], int64)')
+    def array_getitem_bool(x, i):
+        return x[i]
+
+    query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
+             .format(**locals()))
+    desrc, result = omnisci.sql_execute(query)
+    for a, item in result:
+        assert a[2] == item
+
+
 def test_getitem_i8(omnisci):
     omnisci.reset()
 
@@ -200,23 +217,6 @@ def test_getitem_float(omnisci):
     for a, item in result:
         assert a[2] == item
         assert type(a[2]) == type(item)
-
-
-@pytest.mark.skipif(available_version[:2] == (5, 1),
-                    reason="skip due to a bug in omniscidb 5.1 (got %s)" % (
-                        available_version,))
-def test_getitem_bool(omnisci):
-    omnisci.reset()
-
-    @omnisci('bool(bool[], int64)')
-    def array_getitem_bool(x, i):
-        return x[i]
-
-    query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
-             .format(**locals()))
-    desrc, result = omnisci.sql_execute(query)
-    for a, item in result:
-        assert a[2] == item
 
 
 def test_sum(omnisci):

@@ -92,15 +92,15 @@ binary_fns = [
     ('maximum', 'double[](double[], double[])', 'f8'),
     ('minimum', 'double[](double[], double[])', 'f8'),
     # XXX: return a bool[] should work
-    ('greater', 'int8[](int64[], int64[])', 'i8'),
-    ('greater_equal', 'int8[](int64[], int64[])', 'i8'),
-    ('less', 'int8[](int64[], int64[])', 'i8'),
-    ('less_equal', 'int8[](int64[], int64[])', 'i8'),
-    ('not_equal', 'int8[](int64[], int64[])', 'i8'),
-    ('equal', 'int8[](int64[], int64[])', 'i8'),
-    ('logical_and', 'int8[](int64[], int64[])', 'i8'),
-    ('logical_or', 'int8[](int64[], int64[])', 'i8'),
-    ('logical_xor', 'int8[](int64[], int64[])', 'i8'),
+    ('greater', 'bool[](int64[], int64[])', 'i8'),
+    ('greater_equal', 'bool[](int64[], int64[])', 'i8'),
+    ('less', 'bool[](int64[], int64[])', 'i8'),
+    ('less_equal', 'bool[](int64[], int64[])', 'i8'),
+    ('not_equal', 'bool[](int64[], int64[])', 'i8'),
+    ('equal', 'bool[](int64[], int64[])', 'i8'),
+    ('logical_and', 'bool[](int64[], int64[])', 'i8'),
+    ('logical_or', 'bool[](int64[], int64[])', 'i8'),
+    ('logical_xor', 'bool[](int64[], int64[])', 'i8'),
     ('bitwise_and', 'int64[](int64[], int64[])', 'i8'),
     ('bitwise_or', 'int64[](int64[], int64[])', 'i8'),
     ('bitwise_xor', 'int64[](int64[], int64[])', 'i8'),
@@ -126,13 +126,8 @@ def test_omnisci_array_binary_math(omnisci, method, signature, column):
     _, result = omnisci.sql_execute(query)
 
     row, out = list(result)[0]
-
     expected = getattr(np, method)(row, row)
-
-    if method == 'power':
-        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
-    else:
-        assert np.array_equal(expected, out), 'omni_' + method
+    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 
 
 binary_fn_scalar_input = [
@@ -156,15 +151,15 @@ binary_fn_scalar_input = [
     ('hypot', 'double[](double[], double)', 'f8,2.0'),
     ('maximum', 'double[](double[], double)', 'f8,2.0'),
     ('minimum', 'double[](double[], double)', 'f8,4.0'),
-    ('greater', 'int8[](int64[], int64)', 'i8,1'),
-    ('greater_equal', 'int8[](int64[], int64)', 'i8,1'),
-    ('less', 'int8[](int64[], int64)', 'i8,1'),
-    ('less_equal', 'int8[](int64[], int64)', 'i8,1'),
-    ('not_equal', 'int8[](int64[], int64)', 'i8,1'),
-    ('equal', 'int8[](int64[], int64)', 'i8,1'),
-    ('logical_and', 'int8[](int64[], int64)', 'i8,0'),
-    ('logical_or', 'int8[](int64[], int64)', 'i8,2'),
-    ('logical_xor', 'int8[](int64[], int64)', 'i8,2'),
+    ('greater', 'bool[](int64[], int64)', 'i8,1'),
+    ('greater_equal', 'bool[](int64[], int64)', 'i8,1'),
+    ('less', 'bool[](int64[], int64)', 'i8,1'),
+    ('less_equal', 'bool[](int64[], int64)', 'i8,1'),
+    ('not_equal', 'bool[](int64[], int64)', 'i8,1'),
+    ('equal', 'bool[](int64[], int64)', 'i8,1'),
+    ('logical_and', 'bool[](int64[], int64)', 'i8,0'),
+    ('logical_or', 'bool[](int64[], int64)', 'i8,2'),
+    ('logical_xor', 'bool[](int64[], int64)', 'i8,2'),
     ('bitwise_and', 'int64[](int64[], int64)', 'i8,1'),
     ('bitwise_or', 'int64[](int64[], int64)', 'i8,2'),
     ('bitwise_xor', 'int64[](int64[], int64)', 'i8,2'),
@@ -196,11 +191,7 @@ def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
 
     row, out = list(result)[0]
     expected = getattr(np, method)(row, num(scalar))
-
-    if method == 'power':
-        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
-    else:
-        assert np.array_equal(expected, out), 'omni_' + method
+    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 
 
 unary_fns = [
@@ -226,7 +217,8 @@ unary_fns = [
     # ('cbrt', 'double[](double[])', 'f8'),
     ('reciprocal', 'double[](double[])', 'f8'),
     # Bit-twiddling functions
-    ('invert', 'int64[](int64[])', 'i8'),
+    ('invert', 'int64[](int64[])', 'i8'),  # invert does a bitwise inversion
+    ('invert', 'bool[](bool[])', 'b'),
     # trigonometric functions
     ('sin', 'double[](double[])', 'f8'),
     ('cos', 'double[](double[])', 'f8'),
@@ -275,13 +267,12 @@ def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
     _, result = omnisci.sql_execute(query)
 
     row, out = list(result)[0]
+    if method == 'invert' and column == 'b':
+        # invert on booleans is different from invert on int8 values
+        row = np.array(row) != 0
+
     expected = getattr(np, method)(row)
-    _isclose = ['log', 'log2', 'log10', 'log1p', 'sqrt',
-                'arcsin', 'arccos', 'arccosh', 'arctanh']
-    if method in _isclose:
-        assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
-    else:
-        assert np.array_equal(expected, out), 'omni_' + method
+    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 
 
 def test_heaviside(omnisci):

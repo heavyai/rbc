@@ -89,7 +89,10 @@ def type_omnisci_array(context):
             typ = 'Array<{}>'.format(dtype.dtype)
         else:
             raise NotImplementedError(repr(dtype))
-        return array_type_converter(context.target_info, typ).tonumba()
+        atyp = array_type_converter(context.target_info, typ)
+        if atyp is not None:
+            return atyp.tonumba()
+        raise NotImplementedError((dtype, typ))
     return typer
 
 

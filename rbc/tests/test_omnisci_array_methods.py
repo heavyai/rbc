@@ -12,6 +12,9 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
+    # issue https://github.com/xnd-project/rbc/issues/134
+    table_name = 'rbc_test_omnisci_array_methods'
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     yield m
 
 
@@ -122,9 +125,9 @@ def test_ndarray_methods(omnisci, method, signature, args, expected):
         pytest.skip(
             f'{method}: crashes CUDA enabled omniscidb server [issue 93]')
 
-    if available_version[:3] >= (5, 3, 1) and method in ['fill']:
+    if available_version[:3] == (5, 3, 1) and method in ['fill']:
         pytest.skip(
-            f'{method}: crashes CPU-only omniscidb server v 5.4 [issue 113]')
+            f'{method}: crashes CPU-only omniscidb server v 5.3 [issue 113]')
 
     if available_version[:3] >= (5, 3, 1) and method in ['max_empty']:
         pytest.skip(

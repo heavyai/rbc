@@ -6,6 +6,9 @@ import pytest
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
+# Throw an error on Travis CI if the server is not available
+if "TRAVIS" in os.environ and not available_version:
+    pytest.exit(msg=reason, returncode=1)
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -86,6 +89,10 @@ def omnisci():
 
 def test_redefine(omnisci):
     omnisci.reset()
+
+    if omnisci.has_cuda and available_version[:2] >= (5, 4):
+        pytest.skip(
+            'Crashes rbc with CUDA enabled omniscidb server [issue 136]')
 
     @omnisci('i32(i32)')
     def incr(x):

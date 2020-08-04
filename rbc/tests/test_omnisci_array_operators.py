@@ -14,6 +14,9 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
+    # issue https://github.com/xnd-project/rbc/issues/134
+    table_name = 'rbc_test_omnisci_array_operators'
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     yield m
 
 
@@ -492,7 +495,7 @@ def test_array_operators(omnisci, suffix, signature, args, expected):
         pytest.skip(f'operator_{suffix}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 107]')
 
-    if (available_version[:3] >= (5, 3, 1)
+    if (available_version[:3] == (5, 3, 1)
         and suffix in ['abs', 'add', 'and_bw', 'eq', 'floordiv', 'floordiv2',
                        'ge', 'gt', 'iadd', 'iand', 'ifloordiv', 'ifloordiv2',
                        'ilshift', 'imul', 'ior', 'isub', 'ipow', 'irshift',
@@ -500,7 +503,7 @@ def test_array_operators(omnisci, suffix, signature, args, expected):
                        'lt', 'mul', 'mod', 'ne', 'neg', 'or_bw', 'pos', 'pow',
                        'rshift', 'sub', 'truediv', 'truediv2', 'xor']):
         pytest.skip(
-            f'operator_{suffix}: crashes CPU-only omniscidb server v 5.4'
+            f'operator_{suffix}: crashes CPU-only omniscidb server v 5.3'
             ' [issue 115]')
 
     omnisci.reset()

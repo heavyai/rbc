@@ -241,11 +241,13 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
     flags = compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
+    if get_version('numba') >= (0, 49):
+        flags.set('no_cfunc_wrapper')
 
     function_names = []
     for func, signatures in functions_and_signatures:
         for sig in signatures:
-            fname = func.__name__ + sig.mangling
+            fname = func.__name__ + sig.mangling(bool_is_int8=True)
             function_names.append(fname)
             args, return_type = sigutils.normalize_signature(
                 sig.tonumba(bool_is_int8=True))
