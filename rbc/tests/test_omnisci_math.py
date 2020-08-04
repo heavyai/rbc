@@ -9,7 +9,6 @@ available_version, reason = rbc_omnisci.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
-
 @pytest.fixture(scope='module')
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
@@ -169,7 +168,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     if isinstance(np_func, np.ufunc):
         # numba does not support jitting ufunc-s directly
         if arity == 1:
-            np_func = eval(f'lambda x: omni.{np_func.__name__}(x)', dict(omni=omni))
+            np_func = eval(f'lambda x: omni.{np_func.__name__}(x)',
+                           dict(omni=omni))
         elif arity == 2:
             np_func = eval(f'lambda x, y: omni.{np_func.__name__}(x, y)',
                            dict(omni=omni))
@@ -179,8 +179,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # give lambda function a name
         np_func.__name__ = fn_name
 
-    if available_version[:2] <= (5, 3) and fn_name in \
-        ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
+    if available_version[:2] <= (5, 3) and \
+       fn_name in ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
         # Invalid use of Function(<ufunc 'logical_or'>) with
         # argument(s) of type(s): (boolean8, boolean8)
         pytest.skip(

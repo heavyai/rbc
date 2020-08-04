@@ -22,7 +22,6 @@ def determine_input_type(argty):
         return argty.eltype if isinstance(argty, ArrayPointer) else argty
 
 
-
 def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
     """
     Wrapper for binary ufuncs that returns an array
@@ -181,9 +180,9 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.fabs)
 @overload_elementwise_unary_ufunc(np.rint)
 @overload_elementwise_unary_ufunc(np.sign)
-# @overload_elementwise_unary_ufunc(np.absolute) # test?
-# @overload_elementwise_unary_ufunc(np.conj) # test?
-@overload_elementwise_unary_ufunc(np.conjugate) # test?
+# @overload_elementwise_unary_ufunc(np.absolute)  # test?
+# @overload_elementwise_unary_ufunc(np.conj)  # test?
+@overload_elementwise_unary_ufunc(np.conjugate)  # test?
 @overload_elementwise_unary_ufunc(np.exp)
 @overload_elementwise_unary_ufunc(np.exp2)
 @overload_elementwise_unary_ufunc(np.log)
