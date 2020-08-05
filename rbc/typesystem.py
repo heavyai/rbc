@@ -86,7 +86,7 @@ _floatn_match = re.compile(r'\A(float|f)(16|32|64|128|256)(_t|)\Z').match
 _complexn_match = re.compile(
     r'\A(complex|c)(16|32|64|128|256|512)(_t|)\Z').match
 
-_bool_match = re.compile(r'\A(boolean|bool|_Bool|b)\Z').match
+_bool_match = re.compile(r'\A(boolean\d?|bool|_Bool|b)\Z').match
 _string_match = re.compile(r'\A(string|str)\Z').match
 
 _char_match = re.compile(r'\A(char)\Z').match
@@ -131,6 +131,9 @@ _type_name_match = re.compile(r'\A(.*)\s(\w+)\Z').match
 # bad names are the names of types that can have modifiers such as
 # `signed`, `unsigned`, `long`, etc.:
 _bad_names_match = re.compile(r'\A(char|byte|short|int|long|double)\Z').match
+
+# For the custom type support:
+_custom_type_name_params_match = re.compile(r'\A(\w+)\s*[<](.*)[>]\Z').match
 
 
 class Complex64(ctypes.Structure):
@@ -320,6 +323,22 @@ class Type(tuple):
     Also ``byte, short, int, long, long long, signed int, size_t,
     ssize_t``, etc are supported but their normalized names are system
     dependent.
+
+    Custom types
+    ------------
+
+    The typesystem supports processing custom types that are usually
+    named structures or C++ template specifications. The custom types
+    support is provided via `TargetInfo` instance that has a
+    `add_converter` method that can be used to register custom type
+    converters. A type converter is a function that takes takes
+    incomplete atomic `Type` instance, say
+    `Type("MyCustomType<double>")`, as input, and either returns a new
+    complete `Type` instance, say a struct type corresponding to
+    `MyCustomType<double>`, or `None` when conversion is not provided
+    for this particular input. One can add many type converter
+    functons to `TargetInfo` instance.
+
     """
 
     _mangling = None
@@ -457,6 +476,32 @@ class Type(tuple):
         return True
 
     @property
+    def is_concrete(self):
+        """Return True when the Type instance is concrete.
+        """
+        if self.is_atomic:
+            return (self.is_int or self.is_uint or self.is_float
+                    or self.is_complex or self.is_bool
+                    or self.is_string or self.is_char)
+        elif self.is_pointer:
+            return self[0].is_concrete
+        elif self.is_struct:
+            for m in self:
+                if not m.is_concrete:
+                    return False
+        elif self.is_function:
+            if not self[0].is_concrete:
+                return False
+            for a in self[1]:
+                if not a.is_concrete:
+                    return False
+        elif self.is_void:
+            pass
+        else:
+            raise NotImplementedError(repr(self))
+        return True
+
+    @property
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct \
@@ -576,6 +621,9 @@ class Type(tuple):
                 name = member._params.get('name', '_%s' % (i+1))
                 members.append((name,
                                 member.tonumba(bool_is_int8=bool_is_int8)))
+            base = self._params.get('numba.Type')
+            if base is not None:
+                return make_numba_struct(struct_name, members, base=base)
             return make_numba_struct(struct_name, members)
         if self.is_function:
             rtype = self[0].tonumba(bool_is_int8=bool_is_int8)
@@ -898,7 +946,7 @@ class Type(tuple):
                     bits = str(target_info.sizeof(otype) * 8)
                     return self.__class__(ntype + bits, **params)
             if target_info is not None:
-                t = target_info.custom_type(s)
+                t = target_info.custom_type(self)
                 if t is not None:
                     return t
                 if target_info.strict:
@@ -1062,6 +1110,26 @@ class Type(tuple):
     def pointer(self):
         return self.__class__(self, '*')
 
+    def get_name_and_parameters(self):
+        """Return the name and the parameters of a custom type.
+
+        A custom type has a name in the following form::
+
+          CustomType<param1, param2, ...>
+
+        Return None, None if the `Type` instance is not a custom type.
+        """
+        if self.is_atomic:
+            if self[0].endswith('[]'):
+                return 'Array', (self[0][:-2].strip(),)
+
+            m = _custom_type_name_params_match(self[0])
+            if m is not None:
+                name = m.group(1).strip()
+                params = [p.strip() for p in m.group(2).split(',')]
+                return name, tuple(params)
+        return None, None
+
 
 def _demangle(s):
     """Helper function to demangle the string of mangled Type.
@@ -1158,17 +1226,20 @@ if nb is not None:
         return builder.icmp_signed('!=', val, val.type(0))
 
 
-def make_numba_struct(name, members, _cache={}):
+def make_numba_struct(name, members, base=nb.types.Type, _cache={}):
     """Create numba struct type instance.
     """
     t = _cache.get(name)
     if t is None:
+        assert issubclass(base, nb.types.Type)
+
         def model__init__(self, dmm, fe_type):
             datamodel.StructModel.__init__(self, dmm, fe_type, members)
+
         struct_model = type(name+'Model',
                             (datamodel.StructModel,),
                             dict(__init__=model__init__))
-        struct_type = type(name+'Type', (nb.types.Type,),
+        struct_type = type(name+'Type', (base,),
                            dict(members=[t for n, t in members]))
         datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)

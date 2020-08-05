@@ -1,9 +1,17 @@
-import re
+"""Implement Omnisci Array type support
+"""
+
+__all__ = ['ArrayPointer', 'Array', 'omnisci_array_constructor',
+           'array_type_converter']
+
 import warnings
 from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
+from .omnisci_buffer import (BufferPointer, Buffer, BufferPointerModel,
+                             buffer_type_converter, OmnisciBufferType)
+
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
 else:
@@ -16,26 +24,21 @@ int64_t = ir.IntType(64)
 void_t = ir.VoidType()
 
 
-class ArrayPointer(types.Type):
-    """Type class for pointers to :code:`Omnisci Array<T>` structure.
-
-    We are not deriving from CPointer because ArrayPointer getitem is
-    used to access the data stored in Array ptr member.
+class OmnisciArrayType(OmnisciBufferType):
+    """Omnisci Array type for RBC typesystem.
     """
-    mutable = True
-
-    def __init__(self, dtype, eltype):
-        self.dtype = dtype    # i.e. STRUCT__lPLBK
-        self.eltype = eltype  # i.e. int64. Base type for dtype: Array<int64>
-        name = "(%s)*" % dtype
-        super(ArrayPointer, self).__init__(name)
-
-    @property
-    def key(self):
-        return self.dtype
 
 
-class Array(object):
+class ArrayPointer(BufferPointer):
+    """Type class for pointers to :code:`Omnisci Array<T>` structure."""
+
+
+class Array(Buffer):
+    pass
+
+
+@datamodel.register_default(ArrayPointer)
+class ArrayPointerModel(BufferPointerModel):
     pass
 
 
@@ -80,13 +83,17 @@ def omnisci_array_constructor(context, builder, sig, args):
 @extending.type_callable(Array)
 def type_omnisci_array(context):
     def typer(size, dtype):
-        return array_type_converter(context.target_info, dtype).tonumba()
+        if isinstance(dtype, types.StringLiteral):
+            typ = 'Array<{}>'.format(dtype.literal_value)
+        elif isinstance(dtype, types.NumberClass):
+            typ = 'Array<{}>'.format(dtype.dtype)
+        else:
+            raise NotImplementedError(repr(dtype))
+        atyp = array_type_converter(context.target_info, typ)
+        if atyp is not None:
+            return atyp.tonumba()
+        raise NotImplementedError((dtype, typ))
     return typer
-
-
-@datamodel.register_default(ArrayPointer)
-class ArrayPointerModel(datamodel.models.PointerModel):
-    pass
 
 
 @extending.intrinsic
@@ -111,33 +118,10 @@ def omnisci_array_is_null(x):
         return impl
 
 
-@extending.intrinsic
-def omnisci_array_len_(typingctx, data):
-    sig = types.int64(data)
-
-    def codegen(context, builder, signature, args):
-        data, = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        struct = builder.load(builder.gep(rawptr,
-                                          [int32_t(0)]))
-        return builder.load(builder.gep(
-            struct, [int32_t(0), int32_t(1)]))
-    return sig, codegen
-
-
-@extending.overload(len)
-def omnisci_array_len(x):
-    if isinstance(x, ArrayPointer):
-        return lambda x: omnisci_array_len_(x)
-
-
-_array_type_match = re.compile(r'\A(.*)\s*[\[]\s*[\]]\Z').match
-
-
 def array_type_converter(target_info, obj):
-    """Return Type instance corresponding to Omniscidb `Array` type.
+    """Return Type instance corresponding to :code:`Omnisci Array<T>` type.
 
-    Omniscidb `Array` is defined as follows (using C++ syntax)::
+    :code:`Omnisci Array<T>` is defined as follows (using C++ syntax)::
 
       template<typename T>
       struct Array {
@@ -146,41 +130,14 @@ def array_type_converter(target_info, obj):
         bool is_null;
       }
 
-    Parameters
-    ----------
-    obj : {str, numba.Type}
-      If `obj` is a string then it must be in the form `T[]` where `T`
-      specifies the Array items type. Otherwise, `obj` can be any
-      object that can be converted to a typesystem.Type object.
-
+    See :code:`buffer_type_converter` for details.
     """
-    if isinstance(obj, types.StringLiteral):
-        obj = obj.literal_value + '[]'
-    if isinstance(obj, str):
-        m = _array_type_match(obj)
-        t = typesystem.Type.fromstring(m.group(1), target_info)
-    else:
-        t = typesystem.Type.fromobject(obj, target_info)
-
-    ptr_t = typesystem.Type(t, '*', name='ptr')
-    typename = 'Array<%s>' % (t.toprototype())
-    size_t = typesystem.Type.fromstring('size_t sz',
-                                        target_info=target_info)
-    array_type = typesystem.Type(
-        ptr_t,
-        size_t,
-        typesystem.Type.fromstring('bool is_null',
-                                   target_info=target_info),
-    )
-    array_type_ptr = array_type.pointer()
-
-    # In omniscidb, boolean values are stored as int8 because
-    # boolean has three states: false, true, and null.
-    numba_type_ptr = ArrayPointer(
-        array_type.tonumba(bool_is_int8=True),
-        t.tonumba(bool_is_int8=True))
-
-    array_type_ptr._params['typename'] = typename
-    array_type_ptr._params['tonumba'] = numba_type_ptr
-
-    return array_type_ptr
+    buffer_type = buffer_type_converter(
+        target_info, obj, OmnisciArrayType,
+        'Array', ArrayPointer,
+        extra_members=[
+            typesystem.Type.fromstring('bool is_null',
+                                       target_info=target_info)])
+    if buffer_type is not None:
+        return buffer_type.pointer()
+    return buffer_type
