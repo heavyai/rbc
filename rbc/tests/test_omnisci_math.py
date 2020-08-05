@@ -192,8 +192,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # Invalid use of Function(<ufunc 'logical_or'>) with
         # argument(s) of type(s): (boolean8, boolean8)
         pytest.skip(
-            f'using boolean8 as {fn_name} argument not implemented for'
-            ' omniscidb server < v 5.4')
+            f"using boolean arguments requires omniscidb v 5.4 or newer"
+            " (got {available_version})"
 
     if fn_name in ['positive', 'divmod0', 'frexp0']:
         try:
