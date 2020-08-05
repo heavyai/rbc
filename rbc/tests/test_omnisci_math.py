@@ -123,7 +123,6 @@ numpy_functions = [
     ('left_shift', 'int64(int64, int64)', np.left_shift),
     # Misc functions
     ('heaviside', 'double(double, double)', np.heaviside),
-    ('heaviside', 'double(bool, bool)', np.heaviside),
     ('copysign', 'double(double, double)', np.copysign),
     # Bit functions:
     ('invert', 'int(int)', np.invert),
