@@ -22,7 +22,6 @@ def determine_input_type(argty):
         return argty.eltype if isinstance(argty, ArrayPointer) else argty
 
 
-
 def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
     """
     Wrapper for binary ufuncs that returns an array
@@ -132,7 +131,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.fmax)
 @overload_elementwise_binary_ufunc(np.fmin)
 # Floating functions
-# @overload_elementwise_binary_ufunc(np.ldexp) # not supported by numba?
+# @overload_elementwise_binary_ufunc(np.ldexp) # requires numba runtime
 def dummy_binary_ufunc(a, b):
     pass
 
@@ -181,9 +180,9 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.fabs)
 @overload_elementwise_unary_ufunc(np.rint)
 @overload_elementwise_unary_ufunc(np.sign)
-# @overload_elementwise_unary_ufunc(np.absolute) # test?
-# @overload_elementwise_unary_ufunc(np.conj) # test?
-@overload_elementwise_unary_ufunc(np.conjugate) # test?
+@overload_elementwise_unary_ufunc(np.absolute)
+@overload_elementwise_unary_ufunc(np.conj)
+@overload_elementwise_unary_ufunc(np.conjugate)
 @overload_elementwise_unary_ufunc(np.exp)
 @overload_elementwise_unary_ufunc(np.exp2)
 @overload_elementwise_unary_ufunc(np.log)
@@ -239,18 +238,23 @@ def heaviside(x1, x2):
 
 @extending.overload(heaviside)
 def impl_np_heaviside(x1, x2):
+    nb_dtype = types.double
+    typA = determine_input_type(x1)
+    typB = determine_input_type(x2)
     if isinstance(x1, ArrayPointer):
-        nb_dtype = types.double
-
         def impl(x1, x2):
             sz = len(x1)
             r = Array(sz, nb_dtype)
             for i in range(sz):
-                if x1[i] < 0:
-                    r[i] = nb_dtype(0)
-                elif x1[i] == 0:
-                    r[i] = nb_dtype(x2)
-                else:
-                    r[i] = nb_dtype(1)
+                r[i] = heaviside(x1[i], x2)
             return r
+        return impl
+    else:
+        def impl(x1, x2):
+            if typA(x1) < 0:
+                return nb_dtype(0)
+            elif typA(x1) == 0:
+                return nb_dtype(typB(x2))
+            else:
+                return nb_dtype(1)
         return impl

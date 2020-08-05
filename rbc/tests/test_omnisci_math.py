@@ -9,7 +9,6 @@ available_version, reason = rbc_omnisci.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
-
 @pytest.fixture(scope='module')
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
@@ -49,6 +48,7 @@ numpy_functions = [
     # Arithmetic functions:
     ('absolute', 'double(double)', np.absolute),
     ('conjugate', 'double(double)', np.conjugate),
+    ('conj', 'double(double)', np.conjugate),
     ('fabs', 'double(double)', np.fabs),
     ('fmax', 'double(double, double)', np.fmax),
     ('fmin', 'double(double, double)', np.fmin),
@@ -123,6 +123,7 @@ numpy_functions = [
     ('left_shift', 'int64(int64, int64)', np.left_shift),
     # Misc functions
     ('heaviside', 'double(double, double)', np.heaviside),
+    ('heaviside', 'double(bool, bool)', np.heaviside),
     ('copysign', 'double(double, double)', np.copysign),
     # Bit functions:
     ('invert', 'int(int)', np.invert),
@@ -169,31 +170,33 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     if isinstance(np_func, np.ufunc):
         # numba does not support jitting ufunc-s directly
         if arity == 1:
-            np_func = eval(f'lambda x: omni.{np_func.__name__}(x)', dict(omni=omni))
+            fn = eval(f'lambda x: omni.{np_func.__name__}(x)', dict(omni=omni))
         elif arity == 2:
-            np_func = eval(f'lambda x, y: omni.{np_func.__name__}(x, y)',
-                           dict(omni=omni))
+            fn = eval(f'lambda x, y: omni.{np_func.__name__}(x, y)',
+                      dict(omni=omni))
         else:
             raise NotImplementedError((signature, arity))
-    if np_func.__name__ == '<lambda>':
+    else:
+        fn = np_func
+
+    if fn.__name__ == '<lambda>':
         # give lambda function a name
-        np_func.__name__ = fn_name
+        fn.__name__ = fn_name
 
     if available_version[:2] <= (5, 3) and fn_name in \
-        ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
+            ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
         # Invalid use of Function(<ufunc 'logical_or'>) with
         # argument(s) of type(s): (boolean8, boolean8)
         pytest.skip(
             f'using boolean8 as {fn_name} argument not implemented for'
             ' omniscidb server < v 5.4')
 
-    if fn_name in ['positive', 'float_power', 'cbrt', 'divmod0', 'heaviside',
-                   'frexp0']:
+    if fn_name in ['positive', 'float_power', 'cbrt', 'divmod0', 'frexp0']:
         try:
             if arity == 1:
-                nb.njit(np_func)(0.5)
+                nb.njit(fn)(0.5)
             elif arity == 2:
-                nb.njit(np_func)(0.5, 0.5)
+                nb.njit(fn)(0.5, 0.5)
         except nb.errors.TypingError as msg:
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
@@ -224,7 +227,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             'log1p', 'gcd', 'lcm', 'around', 'fmod', 'hypot']:
         # fix forbidden names
         fn_name += 'FIX'
-        np_func.__name__ = fn_name
+        fn.__name__ = fn_name
 
     if omnisci.version < (5, 2) and omnisci.has_cuda and fn_name in [
             'fmax', 'fmin', 'power', 'sqrt', 'tan', 'radians', 'degrees'
@@ -236,7 +239,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    omnisci(signature)(np_func)
+    omnisci(signature)(fn)
 
     omnisci.register()
 
