@@ -45,6 +45,9 @@ def omnisci():
 
 
 def test_sizer_row_multiplier_orig(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(f'crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 147]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -71,6 +74,10 @@ def test_sizer_row_multiplier_orig(omnisci):
 
 
 def test_sizer_row_multiplier_param1(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(f'crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 147]')
+
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -100,9 +107,6 @@ def test_sizer_row_multiplier_param1(omnisci):
         assert r == ((i % 5) * alpha + 4,)
 
 
-@pytest.mark.skipif(available_version[:2] < (5, 4),
-                    reason="test requires omniscidb 5.4 (got %s)" % (
-                        available_version,))
 def test_sizer_row_multiplier_param2(omnisci):
     pytest.skip('fails, likely a bug of omniscidb [issue 131]')
 
@@ -136,9 +140,9 @@ def test_sizer_row_multiplier_param2(omnisci):
 
 
 @pytest.mark.skipif(
-    available_version[:2] <= (5, 4),
+    True,
     reason=(
-        "test requires omniscidb 5.4 with constant parameter"
+        "test requires omniscidb with constant parameter"
         " support (got %s) [issue 124]" % (
             available_version,)))
 def test_sizer_constant_parameter(omnisci):
@@ -163,48 +167,55 @@ def test_sizer_constant_parameter(omnisci):
         'from {omnisci.table_name}), 5));'
         .format(**locals()))
 
-    print(result)
-
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2,)
 
 
+# Requires https://github.com/omnisci/omniscidb-internal/pull/4696
 @pytest.mark.skipif(
-    available_version[:2] <= (5, 4),
+    True,
     reason=(
-        "test requires omniscidb 5.4 with multiple input"
+        "test requires omniscidb with multiple input"
         " columns support (got %s) [issue 124]" % (
             available_version,)))
 def test_rowmul_add_columns(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip(f'crashes CUDA enabled omniscidb server'
+                    ' [issue 147]')
+
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, Column<double>, int64|sizer=RowMultiplier,'
-             ' Column<double>)')
-    def add_columns(x, y, m, r):
+    @omnisci('int32(Column<double>, Column<double>, double,'
+             ' int64|sizer=RowMultiplier, OutputColumn<double>)')
+    def add_columns(x, y, alpha, m, r):
         input_row_count = len(x)
         for i in range(input_row_count):
             for c in range(m):
                 j = i + c * input_row_count
-                r[j] = x[i] + y[i]
+                r[j] = x[i] + alpha * y[i]
         return m * input_row_count
 
+    alpha = 2.5
+
     descr, result = omnisci.sql_execute(
-        'select f8 from table(add_columns('
+        'select * from table(add_columns('
         'cursor(select f8 from {omnisci.table_name}),'
-        ' cursor(select f8 from {omnisci.table_name}), 1));'
+        ' cursor(select f8 from {omnisci.table_name}),'
+        ' cast({alpha} as double), 1));'
         .format(**locals()))
 
-    print(result)
+    for i, r in enumerate(result):
+        assert r == (i + alpha * i,)
 
 
 @pytest.mark.skipif(
-    available_version[:2] <= (5, 4),
+    True,
     reason=(
-        "test requires omniscidb 5.4 with multiple output"
+        "test requires omniscidb with multiple output"
         " columns support (got %s) [issue 124]" % (
             available_version,)))
 def test_rowmul_return_two_columns(omnisci):

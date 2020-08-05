@@ -40,6 +40,8 @@ void_t = ir.VoidType()
 
 
 class OmnisciBufferType(typesystem.Type):
+    """Typesystem type class for Omnisci buffer structures.
+    """
 
     @property
     def _buffer_typename(self):
@@ -53,12 +55,12 @@ class OmnisciBufferType(typesystem.Type):
 
 
 class BufferType(types.Type):
-
-    pass
+    """Numba type class for Omnisci buffer structures.
+    """
 
 
 class BufferPointer(types.Type):
-    """Type class for pointers to Omnisci buffer structures.
+    """Numba type class for pointers to Omnisci buffer structures.
 
     We are not deriving from CPointer because BufferPointer getitem is
     used to access the data stored in Buffer ptr member.
@@ -82,7 +84,15 @@ class Buffer(object):
 
 
 class BufferPointerModel(datamodel.models.PointerModel):
-    pass
+    """Base class for Omnisci buffer pointer models.
+
+    Subclasses should register the model for the corresponding
+    BufferPointer subclass, for instance::
+
+      @datamodel.register_default(ArrayPointer)
+      class ArrayPointerModel(BufferPointerModel):
+          pass
+    """
 
 
 @extending.intrinsic
