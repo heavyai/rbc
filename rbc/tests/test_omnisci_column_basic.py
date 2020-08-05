@@ -46,7 +46,7 @@ def omnisci():
 
 def test_sizer_row_multiplier_orig(omnisci):
     if omnisci.has_cuda:
-        pytest.skip(f'crashes CUDA enabled omniscidb server'
+        pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [rbc issue 147]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -75,7 +75,7 @@ def test_sizer_row_multiplier_orig(omnisci):
 
 def test_sizer_row_multiplier_param1(omnisci):
     if omnisci.has_cuda:
-        pytest.skip(f'crashes CUDA enabled omniscidb server'
+        pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [rbc issue 147]')
 
     omnisci.reset()
@@ -180,7 +180,7 @@ def test_sizer_constant_parameter(omnisci):
             available_version,)))
 def test_rowmul_add_columns(omnisci):
     if omnisci.has_cuda:
-        pytest.skip(f'crashes CUDA enabled omniscidb server'
+        pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [issue 147]')
 
     omnisci.reset()
