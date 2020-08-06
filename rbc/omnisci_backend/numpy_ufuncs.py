@@ -16,10 +16,13 @@ def determine_dtype(a, dtype):
 
 
 def determine_input_type(argty):
+    if isinstance(argty, ArrayPointer):
+        return determine_input_type(argty.eltype)
+
     if argty == typesystem.boolean8:
         return bool
     else:
-        return argty.eltype if isinstance(argty, ArrayPointer) else argty
+        return argty
 
 
 def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
@@ -226,7 +229,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 # not supported?
 # @overload_elementwise_unary_ufunc(np.isnat, dtype=types.int8)
 # @overload_elementwise_unary_ufunc(np.signbit, dtype=types.int8)
-@overload_elementwise_unary_ufunc(np.copysign, dtype=types.int8)
+@overload_elementwise_unary_ufunc(np.copysign)
 # @overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
 def dummy_unary_ufunc(a):
     pass
