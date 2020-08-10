@@ -80,6 +80,14 @@ def np_signbit_impl(context, builder, sig, args):
     return context.compile_internal(builder, impl, sig, args)
 
 
+def np_ldexp_impl(context, builder, sig, args):
+
+    def impl(x1, x2):
+        return x1 * 2 ** x2
+
+    return context.compile_internal(builder, impl, sig, args)
+
+
 ufunc_db._lazy_init_db()
 
 # logaddexp
@@ -98,4 +106,11 @@ ufunc_db._ufunc_db[np.logaddexp2] = {
 ufunc_db._ufunc_db[np.signbit] = {
     'f->?': np_signbit_impl,
     'd->?': np_signbit_impl,
+}
+
+ufunc_db._ufunc_db[np.ldexp] = {
+    'fi->f': np_ldexp_impl,
+    'fl->f': np_ldexp_impl,
+    'di->d': np_ldexp_impl,
+    'dl->d': np_ldexp_impl,
 }

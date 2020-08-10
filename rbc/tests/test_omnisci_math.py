@@ -204,7 +204,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
 
-    if fn_name in ['ldexp', 'spacing', 'nextafter']:
+    if fn_name in ['nextafter']:
         pytest.skip(f'{fn_name}: FIXME')
 
     if omnisci.has_cuda and fn_name in [
@@ -246,7 +246,9 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
 
     omnisci.register()
 
-    if kind == 'double':
+    if fn_name == 'ldexp':
+        xs = ', '.join('xi')
+    elif kind == 'double':
         assert arity <= 3, arity
         xs = ', '.join('xyz'[:arity])
     elif kind.startswith('int'):

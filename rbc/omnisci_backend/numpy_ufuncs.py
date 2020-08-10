@@ -134,7 +134,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.fmax)
 @overload_elementwise_binary_ufunc(np.fmin)
 # Floating functions
-# @overload_elementwise_binary_ufunc(np.ldexp) # requires numba runtime
+@overload_elementwise_binary_ufunc(np.ldexp)
 def dummy_binary_ufunc(a, b):
     pass
 
@@ -231,7 +231,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 # issue 152:
 @overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
 @overload_elementwise_unary_ufunc(np.copysign)
-# @overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
+@overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
 def dummy_unary_ufunc(a):
     pass
 
