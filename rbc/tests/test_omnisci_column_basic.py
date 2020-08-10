@@ -171,11 +171,10 @@ def test_sizer_constant_parameter(omnisci):
         assert r == ((i % 5) * 2,)
 
 
-# Requires https://github.com/omnisci/omniscidb-internal/pull/4696
 @pytest.mark.skipif(
     available_version < (5, 4),
     reason=(
-        "test requires omniscidb v 5.4 or newer (got %s) [issue 124]" % (
+        "test requires omniscidb v 5.4 or newer (got %s) [issue 148]" % (
             available_version,)))
 def test_rowmul_add_columns(omnisci):
     if omnisci.has_cuda:
