@@ -83,7 +83,9 @@ def np_signbit_impl(context, builder, sig, args):
 def np_ldexp_impl(context, builder, sig, args):
 
     def impl(x1, x2):
-        return x1 * 2 ** x2
+        if x2 < 0:
+            return x1 / np.power(2, -x2)
+        return x1 * np.power(2, x2)
 
     return context.compile_internal(builder, impl, sig, args)
 

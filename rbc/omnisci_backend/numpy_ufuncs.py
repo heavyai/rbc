@@ -62,18 +62,18 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
             return impl
         elif isinstance(a, ArrayPointer):
             nb_dtype = determine_dtype(a, dtype)
-            eltype = a.eltype
+            other_dtype = b
 
             def impl(a, b):
-                b = broadcast(b, len(a), eltype)
+                b = broadcast(b, len(a), other_dtype)
                 return binary_impl(a, b, nb_dtype)
             return impl
         elif isinstance(b, ArrayPointer):
             nb_dtype = determine_dtype(b, dtype)
-            eltype = b.eltype
+            other_dtype = a
 
             def impl(a, b):
-                a = broadcast(a, len(b), eltype)
+                a = broadcast(a, len(b), other_dtype)
                 return binary_impl(a, b, nb_dtype)
             return impl
         else:
