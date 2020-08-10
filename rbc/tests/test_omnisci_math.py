@@ -165,7 +165,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     omnisci.reset()
 
     if fn_name == 'signbit':
-        pytest.skip('np.signbit requires numba runtime')
+        pytest.skip('np.signbit requires numba runtime [issue 152]')
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')
 
@@ -187,13 +187,14 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # give lambda function a name
         fn.__name__ = fn_name
 
-    if available_version[:2] <= (5, 3) and fn_name in \
+    if available_version[:2] <= (5, 4) and fn_name in \
             ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
         # Invalid use of Function(<ufunc 'logical_or'>) with
         # argument(s) of type(s): (boolean8, boolean8)
+        # Requires: https://github.com/omnisci/omniscidb-internal/pull/4689
         pytest.skip(
             f"using boolean arguments requires omniscidb v 5.4 or newer"
-            f" (got {available_version})")
+            f" (got {available_version}) [issue 108]")
 
     if fn_name in ['positive', 'divmod0', 'frexp0']:
         try:

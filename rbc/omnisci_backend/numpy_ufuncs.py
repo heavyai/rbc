@@ -228,7 +228,8 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.trunc, dtype=types.double)
 # not supported?
 # @overload_elementwise_unary_ufunc(np.isnat, dtype=types.int8)
-# @overload_elementwise_unary_ufunc(np.signbit, dtype=types.int8)
+# issue 152:
+# @overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
 @overload_elementwise_unary_ufunc(np.copysign)
 # @overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
 def dummy_unary_ufunc(a):
