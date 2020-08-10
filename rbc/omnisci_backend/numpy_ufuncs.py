@@ -38,7 +38,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
         typB = determine_input_type(b)
 
         # XXX: raise error if len(a) != len(b)
-        @extending.register_jitable
+        @extending.register_jitable(_nrt=False)
         def binary_impl(a, b, nb_dtype):
             sz = len(a)
             x = Array(sz, nb_dtype)
@@ -48,7 +48,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
                 x[i] = nb_dtype(ufunc(cast_a, cast_b))
             return x
 
-        @extending.register_jitable
+        @extending.register_jitable(_nrt=False)
         def broadcast(e, sz, dtype):
             b = Array(sz, dtype)
             b.fill(e)
@@ -229,7 +229,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 # not supported?
 # @overload_elementwise_unary_ufunc(np.isnat, dtype=types.int8)
 # issue 152:
-# @overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
+@overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
 @overload_elementwise_unary_ufunc(np.copysign)
 # @overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
 def dummy_unary_ufunc(a):

@@ -164,8 +164,6 @@ if np is not None:
 def test_numpy_function(omnisci, fn_name, signature, np_func):
     omnisci.reset()
 
-    if fn_name == 'signbit':
-        pytest.skip('np.signbit requires numba runtime [issue 152]')
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')
 
@@ -206,7 +204,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
 
-    if fn_name in ['ldexp', 'spacing', 'nextafter', 'signbit']:
+    if fn_name in ['ldexp', 'spacing', 'nextafter']:
         pytest.skip(f'{fn_name}: FIXME')
 
     if omnisci.has_cuda and fn_name in [

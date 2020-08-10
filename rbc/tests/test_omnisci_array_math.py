@@ -242,7 +242,8 @@ unary_fns = [
     ('isnan', 'bool[](int64[])', 'i8'),
     # ('isnat', 'bool[](int64[])', 'i8'), # doesn't work
     ('fabs', 'double[](double[])', 'f8'),
-    # ('signbit', 'bool[](int64[])', 'i8'), # not supported
+    ('signbit', 'bool[](int64[])', 'i8'),
+    ('signbit', 'bool[](double[])', 'f8'),
     # ('spacing', 'double[](double[])', 'f8'), # not supported
     ('floor', 'double[](double[])', 'f8'),
     ('ceil', 'double[](double[])', 'f8'),
