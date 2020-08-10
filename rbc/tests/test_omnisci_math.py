@@ -204,7 +204,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
 
-    if fn_name in ['nextafter']:
+    if fn_name in ['spacing', 'nextafter']:
         pytest.skip(f'{fn_name}: FIXME')
 
     if omnisci.has_cuda and fn_name in [
