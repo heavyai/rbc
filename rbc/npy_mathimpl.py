@@ -1,5 +1,6 @@
 import numpy as np
 from numba.extending import register_jitable
+from llvmlite import ir
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.cpython import mathimpl
@@ -71,13 +72,11 @@ def np_logaddexp2_impl(context, builder, sig, args):
 
 
 def np_signbit_impl(context, builder, sig, args):
-
-    def impl(x):
-        if x < 0:
-            return True
-        return False
-
-    return context.compile_internal(builder, impl, sig, args)
+    int64_t = ir.IntType(64)
+    [val] = args
+    val = builder.bitcast(val, int64_t)
+    res = builder.ashr(val, int64_t(63))
+    return res
 
 
 def np_ldexp_impl(context, builder, sig, args):
