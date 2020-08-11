@@ -73,8 +73,9 @@ def np_logaddexp2_impl(context, builder, sig, args):
 
 def np_signbit_impl(context, builder, sig, args):
     int64_t = ir.IntType(64)
+    double = ir.DoubleType()
     [val] = args
-    val = builder.bitcast(val, int64_t)
+    val = builder.bitcast(builder.fpext(val, double), int64_t)
     res = builder.ashr(val, int64_t(63))
     return res
 
