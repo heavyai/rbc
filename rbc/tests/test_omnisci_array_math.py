@@ -92,7 +92,6 @@ binary_fns = [
     ('hypot', 'double[](double[], double[])', 'f8,f8'),
     ('maximum', 'double[](double[], double[])', 'f8,f8'),
     ('minimum', 'double[](double[], double[])', 'f8,f8'),
-    # XXX: return a bool[] should work
     ('greater', 'bool[](int64[], int64[])', 'i8,i8'),
     ('greater_equal', 'bool[](int64[], int64[])', 'i8,i8'),
     ('less', 'bool[](int64[], int64[])', 'i8,i8'),
