@@ -24,6 +24,7 @@ int32_t = ir.IntType(32)
 def _lf(lst):
     return lst + [e + 'f' for e in lst] + [e + 'l' for e in lst]
 
+
 def _f(lst):
     return lst + [e + 'f' for e in lst]
 
@@ -40,7 +41,7 @@ fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
 
-pymath_funcs = _f(['erf', 'erfc', 'gamma', 'lgamma'])
+pymath_funcs = _f(['erf', 'erfc', 'lgamma', 'tgamma'])
 
 fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
                 *hyperbolic_funcs, *nearest_funcs, *fp_funcs])

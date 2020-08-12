@@ -12,7 +12,7 @@ else:
 # tell numba to wire np.exp2 to libm exp2.
 mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
 mathimpl.unary_math_extern(np.log2, "log2f", "log2")
-mathimpl.unary_math_extern(math.gamma, "gammaf", "gamma")
+mathimpl.unary_math_extern(math.gamma, "tgammaf", "tgamma")
 
 
 def np_logaddexp_impl(context, builder, sig, args):

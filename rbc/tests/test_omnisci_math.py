@@ -26,7 +26,7 @@ def omnisci():
     for _i in range(1, 6):
         a = str((_i % 3) == 0).lower()
         b = str((_i % 2) == 0).lower()
-        x = 0.7 + _i/10.0
+        x = 0.1 + _i/10.0
         y = _i/6.0
         z = _i + 1.23
         i = _i
@@ -92,7 +92,7 @@ math_functions = [
     # # Hyperbolic functions
     ('acosh', 'double(double)', math.acosh),
     ('asinh', 'double(double)', math.asinh),
-    ('atanh', 'double(double)', math.atanh), 
+    ('atanh', 'double(double)', math.atanh),
     ('cosh', 'double(double)', math.cosh),
     ('sinh', 'double(double)', math.sinh),
     ('tanh', 'double(double)', math.tanh),
@@ -119,8 +119,8 @@ def test_math_function(omnisci, fn_name, signature, math_func):
         pytest.skip(f'{fn_name}: FIXME')
 
     if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial',
-                   'fmod', 'isclose', 'isqrt']:
-        pytest.skip(f'{fn_name}: Numba uses cpython implementation! Replace it')
+                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf']:
+        pytest.skip(f'{fn_name}: Numba uses cpython implementation!')
 
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e)')
@@ -160,15 +160,21 @@ def test_math_function(omnisci, fn_name, signature, math_func):
     else:
         raise NotImplementedError(kind)
 
+    if fn_name in ['acosh', 'asinh']:
+        xs = 'z'
+
     query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
-    # descr, result = omnisci.sql_execute(query)
-    # for args in list(result):
-    #     result = args[-1]
-    #     expected = math_func(*args[:-1])
-    #     if np.isnan(expected):
-    #         assert np.isnan(result)
-    #     else:
-    #         assert(np.isclose(expected, result))
+    descr, result = omnisci.sql_execute(query)
+    for args in list(result):
+        result = args[-1]
+        if fn_name in ['pi', 'e', 'tau']:
+            expected = math_func
+        else:
+            expected = math_func(*args[:-1])
+        if np.isnan(expected):
+            assert np.isnan(result)
+        else:
+            assert(np.isclose(expected, result))
 
 
 numpy_functions = [
