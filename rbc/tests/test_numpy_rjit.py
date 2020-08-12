@@ -154,3 +154,25 @@ def test_logaddexp2(rjit):
     test_range()
     test_inf()
     test_nan()
+
+
+def test_signbit(rjit):
+
+    @rjit('bool(double)')
+    def signbit(x):
+        return np.signbit(x)
+
+    def check(array):
+        for val in array:
+            out = signbit(val)
+            expected = np.signbit(val)
+            assert out == expected, val
+
+    a = np.arange(-10, 10, dtype=np.float32)
+    check(a)
+
+    b = np.array([-2, 5, 1, 4, 3], dtype=np.float16)
+    check(b)
+
+    c = np.array([-0.0, 0.0, np.inf, -np.inf], dtype=np.float32)
+    check(c)

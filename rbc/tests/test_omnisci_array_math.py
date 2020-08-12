@@ -73,45 +73,45 @@ def is_number(s):
 
 
 binary_fns = [
-    ('add', 'int32[](int32[], int32[])', 'i4'),
-    ('subtract', 'double[](double[], double[])', 'f8'),
-    ('multiply', 'double[](double[], double[])', 'f8'),
-    ('divide', 'double[](double[], double[])', 'f8'),
-    ('logaddexp', 'double[](double[], double[])', 'f8'),
-    ('logaddexp2', 'double[](double[], double[])', 'f8'),
-    ('true_divide', 'double[](double[], double[])', 'f8'),
-    ('floor_divide', 'double[](double[], double[])', 'f8'),
-    ('power', 'float[](float[], float[])', 'f4'),
-    ('remainder', 'double[](double[], double[])', 'f8'),
-    ('mod', 'double[](double[], double[])', 'f8'),
-    ('fmod', 'double[](double[], double[])', 'f8'),
-    ('gcd', 'int64[](int64[], int64[])', 'i8'),
-    ('lcm', 'int64[](int64[], int64[])', 'i8'),
-    ('arctan2', 'double[](double[], double[])', 'f8'),
-    ('hypot', 'double[](double[], double[])', 'f8'),
-    ('maximum', 'double[](double[], double[])', 'f8'),
-    ('minimum', 'double[](double[], double[])', 'f8'),
-    # XXX: return a bool[] should work
-    ('greater', 'bool[](int64[], int64[])', 'i8'),
-    ('greater_equal', 'bool[](int64[], int64[])', 'i8'),
-    ('less', 'bool[](int64[], int64[])', 'i8'),
-    ('less_equal', 'bool[](int64[], int64[])', 'i8'),
-    ('not_equal', 'bool[](int64[], int64[])', 'i8'),
-    ('equal', 'bool[](int64[], int64[])', 'i8'),
-    ('logical_and', 'bool[](int64[], int64[])', 'i8'),
-    ('logical_or', 'bool[](int64[], int64[])', 'i8'),
-    ('logical_xor', 'bool[](int64[], int64[])', 'i8'),
-    ('bitwise_and', 'int64[](int64[], int64[])', 'i8'),
-    ('bitwise_or', 'int64[](int64[], int64[])', 'i8'),
-    ('bitwise_xor', 'int64[](int64[], int64[])', 'i8'),
-    ('left_shift', 'int64[](int64[], int64[])', 'u8'),
-    ('right_shift', 'int64[](int64[], int64[])', 'i8'),
+    ('add', 'int32[](int32[], int32[])', 'i4,i4'),
+    ('subtract', 'double[](double[], double[])', 'f8,f8'),
+    ('multiply', 'double[](double[], double[])', 'f8,f8'),
+    ('divide', 'double[](double[], double[])', 'f8,f8'),
+    ('logaddexp', 'double[](double[], double[])', 'f8,f8'),
+    ('logaddexp2', 'double[](double[], double[])', 'f8,f8'),
+    ('ldexp', 'double[](double[], int64[])', 'f8,i8'),
+    ('true_divide', 'double[](double[], double[])', 'f8,f8'),
+    ('floor_divide', 'double[](double[], double[])', 'f8,f8'),
+    ('power', 'float[](float[], float[])', 'f4,f4'),
+    ('remainder', 'double[](double[], double[])', 'f8,f8'),
+    ('mod', 'double[](double[], double[])', 'f8,f8'),
+    ('fmod', 'double[](double[], double[])', 'f8,f8'),
+    ('gcd', 'int64[](int64[], int64[])', 'i8,i8'),
+    ('lcm', 'int64[](int64[], int64[])', 'i8,i8'),
+    ('arctan2', 'double[](double[], double[])', 'f8,f8'),
+    ('hypot', 'double[](double[], double[])', 'f8,f8'),
+    ('maximum', 'double[](double[], double[])', 'f8,f8'),
+    ('minimum', 'double[](double[], double[])', 'f8,f8'),
+    ('greater', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('greater_equal', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('less', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('less_equal', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('not_equal', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('equal', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('logical_and', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('logical_or', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('logical_xor', 'bool[](int64[], int64[])', 'i8,i8'),
+    ('bitwise_and', 'int64[](int64[], int64[])', 'i8,i8'),
+    ('bitwise_or', 'int64[](int64[], int64[])', 'i8,i8'),
+    ('bitwise_xor', 'int64[](int64[], int64[])', 'i8,i8'),
+    ('left_shift', 'int64[](int64[], int64[])', 'u8,u8'),
+    ('right_shift', 'int64[](int64[], int64[])', 'i8,i8'),
 ]
 
 
-@pytest.mark.parametrize("method, signature, column", binary_fns,
+@pytest.mark.parametrize("method, signature, columns", binary_fns,
                          ids=[item[0] for item in binary_fns])
-def test_omnisci_array_binary_math(omnisci, method, signature, column):
+def test_omnisci_array_binary_math(omnisci, method, signature, columns):
     omnisci.reset()
 
     s = f'def np_{method}(a, b): return omni.{method}(a, b)'
@@ -119,14 +119,16 @@ def test_omnisci_array_binary_math(omnisci, method, signature, column):
 
     omnisci(signature)(eval('np_{}'.format(method)))
 
-    query = f'select {column}, ' + \
-            f'np_{method}({column}, {column})' + \
+    ca, cb = columns.split(',')
+
+    query = f'select {ca}, {cb}, ' + \
+            f'np_{method}({ca}, {cb})' + \
             f' from {omnisci.table_name};'
 
     _, result = omnisci.sql_execute(query)
 
-    row, out = list(result)[0]
-    expected = getattr(np, method)(row, row)
+    row_a, row_b, out = list(result)[0]
+    expected = getattr(np, method)(row_a, row_b)
     assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 
 
@@ -139,6 +141,7 @@ binary_fn_scalar_input = [
     ('divide', 'double[](double[], double)', 'f8,2.0'),
     ('logaddexp', 'double[](double[], double)', 'f8,2.0'),
     ('logaddexp2', 'double[](double[], double)', 'f8,2.0'),
+    ('ldexp', 'double[](double[], int64)', 'f8,3'),
     ('true_divide', 'double[](double[], double)', 'f8,2.0'),
     ('floor_divide', 'double[](double[], double)', 'f8,2.0'),
     ('power', 'int64[](int64[], int64)', 'i8,2'),
@@ -242,7 +245,8 @@ unary_fns = [
     ('isnan', 'bool[](int64[])', 'i8'),
     # ('isnat', 'bool[](int64[])', 'i8'), # doesn't work
     ('fabs', 'double[](double[])', 'f8'),
-    # ('signbit', 'bool[](int64[])', 'i8'), # not supported
+    ('signbit', 'bool[](int64[])', 'i8'),
+    ('signbit', 'bool[](double[])', 'f8'),
     # ('spacing', 'double[](double[])', 'f8'), # not supported
     ('floor', 'double[](double[])', 'f8'),
     ('ceil', 'double[](double[])', 'f8'),
