@@ -1,4 +1,5 @@
 import pytest
+import math
 import rbc.omnisci_backend as omni  # noqa: F401
 
 
@@ -42,6 +43,132 @@ def omnisci():
     yield m
 
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+
+math_functions = [
+    # Number-theoretic and representation functions
+    ('ceil', 'int64(double)', math.ceil),
+    ('comb', 'int64(int64, int64)', math.comb),
+    ('copysign', 'double(double, double)', math.copysign),
+    ('fabs', 'double(double)', math.fabs),
+    ('factorial', 'int64(int64)', math.factorial),
+    ('floor', 'int64(int64)', math.floor),
+    ('fmod', 'double(double, double)', math.fmod),
+    ('frexp', 'double(double)', math.frexp),  # returns a pair (m, e)
+    # ('fsum', 'double(double[])', math.fsum),
+    ('gcd', 'int(int, int)', math.gcd),
+    ('isclose', 'bool(double, double)', math.isclose),
+    ('isfinite', 'bool(double)', math.isfinite),
+    ('isinf', 'bool(double)', math.isinf),
+    ('isnan', 'bool(double)', math.isnan),
+    ('isqrt', 'int64(int64)', math.isqrt),  # new in python 3.8
+    ('ldexp', 'double(double, int)', math.ldexp),
+    ('modf', 'double(double, double)', math.modf),
+    # # ('perm'),
+    ('prod', 'int64(int64[])', math.prod),
+    ('remainder', 'double(double, double)', math.remainder),
+    ('trunc', 'double(double)', math.trunc),
+    # Power and logarithmic functions
+    ('exp', 'double(double)', math.exp),
+    ('expm1', 'double(double)', math.expm1),
+    ('log', 'double(double)', math.log),
+    ('log1p', 'double(double)', math.log1p),
+    ('log2', 'double(double)', math.log2),
+    ('log10', 'double(double)', math.log10),
+    ('pow', 'double(double, double)', math.pow),
+    ('sqrt', 'double(double)', math.sqrt),
+    # # Trigonometric functions
+    ('acos', 'double(double)', math.acos),
+    ('asin', 'double(double)', math.asin),
+    ('atan', 'double(double)', math.atan),
+    ('atan2', 'double(double, double)', math.atan2),
+    ('cos', 'double(double)', math.cos),
+    # #('dist')
+    ('hypot', 'double(double, double)', math.hypot),
+    ('sin', 'double(double)', math.sin),
+    ('tan', 'double(double)', math.tan),
+    ('degrees', 'double(double)', math.degrees),
+    ('radians', 'double(double)', math.radians),
+    # # Hyperbolic functions
+    ('acosh', 'double(double)', math.acosh),
+    ('asinh', 'double(double)', math.asinh),
+    ('atanh', 'double(double)', math.atanh), 
+    ('cosh', 'double(double)', math.cosh),
+    ('sinh', 'double(double)', math.sinh),
+    ('tanh', 'double(double)', math.tanh),
+    # # Special functions
+    ('erf', 'double(double)', math.erf),
+    ('erfc', 'double(double)', math.erfc),
+    ('gamma', 'double(double)', math.gamma),
+    ('lgamma', 'double(double)', math.lgamma),
+    # Constants
+    ('pi', 'double(double)', math.pi),
+    ('e', 'double(double)', math.e),
+    ('tau', 'double(double)', math.tau),
+    ('inf', 'double(double)', math.inf),
+    ('nan', 'double(double)', math.nan),
+]
+
+
+@pytest.mark.parametrize("fn_name, signature, math_func", math_functions,
+                         ids=[item[0] for item in math_functions])
+def test_math_function(omnisci, fn_name, signature, math_func):
+    omnisci.reset()
+
+    if fn_name in ['inf', 'nan']:
+        pytest.skip(f'{fn_name}: FIXME')
+
+    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial',
+                   'fmod', 'isclose', 'isqrt']:
+        pytest.skip(f'{fn_name}: Numba uses cpython implementation! Replace it')
+
+    if fn_name in ['frexp']:
+        pytest.skip(f'{fn_name} returns a pair (m, e)')
+
+    arity = signature.count(',') + 1
+    kind = signature.split('(')[1].split(',')[0].split(')')[0]
+
+    if fn_name in ['pi', 'e', 'tau', 'inf', 'nan']:
+        fn = eval(f'lambda x: {math_func}', dict(math=math))
+    elif arity == 1:
+        fn = eval(f'lambda x: math.{math_func.__name__}(x)', dict(math=math))
+    elif arity == 2:
+        fn = eval(f'lambda x, y: math.{math_func.__name__}(x, y)',
+                  dict(math=math))
+    else:
+        raise NotImplementedError((signature, arity))
+
+    if fn.__name__ == '<lambda>':
+        # give lambda function a name
+        fn.__name__ = fn_name
+
+    omnisci(signature)(fn)
+
+    omnisci.register()
+
+    if kind == 'double':
+        assert arity <= 3, arity
+        xs = ', '.join('xyz'[:arity])
+    elif kind.startswith('int'):
+        assert arity <= 2, arity
+        xs = ', '.join('ij'[:arity])
+    elif kind.startswith('bool'):
+        assert arity <= 2, arity
+        xs = ', '.join('ab'[:arity])
+    elif kind == 'constant':
+        xs = ''
+    else:
+        raise NotImplementedError(kind)
+
+    query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
+    # descr, result = omnisci.sql_execute(query)
+    # for args in list(result):
+    #     result = args[-1]
+    #     expected = math_func(*args[:-1])
+    #     if np.isnan(expected):
+    #         assert np.isnan(result)
+    #     else:
+    #         assert(np.isclose(expected, result))
 
 
 numpy_functions = [

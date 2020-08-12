@@ -24,6 +24,9 @@ int32_t = ir.IntType(32)
 def _lf(lst):
     return lst + [e + 'f' for e in lst] + [e + 'l' for e in lst]
 
+def _f(lst):
+    return lst + [e + 'f' for e in lst]
+
 
 exp_funcs = ['exp', 'exp2', 'expm1', 'log', 'log2', 'log10',
              'log1p', 'ilogb', 'logb']
@@ -37,8 +40,11 @@ fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
 
+pymath_funcs = _f(['erf', 'erfc', 'gamma', 'lgamma'])
+
 fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
                 *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
+
 libm_funcs = [*fp_funcs, *classification_funcs]
 
 stdio_funcs = ['printf', 'puts', 'fflush']
@@ -67,6 +73,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'stdlib'
                     elif name in ['allocate_varlen_buffer']:
                         _deps[name] = 'omnisci_internal'
+                    elif name in pymath_funcs:
+                        _deps[name] = 'pymath'
                     else:
                         _deps[name] = 'undefined'
                 else:

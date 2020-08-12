@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from numba.extending import register_jitable
 from .utils import get_version
@@ -10,6 +11,7 @@ else:
 # tell numba to wire np.exp2 to libm exp2.
 mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
 mathimpl.unary_math_extern(np.log2, "log2f", "log2")
+mathimpl.unary_math_extern(math.gamma, "gammaf", "gamma")
 
 
 def np_logaddexp_impl(context, builder, sig, args):
