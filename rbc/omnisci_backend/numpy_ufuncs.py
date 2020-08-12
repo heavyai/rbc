@@ -38,7 +38,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
         typB = determine_input_type(b)
 
         # XXX: raise error if len(a) != len(b)
-        @extending.register_jitable
+        @extending.register_jitable(_nrt=False)
         def binary_impl(a, b, nb_dtype):
             sz = len(a)
             x = Array(sz, nb_dtype)
@@ -48,7 +48,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
                 x[i] = nb_dtype(ufunc(cast_a, cast_b))
             return x
 
-        @extending.register_jitable
+        @extending.register_jitable(_nrt=False)
         def broadcast(e, sz, dtype):
             b = Array(sz, dtype)
             b.fill(e)
@@ -62,18 +62,18 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
             return impl
         elif isinstance(a, ArrayPointer):
             nb_dtype = determine_dtype(a, dtype)
-            eltype = a.eltype
+            other_dtype = b
 
             def impl(a, b):
-                b = broadcast(b, len(a), eltype)
+                b = broadcast(b, len(a), other_dtype)
                 return binary_impl(a, b, nb_dtype)
             return impl
         elif isinstance(b, ArrayPointer):
             nb_dtype = determine_dtype(b, dtype)
-            eltype = b.eltype
+            other_dtype = a
 
             def impl(a, b):
-                a = broadcast(a, len(b), eltype)
+                a = broadcast(a, len(b), other_dtype)
                 return binary_impl(a, b, nb_dtype)
             return impl
         else:
@@ -134,7 +134,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.fmax)
 @overload_elementwise_binary_ufunc(np.fmin)
 # Floating functions
-# @overload_elementwise_binary_ufunc(np.ldexp) # requires numba runtime
+@overload_elementwise_binary_ufunc(np.ldexp)
 def dummy_binary_ufunc(a, b):
     pass
 
@@ -229,9 +229,9 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 # not supported?
 # @overload_elementwise_unary_ufunc(np.isnat, dtype=types.int8)
 # issue 152:
-# @overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
+@overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
 @overload_elementwise_unary_ufunc(np.copysign)
-# @overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
+@overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
 def dummy_unary_ufunc(a):
     pass
 

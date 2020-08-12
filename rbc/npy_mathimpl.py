@@ -1,5 +1,6 @@
 import numpy as np
 from numba.extending import register_jitable
+from llvmlite import ir
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.cpython import mathimpl
@@ -70,6 +71,25 @@ def np_logaddexp2_impl(context, builder, sig, args):
     return context.compile_internal(builder, impl, sig, args)
 
 
+def np_signbit_impl(context, builder, sig, args):
+    int64_t = ir.IntType(64)
+    double = ir.DoubleType()
+    [val] = args
+    val = builder.bitcast(builder.fpext(val, double), int64_t)
+    res = builder.ashr(val, int64_t(63))
+    return res
+
+
+def np_ldexp_impl(context, builder, sig, args):
+
+    def impl(x1, x2):
+        if x2 < 0:
+            return x1 / np.power(2, -x2)
+        return x1 * np.power(2, x2)
+
+    return context.compile_internal(builder, impl, sig, args)
+
+
 ufunc_db._lazy_init_db()
 
 # logaddexp
@@ -82,4 +102,17 @@ ufunc_db._ufunc_db[np.logaddexp] = {
 ufunc_db._ufunc_db[np.logaddexp2] = {
     'ff->f': np_logaddexp2_impl,
     'dd->d': np_logaddexp2_impl,
+}
+
+# signbit
+ufunc_db._ufunc_db[np.signbit] = {
+    'f->?': np_signbit_impl,
+    'd->?': np_signbit_impl,
+}
+
+ufunc_db._ufunc_db[np.ldexp] = {
+    'fi->f': np_ldexp_impl,
+    'fl->f': np_ldexp_impl,
+    'di->d': np_ldexp_impl,
+    'dl->d': np_ldexp_impl,
 }
