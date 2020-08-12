@@ -220,7 +220,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 60]')
 
-    if omnisci.has_cuda and fn_name in ['lcm']:
+    if omnisci.has_cuda and fn_name in ['lcm', 'ldexp']:
         # https://github.com/xnd-project/rbc/issues/71
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 71]')
