@@ -121,6 +121,16 @@ def test_math_function(omnisci, fn_name, signature):
         pytest.skip(f'{fn_name}: not available in {math.__name__} module'
                     f' of Python {sys.version.split(None, 1)[0]}')
 
+    if omnisci.has_cuda and fn_name in [
+            'expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
+            'cosh', 'sinh', 'tanh', 'erf', 'erfc', 'lgamma', 'gamma']:
+        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 159]')
+    if omnisci.has_cuda and fn_name in [
+            'pow']:
+        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 158]')
+
     if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
                    'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation!')
