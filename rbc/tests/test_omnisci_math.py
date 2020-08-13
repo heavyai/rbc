@@ -132,7 +132,8 @@ def test_math_function(omnisci, fn_name, signature):
                     ' [rbc issue 158]')
 
     if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
-                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist']:
+                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
+                   'perm']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation!')
 
     if fn_name in ['frexp']:
