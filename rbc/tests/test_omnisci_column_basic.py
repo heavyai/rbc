@@ -108,7 +108,7 @@ def test_sizer_row_multiplier_param1(omnisci):
 
 
 def test_sizer_row_multiplier_param2(omnisci):
-    pytest.skip('fails, likely a bug of omniscidb [issue 131]')
+    pytest.skip('scalar preceding column argument fails [issue 131]')
 
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
