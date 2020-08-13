@@ -1,5 +1,6 @@
-import pytest
 import math
+import pytest
+import sys
 import rbc.omnisci_backend as omni  # noqa: F401
 
 
@@ -47,79 +48,81 @@ def omnisci():
 
 math_functions = [
     # Number-theoretic and representation functions
-    ('ceil', 'int64(double)', math.ceil),
-    ('comb', 'int64(int64, int64)', math.comb),
-    ('copysign', 'double(double, double)', math.copysign),
-    ('fabs', 'double(double)', math.fabs),
-    ('factorial', 'int64(int64)', math.factorial),
-    ('floor', 'int64(int64)', math.floor),
-    ('fmod', 'double(double, double)', math.fmod),
-    ('frexp', 'double(double)', math.frexp),  # returns a pair (m, e)
-    # ('fsum', 'double(double[])', math.fsum),
-    ('gcd', 'int(int, int)', math.gcd),
-    ('isclose', 'bool(double, double)', math.isclose),
-    ('isfinite', 'bool(double)', math.isfinite),
-    ('isinf', 'bool(double)', math.isinf),
-    ('isnan', 'bool(double)', math.isnan),
-    ('isqrt', 'int64(int64)', math.isqrt),  # new in python 3.8
-    ('ldexp', 'double(double, int)', math.ldexp),
-    ('modf', 'double(double, double)', math.modf),
-    # # ('perm'),
-    ('prod', 'int64(int64[])', math.prod),
-    ('remainder', 'double(double, double)', math.remainder),
-    ('trunc', 'double(double)', math.trunc),
+    ('ceil', 'int64(double)'),
+    ('comb', 'int64(int64, int64)'),
+    ('copysign', 'double(double, double)'),
+    ('fabs', 'double(double)'),
+    ('factorial', 'int64(int64)'),
+    ('floor', 'int64(int64)'),
+    ('fmod', 'double(double, double)'),
+    ('frexp', 'double(double)'),  # returns a pair (m, e)
+    ('fsum', 'double(double[])'),
+    ('gcd', 'int(int, int)'),
+    ('isclose', 'bool(double, double)'),
+    ('isfinite', 'bool(double)'),
+    ('isinf', 'bool(double)'),
+    ('isnan', 'bool(double)'),
+    ('isqrt', 'int64(int64)'),
+    ('ldexp', 'double(double, int)'),
+    ('modf', 'double(double, double)'),
+    ('perm', 'int(int, int)'),
+    ('prod', 'int64(int64[])'),
+    ('remainder', 'double(double, double)'),
+    ('trunc', 'double(double)'),
     # Power and logarithmic functions
-    ('exp', 'double(double)', math.exp),
-    ('expm1', 'double(double)', math.expm1),
-    ('log', 'double(double)', math.log),
-    ('log1p', 'double(double)', math.log1p),
-    ('log2', 'double(double)', math.log2),
-    ('log10', 'double(double)', math.log10),
-    ('pow', 'double(double, double)', math.pow),
-    ('sqrt', 'double(double)', math.sqrt),
+    ('exp', 'double(double)'),
+    ('expm1', 'double(double)'),
+    ('log', 'double(double)'),
+    ('log1p', 'double(double)'),
+    ('log2', 'double(double)'),
+    ('log10', 'double(double)'),
+    ('pow', 'double(double, double)'),
+    ('sqrt', 'double(double)'),
     # # Trigonometric functions
-    ('acos', 'double(double)', math.acos),
-    ('asin', 'double(double)', math.asin),
-    ('atan', 'double(double)', math.atan),
-    ('atan2', 'double(double, double)', math.atan2),
-    ('cos', 'double(double)', math.cos),
-    # #('dist')
-    ('hypot', 'double(double, double)', math.hypot),
-    ('sin', 'double(double)', math.sin),
-    ('tan', 'double(double)', math.tan),
-    ('degrees', 'double(double)', math.degrees),
-    ('radians', 'double(double)', math.radians),
+    ('acos', 'double(double)'),
+    ('asin', 'double(double)'),
+    ('atan', 'double(double)'),
+    ('atan2', 'double(double, double)'),
+    ('cos', 'double(double)'),
+    ('dist', 'int64(int64[], int64[])'),
+    ('hypot', 'double(double, double)'),
+    ('sin', 'double(double)'),
+    ('tan', 'double(double)'),
+    ('degrees', 'double(double)'),
+    ('radians', 'double(double)'),
     # # Hyperbolic functions
-    ('acosh', 'double(double)', math.acosh),
-    ('asinh', 'double(double)', math.asinh),
-    ('atanh', 'double(double)', math.atanh),
-    ('cosh', 'double(double)', math.cosh),
-    ('sinh', 'double(double)', math.sinh),
-    ('tanh', 'double(double)', math.tanh),
+    ('acosh', 'double(double)'),
+    ('asinh', 'double(double)'),
+    ('atanh', 'double(double)'),
+    ('cosh', 'double(double)'),
+    ('sinh', 'double(double)'),
+    ('tanh', 'double(double)'),
     # # Special functions
-    ('erf', 'double(double)', math.erf),
-    ('erfc', 'double(double)', math.erfc),
-    ('gamma', 'double(double)', math.gamma),
-    ('lgamma', 'double(double)', math.lgamma),
+    ('erf', 'double(double)'),
+    ('erfc', 'double(double)'),
+    ('gamma', 'double(double)'),
+    ('lgamma', 'double(double)'),
     # Constants
-    ('pi', 'double(double)', math.pi),
-    ('e', 'double(double)', math.e),
-    ('tau', 'double(double)', math.tau),
-    ('inf', 'double(double)', math.inf),
-    ('nan', 'double(double)', math.nan),
+    ('pi', 'double(double)'),
+    ('e', 'double(double)'),
+    ('tau', 'double(double)'),
+    ('inf', 'double(double)'),
+    ('nan', 'double(double)'),
 ]
 
 
-@pytest.mark.parametrize("fn_name, signature, math_func", math_functions,
+@pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=[item[0] for item in math_functions])
-def test_math_function(omnisci, fn_name, signature, math_func):
+def test_math_function(omnisci, fn_name, signature):
     omnisci.reset()
 
-    if fn_name in ['inf', 'nan']:
-        pytest.skip(f'{fn_name}: FIXME')
+    math_func = getattr(math, fn_name, None)
+    if math_func is None:
+        pytest.skip(f'{fn_name}: not available in {math.__name__} module'
+                    f' of Python {sys.version.split(None, 1)[0]}')
 
-    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial',
-                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf']:
+    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
+                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation!')
 
     if fn_name in ['frexp']:
@@ -129,11 +132,11 @@ def test_math_function(omnisci, fn_name, signature, math_func):
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
 
     if fn_name in ['pi', 'e', 'tau', 'inf', 'nan']:
-        fn = eval(f'lambda x: {math_func}', dict(math=math))
+        fn = eval(f'lambda x: math.{fn_name}', dict(math=math))
     elif arity == 1:
-        fn = eval(f'lambda x: math.{math_func.__name__}(x)', dict(math=math))
+        fn = eval(f'lambda x: math.{fn_name}(x)', dict(math=math))
     elif arity == 2:
-        fn = eval(f'lambda x, y: math.{math_func.__name__}(x, y)',
+        fn = eval(f'lambda x, y: math.{fn_name}(x, y)',
                   dict(math=math))
     else:
         raise NotImplementedError((signature, arity))
@@ -167,7 +170,7 @@ def test_math_function(omnisci, fn_name, signature, math_func):
     descr, result = omnisci.sql_execute(query)
     for args in list(result):
         result = args[-1]
-        if fn_name in ['pi', 'e', 'tau']:
+        if fn_name in ['pi', 'e', 'tau', 'inf', 'nan']:
             expected = math_func
         else:
             expected = math_func(*args[:-1])
