@@ -1,6 +1,6 @@
 import pytest
 from numba import njit
-import pandas as pd
+from collections import defaultdict
 import numpy as np
 import math
 
@@ -13,6 +13,18 @@ if available_version and available_version < (5, 4):
               + '.'.join(map(str, available_version)))
     available_version = ()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+
+
+def read_csv(filename):
+    d = defaultdict(list)
+    f = open(filename, 'r')
+    s = f.readlines()
+    header = s[0].strip().split(',')
+    for col in s[1:]:
+        col = col.strip().split(',')
+        for h, c in zip(header, col):
+            d[h].append(float(c))
+    return d
 
 
 @pytest.fixture(scope='module')
@@ -30,9 +42,9 @@ def omnisci():
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
         .format(**locals()))
 
-    df = pd.read_csv('./rbc/tests/data_black_scholes.csv', sep=',')[:10]
+    df = read_csv('./rbc/tests/data_black_scholes.csv')
 
-    rows = len(df)
+    rows = 10
     for i in range(rows):
         S = 100.0
         X = df['STRIKE'][i]
