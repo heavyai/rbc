@@ -1,5 +1,8 @@
 import pytest
-
+from numba import njit
+import pandas as pd
+import numpy as np
+import math
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -10,11 +13,6 @@ if available_version and available_version < (5, 4):
               + '.'.join(map(str, available_version)))
     available_version = ()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
-
-from numba import njit
-import pandas as pd
-import numpy as np
-import math
 
 
 @pytest.fixture(scope='module')
@@ -50,6 +48,7 @@ def omnisci():
     yield m
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
+
 @njit
 def cnd_numba(d):
     A1 = 0.31938153
@@ -64,6 +63,7 @@ def cnd_numba(d):
     if d > 0:
         ret_val = 1.0 - ret_val
     return ret_val
+
 
 def test_black_scholes_udf(omnisci):
     if omnisci.has_cuda:
@@ -80,12 +80,12 @@ def test_black_scholes_udf(omnisci):
     def black_scholes_UDF(S, X, T, r, sigma):
         d1 = (np.log(S/X) + (r + 0.5 * sigma**2)*T) / (sigma * np.sqrt(T))
         d2 = d1 - sigma * np.sqrt(T)
-        
+
         cndd1 = cnd_numba(d1)
         cndd2 = cnd_numba(d2)
 
         expRT = math.exp((-1. * r) * T)
-        
+
         callResult = (S * cndd1 - X * expRT * cndd2)
         return callResult
 
@@ -100,6 +100,7 @@ def test_black_scholes_udf(omnisci):
     for _, (expected, out) in enumerate(result):
         assert math.isclose(expected, out, abs_tol=0.0001)
 
+
 @pytest.mark.skip('UDTF assigns the same column to every column argument'
                   ' [rbc issue 160]')
 def test_black_scholes_udtf(omnisci):
@@ -113,21 +114,21 @@ def test_black_scholes_udtf(omnisci):
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, Column<double>, Column<double>, Column<double>, Column<double>,'
+    @omnisci('int32(Column<double>, Column<double>, Column<double>, Column<double>, Column<double>,'  # noqa: E501
              ' int64|sizer=RowMultiplier, OutputColumn<double>)')
     def black_scholes_udtf(S, X, T, r, sigma, m, out):
         input_row_count = len(X)
 
         for i in range(input_row_count):
-            d1 = (np.log(S[i]/X[i]) + (r[i] + 0.5 * sigma[i]**2)*T[i]) / (sigma[i] * np.sqrt(T[i]))
+            d1 = (np.log(S[i]/X[i]) + (r[i] + 0.5 * sigma[i]**2)*T[i]) / (sigma[i] * np.sqrt(T[i]))  # noqa: E501
             out[i] = S[i] + X[i] + T[i] + r[i] + sigma[i]
             d2 = d1 - sigma[i] * np.sqrt(T[i])
-            
+
             cndd1 = cnd_numba(d1)
             cndd2 = cnd_numba(d2)
 
             expRT = math.exp((-1. * r[i]) * T[i])
-            
+
             out[i] = (S[i] * cndd1 - X[i] * expRT * cndd2)
 
         return m * input_row_count
