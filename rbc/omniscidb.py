@@ -5,8 +5,6 @@ import configparser
 from collections import defaultdict
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
-from pymapd.cursor import make_row_results_set
-from pymapd._parsers import _extract_description  # , _bind_parameters
 from .omnisci_backend import (
     array_type_converter,
     output_column_type_converter, column_type_converter,
@@ -259,7 +257,78 @@ class RemoteOmnisci(RemoteJIT):
             print(msg)
         return client(Omnisci={name: args})['Omnisci'][name]
 
+    def get_tables(self):
+        """Return a list of table names stored in the OmnisciDB server.
+        """
+        return self.thrift_call('get_tables', self.session_id)
+
+    def get_table_details(self, table_name):
+        """Return details about OmnisciDB table.
+        """
+        return self.thrift_call('get_table_details',
+                                self.session_id, table_name)
+
+    def load_table_columnar(self, table_name, **columnar_data):
+        """Load columnar data to OmnisciDB table.
+
+        Warning: currently loading only integral and floating point
+        data is supported.
+
+        Parameters
+        ----------
+        table_name : str
+          The name of table into the data is loaded. The table must exist.
+
+        columnar_data : dict
+          A dictionary of column names and the corresponding column
+          values. A column values is a sequence of values.
+          The table must have the specified columns defined.
+        """
+        thrift = self.thrift_client.thrift
+        table_details = self.get_table_details(table_name)
+
+        columns = []
+        for column_name, column_data in columnar_data.items():
+            typeinfo = None
+            for ct in table_details.row_desc:
+                if ct.col_name == column_name:
+                    typeinfo = ct.col_type
+                    break
+            if typeinfo is None:
+                raise ValueError(
+                    f'OmnisciDB `{table_name}` has no column `{column_name}`')
+            typename = thrift.TExtArgumentType._VALUES_TO_NAMES[typeinfo.type]
+            if typename in ['Double', 'Float']:
+                col_data = thrift.TColumnData(real_col=column_data)
+            elif typename.startswith('Int'):
+                col_data = thrift.TColumnData(int_col=column_data)
+            else:
+                raise NotImplementedError(f'loading {typename} data')
+            columns.append(thrift.TColumn(
+                data=col_data, nulls=[False] * len(column_data)))
+
+        self.thrift_call('load_table_binary_columnar',
+                         self.session_id, table_name, columns)
+
     def sql_execute(self, query):
+        """Execute SQL query in OmnisciDB server.
+
+        Parameters
+        ----------
+        query : str
+
+          SQL query string containing exactly one query. Multiple
+          queries are not supported.
+
+        Returns
+        -------
+        descr : object
+          Row description object
+        results : iterator
+          Iterator over rows.
+        """
+        from pymapd.cursor import make_row_results_set
+        from pymapd._parsers import _extract_description
         self.register()
         columnar = True
         if self.debug:
