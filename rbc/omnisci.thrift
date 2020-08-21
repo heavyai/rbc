@@ -63,10 +63,32 @@ struct TQueryResult {
   4: string nonce
 }
 
+enum TPartitionDetail {
+  DEFAULT,
+  REPLICATED,
+  SHARDED,
+  OTHER
+}
+
+struct TTableDetails {
+  1: TRowDescriptor row_desc
+  2: i64 fragment_size
+  3: i64 page_size
+  4: i64 max_rows
+  5: string view_sql
+  6: i64 shard_count
+  7: string key_metainfo
+  8: bool is_temporary
+  9: TPartitionDetail partition_detail
+}
+
 service Omnisci {
   string get_version() throws (1: TMapDException e)
   TSessionId connect(1: string user, 2: string passwd, 3: string dbname) throws (1: TMapDException e)
   TQueryResult sql_execute(1: TSessionId session, 2: string query 3: bool column_format, 4: string nonce, 5: i32 first_n = -1, 6: i32 at_most_n = -1) throws (1: TMapDException e)
   map<string, string> get_device_parameters(1: TSessionId session) throws (1: TMapDException e)
   void register_runtime_extension_functions(1: TSessionId session, 2: list<extension_functions.TUserDefinedFunction> udfs, 3: list<extension_functions.TUserDefinedTableFunction> udtfs, 4: map<string, string> device_ir_map) throws (1: TMapDException e)
+  list<string> get_tables(1: TSessionId session) throws (1: TMapDException e)
+  TTableDetails get_table_details(1: TSessionId session, 2: string table_name) throws (1: TMapDException e)
+  void load_table_binary_columnar(1: TSessionId session, 2: string table_name, 3: list<TColumn> cols) throws (1: TMapDException e)
 }
