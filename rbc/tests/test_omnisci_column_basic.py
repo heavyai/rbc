@@ -1,3 +1,5 @@
+import os
+from collections import defaultdict
 import pytest
 
 
@@ -16,29 +18,29 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci_udtf'
+    table_name = os.path.splitext(os.path.basename(__file__))[0]
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
-                'BOOLEAN']
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+                'BOOLEAN', 'DOUBLE']
+    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
     m.sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
         .format(**locals()))
 
-    def row_value(row, col, colname):
-        if colname == 'b':
-            return ("'true'" if row % 2 == 0 else "'false'")
-        return row
+    data = defaultdict(list)
+    for i in range(5):
+        for j, n in enumerate(colnames):
+            if n == 'b':
+                data[n].append(i % 2 == 0)
+            elif n == 'd':
+                data[n].append(i + 1.5)
+            else:
+                data[n].append(i)
 
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(
-            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+    m.load_table_columnar(table_name, **data)
     m.table_name = table_name
     yield m
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
@@ -194,7 +196,7 @@ def test_rowmul_add_columns(omnisci):
         for i in range(input_row_count):
             for c in range(m):
                 j = i + c * input_row_count
-                r[j] = x[i] + alpha * y[i]
+                r[j] = x[i] + alpha * float(y[i])
         return m * input_row_count
 
     alpha = 2.5
@@ -202,12 +204,12 @@ def test_rowmul_add_columns(omnisci):
     descr, result = omnisci.sql_execute(
         'select * from table(add_columns('
         'cursor(select f8 from {omnisci.table_name}),'
-        ' cursor(select f8 from {omnisci.table_name}),'
+        ' cursor(select d from {omnisci.table_name}),'
         ' cast({alpha} as double), 1));'
         .format(**locals()))
 
     for i, r in enumerate(result):
-        assert r == (i + alpha * i,)
+        assert r == (i + alpha * (i + 1.5),)
 
 
 @pytest.mark.skipif(
