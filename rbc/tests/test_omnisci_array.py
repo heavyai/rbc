@@ -1,5 +1,6 @@
+import os
+from collections import defaultdict
 import pytest
-
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -10,7 +11,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci_array'
+    table_name = os.path.splitext(os.path.basename(__file__))[0]
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
                 'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
@@ -26,23 +27,17 @@ def omnisci():
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
         .format(**locals()))
 
-    def row_value(row, col, colname):
-        if colname == 'b':
-            return 'ARRAY[%s]' % (', '.join(
-                ("'true'" if i % 2 == 0 else "'false'")
-                for i in range(-3, 3)))
-        if colname.startswith('f'):
-            return 'ARRAY[%s]' % (', '.join(
-                str(row * 10 + i + 0.5) for i in range(-3, 3)))
-        return 'ARRAY[%s]' % (', '.join(
-            str(row * 10 + i) for i in range(-3, 3)))
+    data = defaultdict(list)
+    for i in range(5):
+        for j, n in enumerate(colnames):
+            if n == 'b':
+                data[n].append([_i % 2 == 0 for _i in range(-3, 3)])
+            elif n.startswith('f'):
+                data[n].append([i * 10 + _i + 0.5 for _i in range(-3, 3)])
+            else:
+                data[n].append([i * 10 + _i for _i in range(-3, 3)])
 
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(
-            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+    m.load_table_columnar(table_name, **data)
     m.table_name = table_name
     yield m
     try:

@@ -271,9 +271,6 @@ class RemoteOmnisci(RemoteJIT):
     def load_table_columnar(self, table_name, **columnar_data):
         """Load columnar data to OmnisciDB table.
 
-        Warning: currently loading only integral and floating point
-        data is supported.
-
         Parameters
         ----------
         table_name : str
@@ -286,8 +283,14 @@ class RemoteOmnisci(RemoteJIT):
         """
         thrift = self.thrift_client.thrift
         table_details = self.get_table_details(table_name)
-
         columns = []
+
+        int_col_types = ['TINYINT', 'SMALLINT', 'INT', 'BIGINT', 'BOOL',
+                         'DECIMAL', 'TIME', 'TIMESTAMP', 'DATE']
+        real_col_types = ['FLOAT', 'DOUBLE']
+        str_col_types = ['STR', 'POINT', 'LINESTRING', 'POLYGON',
+                         'MULTIPOLYGON']
+
         for column_name, column_data in columnar_data.items():
             typeinfo = None
             for ct in table_details.row_desc:
@@ -297,13 +300,31 @@ class RemoteOmnisci(RemoteJIT):
             if typeinfo is None:
                 raise ValueError(
                     f'OmnisciDB `{table_name}` has no column `{column_name}`')
-            typename = thrift.TExtArgumentType._VALUES_TO_NAMES[typeinfo.type]
-            if typename in ['Double', 'Float']:
-                col_data = thrift.TColumnData(real_col=column_data)
-            elif typename.startswith('Int'):
+            datumtype = thrift.TDatumType._VALUES_TO_NAMES[typeinfo.type]
+            if typeinfo.is_array:
+                rows = []
+                for row in column_data:
+                    if datumtype in int_col_types:
+                        row_data = thrift.TColumnData(int_col=row)
+                    elif datumtype in real_col_types:
+                        row_data = thrift.TColumnData(real_col=row)
+                    elif datumtype in str_col_types:
+                        row_data = thrift.TColumnData(str_col=row)
+                    else:
+                        raise NotImplementedError(
+                            f'loading {datumtype} array data')
+                    rows.append(thrift.TColumn(
+                        data=row_data,
+                        nulls=[False] * len(row)))
+                col_data = thrift.TColumnData(arr_col=rows)
+            elif datumtype in int_col_types:
                 col_data = thrift.TColumnData(int_col=column_data)
+            elif datumtype in real_col_types:
+                col_data = thrift.TColumnData(real_col=column_data)
+            elif datumtype in str_col_types:
+                col_data = thrift.TColumnData(str_col=column_data)
             else:
-                raise NotImplementedError(f'loading {typename} data')
+                raise NotImplementedError(f'loading {datumtype} data')
             columns.append(thrift.TColumn(
                 data=col_data, nulls=[False] * len(column_data)))
 
