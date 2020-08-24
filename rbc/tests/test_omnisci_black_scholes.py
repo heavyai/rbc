@@ -113,8 +113,6 @@ def test_black_scholes_udf(omnisci):
         assert math.isclose(expected, out, abs_tol=0.0001)
 
 
-@pytest.mark.skip('UDTF assigns the same column to every column argument'
-                  ' [rbc issue 160]')
 def test_black_scholes_udtf(omnisci):
     if omnisci.has_cuda:
         pytest.skip('crashes CUDA enabled omniscidb server'
@@ -155,7 +153,7 @@ def test_black_scholes_udtf(omnisci):
         ' 1));'
         .format(**locals()))
 
-    _, oprice = omnisci.sql_execute(f'select * from {omnisci.table_name}')
+    _, oprice = omnisci.sql_execute(f'select OPRICE from {omnisci.table_name}')
 
-    print(list(result))
-    print(list(oprice))
+    for r, o in zip(result, oprice):
+        assert math.isclose(o[0], r[0], abs_tol=0.0001)
