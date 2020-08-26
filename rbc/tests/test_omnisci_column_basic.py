@@ -67,7 +67,7 @@ def test_sizer_row_multiplier_orig(omnisci):
         return m * input_row_count
 
     descr, result = omnisci.sql_execute(
-        'select f8 from table(my_row_copier_mul(cursor(select f8 '
+        'select * from table(my_row_copier_mul(cursor(select f8 '
         'from {omnisci.table_name}), 2));'
         .format(**locals()))
 
@@ -99,7 +99,7 @@ def test_sizer_row_multiplier_param1(omnisci):
     alpha = 3
 
     descr, result = omnisci.sql_execute(
-        'select f8 from table(my_row_copier_mul_param1('
+        'select * from table(my_row_copier_mul_param1('
         'cursor(select f8 from {omnisci.table_name}),'
         'cast({alpha} as double),'
         'cast(4 as int), 2));'
@@ -110,8 +110,6 @@ def test_sizer_row_multiplier_param1(omnisci):
 
 
 def test_sizer_row_multiplier_param2(omnisci):
-    pytest.skip('scalar preceding column argument fails [issue 131]')
-
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -131,7 +129,7 @@ def test_sizer_row_multiplier_param2(omnisci):
     alpha = 3
 
     descr, result = omnisci.sql_execute(
-        'select f8 from table(my_row_copier_mul_param2('
+        'select * from table(my_row_copier_mul_param2('
         'cast({alpha} as double),'
         'cursor(select f8 from {omnisci.table_name}),'
         'cast(4 as int), 2));'
@@ -165,7 +163,7 @@ def test_sizer_constant_parameter(omnisci):
         return m
 
     descr, result = omnisci.sql_execute(
-        'select f8 from table(my_row_copier_cp(cursor(select f8 '
+        'select * from table(my_row_copier_cp(cursor(select f8 '
         'from {omnisci.table_name}), 5));'
         .format(**locals()))
 
@@ -213,10 +211,10 @@ def test_rowmul_add_columns(omnisci):
 
 
 @pytest.mark.skipif(
-    True,
+    available_version < (5, 4),
     reason=(
         "test requires omniscidb with multiple output"
-        " columns support (got %s) [issue 124]" % (
+        " columns support (got %s) [issue 150]" % (
             available_version,)))
 def test_rowmul_return_two_columns(omnisci):
     omnisci.reset()
@@ -226,19 +224,28 @@ def test_rowmul_return_two_columns(omnisci):
     omnisci.register()
 
     @omnisci('int32(Column<double>, int64|sizer=RowMultiplier,'
-             ' Column<double>, Column<double>)')
+             ' OutputColumn<double>, OutputColumn<double>)')
     def ret_columns(x, m, y, z):
         input_row_count = len(x)
         for i in range(input_row_count):
             for c in range(m):
                 j = i + c * input_row_count
-                y[j] = x[i]
-                z[j] = x[i]
+                y[j] = 2 * x[i]
+                z[j] = 3 * x[i]
         return m * input_row_count
 
     descr, result = omnisci.sql_execute(
         'select * from table(ret_columns('
-        'cursor(select f8 from {omnisci.table_name}), 1));'
-        .format(**locals()))
+        f'cursor(select f8 from {omnisci.table_name}), 1));')
 
-    print(list(result))
+    for i, r in enumerate(result):
+        assert r[0] == 2 * i
+        assert r[1] == 3 * i
+
+    descr, result = omnisci.sql_execute(
+        'select out1, out0 from table(ret_columns('
+        f'cursor(select f8 from {omnisci.table_name}), 1));')
+
+    for i, r in enumerate(result):
+        assert r[1] == 2 * i
+        assert r[0] == 3 * i
