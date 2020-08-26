@@ -382,7 +382,7 @@ class RemoteOmnisci(RemoteJIT):
             'bool': typemap['TExtArgumentType']['Bool'],
             'bool*': typemap['TExtArgumentType'].get('PBool'),
             'Array<bool>': typemap['TExtArgumentType'].get(
-                'ArrayInt8', typemap['TExtArgumentType']['ArrayInt8']),
+                'ArrayBool', typemap['TExtArgumentType']['ArrayInt8']),
             'Array<int8_t>': typemap['TExtArgumentType']['ArrayInt8'],
             'Array<int16_t>': typemap['TExtArgumentType']['ArrayInt16'],
             'Array<int32_t>': typemap['TExtArgumentType']['ArrayInt32'],
