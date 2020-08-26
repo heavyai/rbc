@@ -406,5 +406,6 @@ def printf(typingctx, format_type, *args):
 
         def codegen(context, builder, signature, args):
             cgutils.printf(builder, format_type.literal_value, *args[1:])
+            cg_fflush(builder)
 
         return sig, codegen
