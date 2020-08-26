@@ -404,6 +404,10 @@ class RemoteOmnisci(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
         }
+
+        if self.version[:2] < (5, 4):
+            ext_arguments_map['Array<bool>'] = typemap['TExtArgumentType']['ArrayInt8']
+
         ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
             = ext_arguments_map['Array<bool>']
         ext_arguments_map['{int8* ptr, uint64 sz, bool is_null}*'] \
