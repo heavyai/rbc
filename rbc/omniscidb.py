@@ -271,6 +271,9 @@ class RemoteOmnisci(RemoteJIT):
     def load_table_columnar(self, table_name, **columnar_data):
         """Load columnar data to OmnisciDB table.
 
+        Warning: when connected to OmnisciDB < 5.3, the data is loaded
+          row-wise that will be very slow for large data sets.
+
         Parameters
         ----------
         table_name : str
@@ -280,17 +283,50 @@ class RemoteOmnisci(RemoteJIT):
           A dictionary of column names and the corresponding column
           values. A column values is a sequence of values.
           The table must have the specified columns defined.
-        """
-        thrift = self.thrift_client.thrift
-        table_details = self.get_table_details(table_name)
-        columns = []
 
+        """
         int_col_types = ['TINYINT', 'SMALLINT', 'INT', 'BIGINT', 'BOOL',
                          'DECIMAL', 'TIME', 'TIMESTAMP', 'DATE']
         real_col_types = ['FLOAT', 'DOUBLE']
         str_col_types = ['STR', 'POINT', 'LINESTRING', 'POLYGON',
                          'MULTIPOLYGON']
 
+        thrift = self.thrift_client.thrift
+        table_details = self.get_table_details(table_name)
+        if self.version[:2] < (5, 3):
+            rows = None
+            for column_name, column_data in columnar_data.items():
+                if rows is None:
+                    rows = [[None for j in range(len(columnar_data))]
+                            for i in range(len(column_data))]
+                col_index = None
+                for i, ct in enumerate(table_details.row_desc):
+                    if ct.col_name == column_name:
+                        typeinfo = ct.col_type
+                        col_index = i
+                        datumtype = thrift.TDatumType._VALUES_TO_NAMES[
+                            typeinfo.type]
+                        is_array = typeinfo.is_array
+                        break
+                assert col_index is not None
+                for i, v in enumerate(column_data):
+                    if is_array:
+                        if datumtype == 'BOOL':
+                            v = ["'true'" if v_ else "'false'" for v_ in v]
+                        v = ', '.join(map(str, v))
+                        v = f'ARRAY[{v}]'
+                    else:
+                        if datumtype == 'BOOL':
+                            v = "'true'" if v else "'false'"
+                    rows[i][col_index] = v
+
+            for row in rows:
+                table_row = ', '.join(map(str, row))
+                self.sql_execute(
+                    f'INSERT INTO {table_name} VALUES ({table_row})')
+            return
+
+        columns = []
         for column_name, column_data in columnar_data.items():
             typeinfo = None
             for ct in table_details.row_desc:
@@ -406,7 +442,8 @@ class RemoteOmnisci(RemoteJIT):
         }
 
         if self.version[:2] < (5, 4):
-            ext_arguments_map['Array<bool>'] = typemap['TExtArgumentType']['ArrayInt8']
+            ext_arguments_map['Array<bool>'] = typemap[
+                'TExtArgumentType']['ArrayInt8']
 
         ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
             = ext_arguments_map['Array<bool>']
