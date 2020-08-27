@@ -110,6 +110,10 @@ def test_sizer_row_multiplier_param1(omnisci):
 
 
 def test_sizer_row_multiplier_param2(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip('crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 147]')
+
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -217,6 +221,9 @@ def test_rowmul_add_columns(omnisci):
         " columns support (got %s) [issue 150]" % (
             available_version,)))
 def test_rowmul_return_two_columns(omnisci):
+    if omnisci.has_cuda:
+        pytest.skip('crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 147]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
