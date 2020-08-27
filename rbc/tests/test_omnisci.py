@@ -90,10 +90,6 @@ def omnisci():
 def test_redefine(omnisci):
     omnisci.reset()
 
-    if omnisci.has_cuda and available_version[:2] >= (5, 4):
-        pytest.skip(
-            'Crashes rbc with CUDA enabled omniscidb server [issue 136]')
-
     @omnisci('i32(i32)')
     def incr(x):
         return x + 1

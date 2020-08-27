@@ -332,11 +332,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # give lambda function a name
         fn.__name__ = fn_name
 
-    if available_version[:2] <= (5, 4) and fn_name in \
+    if available_version[:2] < (5, 4) and fn_name in \
             ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
-        # Invalid use of Function(<ufunc 'logical_or'>) with
-        # argument(s) of type(s): (boolean8, boolean8)
-        # Requires: https://github.com/omnisci/omniscidb-internal/pull/4689
         pytest.skip(
             f"using boolean arguments requires omniscidb v 5.4 or newer"
             f" (got {available_version}) [issue 108]")
