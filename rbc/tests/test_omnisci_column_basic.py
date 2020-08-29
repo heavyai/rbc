@@ -47,17 +47,13 @@ def omnisci():
 
 
 def test_sizer_row_multiplier_orig(omnisci):
-    if omnisci.has_cuda:
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 147]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, int64|sizer=RowMultiplier,'
-             ' OutputColumn<double>)')
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
     def my_row_copier_mul(x, m, y):
         input_row_count = len(x)
         for i in range(input_row_count):
@@ -76,17 +72,13 @@ def test_sizer_row_multiplier_orig(omnisci):
 
 
 def test_sizer_row_multiplier_param1(omnisci):
-    if omnisci.has_cuda:
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 147]')
-
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, double, int32, int64|sizer=RowMultiplier,'
+    @omnisci('int32(Column<double>, double, int32, RowMultiplier,'
              'OutputColumn<double>)')
     def my_row_copier_mul_param1(x, alpha, beta, m, y):
         input_row_count = len(x)
@@ -110,17 +102,13 @@ def test_sizer_row_multiplier_param1(omnisci):
 
 
 def test_sizer_row_multiplier_param2(omnisci):
-    if omnisci.has_cuda:
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 147]')
-
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
     omnisci.register()
 
-    @omnisci('int32(double, Column<double>, int32, int64|sizer=RowMultiplier,'
+    @omnisci('int32(double, Column<double>, int32, RowMultiplier,'
              'OutputColumn<double>)')
     def my_row_copier_mul_param2(alpha, x, beta, m, y):
         input_row_count = len(x)
@@ -156,8 +144,7 @@ def test_sizer_constant_parameter(omnisci):
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, int64|sizer=ConstantParameter,'
-             ' Column<double>)')
+    @omnisci('int32(Column<double>, ConstantParameter, Column<double>)')
     def my_row_copier_cp(x, m, y):
         input_row_count = len(x)
         for i in range(input_row_count):
@@ -181,10 +168,6 @@ def test_sizer_constant_parameter(omnisci):
         "test requires omniscidb v 5.4 or newer (got %s) [issue 148]" % (
             available_version,)))
 def test_rowmul_add_columns(omnisci):
-    if omnisci.has_cuda:
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [issue 147]')
-
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -192,7 +175,7 @@ def test_rowmul_add_columns(omnisci):
     omnisci.register()
 
     @omnisci('int32(Column<double>, Column<double>, double,'
-             ' int64|sizer=RowMultiplier, OutputColumn<double>)')
+             ' RowMultiplier, OutputColumn<double>)')
     def add_columns(x, y, alpha, m, r):
         input_row_count = len(x)
         for i in range(input_row_count):
@@ -230,7 +213,7 @@ def test_rowmul_return_two_columns(omnisci):
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, int64|sizer=RowMultiplier,'
+    @omnisci('int32(Column<double>, RowMultiplier,'
              ' OutputColumn<double>, OutputColumn<double>)')
     def ret_columns(x, m, y, z):
         input_row_count = len(x)

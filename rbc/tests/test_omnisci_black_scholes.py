@@ -80,7 +80,7 @@ def cnd_numba(d):
 def test_black_scholes_udf(omnisci):
     if omnisci.has_cuda:
         pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [issue 147]')
+                    ' [issue 60]')
 
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -116,7 +116,7 @@ def test_black_scholes_udf(omnisci):
 def test_black_scholes_udtf(omnisci):
     if omnisci.has_cuda:
         pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [issue 147]')
+                    ' [issue 169]')
 
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -125,7 +125,7 @@ def test_black_scholes_udtf(omnisci):
     omnisci.register()
 
     @omnisci('int32(Column<double>, Column<double>, Column<double>, Column<double>, Column<double>,'  # noqa: E501
-             ' int64|sizer=RowMultiplier, OutputColumn<double>)')
+             ' RowMultiplier, OutputColumn<double>)')
     def black_scholes_udtf(S, X, T, r, sigma, m, out):
         input_row_count = len(X)
 

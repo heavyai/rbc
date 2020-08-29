@@ -8,6 +8,7 @@ from .thrift.utils import resolve_includes
 from .omnisci_backend import (
     array_type_converter,
     output_column_type_converter, column_type_converter,
+    table_function_sizer_type_converter,
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline)
 from .targetinfo import TargetInfo
@@ -152,7 +153,8 @@ class RemoteOmnisci(RemoteJIT):
     c2) from table`
     """
     converters = [array_type_converter,
-                  output_column_type_converter, column_type_converter]
+                  output_column_type_converter, column_type_converter,
+                  table_function_sizer_type_converter]
     multiplexed = False
     mangle_prefix = ''
 
@@ -621,6 +623,8 @@ class RemoteOmnisci(RemoteJIT):
                             annot = a.annotation()
                             _sizer = annot.get('sizer', unspecified)
                             if _sizer is not unspecified:
+                                # sizer must have type int32
+                                assert a.is_int and a.bits == 32, a
                                 if _sizer is None:
                                     _sizer = 'RowMultiplier'
                                 _sizer = sizer_map[_sizer]
@@ -642,7 +646,6 @@ class RemoteOmnisci(RemoteJIT):
                         assert sizer is not None  # need a sizer argument
                         sizer_type = getattr(
                             thrift.TOutputBufferSizeType, sizer)
-
                         udtfs.append(thrift.TUserDefinedTableFunction(
                             name + sig.mangling(),
                             sizer_type, sizer_index,
