@@ -206,7 +206,7 @@ def test_rowmul_add_columns(omnisci):
 def test_rowmul_return_two_columns(omnisci):
     if omnisci.has_cuda:
         pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 147]')
+                    ' [rbc issue 171]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
