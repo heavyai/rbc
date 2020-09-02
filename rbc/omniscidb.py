@@ -623,8 +623,9 @@ class RemoteOmnisci(RemoteJIT):
                             annot = a.annotation()
                             _sizer = annot.get('sizer', unspecified)
                             if _sizer is not unspecified:
-                                # sizer must have type int32
-                                assert a.is_int and a.bits == 32, a
+                                if not (a.is_int and a.bits == 32):
+                                    raise ValueError(
+                                        'sizer argument must have type int32')
                                 if _sizer is None:
                                     _sizer = 'RowMultiplier'
                                 _sizer = sizer_map[_sizer]
