@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 import pytest
-
+import numpy as np
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -68,7 +68,7 @@ def test_sizer_row_multiplier_orig(omnisci):
         .format(**locals()))
 
     for i, r in enumerate(result):
-        assert r == ((i % 5) * 2,)
+        assert r == (float((i % 5) * 2),)
 
 
 def test_sizer_row_multiplier_param1(omnisci):
@@ -198,13 +198,14 @@ def test_rowmul_add_columns(omnisci):
 
 
 @pytest.mark.skipif(
-    available_version < (5, 4),
+    available_version <= (5, 4),
     reason=(
         "test requires omniscidb with multiple output"
         " columns support (got %s) [issue 150]" % (
             available_version,)))
-def test_rowmul_return_two_columns(omnisci):
+def test_rowmul_return_mixed_columns(omnisci):
     if omnisci.has_cuda:
+        # requires omniscidb-internal PR 4785
         pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [rbc issue 171]')
     omnisci.reset()
@@ -214,28 +215,130 @@ def test_rowmul_return_two_columns(omnisci):
     omnisci.register()
 
     @omnisci('int32(Column<double>, RowMultiplier,'
-             ' OutputColumn<double>, OutputColumn<double>)')
-    def ret_columns(x, m, y, z):
+             ' OutputColumn<double>, OutputColumn<float>)')
+    def ret_mixed_columns(x, m, y, z):
         input_row_count = len(x)
         for i in range(input_row_count):
             for c in range(m):
                 j = i + c * input_row_count
                 y[j] = 2 * x[i]
-                z[j] = 3 * x[i]
+                z[j] = np.float32(3 * x[i])
         return m * input_row_count
 
     descr, result = omnisci.sql_execute(
-        'select * from table(ret_columns('
+        'select * from table(ret_mixed_columns('
         f'cursor(select f8 from {omnisci.table_name}), 1));')
 
     for i, r in enumerate(result):
-        assert r[0] == 2 * i
-        assert r[1] == 3 * i
+        assert r[0] == float(2 * i)
+        assert r[1] == float(3 * i)
 
     descr, result = omnisci.sql_execute(
-        'select out1, out0 from table(ret_columns('
+        'select * from table(ret_mixed_columns('
+        f'cursor(select f8 from {omnisci.table_name}), 2));')
+
+    for i, r in enumerate(result):
+        assert r[0] == float(2 * (i % 5))
+        assert r[1] == float(3 * (i % 5))
+
+    descr, result = omnisci.sql_execute(
+        'select out1, out0 from table(ret_mixed_columns('
         f'cursor(select f8 from {omnisci.table_name}), 1));')
 
     for i, r in enumerate(result):
-        assert r[1] == 2 * i
-        assert r[0] == 3 * i
+        assert r[1] == float(2 * i)
+        assert r[0] == float(3 * i)
+
+
+@pytest.mark.skipif(
+    available_version < (5, 4),
+    reason=(
+        "test requires omniscidb with multiple output"
+        " columns support (got %s) [issue 150]" % (
+            available_version,)))
+@pytest.mark.parametrize("max_n", [-1, 3])
+@pytest.mark.parametrize("sizer", [1, 2])
+@pytest.mark.parametrize("num_columns", [1, 2, 3, 4])
+def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
+    if omnisci.has_cuda:
+        # requires omniscidb-internal PR 4785
+        pytest.skip('crashes CUDA enabled omniscidb server'
+                    ' [rbc issue 171]')
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    if num_columns == 1:
+        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>)')
+        def ret_1_columns(n, x1, m, y1):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    if num_columns == 2:
+        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>, OutputColumn<double>)')
+        def ret_2_columns(n, x1, m, y1, y2):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+                    y2[j] = float(2*(j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    if num_columns == 3:
+        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>, OutputColumn<double>,'
+                 ' OutputColumn<double>)')
+        def ret_3_columns(n, x1, m, y1, y2, y3):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+                    y2[j] = float(2*(j+1))
+                    y3[j] = float(3*(j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    if num_columns == 4:
+        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>, OutputColumn<double>,'
+                 ' OutputColumn<double>, OutputColumn<double>)')
+        def ret_4_columns(n, x1, m, y1, y2, y3, y4):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+                    y2[j] = float(2*(j+1))
+                    y3[j] = float(3*(j+1))
+                    y4[j] = float(4*(j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    descr, result = omnisci.sql_execute(
+        f'select * from table(ret_{num_columns}_columns({max_n}, '
+        f'cursor(select f8 from {omnisci.table_name}), {sizer}));')
+
+    result = list(result)
+    if max_n == -1:
+        assert len(result) == sizer * 5
+    else:
+        assert len(result) == max_n
+    for i, r in enumerate(result):
+        for j, v in enumerate(r):
+            assert v == float((i+1) * (j+1))
