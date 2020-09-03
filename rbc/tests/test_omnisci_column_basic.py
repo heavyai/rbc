@@ -204,10 +204,6 @@ def test_rowmul_add_columns(omnisci):
         " columns support (got %s) [issue 150]" % (
             available_version,)))
 def test_rowmul_return_mixed_columns(omnisci):
-    if omnisci.has_cuda:
-        # requires omniscidb-internal PR 4785
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 171]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -260,10 +256,6 @@ def test_rowmul_return_mixed_columns(omnisci):
 @pytest.mark.parametrize("sizer", [1, 2])
 @pytest.mark.parametrize("num_columns", [1, 2, 3, 4])
 def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
-    if omnisci.has_cuda:
-        # requires omniscidb-internal PR 4785
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 171]')
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -335,6 +327,7 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
         f'cursor(select f8 from {omnisci.table_name}), {sizer}));')
 
     result = list(result)
+
     if max_n == -1:
         assert len(result) == sizer * 5
     else:
