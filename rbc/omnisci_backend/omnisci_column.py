@@ -6,8 +6,10 @@ UDTFs.
 
 __all__ = ['ColumnPointer', 'OutputColumn', 'Column',
            'OmnisciOutputColumnType', 'OmnisciColumnType',
-           'output_column_type_converter', 'column_type_converter']
+           'output_column_type_converter', 'column_type_converter',
+           'table_function_sizer_type_converter']
 
+from rbc import typesystem
 from rbc.utils import get_version
 from .omnisci_buffer import (
     BufferPointer, Buffer, BufferPointerModel,
@@ -76,3 +78,17 @@ def output_column_type_converter(target_info, obj):
     return buffer_type_converter(
         target_info, obj, OmnisciOutputColumnType, 'OutputColumn',
         ColumnPointer, extra_members=[])
+
+
+def table_function_sizer_type_converter(target_info, obj):
+    """Return Type instance corresponding to sizer argument of a
+    user-defined table function.
+    """
+    if not isinstance(obj, typesystem.Type):
+        raise NotImplementedError(type(obj))
+    if obj.is_atomic:
+        sizer_name = obj[0]
+        sizer_types = ['RowMultiplier', 'ConstantParameter', 'Constant']
+        if sizer_name in sizer_types:
+            return typesystem.Type.fromstring(f'int32|sizer={sizer_name}',
+                                              target_info=target_info)
