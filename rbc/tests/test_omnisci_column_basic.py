@@ -335,3 +335,54 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
     for i, r in enumerate(result):
         for j, v in enumerate(r):
             assert v == float((i+1) * (j+1))
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with single cursor"
+        " support (got %s) [issue 173]" % (
+            available_version,)))
+def test_issue173(omnisci):
+
+    @omnisci('int32(Column<double>, Column<bool>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def mask_zero(x, b, m, y):
+        for i in range(len(x)):
+            if b[i]:
+                y[i] = 0.0
+            else:
+                y[i] = x[i]
+        return len(x)
+
+    descr, result = omnisci.sql_execute(
+        f'select f8, b from {omnisci.table_name}')
+    f8, b = zip(*list(result))
+
+    descr, result = omnisci.sql_execute(
+        f'select * from table(mask_zero('
+        f'cursor(select f8 from {omnisci.table_name}),'
+        f'cursor(select b from {omnisci.table_name}), 1))')
+
+    result = list(result)
+
+    for i in range(len(result)):
+        assert result[i][0] == (0.0 if b[i] else f8[i])
+
+    @omnisci('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def mask_zero2(x, b, m, y):
+        for i in range(len(x)):
+            if b[i]:
+                y[i] = 0.0
+            else:
+                y[i] = x[i]
+        return len(x)
+
+    descr, result = omnisci.sql_execute(
+        f'select * from table(mask_zero2('
+        f'cursor(select f8, b from {omnisci.table_name}), 1))')
+
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == (0.0 if b[i] else f8[i])

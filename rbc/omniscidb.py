@@ -9,8 +9,9 @@ from .omnisci_backend import (
     array_type_converter,
     output_column_type_converter, column_type_converter,
     table_function_sizer_type_converter,
+    cursor_type_converter,
     OmnisciOutputColumnType, OmnisciColumnType,
-    OmnisciCompilerPipeline)
+    OmnisciCompilerPipeline, OmnisciCursorType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError
@@ -154,7 +155,8 @@ class RemoteOmnisci(RemoteJIT):
     """
     converters = [array_type_converter,
                   output_column_type_converter, column_type_converter,
-                  table_function_sizer_type_converter]
+                  table_function_sizer_type_converter,
+                  cursor_type_converter]
     multiplexed = False
     mangle_prefix = ''
 
@@ -566,6 +568,7 @@ class RemoteOmnisci(RemoteJIT):
         udtfs = []
         device_ir_map = {}
         unspecified = object()
+        llvm_function_names = []
         for device, target_info in self.targets.items():
             functions_and_signatures = []
             function_signatures = defaultdict(list)
@@ -593,6 +596,8 @@ class RemoteOmnisci(RemoteJIT):
                                   f' older definition of `{name}` for `{sig}`'
                                   f' in {f2}#{n2}.')
                         continue
+                    orig_sig = sig
+                    sig = sig[0](*sig.argument_types)
                     function_signatures[name].append(sig)
 
                     sig_is_udtf = is_udtf(sig)
@@ -619,7 +624,9 @@ class RemoteOmnisci(RemoteJIT):
                         sqlArgTypes = []
                         sizer = None
                         sizer_index = -1
-                        for i, a in enumerate(sig[1]):
+
+                        consumed_index = 0
+                        for i, a in enumerate(orig_sig[1]):
                             annot = a.annotation()
                             _sizer = annot.get('sizer', unspecified)
                             if _sizer is not unspecified:
@@ -631,19 +638,31 @@ class RemoteOmnisci(RemoteJIT):
                                 _sizer = sizer_map[_sizer]
                                 # cannot have multiple sizer arguments
                                 assert sizer_index == -1
-                                sizer_index = i + 1
+                                sizer_index = consumed_index + 1
                                 sizer = _sizer
-                            atype = ext_arguments_map[
-                                a.tostring(use_annotation=False)]
-                            if isinstance(a, OmnisciOutputColumnType):
-                                outputArgTypes.append(atype)
-                            elif isinstance(a, OmnisciColumnType):
-                                sqlArgTypes.append(ext_arguments_map['Cursor'])
-                                inputArgTypes.append(atype)
-                            else:
-                                sqlArgTypes.append(atype)
-                                inputArgTypes.append(atype)
 
+                            if isinstance(a, OmnisciCursorType):
+                                sqlArgTypes.append(ext_arguments_map['Cursor'])
+                                for a_ in a.as_consumed_args:
+                                    assert not isinstance(
+                                        a_, OmnisciOutputColumnType), (a_)
+                                    atype = ext_arguments_map[
+                                        a_.tostring(use_annotation=False)]
+                                    inputArgTypes.append(atype)
+                                    consumed_index += 1
+                            else:
+                                atype = ext_arguments_map[
+                                    a.tostring(use_annotation=False)]
+                                if isinstance(a, OmnisciOutputColumnType):
+                                    outputArgTypes.append(atype)
+                                elif isinstance(a, OmnisciColumnType):
+                                    sqlArgTypes.append(
+                                        ext_arguments_map['Cursor'])
+                                    inputArgTypes.append(atype)
+                                else:
+                                    sqlArgTypes.append(atype)
+                                    inputArgTypes.append(atype)
+                                consumed_index += 1
                         assert sizer is not None  # need a sizer argument
                         sizer_type = getattr(
                             thrift.TOutputBufferSizeType, sizer)
@@ -708,7 +727,17 @@ class RemoteOmnisci(RemoteJIT):
                                           OmnisciCompilerPipeline, self.debug)
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout
+            for f in llvm_module.functions:
+                llvm_function_names.append(f.name)
+
             device_ir_map[device] = str(llvm_module)
+
+        # Make sure that all registered functions have
+        # implementations, otherwise, we will crash the server.
+        for f in udtfs:
+            assert f.name in llvm_function_names
+        for f in udfs:
+            assert f.name in llvm_function_names
 
         self.set_last_compile(device_ir_map)
         return self.thrift_call('register_runtime_extension_functions',
