@@ -343,10 +343,11 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
         "test requires omniscidb with single cursor"
         " support (got %s) [issue 173]" % (
             available_version,)))
-def test_issue173(omnisci):
+@pytest.mark.parametrize("variant", [1, 2, 3])
+def test_issue173(omnisci, variant):
+    omnisci.reset()
+    omnisci.register()
 
-    @omnisci('int32(Column<double>, Column<bool>, RowMultiplier,'
-             ' OutputColumn<double>)')
     def mask_zero(x, b, m, y):
         for i in range(len(x)):
             if b[i]:
@@ -359,30 +360,34 @@ def test_issue173(omnisci):
         f'select f8, b from {omnisci.table_name}')
     f8, b = zip(*list(result))
 
-    descr, result = omnisci.sql_execute(
-        f'select * from table(mask_zero('
-        f'cursor(select f8 from {omnisci.table_name}),'
-        f'cursor(select b from {omnisci.table_name}), 1))')
+    # remove after resolving rbc issue 175:
+    mask_zero.__name__ += f'_{variant}'
+
+    if variant == 1:
+        omnisci('int32(Column<double>, Column<bool>, RowMultiplier,'
+                ' OutputColumn<double>)')(mask_zero)
+        descr, result = omnisci.sql_execute(
+            f'select * from table({mask_zero.__name__}('
+            f'cursor(select f8 from {omnisci.table_name}),'
+            f'cursor(select b from {omnisci.table_name}), 1))')
+    elif variant == 2:
+        omnisci('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
+                ' OutputColumn<double>)')(mask_zero)
+
+        descr, result = omnisci.sql_execute(
+            f'select * from table({mask_zero.__name__}('
+            f'cursor(select f8, b from {omnisci.table_name}), 1))')
+    elif variant == 3:
+        omnisci('int32(Cursor<double, bool>, RowMultiplier,'
+                ' OutputColumn<double>)')(mask_zero)
+
+        descr, result = omnisci.sql_execute(
+            f'select * from table({mask_zero.__name__}('
+            f'cursor(select f8, b from {omnisci.table_name}), 1))')
+    else:
+        raise ValueError(variant)
 
     result = list(result)
 
-    for i in range(len(result)):
-        assert result[i][0] == (0.0 if b[i] else f8[i])
-
-    @omnisci('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
-             ' OutputColumn<double>)')
-    def mask_zero2(x, b, m, y):
-        for i in range(len(x)):
-            if b[i]:
-                y[i] = 0.0
-            else:
-                y[i] = x[i]
-        return len(x)
-
-    descr, result = omnisci.sql_execute(
-        f'select * from table(mask_zero2('
-        f'cursor(select f8, b from {omnisci.table_name}), 1))')
-
-    result = list(result)
     for i in range(len(result)):
         assert result[i][0] == (0.0 if b[i] else f8[i])
