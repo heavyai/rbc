@@ -5,7 +5,6 @@ import re
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
-from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
@@ -37,7 +36,7 @@ hyperbolic_funcs = ['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']
 nearest_funcs = ['ceil', 'floor', 'trunc', 'round', 'lround', 'llround',
                  'nearbyint', 'rint', 'lrint', 'llrint']
 fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
-            'nexttoward']
+            'nexttoward', 'spacing']
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
 
@@ -145,6 +144,49 @@ class RemoteCPUContext(cpu.CPUContext):
 
 # ---------------------------------------------------------------------------
 # GPU Context classes
+
+
+class RemoteGPUTargetContext(cpu.CPUContext):
+
+    def __init__(self, typing_context, target_info):
+        self.target_info = target_info
+        super().__init__(typing_context)
+
+    @compiler_lock.global_compiler_lock
+    def init(self):
+        self.address_size = self.target_info.bits
+        self.is32bit = (self.address_size == 32)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
+                                                     self.target_info)
+
+    def load_additional_registries(self):
+        # libdevice and math from cuda have precedence over the ones from CPU
+        nb_version = get_version('numba')
+        if nb_version >= (0, 52):
+            from numba.cuda import libdeviceimpl, mathimpl
+            from .omnisci_backend import cuda_npyimpl
+            self.install_registry(libdeviceimpl.registry)
+            self.install_registry(mathimpl.registry)
+            self.install_registry(cuda_npyimpl.registry)
+        else:
+            import warnings
+            warnings.warn("libdevice bindings requires Numba 0.52 or newer,"
+                          f" got Numba v{'.'.join(map(str, nb_version))}")
+        super().load_additional_registries()
+
+
+class RemoteGPUTypingContext(typing.Context):
+    def load_additional_registries(self):
+        if get_version('numba') >= (0, 52):
+            from numba.core.typing import npydecl
+            from numba.cuda import cudamath, libdevicedecl
+            self.install_registry(npydecl.registry)
+            self.install_registry(cudamath.registry)
+            self.install_registry(libdevicedecl.registry)
+        super().load_additional_registries()
+
+# ---------------------------------------------------------------------------
+# Code generation methods
 
 
 class RemoteGPUTargetContext(cpu.CPUContext):

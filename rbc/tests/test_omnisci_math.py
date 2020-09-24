@@ -144,10 +144,10 @@ def test_math_function(omnisci, fn_name, signature):
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
 
-    if omnisci.has_cuda and numba_version <= (0, 48, 0):
+    if omnisci.has_cuda and numba_version <= (0, 52, 0):
         if fn_name in ['expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
                        'cosh', 'sinh', 'tanh', 'erf', 'erfc']:
-            pytest.skip(f'{fn_name} requires numba version 0.48, currently using'
+            pytest.skip(f'{fn_name} requires numba version 0.52, currently using'
                         f' {".".join(map(str, numba_version))}')
 
     arity = signature.count(',') + 1
@@ -362,26 +362,21 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
 
-    if fn_name in ['spacing', 'nextafter']:
+    if fn_name in ['spacing']:
         pytest.skip(f'{fn_name}: FIXME')
 
-    if omnisci.has_cuda and fn_name in [
-            'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
-            'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
-            'log1p', 'logaddexp2']:
-        # https://github.com/xnd-project/rbc/issues/59
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 59]')
-
-    if omnisci.has_cuda and fn_name in ['logaddexp']:
-        # https://github.com/xnd-project/rbc/issues/60
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 60]')
-
-    if omnisci.has_cuda and fn_name in ['lcm', 'ldexp']:
+    if omnisci.has_cuda and fn_name in ['lcm']:
         # https://github.com/xnd-project/rbc/issues/71
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 71]')
+
+    nb_version = get_version('numba')
+    if nb_version < (0, 52) and omnisci.has_cuda and fn_name in [
+            'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
+            'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
+            'log1p', 'logaddexp2', 'ldexp', 'lcm', 'logaddexp', 'nextafter']:
+        pytest.skip(f"{fn_name}: libdevice bindings requires numba 0.52 or newer,"
+                    f" got Numba v{'.'.join(map(str, nb_version))}")
 
     if omnisci.version < (5, 2) and fn_name in [
             'sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1', 'exp2', 'log2',
