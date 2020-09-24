@@ -76,8 +76,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'omnisci_internal'
                     elif name in pymath_funcs:
                         _deps[name] = 'pymath'
-                    else:
-                        _deps[name] = 'undefined'
+                    elif name.startswith('__nv'):
+                        _deps[name] = 'cuda'
                 else:
                     if name not in _deps:
                         _deps[name] = 'defined'

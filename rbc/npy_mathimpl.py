@@ -13,6 +13,8 @@ else:
 mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
 mathimpl.unary_math_extern(np.log2, "log2f", "log2")
 mathimpl.unary_math_extern(math.gamma, "tgammaf", "tgamma")
+mathimpl.unary_math_extern(math.log1p, "__nv_log1pf", "__nv_log1p")
+mathimpl.unary_math_extern(math.erf, "__nv_erf", "__nv_erf")
 
 
 def np_logaddexp_impl(context, builder, sig, args):
