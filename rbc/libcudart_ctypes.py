@@ -206,7 +206,8 @@ def get_cuda_versions():
     if dr.value != 0:
         # driver is installed
         r = libcudart.cudaRuntimeGetVersion(ctypes.byref(rt))
-        assert r in [cudaError.cudaSuccess, cudaError.cudaErrorNoDevice], repr(r)
+        assert r in [cudaError.cudaSuccess,
+                     cudaError.cudaErrorNoDevice], repr(r)
     return dr.value, rt.value
 
 

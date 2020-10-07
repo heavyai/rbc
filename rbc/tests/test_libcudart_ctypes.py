@@ -12,6 +12,7 @@ if cudart.get_device_count() == 0:
     pytest.importorskip('rbc.libcudart_ctypes_NODEVICE',
                         reason='CUDA device missing')
 
+
 def test_get_device_count():
     assert cudart.get_device_count() > 0
 

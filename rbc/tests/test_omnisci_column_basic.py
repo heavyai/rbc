@@ -1,3 +1,4 @@
+
 import os
 from collections import defaultdict
 import pytest
@@ -391,3 +392,138 @@ def test_issue173(omnisci, variant):
 
     for i in range(len(result)):
         assert result[i][0] == (0.0 if b[i] else f8[i])
+
+
+@pytest.mark.skipif(
+    available_version < (5, 4),
+    reason=(
+        "test requires omniscidb with udtf redefine"
+        " support (got %s) [issue 175]" % (
+            available_version,)))
+def test_redefine(omnisci):
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    descr, result = omnisci.sql_execute(
+        f'select f8, i4 from {omnisci.table_name}')
+
+    f8, i4 = zip(*result)
+
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
+    def redefined_udtf(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i] + 1
+        return len(x)
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select f8 from {omnisci.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == f8[i] + 1
+
+    # redefine implementation
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
+    def redefined_udtf(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i] + 2
+        return len(x)
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select f8 from {omnisci.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == f8[i] + 2
+
+    # overload with another type
+    @omnisci('int32(Column<int32>, RowMultiplier, OutputColumn<int32>)')  # noqa: E501, F811
+    def redefined_udtf(x, m, y):
+        for i in range(len(x)):
+            y[i] = np.int32(x[i] + 3)
+        return len(x)
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select i4 from {omnisci.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == i4[i] + 3
+
+    # check overload
+    descr, result = omnisci.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select f8 from {omnisci.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == f8[i] + 2
+
+
+@pytest.mark.skipif(
+    available_version < (5, 4),
+    reason=(
+        "test requires omniscidb with udtf redefine"
+        " support (got %s) [issue 175]" % (
+            available_version,)))
+@pytest.mark.parametrize("step", [1, 2, 3])
+def test_overload(omnisci, step):
+    omnisci.reset()
+    omnisci.register()
+
+    if step > 0:
+        @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        def overloaded_udtf(x, m, y):
+            y[0] = 64
+            return 1
+
+    if step > 1:
+        @omnisci('int32(Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        def overloaded_udtf(x, m, y):
+            y[0] = 32
+            return 1
+
+    if step > 2:
+        @omnisci('int32(Column<float>, Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        def overloaded_udtf(x1, x2, m, y):
+            y[0] = 132
+            return 1
+
+    sql_query = ('select * from table(overloaded_udtf(cursor('
+                 f'select f8 from {omnisci.table_name}), 1))')
+    if step > 0:
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+        assert result[0][0] == 64
+
+    sql_query = ('select * from table(overloaded_udtf(cursor('
+                 f'select f4 from {omnisci.table_name}), 1))')
+    if step > 1:
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+        assert result[0][0] == 32
+    else:
+        with pytest.raises(
+                Exception,
+                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\)"
+                       " not supported")):
+            descr, result = omnisci.sql_execute(sql_query)
+
+    # TODO: Requires https://github.com/omnisci/omniscidb-internal/pull/4856
+    return
+
+    sql_query = ('select * from table(overloaded_udtf(cursor('
+                 f'select f4, f4 from {omnisci.table_name}), 1))')
+    if step > 2:
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+        assert result[0][0] == 132
+    else:
+        with pytest.raises(
+                Exception,
+                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>,"
+                       r" COLUMN<FLOAT>, INTEGER\) not supported")):
+            descr, result = omnisci.sql_execute(sql_query)
+
