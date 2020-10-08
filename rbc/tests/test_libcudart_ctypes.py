@@ -1,7 +1,7 @@
 
 import pytest
 
-cudart = pytest.importorskip('rbc.libcudart_ctypes')
+cudart = pytest.importorskip('rbc.libcudart_ctypes_SKIP')
 
 driver_version = cudart.get_cuda_versions()[0]
 if driver_version == 0:

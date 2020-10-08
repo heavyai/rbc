@@ -413,7 +413,7 @@ def test_redefine(omnisci):
     f8, i4 = zip(*result)
 
     @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
-    def redefined_udtf(x, m, y):
+    def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = x[i] + 1
         return len(x)
@@ -427,7 +427,7 @@ def test_redefine(omnisci):
 
     # redefine implementation
     @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
-    def redefined_udtf(x, m, y):
+    def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = x[i] + 2
         return len(x)
@@ -441,7 +441,7 @@ def test_redefine(omnisci):
 
     # overload with another type
     @omnisci('int32(Column<int32>, RowMultiplier, OutputColumn<int32>)')  # noqa: E501, F811
-    def redefined_udtf(x, m, y):
+    def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = np.int32(x[i] + 3)
         return len(x)
@@ -475,19 +475,19 @@ def test_overload(omnisci, step):
 
     if step > 0:
         @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
-        def overloaded_udtf(x, m, y):
+        def overloaded_udtf(x, m, y):  # noqa: E501, F811
             y[0] = 64
             return 1
 
     if step > 1:
         @omnisci('int32(Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
-        def overloaded_udtf(x, m, y):
+        def overloaded_udtf(x, m, y):  # noqa: E501, F811
             y[0] = 32
             return 1
 
     if step > 2:
         @omnisci('int32(Column<float>, Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
-        def overloaded_udtf(x1, x2, m, y):
+        def overloaded_udtf(x1, x2, m, y):  # noqa: E501, F811
             y[0] = 132
             return 1
 
@@ -511,9 +511,6 @@ def test_overload(omnisci, step):
                        " not supported")):
             descr, result = omnisci.sql_execute(sql_query)
 
-    # TODO: Requires https://github.com/omnisci/omniscidb-internal/pull/4856
-    return
-
     sql_query = ('select * from table(overloaded_udtf(cursor('
                  f'select f4, f4 from {omnisci.table_name}), 1))')
     if step > 2:
@@ -526,4 +523,3 @@ def test_overload(omnisci, step):
                 match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>,"
                        r" COLUMN<FLOAT>, INTEGER\) not supported")):
             descr, result = omnisci.sql_execute(sql_query)
-
