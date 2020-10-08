@@ -63,18 +63,19 @@ def _commasplit(s):
     """
     lst = s.split(',')
     ac = ''
-    p1, p2, p3 = 0, 0, 0
+    p1, p2, p3, p4 = 0, 0, 0, 0
     rlst = []
     for i in lst:
         p1 += i.count('(') - i.count(')')
         p2 += i.count('{') - i.count('}')
         p3 += i.count('[') - i.count(']')
-        if p1 == p2 == p3 == 0:
+        p4 += i.count('<') - i.count('>')
+        if p1 == p2 == p3 == p4 == 0:
             rlst.append((ac + ',' + i if ac else i).strip())
             ac = ''
         else:
             ac = ac + ',' + i if ac else i
-    if p1 == p2 == p3 == 0:
+    if p1 == p2 == p3 == p4 == 0:
         return rlst
     raise TypeParseError('failed to comma-split `%s`' % s)
 
@@ -508,7 +509,47 @@ class Type(tuple):
             or (self.is_function and len(self[1]) > 0)
 
     def __repr__(self):
+        if self._params:
+            return '%s%s|%s' % (type(self).__name__,
+                                tuple.__repr__(self), self._params)
         return '%s%s' % (type(self).__name__, tuple.__repr__(self))
+
+    @property
+    def consumes_nargs(self):
+        """Return the number of arguments that the given type consumes.
+        """
+        return len(self.as_consumed_args)
+
+    @property
+    def as_consumed_args(self):
+        """Return the argument types that the given type will consume.
+        """
+        return [self]
+
+    @property
+    def arity(self):
+        """Return the arity of the function type.
+
+        Some function argument types may consume several function
+        arguments (e.g., data pointer and data size). The arity of
+        function type is the number of functon arguments that are
+        consumed when constructing a call.
+        """
+        assert self.is_function
+        arity = 0
+        for t in self[1]:
+            arity += t.consumes_nargs
+        return arity
+
+    @property
+    def argument_types(self):
+        """Return the list of consumed argument types.
+        """
+        assert self.is_function
+        atypes = []
+        for t in self[1]:
+            atypes.extend(t.as_consumed_args)
+        return atypes
 
     def __str__(self):
         if self._is_ok:
@@ -544,6 +585,11 @@ class Type(tuple):
         if self.is_pointer:
             return self[0].tostring(use_typename=use_typename) + '*' + suffix
         if self.is_struct:
+            clsname = self._params.get('clsname')
+            if clsname is not None:
+                return clsname + '<' + ', '.join(
+                    [t.tostring(use_typename=use_typename)
+                     for t in self]) + '>' + suffix
             return '{' + ', '.join([t.tostring(use_typename=use_typename)
                                     for t in self]) + '}' + suffix
         if self.is_function:

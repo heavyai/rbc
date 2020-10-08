@@ -174,7 +174,7 @@ class Signature(object):
                 raise ValueError(
                     'expected signature representing function type,'
                     f' got `{sig}`')
-            if len(sig[1]) != nargs:
+            if sig.arity != nargs:
                 raise ValueError(f'signature `{sig}` must have arity {nargs}'
                                  f' but got {len(sig[1])}')
             if fsig is not None:

@@ -6,6 +6,7 @@ UDTFs.
 
 __all__ = ['ColumnPointer', 'OutputColumn', 'Column',
            'OmnisciOutputColumnType', 'OmnisciColumnType',
+           'OmnisciCursorType', 'cursor_type_converter',
            'output_column_type_converter', 'column_type_converter',
            'table_function_sizer_type_converter']
 
@@ -92,3 +93,34 @@ def table_function_sizer_type_converter(target_info, obj):
         if sizer_name in sizer_types:
             return typesystem.Type.fromstring(f'int32|sizer={sizer_name}',
                                               target_info=target_info)
+
+
+class OmnisciCursorType(typesystem.Type):
+
+    @property
+    def as_consumed_args(self):
+        return list(self)
+
+
+def cursor_type_converter(target_info, obj):
+    """Return Type instance corresponding to cursor argument of a
+    user-defined table function.
+    """
+    if not isinstance(obj, typesystem.Type):
+        raise NotImplementedError(type(obj))
+    name, params = obj.get_name_and_parameters()
+    if name == 'Cursor':
+        new_params = []
+        for p in params:
+            p = typesystem.Type.fromstring(p, target_info=target_info)
+            if p.is_float or p.is_int or p.is_bool:
+                p = typesystem.Type.fromstring(
+                    f'Column<{p}>', target_info=target_info)
+            if not isinstance(p, OmnisciColumnType):
+                raise TypeError(
+                    f'expected OmnisciColumnType|float|int|bool as'
+                    f' OmnisciCursorType argument but got `{p}`')
+            new_params.append(p)
+        cursor_type = OmnisciCursorType(*new_params)
+        cursor_type._params['clsname'] = name
+        return cursor_type
