@@ -395,7 +395,7 @@ def test_issue173(omnisci, variant):
 
 
 @pytest.mark.skipif(
-    available_version < (5, 4),
+    available_version < (5, 5),
     reason=(
         "test requires omniscidb with udtf redefine"
         " support (got %s) [issue 175]" % (
@@ -463,7 +463,7 @@ def test_redefine(omnisci):
 
 
 @pytest.mark.skipif(
-    available_version < (5, 4),
+    available_version < (5, 5),
     reason=(
         "test requires omniscidb with udtf redefine"
         " support (got %s) [issue 175]" % (
