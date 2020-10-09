@@ -206,7 +206,8 @@ def get_cuda_versions():
     if dr.value != 0:
         # driver is installed
         r = libcudart.cudaRuntimeGetVersion(ctypes.byref(rt))
-        assert r == cudaError.cudaSuccess, repr(r)
+        assert r in [cudaError.cudaSuccess,
+                     cudaError.cudaErrorNoDevice], repr(r)
     return dr.value, rt.value
 
 
@@ -218,7 +219,7 @@ def get_cuda_device_properties(device):
     v = cudaDeviceProp()
     d = ctypes.c_int(0)
     r = libcudart.cudaGetDeviceProperties(ctypes.byref(v), d)
-    assert r == cudaError.cudaSuccess, repr(r)
+    assert r in [cudaError.cudaSuccess, cudaError.cudaErrorNoDevice], repr(r)
     d = {}
     for (n, t) in cudaDeviceProp._fields_:
         a = getattr(v, n)
@@ -233,5 +234,7 @@ def get_device_count():
     """
     c = ctypes.c_int(0)
     r = libcudart.cudaGetDeviceCount(ctypes.byref(c))
+    if r == cudaError.cudaErrorNoDevice:
+        return 0
     assert r == cudaError.cudaSuccess, repr(r)  # noqa: F821
     return c.value
