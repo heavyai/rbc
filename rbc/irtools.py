@@ -7,6 +7,7 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
+from numba import cuda
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
@@ -139,6 +140,11 @@ class RemoteCPUContext(cpu.CPUContext):
 
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
+class RemoteGPUContext(cuda.target.CUDATargetContext):
+    def __init__(self, typing_context, target_info):
+        self.target_info = target_info
+        super().__init__(typing_context)
+
 
 def make_wrapper(fname, atypes, rtype, cres):
     """Make wrapper function to numba compile result.
@@ -232,8 +238,10 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
-        typing_context = typing.Context()
-        target_context = RemoteCPUContext(typing_context, target)
+        # typing_context = typing.Context()
+        # target_context = RemoteCPUContext(typing_context, target)
+        typing_context = cuda.target.CUDATypingContext()
+        target_context = RemoteGPUContext(typing_context, target)
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
         # Fixes rbc issue 74:

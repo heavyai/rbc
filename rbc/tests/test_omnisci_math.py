@@ -53,7 +53,7 @@ math_functions = [
     ('copysign', 'double(double, double)'),
     ('fabs', 'double(double)'),
     ('factorial', 'int64(int64)'),
-    ('floor', 'int64(int64)'),
+    ('floor', 'int64(double)'),
     ('fmod', 'double(double, double)'),
     ('frexp', 'double(double)'),  # returns a pair (m, e)
     ('fsum', 'double(double[])'),
@@ -121,21 +121,21 @@ def test_math_function(omnisci, fn_name, signature):
         pytest.skip(f'{fn_name}: not available in {math.__name__} module'
                     f' of Python {sys.version.split(None, 1)[0]}')
 
-    # if omnisci.has_cuda and fn_name in [
-    #         'expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
-    #         'cosh', 'sinh', 'tanh', 'erf', 'erfc', 'lgamma', 'gamma']:
-    #     pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-    #                 ' [rbc issue 159]')
-    if omnisci.has_cuda and fn_name in [
-            'pow']:
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 158]')
-
-    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
-                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
-                   'perm']:
+    if not omnisci.has_cuda and \
+        fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
+                    'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
+                    'perm']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation!')
 
+    if omnisci.has_cuda and \
+        fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
+                    'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
+                    'trunc', 'dist']:
+        pytest.skip(f'CUDA target does not support {fn_name} function')
+    
+    if omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
+        pytest.skip(f'{fn_name} crashes with CUDA-enabled server')
+    
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e)')
 
@@ -156,7 +156,8 @@ def test_math_function(omnisci, fn_name, signature):
         # give lambda function a name
         fn.__name__ = fn_name
 
-    omnisci(signature)(fn)
+    x = omnisci(signature)(fn)
+    # print(str(x))
 
     omnisci.register()
 
@@ -176,6 +177,9 @@ def test_math_function(omnisci, fn_name, signature):
 
     if fn_name in ['acosh', 'asinh']:
         xs = 'z'
+    
+    if fn_name in ['ldexp']:
+        xs = 'x, i'
 
     query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
     descr, result = omnisci.sql_execute(query)
