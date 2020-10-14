@@ -79,6 +79,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'pymath'
                     elif name.startswith('__nv'):
                         _deps[name] = 'cuda'
+                    else:
+                        _deps[name] = 'undefined'
                 else:
                     if name not in _deps:
                         _deps[name] = 'defined'
@@ -215,7 +217,8 @@ def make_wrapper(fname, atypes, rtype, cres):
 
 
 def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
-                    pipeline_class=compiler.Compiler, debug=False):
+                    pipeline_class=compiler.Compiler, has_cuda=False,
+                    debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -238,10 +241,12 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
-        # typing_context = typing.Context()
-        # target_context = RemoteCPUContext(typing_context, target)
-        typing_context = cuda.target.CUDATypingContext()
-        target_context = RemoteGPUContext(typing_context, target)
+        if has_cuda:
+            typing_context = cuda.target.CUDATypingContext()
+            target_context = RemoteGPUContext(typing_context, target)
+        else:
+            typing_context = typing.Context()
+            target_context = RemoteCPUContext(typing_context, target)
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
         # Fixes rbc issue 74:
