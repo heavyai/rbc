@@ -156,8 +156,7 @@ def test_math_function(omnisci, fn_name, signature):
         # give lambda function a name
         fn.__name__ = fn_name
 
-    x = omnisci(signature)(fn)
-    print(str(x))
+    omnisci(signature)(fn)
 
     omnisci.register()
 
