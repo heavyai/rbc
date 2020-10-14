@@ -88,6 +88,8 @@ def get_function_dependencies(module, funcname, _deps=None):
     return _deps
 
 
+#---------------------------------------------------------------------------
+# CPU Context classes
 class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
     # TODO: introduce JITRemoteCodeLibrary?
     _library_class = codegen.JITCodeLibrary
@@ -142,10 +144,17 @@ class RemoteCPUContext(cpu.CPUContext):
 
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
+#---------------------------------------------------------------------------
+# GPU Context classes
+
 class RemoteGPUContext(cuda.target.CUDATargetContext):
     def __init__(self, typing_context, target_info):
         self.target_info = target_info
         super().__init__(typing_context)
+
+class RemoteGPUTargetDesc(cuda.descriptor.CUDATargetDesc):
+    typing_context = cuda.descriptor.CUDATargetDesc.typingctx
+    target_context = cuda.descriptor.CUDATargetDesc.targetctx
 
 
 def make_wrapper(fname, atypes, rtype, cres):
@@ -216,8 +225,10 @@ def make_wrapper(fname, atypes, rtype, cres):
     cres.library.add_ir_module(module)
 
 
-def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
-                    pipeline_class=compiler.Compiler, has_cuda=False,
+def compile_to_LLVM(functions_and_signatures,
+                    target: TargetInfo,
+                    device='cpu',
+                    pipeline_class=compiler.Compiler,
                     debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
@@ -235,20 +246,25 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    target_desc = registry.cpu_target
+    if device == 'gpu':
+        target_desc = RemoteGPUTargetDesc
+    else:
+        target_desc = registry.cpu_target
+    
     if target is None:
         target = TargetInfo.host()
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
-        if has_cuda:
+        if device == 'gpu':
             typing_context = cuda.target.CUDATypingContext()
             target_context = RemoteGPUContext(typing_context, target)
         else:
             typing_context = typing.Context()
             target_context = RemoteCPUContext(typing_context, target)
+        
         # Bring over Array overloads (a hack):
-        target_context._defns = target_desc.target_context._defns
+        # target_context._defns = target_desc.target_context._defns
         # Fixes rbc issue 74:
         target_desc.typing_context.target_info = target
         target_desc.target_context.target_info = target

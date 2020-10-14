@@ -724,8 +724,8 @@ class RemoteOmnisci(RemoteJIT):
                 functions_and_signatures.append((caller.func, signatures))
             llvm_module = compile_to_LLVM(functions_and_signatures,
                                           target_info,
-                                          OmnisciCompilerPipeline,
-                                          has_cuda=self.has_cuda,
+                                          pipeline_class=OmnisciCompilerPipeline,
+                                          device=device,
                                           debug=self.debug)
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout

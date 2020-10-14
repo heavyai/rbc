@@ -130,7 +130,7 @@ def test_math_function(omnisci, fn_name, signature):
     if omnisci.has_cuda and \
         fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
                     'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
-                    'trunc', 'dist']:
+                    'trunc', 'dist', 'fmod']:
         pytest.skip(f'CUDA target does not support {fn_name} function')
     
     if omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
@@ -157,7 +157,7 @@ def test_math_function(omnisci, fn_name, signature):
         fn.__name__ = fn_name
 
     x = omnisci(signature)(fn)
-    # print(str(x))
+    print(str(x))
 
     omnisci.register()
 
