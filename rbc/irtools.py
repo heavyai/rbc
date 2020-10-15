@@ -147,15 +147,33 @@ class RemoteCPUContext(cpu.CPUContext):
 #---------------------------------------------------------------------------
 # GPU Context classes
 
-class RemoteGPUContext(cuda.target.CUDATargetContext):
+class RemoteGPUTargetContext(cpu.CPUContext):
     def __init__(self, typing_context, target_info):
         self.target_info = target_info
         super().__init__(typing_context)
 
+    def load_additional_registries(self):
+        # libdevice and math from cuda have precedence over the ones from CPU
+        from numba.cuda import libdeviceimpl, mathimpl
+        self.install_registry(libdeviceimpl.registry)
+        self.install_registry(mathimpl.registry)
+        super().load_additional_registries()
+
+
+class RemoteGPUTypingContext(typing.Context):
+    def load_additional_registries(self):
+        super().load_additional_registries()
+        from numba.cuda import libdeviceimpl, cudamath
+        self.install_registry(libdeviceimpl.registry)
+        self.install_registry(cudamath.registry)
+
 class RemoteGPUTargetDesc(cuda.descriptor.CUDATargetDesc):
-    typing_context = cuda.descriptor.CUDATargetDesc.typingctx
+    # typing_context = cuda.descriptor.CUDATargetDesc.typingctx
+    typing_context = RemoteGPUTypingContext()
     target_context = cuda.descriptor.CUDATargetDesc.targetctx
 
+#---------------------------------------------------------------------------
+# Code generation methods
 
 def make_wrapper(fname, atypes, rtype, cres):
     """Make wrapper function to numba compile result.
@@ -246,10 +264,11 @@ def compile_to_LLVM(functions_and_signatures,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    if device == 'gpu':
-        target_desc = RemoteGPUTargetDesc
-    else:
-        target_desc = registry.cpu_target
+
+    # if device == 'gpu' and False:
+    #     target_desc = RemoteGPUTargetDesc
+    # else:
+    target_desc = registry.cpu_target
     
     if target is None:
         target = TargetInfo.host()
@@ -257,14 +276,16 @@ def compile_to_LLVM(functions_and_signatures,
         target_context = target_desc.target_context
     else:
         if device == 'gpu':
-            typing_context = cuda.target.CUDATypingContext()
-            target_context = RemoteGPUContext(typing_context, target)
+            typing_context = RemoteGPUTypingContext()
+            target_context = RemoteGPUTargetContext(typing_context, target)
         else:
             typing_context = typing.Context()
             target_context = RemoteCPUContext(typing_context, target)
         
         # Bring over Array overloads (a hack):
-        # target_context._defns = target_desc.target_context._defns
+        target_context._defns = target_desc.target_context._defns
+        # from pprint import pprint
+        # pprint(target_context._defns)
         # Fixes rbc issue 74:
         target_desc.typing_context.target_info = target
         target_desc.target_context.target_info = target
