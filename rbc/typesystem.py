@@ -534,10 +534,14 @@ class Type(tuple):
         arguments (e.g., data pointer and data size). The arity of
         function type is the number of functon arguments that are
         consumed when constructing a call.
+
+        Arguments with default value are ignored.
         """
         assert self.is_function
         arity = 0
         for t in self[1]:
+            if t.annotation().get('default'):
+                break
             arity += t.consumes_nargs
         return arity
 
@@ -867,6 +871,10 @@ class Type(tuple):
                 raise ValueError(
                     'callable argument kind must be positional,'
                     ' `%s` has kind %s' % (param, param.kind))
+            if param.default != sig.empty:
+                if annot == sig.empty:
+                    annot = {}
+                annot['default'] = param.default
             if isinstance(annot, dict):
                 atypes.append(cls('<type of %s>' % n) | annot)
             elif annot == sig.empty:

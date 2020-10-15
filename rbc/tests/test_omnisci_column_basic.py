@@ -133,7 +133,7 @@ def test_sizer_row_multiplier_param2(omnisci):
 
 
 @pytest.mark.skipif(
-    True,
+    available_version < (5, 5),
     reason=(
         "test requires omniscidb with constant parameter"
         " support (got %s) [issue 124]" % (
@@ -145,20 +145,58 @@ def test_sizer_constant_parameter(omnisci):
     # queries:
     omnisci.register()
 
-    @omnisci('int32(Column<double>, ConstantParameter, Column<double>)')
+    @omnisci('int32(Column<double>, ConstantParameter, OutputColumn<double>)')
     def my_row_copier_cp(x, m, y):
-        input_row_count = len(x)
-        for i in range(input_row_count):
-            for c in range(m):
-                j = i + c * input_row_count
-                y[j] = x[i] * 2
+        n = len(x)
+        for i in range(m):
+            y[i] = x[i % n] * 2
         return m
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        'from {omnisci.table_name}), 5));'
+        'from {omnisci.table_name}), 3));'
         .format(**locals()))
+    result = list(result)
+    assert len(result) == 3
+    for i, r in enumerate(result):
+        assert r == (i * 2,)
 
+    descr, result = omnisci.sql_execute(
+        'select * from table(my_row_copier_cp(cursor(select f8 '
+        'from {omnisci.table_name}), 8));'
+        .format(**locals()))
+    result = list(result)
+    assert len(result) == 8
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * 2,)
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with constant parameter"
+        " support (got %s) [issue 124]" % (
+            available_version,)))
+def test_sizer_return_size(omnisci):
+    omnisci.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, OutputColumn<double>)')
+    def my_row_copier_c(x, y):
+        n = len(x)
+        for i in range(13):
+            y[i] = x[i % n] * 2
+        return 13
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(my_row_copier_c(cursor(select f8 '
+        'from {omnisci.table_name})));'
+        .format(**locals()))
+    result = list(result)
+    assert len(result) == 13
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2,)
 

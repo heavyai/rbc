@@ -1,3 +1,5 @@
+import ast
+import inspect
 import os
 import re
 import warnings
@@ -15,6 +17,64 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError
+
+
+def get_literal_return(func, verbose=False):
+    """Return a literal value from the last function return statement or
+    None.
+    """
+    def _convert(node):
+        if isinstance(node, (int, float, complex, str, tuple, list, dict)):
+            return node
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Num):
+            return _convert(node.n)
+        if isinstance(node, ast.Name):
+            if node.id in func.__code__.co_names:
+                return func.__globals__[node.id]
+            args = func.__code__.co_varnames[:func.__code__.co_argcount]
+            args_with_default = args[len(args) - len(func.__defaults__):]
+            if node.id in args_with_default:
+                return func.__defaults__[
+                    list(args_with_default).index(node.id)]
+            raise NotImplementedError(f'literal value from name `{node.id}`')
+        if isinstance(node, ast.BinOp):
+            if isinstance(node.op, ast.Add):
+                return _convert(node.left) + _convert(node.right)
+            if isinstance(node.op, ast.Sub):
+                return _convert(node.left) - _convert(node.right)
+            if isinstance(node.op, ast.Mult):
+                return _convert(node.left) * _convert(node.right)
+            if isinstance(node.op, ast.Div):
+                return _convert(node.left) / _convert(node.right)
+            if isinstance(node.op, ast.FloorDiv):
+                return _convert(node.left) // _convert(node.right)
+            if isinstance(node.op, ast.Mod):
+                return _convert(node.left) % _convert(node.right)
+            if isinstance(node.op, ast.Pow):
+                return _convert(node.left) ** _convert(node.right)
+            raise NotImplementedError(
+                f'literal value from binary op `{node.op}`')
+        raise NotImplementedError(f'literal value from `{node}`')
+    source = ''
+    intent = None
+    for line in inspect.getsourcelines(func)[0]:
+        if line.lstrip().startswith('@'):
+            continue
+        if intent is None:
+            intent = len(line) - len(line.lstrip())
+        source += line[intent:]
+
+    tree = ast.parse(source)
+    last_node = tree.body[0].body[-1]
+    if isinstance(last_node, ast.Return):
+        try:
+            return _convert(last_node.value)
+        except Exception as msg:
+            if verbose or 1:
+                print(f'get_literal_return: {msg}')
+                print(source)
 
 
 def is_available(_cache={}):
@@ -663,9 +723,18 @@ class RemoteOmnisci(RemoteJIT):
                                     sqlArgTypes.append(atype)
                                     inputArgTypes.append(atype)
                                 consumed_index += 1
-                        assert sizer is not None  # need a sizer argument
-                        sizer_type = getattr(
-                            thrift.TOutputBufferSizeType, sizer)
+                        if sizer is None:
+                            sizer = 'kConstant'
+                        if sizer == 'kConstant':
+                            sizer_index = get_literal_return(
+                                caller.func, verbose=self.debug)
+                            if sizer_index is None:
+                                raise TypeError(
+                                    f'Table function `{caller.func.__name__}`'
+                                    ' has no sizer argument specified nor has'
+                                    ' it `return <literal value>` statement')
+                        sizer_type = (thrift.TOutputBufferSizeType
+                                      ._NAMES_TO_VALUES[sizer])
                         udtfs.append(thrift.TUserDefinedTableFunction(
                             name + sig.mangling(),
                             sizer_type, sizer_index,
@@ -706,8 +775,8 @@ class RemoteOmnisci(RemoteJIT):
                                 inputArgTypes.append(atype)
                         if sizer is None:
                             sizer = 'kConstant'
-                        sizer_type = getattr(
-                            thrift.TOutputBufferSizeType, sizer)
+                        sizer_type = (thrift.TOutputBufferSizeType
+                                      ._NAMES_TO_VALUES[sizer])
                         udtfs.append(thrift.TUserDefinedTableFunction(
                             name + sig.mangling(),
                             sizer_type, sizer_index,
