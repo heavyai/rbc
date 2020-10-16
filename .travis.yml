@@ -35,7 +35,7 @@ install:
   - conda list
   - pip install thriftpy2
   - pip install flake8
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then mamba create --quiet --name omnisci-ci omniscidb ; fi
+  - if [ "$OMNISCIDB_FROM" = "conda" ]; then mamba create --quiet --name omnisci-ci omniscidb libclang-cpp=10; fi
   - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker pull omnisci/core-os-cpu ; fi
 
 before_script:
