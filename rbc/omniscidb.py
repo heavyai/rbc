@@ -731,8 +731,13 @@ class RemoteOmnisci(RemoteJIT):
                             if sizer_index is None:
                                 raise TypeError(
                                     f'Table function `{caller.func.__name__}`'
-                                    ' has no sizer argument specified nor has'
+                                    ' has no sizing parameter nor has'
                                     ' it `return <literal value>` statement')
+                        if sizer_index < 0:
+                            raise ValueError(
+                                f'Table function `{caller.func.__name__}`'
+                                ' sizing parameter must be non-negative'
+                                f' integer (got {sizer_index})')
                         sizer_type = (thrift.TOutputBufferSizeType
                                       ._NAMES_TO_VALUES[sizer])
                         udtfs.append(thrift.TUserDefinedTableFunction(
