@@ -665,7 +665,7 @@ class RemoteOmnisci(RemoteJIT):
                     # Note: device info cannot be included in mangling string
                     if i == 0 and (self.version < (5, 2) or is_old_udtf or
                                    (self.version < (5, 5) and sig_is_udtf)):
-                        sig.set_mangling('__')
+                        sig.set_mangling('')
                     else:
                         # TODO: include device to the name mangling of UDFs
                         if self.version < (5, 5) or not sig_is_udtf:
