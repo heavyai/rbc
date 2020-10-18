@@ -149,7 +149,8 @@ def test_sizer_constant_parameter(omnisci):
     def my_row_copier_cp(x, m, y):
         n = len(x)
         for i in range(m):
-            y[i] = x[i % n] * 2
+            j = i % n
+            y[i] = x[j] * 2
         return m
 
     descr, result = omnisci.sql_execute(
@@ -186,9 +187,9 @@ def test_sizer_return_size(omnisci):
 
     @omnisci('int32(Column<double>, OutputColumn<double>)')
     def my_row_copier_c(x, y):
-        n = len(x)
         for i in range(13):
-            y[i] = x[i % n] * 2
+            j = i % len(x)
+            y[i] = x[j] * 2
         return 13
 
     descr, result = omnisci.sql_execute(
@@ -198,7 +199,7 @@ def test_sizer_return_size(omnisci):
     result = list(result)
     assert len(result) == 13
     for i, r in enumerate(result):
-        assert r == ((i % 5) * 2,)
+        assert r == ((i % 5) * 2,), repr((i, r))
 
 
 @pytest.mark.skipif(

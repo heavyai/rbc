@@ -180,7 +180,7 @@ class RemoteGPUTypingContext(typing.Context):
 # Code generation methods
 
 
-def make_wrapper(fname, atypes, rtype, cres):
+def make_wrapper(fname, atypes, rtype, cres, verbose=False):
     """Make wrapper function to numba compile result.
 
     The compilation result contains a function with prototype::
@@ -206,6 +206,9 @@ def make_wrapper(fname, atypes, rtype, cres):
       The return Numba type
     cres : CompileResult
       Numba compilation result.
+    verbose: bool
+      When True, insert printf statements for debugging errors. Use
+      False for CUDA target.
 
     """
     fndesc = cres.fndesc
@@ -225,9 +228,10 @@ def make_wrapper(fname, atypes, rtype, cres):
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args[1:])
         with cgutils.if_unlikely(builder, status.is_error):
-            cgutils.printf(builder,
-                           f"rbc: {fname} failed with status code %i\n",
-                           status.code)
+            if verbose:
+                cgutils.printf(builder,
+                               f"rbc: {fname} failed with status code %i\n",
+                               status.code)
             builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
@@ -239,10 +243,11 @@ def make_wrapper(fname, atypes, rtype, cres):
         fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args)
-        with cgutils.if_unlikely(builder, status.is_error):
-            cgutils.printf(builder,
-                           f"rbc: {fname} failed with status code %i\n",
-                           status.code)
+        if verbose:
+            with cgutils.if_unlikely(builder, status.is_error):
+                cgutils.printf(builder,
+                               f"rbc: {fname} failed with status code %i\n",
+                               status.code)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
@@ -320,7 +325,8 @@ def compile_to_LLVM(functions_and_signatures,
                                           library=main_library,
                                           locals={},
                                           pipeline_class=pipeline_class)
-            make_wrapper(fname, args, return_type, cres)
+            make_wrapper(fname, args, return_type, cres,
+                         verbose=debug)
 
     seen = set()
     for _library in main_library._linking_libraries:

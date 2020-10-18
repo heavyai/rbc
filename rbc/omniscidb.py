@@ -659,15 +659,19 @@ class RemoteOmnisci(RemoteJIT):
                     orig_sig = sig
                     sig = sig[0](*sig.argument_types)
                     function_signatures[name].append(sig)
-
                     sig_is_udtf = is_udtf(sig)
                     is_old_udtf = 'table' in sig[0].annotation()
-                    if i == 0 and (self.version < (5, 2)
-                                   or is_old_udtf or sig_is_udtf):
-                        # TODO: support __0 for UDTFs
-                        sig.set_mangling('')
+
+                    # Note: device info cannot be included in mangling string
+                    if i == 0 and (self.version < (5, 2) or is_old_udtf or
+                                   (self.version < (5, 5) and sig_is_udtf)):
+                        sig.set_mangling('__')
                     else:
-                        sig.set_mangling('__%s' % (i))
+                        # TODO: include device to the name mangling of UDFs
+                        if self.version < (5, 5) or not sig_is_udtf:
+                            sig.set_mangling('__%s' % (i))
+                        else:
+                            sig.set_mangling('__%s_%s' % (device, i))
 
                     if sig_is_udtf:
                         # new style UDTF, requires omniscidb version >= 5.4
