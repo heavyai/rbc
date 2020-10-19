@@ -72,7 +72,7 @@ def get_literal_return(func, verbose=False):
         try:
             return _convert(last_node.value)
         except Exception as msg:
-            if verbose or 1:
+            if verbose:
                 print(f'get_literal_return: {msg}')
                 print(source)
 
