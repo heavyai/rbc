@@ -133,6 +133,9 @@ def test_math_function(omnisci, fn_name, signature):
                     'trunc', 'dist', 'fmod']:
         pytest.skip(f'CUDA target does not support {fn_name} function')
 
+    if omnisci.has_cuda and fn_name in ['floor']:
+        pytest.skip(f'{fn_name} compilation crashes due to typing differences with CPU target')
+
     if omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
         pytest.skip(f'{fn_name} crashes with CUDA-enabled server')
 
