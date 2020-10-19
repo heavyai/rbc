@@ -125,22 +125,23 @@ def test_math_function(omnisci, fn_name, signature):
         fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
                     'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
                     'perm']:
-        pytest.skip(f'{fn_name}: Numba uses cpython implementation!')
+        pytest.skip(f'{fn_name}: Numba uses cpython implementation! [rbc issue 156]')
 
     if omnisci.has_cuda and \
         fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
                     'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
                     'trunc', 'dist', 'fmod']:
-        pytest.skip(f'CUDA target does not support {fn_name} function')
+        pytest.skip(f'CUDA target does not support {fn_name} function [rbc issue 156]')
 
     if omnisci.has_cuda and fn_name in ['floor']:
-        pytest.skip(f'{fn_name} compilation crashes due to typing differences with CPU target')
+        pytest.skip(f'{fn_name} compilation crashes due to typing differences with CPU target'
+                    ' [rbc issue 203]')
 
     if omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
-        pytest.skip(f'{fn_name} crashes with CUDA-enabled server')
+        pytest.skip(f'{fn_name} crashes with CUDA-enabled server [rbc issue 156/158]')
 
     if fn_name in ['frexp']:
-        pytest.skip(f'{fn_name} returns a pair (m, e)')
+        pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
 
     arity = signature.count(',') + 1
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
