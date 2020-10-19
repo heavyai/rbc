@@ -725,7 +725,6 @@ class RemoteOmnisci(RemoteJIT):
             llvm_module = compile_to_LLVM(functions_and_signatures,
                                           target_info,
                                           pipeline_class=OmnisciCompilerPipeline,
-                                          device=device,
                                           debug=self.debug)
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout

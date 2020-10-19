@@ -241,7 +241,6 @@ class Caller(object):
             llvm_module = irtools.compile_to_LLVM(
                 [(self.func, signatures)],
                 target_info,
-                device=device,
                 debug=self.remotejit.debug)
             lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')

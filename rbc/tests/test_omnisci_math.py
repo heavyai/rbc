@@ -53,7 +53,7 @@ math_functions = [
     ('copysign', 'double(double, double)'),
     ('fabs', 'double(double)'),
     ('factorial', 'int64(int64)'),
-    ('floor', 'int64(double)'),
+    ('floor', 'double(double)'),
     ('fmod', 'double(double, double)'),
     ('frexp', 'double(double)'),  # returns a pair (m, e)
     ('fsum', 'double(double[])'),
@@ -132,10 +132,10 @@ def test_math_function(omnisci, fn_name, signature):
                     'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
                     'trunc', 'dist', 'fmod']:
         pytest.skip(f'CUDA target does not support {fn_name} function')
-    
+
     if omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
         pytest.skip(f'{fn_name} crashes with CUDA-enabled server')
-    
+
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e)')
 
@@ -176,7 +176,7 @@ def test_math_function(omnisci, fn_name, signature):
 
     if fn_name in ['acosh', 'asinh']:
         xs = 'z'
-    
+
     if fn_name in ['ldexp']:
         xs = 'x, i'
 

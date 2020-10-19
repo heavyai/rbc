@@ -7,7 +7,6 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .npy_mathimpl import *  # noqa: F403, F401
 from .utils import get_version
-from numba import cuda
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
@@ -88,7 +87,7 @@ def get_function_dependencies(module, funcname, _deps=None):
     return _deps
 
 
-#---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # CPU Context classes
 class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
     # TODO: introduce JITRemoteCodeLibrary?
@@ -144,13 +143,22 @@ class RemoteCPUContext(cpu.CPUContext):
 
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
-#---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # GPU Context classes
 
+
 class RemoteGPUTargetContext(cpu.CPUContext):
+
     def __init__(self, typing_context, target_info):
         self.target_info = target_info
         super().__init__(typing_context)
+
+    @compiler_lock.global_compiler_lock
+    def init(self):
+        self.address_size = self.target_info.bits
+        self.is32bit = (self.address_size == 32)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
+                                                     self.target_info)
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
@@ -162,18 +170,15 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
 class RemoteGPUTypingContext(typing.Context):
     def load_additional_registries(self):
-        super().load_additional_registries()
-        from numba.cuda import libdeviceimpl, cudamath
-        self.install_registry(libdeviceimpl.registry)
+
+        from numba.cuda import cudamath, libdevicedecl
         self.install_registry(cudamath.registry)
+        self.install_registry(libdevicedecl.registry)
+        super().load_additional_registries()
 
-class RemoteGPUTargetDesc(cuda.descriptor.CUDATargetDesc):
-    # typing_context = cuda.descriptor.CUDATargetDesc.typingctx
-    typing_context = RemoteGPUTypingContext()
-    target_context = cuda.descriptor.CUDATargetDesc.targetctx
-
-#---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # Code generation methods
+
 
 def make_wrapper(fname, atypes, rtype, cres):
     """Make wrapper function to numba compile result.
@@ -245,7 +250,6 @@ def make_wrapper(fname, atypes, rtype, cres):
 
 def compile_to_LLVM(functions_and_signatures,
                     target: TargetInfo,
-                    device='cpu',
                     pipeline_class=compiler.Compiler,
                     debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
@@ -265,27 +269,24 @@ def compile_to_LLVM(functions_and_signatures,
 
     """
 
-    # if device == 'gpu' and False:
-    #     target_desc = RemoteGPUTargetDesc
-    # else:
     target_desc = registry.cpu_target
-    
+
     if target is None:
+        # RemoteJIT
         target = TargetInfo.host()
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
-        if device == 'gpu':
-            typing_context = RemoteGPUTypingContext()
-            target_context = RemoteGPUTargetContext(typing_context, target)
-        else:
+        # OmnisciDB target
+        if target.is_cpu:
             typing_context = typing.Context()
             target_context = RemoteCPUContext(typing_context, target)
-        
+        else:  # gpu
+            typing_context = RemoteGPUTypingContext()
+            target_context = RemoteGPUTargetContext(typing_context, target)
+
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
-        # from pprint import pprint
-        # pprint(target_context._defns)
         # Fixes rbc issue 74:
         target_desc.typing_context.target_info = target
         target_desc.target_context.target_info = target

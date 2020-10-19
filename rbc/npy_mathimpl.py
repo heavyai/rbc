@@ -14,6 +14,7 @@ mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
 mathimpl.unary_math_extern(np.log2, "log2f", "log2")
 mathimpl.unary_math_extern(math.gamma, "tgammaf", "tgamma")
 
+
 def np_logaddexp_impl(context, builder, sig, args):
     # based on NumPy impl.
     # https://github.com/numpy/numpy/blob/30f985499b77381ab4748692cc76c55048ca0548/numpy/core/src/npymath/npy_math_internal.h.src#L585-L604
