@@ -5,9 +5,11 @@ from llvmlite import ir
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.cpython import mathimpl
-    from numba.np import ufunc_db
+    from numba.np import ufunc_db, npyfuncs
+    from numba.core import types
 else:
-    from numba.targets import mathimpl, ufunc_db
+    from numba.targets import mathimpl, ufunc_db, npyfuncs
+    from numba import types
 
 # tell numba to wire np.exp2 to libm exp2.
 mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
@@ -39,20 +41,6 @@ def np_logaddexp_impl(context, builder, sig, args):
 def log2_1p(x):
     LOG2E = 1.442695040888963407359924681001892137  # log_2 e
     return LOG2E * np.log1p(x)
-
-
-def impl(x, y):
-    if x == y:
-        return x + 1
-    else:
-        tmp = x - y
-        if tmp > 0:
-            return x + log2_1p(np.exp2(-tmp))
-        elif tmp <= 0:
-            return y + log2_1p(np.exp2(tmp))
-        else:
-            # NaN's
-            return tmp
 
 
 def np_logaddexp2_impl(context, builder, sig, args):
@@ -92,6 +80,30 @@ def np_ldexp_impl(context, builder, sig, args):
     return context.compile_internal(builder, impl, sig, args)
 
 
+def np_real_nextafter_impl(context, builder, sig, args):
+    npyfuncs._check_arity_and_homogeneity(sig, args, 2)
+
+    dispatch_table = {
+        types.float32: 'nextafterf',
+        types.float64: 'nextafter',
+    }
+
+    return npyfuncs._dispatch_func_by_name_type(context, builder, sig, args,
+                                                dispatch_table, 'nextafter')
+
+
+def np_real_spacing_impl(context, builder, sig, args):
+    npyfuncs._check_arity_and_homogeneity(sig, args, 1)
+
+    dispatch_table = {
+        types.float32: 'spacingf',
+        types.float64: 'spacing',
+    }
+
+    return npyfuncs._dispatch_func_by_name_type(context, builder, sig, args,
+                                                dispatch_table, 'spacing')
+
+
 ufunc_db._lazy_init_db()
 
 # logaddexp
@@ -112,9 +124,22 @@ ufunc_db._ufunc_db[np.signbit] = {
     'd->?': np_signbit_impl,
 }
 
+# ldexp
 ufunc_db._ufunc_db[np.ldexp] = {
     'fi->f': np_ldexp_impl,
     'fl->f': np_ldexp_impl,
     'di->d': np_ldexp_impl,
     'dl->d': np_ldexp_impl,
+}
+
+# nextafter
+ufunc_db._ufunc_db[np.nextafter] = {
+    'ff->f': np_real_nextafter_impl,
+    'dd->d': np_real_nextafter_impl,
+}
+
+# spacing
+ufunc_db._ufunc_db[np.spacing] = {
+    'f->f': np_real_spacing_impl,
+    'd->d': np_real_spacing_impl,
 }

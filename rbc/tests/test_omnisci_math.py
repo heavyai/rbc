@@ -355,21 +355,13 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
 
-    if fn_name in ['spacing', 'nextafter']:
+    if omnisci.has_cuda and fn_name in ['spacing']:
         pytest.skip(f'{fn_name}: FIXME')
 
-    if omnisci.has_cuda and fn_name in [
-            'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
-            'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
-            'log1p', 'logaddexp2']:
+    if omnisci.has_cuda and fn_name in ['logaddexp2']:
         # https://github.com/xnd-project/rbc/issues/59
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 59]')
-
-    if omnisci.has_cuda and fn_name in ['logaddexp']:
-        # https://github.com/xnd-project/rbc/issues/60
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 60]')
 
     if omnisci.has_cuda and fn_name in ['lcm', 'ldexp']:
         # https://github.com/xnd-project/rbc/issues/71
@@ -393,7 +385,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    omnisci(signature)(fn)
+    x = omnisci(signature)(fn)
+    # print(str(x))
 
     omnisci.register()
 

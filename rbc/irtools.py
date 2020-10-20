@@ -37,7 +37,7 @@ hyperbolic_funcs = ['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']
 nearest_funcs = ['ceil', 'floor', 'trunc', 'round', 'lround', 'llround',
                  'nearbyint', 'rint', 'lrint', 'llrint']
 fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
-            'nexttoward']
+            'nexttoward', 'spacing']
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
 
@@ -163,15 +163,18 @@ class RemoteGPUTargetContext(cpu.CPUContext):
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
         from numba.cuda import libdeviceimpl, mathimpl
+        from .omnisci_backend import cuda_npyimpl
         self.install_registry(libdeviceimpl.registry)
         self.install_registry(mathimpl.registry)
+        self.install_registry(cuda_npyimpl.registry)
         super().load_additional_registries()
 
 
 class RemoteGPUTypingContext(typing.Context):
     def load_additional_registries(self):
-
+        from numba.core.typing import npydecl
         from numba.cuda import cudamath, libdevicedecl
+        self.install_registry(npydecl.registry)
         self.install_registry(cudamath.registry)
         self.install_registry(libdevicedecl.registry)
         super().load_additional_registries()
