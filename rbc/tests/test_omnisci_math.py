@@ -259,6 +259,7 @@ numpy_functions = [
     ('logaddexp', 'double(double, double)', np.logaddexp),
     ('logaddexp2', 'double(double, double)', np.logaddexp2),
     ('ldexp', 'double(double, int)', np.ldexp),
+    ('ldexp', 'float(float, int)', np.ldexp),
     ('frexp0', 'double(double)', lambda x: np.frexp(x)[0]),
     # Rounding functions:
     ('around', 'double(double)', lambda x: np.around(x)),
@@ -355,13 +356,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
             msg = str(msg).splitlines()[1]
             pytest.skip(msg)
 
-    if omnisci.has_cuda and fn_name in ['spacing']:
+    if fn_name in ['spacing']:
         pytest.skip(f'{fn_name}: FIXME')
-
-    if omnisci.has_cuda and fn_name in ['logaddexp2']:
-        # https://github.com/xnd-project/rbc/issues/59
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 59]')
 
     if omnisci.has_cuda and fn_name in ['lcm', 'ldexp']:
         # https://github.com/xnd-project/rbc/issues/71
@@ -385,8 +381,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    x = omnisci(signature)(fn)
-    # print(str(x))
+    omnisci(signature)(fn)
 
     omnisci.register()
 

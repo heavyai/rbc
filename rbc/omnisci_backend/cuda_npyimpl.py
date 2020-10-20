@@ -1,5 +1,6 @@
 from numba.core.imputils import Registry
-from numba.cuda import libdevice, mathimpl, libdevicefuncs
+from numba.core import typing
+from numba.cuda import libdevice, mathimpl
 from numba.types import float32, float64, int64, uint64, int32
 import numpy as np
 
@@ -97,7 +98,7 @@ binarys += [('fmax', 'fmaxf', np.fmax)]
 binarys += [('fmin', 'fminf', np.fmin)]
 binarys += [('copysign', 'copysignf', np.copysign)]
 binarys += [('nextafter', 'nextafterf', np.nextafter)]
-binarys += [('ldexp', 'ldexpf', np.ldexp)]
+# binarys += [('ldexp', 'ldexpf', np.ldexp)]
 binarys += [('fmod', 'fmodf', np.fmod)]
 
 for fname64, fname32, key in booleans:
@@ -125,6 +126,7 @@ for fname64, fname32, key in binarys:
 
 def impl_signbit(ty, libfunc):
     def lower_signbit_impl(context, builder, sig, args):
+        assert False, "ensure this code is being executed"
         signbit_sig = typing.signature(ty, ty, int32)
         libfunc_impl = context.get_function(libfunc, signbit_sig)
         return libfunc_impl(builder, args)
@@ -136,26 +138,11 @@ impl_signbit(float32, libdevice.signbitf)
 impl_signbit(float64, libdevice.signbitd)
 
 
+# np.logaddexp and np.logaddexp2
 def impl_logaddexp(ty):
-
-    def core(context, builder, sig, args):        
-        def impl(x, y):
-            if x == y:
-                LOGE2 = 0.693147180559945309417232121458176568  # log_e 2
-                return x + LOGE2
-            else:
-                tmp = x - y
-                if tmp > 0:
-                    return x + np.log1p(np.exp(-tmp))
-                elif tmp <= 0:
-                    return y + np.log1p(np.exp(tmp))
-                else:
-                    # NaN's
-                    return tmp
-        
-        return context.compile_internal(builder, impl, sig, args)
-
-    lower(np.signbit, ty, ty)(core)
+    from .npy_mathimpl import np_logaddexp_impl, np_logaddexp2_impl
+    lower(np.logaddexp, ty, ty)(np_logaddexp_impl)
+    lower(np.logaddexp2, ty, ty)(np_logaddexp2_impl)
 
 
 impl_logaddexp(float32)
