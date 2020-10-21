@@ -227,9 +227,9 @@ def make_wrapper(fname, atypes, rtype, cres):
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args[1:])
         with cgutils.if_unlikely(builder, status.is_error):
-            cgutils.printf(builder,
-                           f"rbc: {fname} failed with status code %i\n",
-                           status.code)
+            # cgutils.printf(builder,
+            #                f"rbc: {fname} failed with status code %i\n",
+            #                status.code)
             builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
@@ -241,10 +241,10 @@ def make_wrapper(fname, atypes, rtype, cres):
         fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args)
-        with cgutils.if_unlikely(builder, status.is_error):
-            cgutils.printf(builder,
-                           f"rbc: {fname} failed with status code %i\n",
-                           status.code)
+        # with cgutils.if_unlikely(builder, status.is_error):
+            # cgutils.printf(builder,
+            #                f"rbc: {fname} failed with status code %i\n",
+            #                status.code)
         builder.ret(out)
 
     cres.library.add_ir_module(module)

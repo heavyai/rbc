@@ -1,7 +1,7 @@
 from numba.core.imputils import Registry
 from numba.core import typing
 from numba.cuda import libdevice, mathimpl
-from numba.types import float32, float64, int64, uint64, int32
+from numba.types import float32, float64, int64, uint64, int32, boolean
 import numpy as np
 
 registry = Registry()
@@ -98,7 +98,6 @@ binarys += [('fmax', 'fmaxf', np.fmax)]
 binarys += [('fmin', 'fminf', np.fmin)]
 binarys += [('copysign', 'copysignf', np.copysign)]
 binarys += [('nextafter', 'nextafterf', np.nextafter)]
-# binarys += [('ldexp', 'ldexpf', np.ldexp)]
 binarys += [('fmod', 'fmodf', np.fmod)]
 
 for fname64, fname32, key in booleans:
@@ -124,18 +123,32 @@ for fname64, fname32, key in binarys:
     mathimpl.impl_binary_int(key, uint64, impl64)
 
 
+# np.signbit
 def impl_signbit(ty, libfunc):
     def lower_signbit_impl(context, builder, sig, args):
-        assert False, "ensure this code is being executed"
-        signbit_sig = typing.signature(ty, ty, int32)
+        signbit_sig = typing.signature(int32, ty)  # (ty) -> int32
         libfunc_impl = context.get_function(libfunc, signbit_sig)
-        return libfunc_impl(builder, args)
+        result = libfunc_impl(builder, args)
+        return context.cast(builder, result, int32, boolean)
 
-    lower(np.signbit, ty, int32)(lower_signbit_impl)
+    lower(np.signbit, ty)(lower_signbit_impl)
 
 
 impl_signbit(float32, libdevice.signbitf)
 impl_signbit(float64, libdevice.signbitd)
+
+# np.ldexp
+def impl_ldexp(ty, libfunc):
+    def lower_ldexp_impl(context, builder, sig, args):
+        ldexp_sig = typing.signature(ty, ty, int32)  # (ty, int32) -> ty
+        libfunc_impl = context.get_function(libfunc, ldexp_sig)
+        return libfunc_impl(builder, args)
+
+    lower(np.ldexp, ty, int32)(lower_ldexp_impl)
+
+
+impl_ldexp(float32, libdevice.ldexpf)
+impl_ldexp(float64, libdevice.ldexp)
 
 
 # np.logaddexp and np.logaddexp2

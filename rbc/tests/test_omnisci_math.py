@@ -20,7 +20,7 @@ def omnisci():
 
     m.sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name}'
-        ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z DOUBLE, i INT, '
+        ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z FLOAT, i INT, '
         'j INT, t INT[], td DOUBLE[], te INT[]);'
         .format(**locals()))
 
@@ -359,7 +359,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
     if fn_name in ['spacing']:
         pytest.skip(f'{fn_name}: FIXME')
 
-    if omnisci.has_cuda and fn_name in ['lcm', 'ldexp']:
+    if omnisci.has_cuda and fn_name in ['lcm']:
         # https://github.com/xnd-project/rbc/issues/71
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 71]')
@@ -381,7 +381,8 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    omnisci(signature)(fn)
+    x = omnisci(signature)(fn)
+    print(str(x))
 
     omnisci.register()
 
