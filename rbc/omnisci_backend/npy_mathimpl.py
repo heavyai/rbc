@@ -47,7 +47,7 @@ def np_logaddexp2_impl(context, builder, sig, args):
             if tmp > 0:
                 return x + (LOG2E * np.log1p(np.exp2(-tmp)))
             elif tmp <= 0:
-                return x + (LOG2E * np.log1p(np.exp2(-tmp)))
+                return y + (LOG2E * np.log1p(np.exp2(tmp)))
             else:
                 # NaN's
                 return tmp

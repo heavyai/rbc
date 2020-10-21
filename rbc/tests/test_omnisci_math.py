@@ -20,7 +20,7 @@ def omnisci():
 
     m.sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name}'
-        ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z FLOAT, i INT, '
+        ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z DOUBLE, i INT, '
         'j INT, t INT[], td DOUBLE[], te INT[]);'
         .format(**locals()))
 
@@ -259,7 +259,6 @@ numpy_functions = [
     ('logaddexp', 'double(double, double)', np.logaddexp),
     ('logaddexp2', 'double(double, double)', np.logaddexp2),
     ('ldexp', 'double(double, int)', np.ldexp),
-    ('ldexp', 'float(float, int)', np.ldexp),
     ('frexp0', 'double(double)', lambda x: np.frexp(x)[0]),
     # Rounding functions:
     ('around', 'double(double)', lambda x: np.around(x)),
