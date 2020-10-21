@@ -380,8 +380,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    x = omnisci(signature)(fn)
-    print(str(x))
+    omnisci(signature)(fn)
 
     omnisci.register()
 
