@@ -76,6 +76,8 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'omnisci_internal'
                     elif name in pymath_funcs:
                         _deps[name] = 'pymath'
+                    elif name.startswith('__nv'):
+                        _deps[name] = 'cuda'
                     else:
                         _deps[name] = 'undefined'
                 else:
@@ -85,6 +87,8 @@ def get_function_dependencies(module, funcname, _deps=None):
     return _deps
 
 
+# ---------------------------------------------------------------------------
+# CPU Context classes
 class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
     # TODO: introduce JITRemoteCodeLibrary?
     _library_class = codegen.JITCodeLibrary
@@ -138,6 +142,42 @@ class RemoteCPUContext(cpu.CPUContext):
         # import numba.unicode  # unicode support is not relevant here
 
     # TODO: overwrite load_additional_registries, call_conv?, post_lowering
+
+# ---------------------------------------------------------------------------
+# GPU Context classes
+
+
+class RemoteGPUTargetContext(cpu.CPUContext):
+
+    def __init__(self, typing_context, target_info):
+        self.target_info = target_info
+        super().__init__(typing_context)
+
+    @compiler_lock.global_compiler_lock
+    def init(self):
+        self.address_size = self.target_info.bits
+        self.is32bit = (self.address_size == 32)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
+                                                     self.target_info)
+
+    def load_additional_registries(self):
+        # libdevice and math from cuda have precedence over the ones from CPU
+        from numba.cuda import libdeviceimpl, mathimpl
+        self.install_registry(libdeviceimpl.registry)
+        self.install_registry(mathimpl.registry)
+        super().load_additional_registries()
+
+
+class RemoteGPUTypingContext(typing.Context):
+    def load_additional_registries(self):
+
+        from numba.cuda import cudamath, libdevicedecl
+        self.install_registry(cudamath.registry)
+        self.install_registry(libdevicedecl.registry)
+        super().load_additional_registries()
+
+# ---------------------------------------------------------------------------
+# Code generation methods
 
 
 def make_wrapper(fname, atypes, rtype, cres):
@@ -208,8 +248,10 @@ def make_wrapper(fname, atypes, rtype, cres):
     cres.library.add_ir_module(module)
 
 
-def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
-                    pipeline_class=compiler.Compiler, debug=False):
+def compile_to_LLVM(functions_and_signatures,
+                    target: TargetInfo,
+                    pipeline_class=compiler.Compiler,
+                    debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -226,14 +268,23 @@ def compile_to_LLVM(functions_and_signatures, target: TargetInfo,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
+
     target_desc = registry.cpu_target
+
     if target is None:
+        # RemoteJIT
         target = TargetInfo.host()
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
-        typing_context = typing.Context()
-        target_context = RemoteCPUContext(typing_context, target)
+        # OmnisciDB target
+        if target.is_cpu:
+            typing_context = typing.Context()
+            target_context = RemoteCPUContext(typing_context, target)
+        else:  # gpu
+            typing_context = RemoteGPUTypingContext()
+            target_context = RemoteGPUTargetContext(typing_context, target)
+
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
         # Fixes rbc issue 74:
