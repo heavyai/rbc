@@ -161,21 +161,28 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
-        from numba.cuda import libdeviceimpl, mathimpl
-        from .omnisci_backend import cuda_npyimpl
-        self.install_registry(libdeviceimpl.registry)
-        self.install_registry(mathimpl.registry)
-        self.install_registry(cuda_npyimpl.registry)
+        nb_version = get_version('numba')
+        if nb_version >= (0, 52):
+            from numba.cuda import libdeviceimpl, mathimpl
+            from .omnisci_backend import cuda_npyimpl
+            self.install_registry(libdeviceimpl.registry)
+            self.install_registry(mathimpl.registry)
+            self.install_registry(cuda_npyimpl.registry)
+        else:
+            import warnings
+            warnings.warn("libdevice bindings requires Numba 0.52 or newer,"
+                          f" got Numba v{'.'.join(map(str, nb_version))}")
         super().load_additional_registries()
 
 
 class RemoteGPUTypingContext(typing.Context):
     def load_additional_registries(self):
-        from numba.core.typing import npydecl
-        from numba.cuda import cudamath, libdevicedecl
-        self.install_registry(npydecl.registry)
-        self.install_registry(cudamath.registry)
-        self.install_registry(libdevicedecl.registry)
+        if get_version('numba') >= (0, 52):
+            from numba.core.typing import npydecl
+            from numba.cuda import cudamath, libdevicedecl
+            self.install_registry(npydecl.registry)
+            self.install_registry(cudamath.registry)
+            self.install_registry(libdevicedecl.registry)
         super().load_additional_registries()
 
 # ---------------------------------------------------------------------------

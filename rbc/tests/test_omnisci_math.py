@@ -2,6 +2,7 @@ import math
 import pytest
 import sys
 import rbc.omnisci_backend as omni  # noqa: F401
+from rbc.utils import get_version
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -362,6 +363,14 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         # https://github.com/xnd-project/rbc/issues/71
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 71]')
+
+    nb_version = get_version('numba')
+    if nb_version < (0, 52) and omnisci.has_cuda and fn_name in [
+            'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
+            'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
+            'log1p', 'logaddexp2', 'ldexp', 'lcm', 'logaddexp', 'nextafter']:
+        pytest.skip(f"{fn_name}: libdevice bindings requires numba 0.52 or newer,"
+                    f" got Numba v{'.'.join(map(str, nb_version))}")
 
     if omnisci.version < (5, 2) and fn_name in [
             'sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1', 'exp2', 'log2',
