@@ -163,10 +163,8 @@ class Signature(object):
         """
         signature = Signature(self.remotejit)
         fsig = Type.fromcallable(func, target_info)
-        nargs = len(fsig[1])
+        nargs = fsig.arity
         for sig in self.signatures:
-            if nargs is None:
-                nargs = len(sig[1])
             sig = Type.fromobject(sig, target_info)
             if not sig.is_complete:
                 continue
