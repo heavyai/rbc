@@ -204,7 +204,7 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
-        if get_version('numba') >= (0, 49):
+        if get_version('numba') >= (0, 52):
             from numba.cuda import libdeviceimpl, mathimpl
             self.install_registry(libdeviceimpl.registry)
             self.install_registry(mathimpl.registry)
@@ -213,7 +213,7 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
 class RemoteGPUTypingContext(typing.Context):
     def load_additional_registries(self):
-        if get_version('numba') >= (0, 49):
+        if get_version('numba') >= (0, 52):
             from numba.cuda import cudamath, libdevicedecl
             self.install_registry(cudamath.registry)
             self.install_registry(libdevicedecl.registry)
