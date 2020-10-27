@@ -4,12 +4,12 @@ import sys
 import rbc.omnisci_backend as omni  # noqa: F401
 from rbc.utils import get_version
 
-
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 np = pytest.importorskip('numpy')
 nb = pytest.importorskip('numba')
 available_version, reason = rbc_omnisci.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+numba_version = get_version('numba')
 
 
 @pytest.fixture(scope='module')
@@ -143,6 +143,12 @@ def test_math_function(omnisci, fn_name, signature):
 
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
+
+    if omnisci.has_cuda and numba_version <= (0, 52, 0):
+        if fn_name in ['expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
+                       'cosh', 'sinh', 'tanh', 'erf', 'erfc']:
+            pytest.skip(f'{fn_name} requires numba version 0.52, currently using'
+                        f' {".".join(map(str, numba_version))}')
 
     arity = signature.count(',') + 1
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
