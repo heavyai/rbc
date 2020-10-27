@@ -4,7 +4,7 @@ import os
 import re
 import warnings
 import configparser
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from .omnisci_backend import (
@@ -431,6 +431,56 @@ class RemoteOmnisci(RemoteJIT):
         self.thrift_call('load_table_binary_columnar',
                          self.session_id, table_name, columns)
 
+    def _make_row_results_set(self, data):
+        # The following code is a stripped copy from omnisci/pymapd
+
+        _typeattr = {
+            'SMALLINT': 'int',
+            'INT': 'int',
+            'BIGINT': 'int',
+            'TIME': 'int',
+            'TIMESTAMP': 'int',
+            'DATE': 'int',
+            'BOOL': 'int',
+            'FLOAT': 'real',
+            'DECIMAL': 'real',
+            'DOUBLE': 'real',
+            'STR': 'str',
+            'POINT': 'str',
+            'LINESTRING': 'str',
+            'POLYGON': 'str',
+            'MULTIPOLYGON': 'str',
+            'TINYINT': 'int',
+            'GEOMETRY': 'str',
+            'GEOGRAPHY': 'str',
+        }
+
+        thrift = self.thrift_client.thrift
+
+        def extract_col_vals(desc, val):
+            typename = thrift.TDatumType._VALUES_TO_NAMES[desc.col_type.type]
+            nulls = val.nulls
+
+            if hasattr(val.data, 'arr_col') and val.data.arr_col:
+                vals = [
+                    None if null else getattr(v.data, _typeattr[typename] + '_col')
+                    for null, v in zip(nulls, val.data.arr_col)
+                ]
+            else:
+                vals = getattr(val.data, _typeattr[typename] + '_col')
+                vals = [None if null else v for null, v in zip(nulls, vals)]
+            return vals
+
+        if data.row_set.columns:
+            nrows = len(data.row_set.columns[0].nulls)
+            ncols = len(data.row_set.row_desc)
+            columns = [
+                extract_col_vals(desc, col)
+                for desc, col in zip(data.row_set.row_desc, data.row_set.columns)
+            ]
+            for i in range(nrows):
+                yield tuple(columns[j][i] for j in range(ncols))
+
     def sql_execute(self, query):
         """Execute SQL query in OmnisciDB server.
 
@@ -448,16 +498,18 @@ class RemoteOmnisci(RemoteJIT):
         results : iterator
           Iterator over rows.
         """
-        from pymapd.cursor import make_row_results_set
-        from pymapd._parsers import _extract_description
         self.register()
         columnar = True
         if self.debug:
             print('  %s;' % (query))
         result = self.thrift_call(
             'sql_execute', self.session_id, query, columnar, "", -1, -1)
-        descr = _extract_description(result.row_set.row_desc)
-        return descr, make_row_results_set(result)
+
+        Description = namedtuple("Description", ["name", "type_code", "null_ok"])
+        descr = []
+        for col in result.row_set.row_desc:
+            descr.append(Description(col.col_name, col.col_type.type, col.col_type.nullable))
+        return descr, self._make_row_results_set(result)
 
     _ext_arguments_map = None
 
