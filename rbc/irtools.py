@@ -180,8 +180,7 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
-        nb_version = get_version('numba')
-        if nb_version >= (0, 52):
+        if get_version('numba') >= (0, 52):
             from numba.cuda import libdeviceimpl, mathimpl
             from .omnisci_backend import cuda_npyimpl
             self.install_registry(libdeviceimpl.registry)
@@ -460,11 +459,14 @@ def cg_fflush(builder):
 @extending.intrinsic
 def fflush(typingctx):
     """fflush that can be called from Numba jit-decorated functions.
+
+    Note: fflush is available only for CPU target.
     """
     sig = nb_types.void(nb_types.void)
 
     def codegen(context, builder, signature, args):
-        cg_fflush(builder)
+        if typingctx.target_info.is_cpu:
+            cg_fflush(builder)
 
     return sig, codegen
 
@@ -472,12 +474,15 @@ def fflush(typingctx):
 @extending.intrinsic
 def printf(typingctx, format_type, *args):
     """printf that can be called from Numba jit-decorated functions.
+
+    Note: printf is available only for CPU target.
     """
     if isinstance(format_type, nb_types.StringLiteral):
         sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
 
         def codegen(context, builder, signature, args):
-            cgutils.printf(builder, format_type.literal_value, *args[1:])
-            cg_fflush(builder)
+            if typingctx.target_info.is_cpu:
+                cgutils.printf(builder, format_type.literal_value, *args[1:])
+                cg_fflush(builder)
 
         return sig, codegen
