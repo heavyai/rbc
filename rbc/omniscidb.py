@@ -5,6 +5,7 @@ import re
 import warnings
 import configparser
 from collections import defaultdict, namedtuple
+from llvmlite.binding import ModuleRef
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from .omnisci_backend import (
@@ -16,7 +17,8 @@ from .omnisci_backend import (
     OmnisciCompilerPipeline, OmnisciCursorType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import ForbiddenNameError
+from .errors import ForbiddenIntrinsicError, ForbiddenNameError
+from .utils import get_version
 
 
 def get_literal_return(func, verbose=False):
@@ -660,6 +662,33 @@ class RemoteOmnisci(RemoteJIT):
                     'exp2', 'log2', 'log1p', 'fmod']
         return []
 
+    def catch_invalid_intrinsics(self, llvm_module: ModuleRef, target_info: TargetInfo):
+        """When libdevice is not available, the GPU target will use the same intrinsics
+        as the CPU one. Although some CPU intrinsics works, a few ones crash the server
+        """
+
+        invalid = []
+
+        # libdevice bindings is only available on omniscidb >= 5.5 and numba >= 0.52
+        nb_version = get_version('numba')
+        if target_info.is_gpu and not (self.version >= (5, 5) and nb_version >= (0, 52)):
+            invalid = ['asin', 'acos', 'atan', 'atan2', 'hypot', 'sinh',
+                       'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
+                       'expm1', 'exp2', 'log2', 'log1p', 'exp', 'exp2',
+                       'ldexp', 'nextafter', 'acosf', 'acoshf', 'asinf',
+                       'asinhf', 'atan2f', 'atanf', 'atanhf', 'coshf',
+                       'exp2f', 'expm1f', 'hypotf', 'ldexpf',
+                       'log1pf', 'log2f', 'nextafterf', 'sinhf', 'tanhf']
+
+        for fn in llvm_module.functions:
+            if fn.is_declaration and fn.name in invalid:
+                raise ForbiddenIntrinsicError(
+                    f"\n\nAttempt to use function with name `{fn.name}`.\n"
+                    f"As a workaround, you might want to consider upgrade "
+                    f"OmniSciDB and RBC to the latest version.\n"
+                    f"For more information, see: "
+                    f"https://github.com/xnd-project/rbc/issues/207")
+
     def register(self):
         if self.have_last_compile:
             return
@@ -856,6 +885,9 @@ class RemoteOmnisci(RemoteJIT):
                                           target_info,
                                           pipeline_class=OmnisciCompilerPipeline,
                                           debug=self.debug)
+
+            self.catch_invalid_intrinsics(llvm_module, target_info)
+
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout
             for f in llvm_module.functions:

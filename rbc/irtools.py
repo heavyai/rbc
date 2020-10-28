@@ -5,6 +5,7 @@ import re
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
+from typing import List, Set
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
@@ -84,6 +85,24 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'defined'
                         get_function_dependencies(module, name, _deps=_deps)
     return _deps
+
+
+def catch_undefined_functions(main_module: llvm.ModuleRef, target: TargetInfo,
+                              function_names: List[str]) -> Set[str]:
+    used_functions = set(function_names)
+    for fname in function_names:
+        deps = get_function_dependencies(main_module, fname)
+        for fn_name, descr in deps.items():
+            used_functions.add(fn_name)
+            if descr == 'undefined':
+                if fn_name.startswith('numba_') and target.has_numba:
+                    continue
+                if fn_name.startswith('Py') and target.has_cpython:
+                    continue
+                if fn_name.startswith('npy_') and target.has_numpy:
+                    continue
+                raise RuntimeError('function `%s` is undefined' % (fn_name))
+    return used_functions
 
 
 # ---------------------------------------------------------------------------
@@ -348,20 +367,7 @@ def compile_to_LLVM(functions_and_signatures,
     main_library._optimize_final_module()
 
     # Catch undefined functions:
-    used_functions = set(function_names)
-    for fname in function_names:
-        deps = get_function_dependencies(main_module, fname)
-        for fn, descr in deps.items():
-            used_functions.add(fn)
-            if descr == 'undefined':
-                if fn.startswith('numba_') and target.has_numba:
-                    continue
-                if fn.startswith('Py') and target.has_cpython:
-                    continue
-                raise RuntimeError('function `%s` is undefined' % (fn))
-
-    # for global_variable in main_module.global_variables:
-    #    global_variable.linkage = llvm.Linkage.private
+    used_functions = catch_undefined_functions(main_module, target, function_names)
 
     unused_functions = [f.name for f in main_module.functions
                         if f.name not in used_functions]

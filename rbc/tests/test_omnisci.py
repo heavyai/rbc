@@ -53,6 +53,12 @@ use_host_target: False
 
 
 @pytest.fixture(scope='module')
+def nb_version():
+    from rbc.utils import get_version
+    return get_version('numba')
+
+
+@pytest.fixture(scope='module')
 def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
@@ -173,6 +179,37 @@ def test_single_argument_overloading(omnisci):
     for x, x1 in result:
         assert x1 == x - 1
         assert isinstance(x1, type(x))
+
+
+def test_numpy_forbidden_ufunc(omnisci, nb_version):
+    omnisci.reset()
+
+    if omnisci.version >= (5, 5) and nb_version >= (0, 52):
+        pytest.skip(
+            f'forbidden ufunc not required for OmniSciDB {omnisci.version} '
+            f'and Numba {nb_version}')
+
+    msg = "Attempt to use function with name `{ufunc}`"
+
+    @omnisci('double(double)')
+    def arcsin(x):
+        return np.arcsin(x)
+
+    with pytest.raises(errors.ForbiddenIntrinsicError) as excinfo:
+        omnisci.register()
+    assert msg.format(ufunc='asin') in str(excinfo.value)
+
+    omnisci.reset()
+
+    @omnisci('float32(float32, float32)')
+    def logaddexp(x, y):
+        return np.logaddexp(x, y)
+
+    with pytest.raises(errors.ForbiddenIntrinsicError) as excinfo:
+        omnisci.register()
+    assert msg.format(ufunc='log1pf') in str(excinfo.value)
+
+    omnisci.reset()
 
 
 def test_thrift_api_doc(omnisci):

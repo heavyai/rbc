@@ -168,10 +168,22 @@ class TargetInfo(object):
         return 'cpu' in self.name
 
     @property
+    def is_gpu(self):
+        """Return True if the target device is GPU.
+        """
+        return 'gpu' in self.name
+
+    @property
     def has_numba(self):
         """Check if target supports numba symbols
         """
         return self.info.get('has_numba', False)
+
+    @property
+    def has_numpy(self):
+        """Check if target supports numpy symbols
+        """
+        return self.info.get('has_numpy', False)
 
     @property
     def has_cpython(self):

@@ -2,14 +2,18 @@ import math
 import pytest
 import sys
 import rbc.omnisci_backend as omni  # noqa: F401
-from rbc.utils import get_version
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 np = pytest.importorskip('numpy')
 nb = pytest.importorskip('numba')
 available_version, reason = rbc_omnisci.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
-numba_version = get_version('numba')
+
+
+@pytest.fixture(scope='module')
+def nb_version():
+    from rbc.utils import get_version
+    return get_version('numba')
 
 
 @pytest.fixture(scope='module')
@@ -114,7 +118,7 @@ math_functions = [
 
 @pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=[item[0] for item in math_functions])
-def test_math_function(omnisci, fn_name, signature):
+def test_math_function(omnisci, nb_version, fn_name, signature):
     omnisci.reset()
 
     math_func = getattr(math, fn_name, None)
@@ -144,11 +148,12 @@ def test_math_function(omnisci, fn_name, signature):
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
 
-    if omnisci.has_cuda and numba_version <= (0, 52, 0):
+    if omnisci.has_cuda and nb_version < (0, 52):
         if fn_name in ['expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
-                       'cosh', 'sinh', 'tanh', 'erf', 'erfc']:
+                       'cosh', 'sinh', 'tanh', 'erf', 'erfc', 'acos', 'asin',
+                       'atan', 'atan2']:
             pytest.skip(f'{fn_name} requires numba version 0.52, currently using'
-                        f' {".".join(map(str, numba_version))}')
+                        f' {".".join(map(str, nb_version))}')
 
     arity = signature.count(',') + 1
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
@@ -322,7 +327,7 @@ if np is not None:
 
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
                          ids=[item[0] for item in numpy_functions])
-def test_numpy_function(omnisci, fn_name, signature, np_func):
+def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
     omnisci.reset()
 
     if fn_name in ['cbrt', 'float_power']:
@@ -370,7 +375,6 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 71]')
 
-    nb_version = get_version('numba')
     if nb_version < (0, 52) and omnisci.has_cuda and fn_name in [
             'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
             'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
@@ -412,6 +416,7 @@ def test_numpy_function(omnisci, fn_name, signature, np_func):
         xs = ', '.join('ab'[:arity])
     else:
         raise NotImplementedError(kind)
+
     query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
     descr, result = omnisci.sql_execute(query)
     for args in list(result):
