@@ -1,5 +1,6 @@
 import ctypes
 import json
+from . import libfuncs
 
 
 class TargetInfo(object):
@@ -21,10 +22,29 @@ class TargetInfo(object):
         self.custom_type_converters = []
         self.info = {}
         self.type_sizeof = {}
+        self._supported_libraries = set()  # libfuncs.Library instances
+
+    def add_library(self, lib):
+        if isinstance(lib, str):
+            lib = libfuncs.Library.get(lib)
+        if isinstance(lib, libfuncs.Library):
+            self._supported_libraries.add(lib)
+        else:
+            raise TypeError(
+                f'Expected libfuncs.Library instance or library name but got {type(lib)}')
+
+    def supports(self, name):
+        """Return True if the target system defines symbol name
+        """
+        for lib in self._supported_libraries:
+            if name in lib:
+                return True
+        return False
 
     def todict(self):
         return dict(name=self.name, strict=self.strict, info=self.info,
-                    type_sizeof=self.type_sizeof)
+                    type_sizeof=self.type_sizeof,
+                    libraries=[lib.name for lib in self._supported_libraries])
 
     @classmethod
     def fromdict(cls, data):
@@ -32,6 +52,8 @@ class TargetInfo(object):
                           strict=data.get('strict', False))
         target_info.info.update(data.get('info', {}))
         target_info.type_sizeof.update(data.get('type_sizeof', {}))
+        for lib in data.get('libraries', []):
+            target_info.add_library(lib)
         return target_info
 
     def tojson(self):
@@ -85,7 +107,12 @@ class TargetInfo(object):
         ).items():
             target_info.type_sizeof[tname] = ctypes.sizeof(ctype)
 
+        target_info.add_library('m')
+        target_info.add_library('stdio')
+        target_info.add_library('stdlib')
+
         cls._host_target_info_cache[key] = target_info
+
         return target_info
 
     def set(self, prop, value):

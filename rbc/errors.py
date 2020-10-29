@@ -18,7 +18,7 @@ class OmnisciServerError(Exception):
     """
 
 
-class OmnisciUnsupportedError(numba_errors.UnsupportedError):
+class UnsupportedError(numba_errors.UnsupportedError):
     """
     Launch when an attempt is to use a feature that is not supported
     for a given target.

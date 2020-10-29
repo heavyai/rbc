@@ -658,6 +658,15 @@ class RemoteOmnisci(RemoteJIT):
                 # see https://github.com/numba/numba/issues/4546
                 target_info.set('name', 'skylake')
             targets[device] = target_info
+
+            if target_info.is_cpu:
+                target_info.add_library('m')
+                target_info.add_library('stdio')
+                target_info.add_library('stdlib')
+                target_info.add_library('omniscidb')
+            elif target_info.is_gpu:
+                target_info.add_library('libdevice')
+
         return targets
 
     @property
