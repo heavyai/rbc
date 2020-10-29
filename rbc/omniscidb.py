@@ -667,11 +667,19 @@ class RemoteOmnisci(RemoteJIT):
         as the CPU one. Although some CPU intrinsics works, a few ones crash the server
         """
 
+        def use_array(llvm_module):
+            import re
+            regex = r"{\ ?\w+\*, i64, i8\ ?}"
+            return re.search(regex, str(llvm_module)) is not None
+
+        array = use_array(llvm_module)
+
         invalid = []
 
         # libdevice bindings is only available on omniscidb >= 5.5 and numba >= 0.52
         nb_version = get_version('numba')
-        if target_info.is_gpu and not (self.version >= (5, 5) and nb_version >= (0, 52)):
+        if not array and target_info.is_gpu and not \
+                (self.version >= (5, 5) and nb_version >= (0, 52)):
             invalid = ['asin', 'acos', 'atan', 'atan2', 'hypot', 'sinh',
                        'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
                        'expm1', 'exp2', 'log2', 'log1p', 'exp', 'exp2',
