@@ -93,13 +93,21 @@ class TargetInfo(object):
         """
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
-                          'has_cpython', 'has_numba')
+                          'has_cpython', 'has_numba', 'driver')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
         self.info[prop] = value
 
     # Convenience methods
+
+    @property
+    def driver(self):
+        """Return driver name and version numbers as int tuple.
+        """
+        name, version = self.info['driver'].split(None, 1)
+        version = tuple(map(int, version.split('.')))
+        return name, version
 
     @property
     def triple(self):

@@ -233,11 +233,16 @@ class Caller(object):
         """Return LLVM IRs of all target devices.
         """
         lst = ['']
+        fid = 0
         for device, target_info in self.remotejit.targets.items():
             lst.append(f'{device:-^80}')
             signatures = self.get_signatures(target_info)
-            llvm_module = irtools.compile_to_LLVM(
-                [(self.func, signatures)],
+            signatures_map = {}
+            for sig in signatures:
+                fid += 1
+                signatures_map[fid] = sig
+            llvm_module, succesful_fids = irtools.compile_to_LLVM(
+                [(self.func, signatures_map)],
                 target_info,
                 debug=self.remotejit.debug)
             lst.append(str(llvm_module))
@@ -528,8 +533,8 @@ class RemoteJIT(object):
         Return the corresponding LLVM IR module instance which may be
         useful for debugging.
         """
-        llvm_module = irtools.compile_to_LLVM(
-            [(func, [ftype])], target_info, debug=self.debug)
+        llvm_module, succesful_fids = irtools.compile_to_LLVM(
+            [(func, {0: ftype})], target_info, debug=self.debug)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
         response = self.client(remotejit=dict(

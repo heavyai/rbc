@@ -149,6 +149,7 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
         pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
 
     if omnisci.has_cuda and nb_version < (0, 52):
+        # Remove this skip when https://github.com/omnisci/omniscidb-internal/pull/4955 is merged
         if fn_name in ['expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
                        'cosh', 'sinh', 'tanh', 'erf', 'erfc', 'acos', 'asin',
                        'atan', 'atan2']:
@@ -168,9 +169,13 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
     else:
         raise NotImplementedError((signature, arity))
 
+    fprefix = 'rbc_test_'  # to avoid conflicts with SQL functions
+
     if fn.__name__ == '<lambda>':
         # give lambda function a name
         fn.__name__ = fn_name
+
+    fn.__name__ = fprefix + fn.__name__
 
     omnisci(signature)(fn)
 
@@ -196,7 +201,7 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
     if fn_name in ['ldexp']:
         xs = 'x, i'
 
-    query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
+    query = f'select {xs}, {fprefix}{fn_name}({xs}) from {omnisci.table_name}'
     descr, result = omnisci.sql_execute(query)
     for args in list(result):
         result = args[-1]
