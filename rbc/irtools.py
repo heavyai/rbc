@@ -5,7 +5,7 @@ import re
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
-from .npy_mathimpl import *  # noqa: F403, F401
+from typing import List, Set
 from .utils import get_version
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
@@ -37,7 +37,7 @@ hyperbolic_funcs = ['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']
 nearest_funcs = ['ceil', 'floor', 'trunc', 'round', 'lround', 'llround',
                  'nearbyint', 'rint', 'lrint', 'llrint']
 fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
-            'nexttoward']
+            'nexttoward', 'spacing']
 classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
                         'isnormal', 'signbit']
 
@@ -85,6 +85,24 @@ def get_function_dependencies(module, funcname, _deps=None):
                         _deps[name] = 'defined'
                         get_function_dependencies(module, name, _deps=_deps)
     return _deps
+
+
+def catch_undefined_functions(main_module: llvm.ModuleRef, target: TargetInfo,
+                              function_names: List[str]) -> Set[str]:
+    used_functions = set(function_names)
+    for fname in function_names:
+        deps = get_function_dependencies(main_module, fname)
+        for fn_name, descr in deps.items():
+            used_functions.add(fn_name)
+            if descr == 'undefined':
+                if fn_name.startswith('numba_') and target.has_numba:
+                    continue
+                if fn_name.startswith('Py') and target.has_cpython:
+                    continue
+                if fn_name.startswith('npy_') and target.has_numpy:
+                    continue
+                raise RuntimeError('function `%s` is undefined' % (fn_name))
+    return used_functions
 
 
 # ---------------------------------------------------------------------------
@@ -162,17 +180,26 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
-        if get_version('numba') >= (0, 49):
+        nb_version = get_version('numba')
+        if nb_version >= (0, 52):
             from numba.cuda import libdeviceimpl, mathimpl
+            from .omnisci_backend import cuda_npyimpl
             self.install_registry(libdeviceimpl.registry)
             self.install_registry(mathimpl.registry)
+            self.install_registry(cuda_npyimpl.registry)
+        else:
+            import warnings
+            warnings.warn("libdevice bindings requires Numba 0.52 or newer,"
+                          f" got Numba v{'.'.join(map(str, nb_version))}")
         super().load_additional_registries()
 
 
 class RemoteGPUTypingContext(typing.Context):
     def load_additional_registries(self):
-        if get_version('numba') >= (0, 49):
+        if get_version('numba') >= (0, 52):
+            from numba.core.typing import npydecl
             from numba.cuda import cudamath, libdevicedecl
+            self.install_registry(npydecl.registry)
             self.install_registry(cudamath.registry)
             self.install_registry(libdevicedecl.registry)
         super().load_additional_registries()
@@ -340,20 +367,7 @@ def compile_to_LLVM(functions_and_signatures,
     main_library._optimize_final_module()
 
     # Catch undefined functions:
-    used_functions = set(function_names)
-    for fname in function_names:
-        deps = get_function_dependencies(main_module, fname)
-        for fn, descr in deps.items():
-            used_functions.add(fn)
-            if descr == 'undefined':
-                if fn.startswith('numba_') and target.has_numba:
-                    continue
-                if fn.startswith('Py') and target.has_cpython:
-                    continue
-                raise RuntimeError('function `%s` is undefined' % (fn))
-
-    # for global_variable in main_module.global_variables:
-    #    global_variable.linkage = llvm.Linkage.private
+    used_functions = catch_undefined_functions(main_module, target, function_names)
 
     unused_functions = [f.name for f in main_module.functions
                         if f.name not in used_functions]

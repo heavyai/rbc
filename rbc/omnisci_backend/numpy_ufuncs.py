@@ -134,6 +134,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.fmax)
 @overload_elementwise_binary_ufunc(np.fmin)
 # Floating functions
+@overload_elementwise_binary_ufunc(np.nextafter)
 @overload_elementwise_binary_ufunc(np.ldexp)
 def dummy_binary_ufunc(a, b):
     pass
