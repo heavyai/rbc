@@ -1,6 +1,7 @@
 import ctypes
 import json
 from . import libfuncs
+from .utils import parse_version
 
 
 class TargetInfo(object):
@@ -34,7 +35,7 @@ class TargetInfo(object):
                 f'Expected libfuncs.Library instance or library name but got {type(lib)}')
 
     def supports(self, name):
-        """Return True if the target system defines symbol name
+        """Return True if the target system defines symbol name.
         """
         for lib in self._supported_libraries:
             if name in lib:
@@ -120,7 +121,7 @@ class TargetInfo(object):
         """
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
-                          'has_cpython', 'has_numba', 'driver')
+                          'has_cpython', 'has_numba', 'driver', 'software')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
@@ -129,12 +130,29 @@ class TargetInfo(object):
     # Convenience methods
 
     @property
-    def driver(self):
-        """Return driver name and version numbers as int tuple.
+    def software(self):
+        """Return remote software name and version number as int tuple.
         """
-        name, version = self.info['driver'].split(None, 1)
-        version = tuple(map(int, version.split('.')))
-        return name, version
+        lst = self.info.get('software', '').split(None, 1)
+        if len(lst) == 2:
+            name, version = lst
+        else:
+            return lst[0], ()
+        return name, parse_version(version)
+
+    @property
+    def driver(self):
+        """Return device driver name and version numbers as int tuple. For
+        instance::
+
+          'CUDA', (11, 0)
+        """
+        lst = self.info.get('driver', '').split(None, 1)
+        if len(lst) == 2:
+            name, version = lst
+        else:
+            return lst[0], ()
+        return name, parse_version(version)
 
     @property
     def triple(self):

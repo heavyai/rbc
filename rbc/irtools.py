@@ -414,10 +414,10 @@ def compile_to_LLVM(functions_and_signatures,
                 f.linkage = llvm.Linkage.private
                 changed = True
 
+    # TODO: determine unused global_variables and struct_types
+
     if changed:
         main_library._optimize_final_module()
-
-    # TODO: determine unused global_variables and struct_types
 
     main_module.verify()
     main_library._finalized = True

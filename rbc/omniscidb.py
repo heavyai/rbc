@@ -17,6 +17,7 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
+from .utils import parse_version
 
 
 def get_literal_return(func, verbose=False):
@@ -263,12 +264,7 @@ class RemoteOmnisci(RemoteJIT):
     def version(self):
         if self._version is None:
             version = self.thrift_call('get_version')
-            m = re.match(r'(\d+)[.](\d+)[.](\d+)(.*)', version)
-            if m is None:
-                raise RuntimeError('Could not parse OmniSci version=%r'
-                                   % (version))
-            major, minor, micro, dev = m.groups()
-            self._version = (int(major), int(minor), int(micro), dev)
+            return parse_version(version)
         return self._version
 
     @property
@@ -658,13 +654,17 @@ class RemoteOmnisci(RemoteJIT):
             targets[device] = target_info
 
             if target_info.is_cpu:
+                target_info.set('driver', 'none')
                 target_info.add_library('m')
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('omniscidb')
-            elif target_info.is_gpu:
+            elif target_info.is_gpu and self.version >= (5, 5):
                 target_info.add_library('libdevice')
 
+            version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
+            target_info.set('software', f'OmnisciDB {version_str}')
+        print(device_params)
         return targets
 
     @property
@@ -863,13 +863,11 @@ class RemoteOmnisci(RemoteJIT):
                     sig_is_udtf = is_udtf(sig)
                     is_old_udtf = 'table' in sig[0].annotation()
 
-                    # Note: device info cannot be included in mangling string
                     if i == 0 and (self.version < (5, 2) or is_old_udtf or
                                    (self.version < (5, 5) and sig_is_udtf)):
                         sig.set_mangling('')
                     else:
-                        # TODO: include device to the name mangling of UDFs
-                        if self.version < (5, 5):  # or not sig_is_udtf:
+                        if self.version < (5, 5):
                             sig.set_mangling('__%s' % (i))
                         else:
                             sig.set_mangling('__%s_%s' % (device, i))
