@@ -911,9 +911,6 @@ class RemoteOmnisci(RemoteJIT):
                 else:
                     skipped_names.append(udtf.name)
 
-        if not (udfs or udtfs):
-            return RuntimeError(f'nothing to register')
-
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.
         for f in udtfs:
