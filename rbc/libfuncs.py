@@ -151,61 +151,66 @@ class LLVMIntrinsics(Library):
             return Library.check(self, get_llvm_name(fname))
         return False
 
-    _function_names = list(''' va_start va_end va_copy gcroot gcread
-    gcwrite returnaddress addressofreturnaddress sponentry frameaddress
-    stacksave stackrestore get.dynamic.area.offset prefetch pcmarker
+    _function_names = list(''' va_start va_end va_copy gcroot gcread gcwrite returnaddress
+    addressofreturnaddress sponentry frameaddress stacksave
+    stackrestore get.dynamic.area.offset prefetch pcmarker
     readcyclecounter clear_cache instrprof.increment
     instrprof.increment.step instrprof.value.profile thread.pointer
     call.preallocated.setup call.preallocated.arg
     call.preallocated.teardown abs smax smin umax umin memcpy
-    memcpy.inline memmove sqrt powi sin cos pow exp exp2 log log10 log2
-    fma fabs minnum maxnum minimum maximum copysign floor ceil trunc rint
-    nearbyint round roundeven lround llround lrint llrint ctpop ctlz cttz
-    fshl fshr canonicalize fmuladd set.loop.iterations
-    test.set.loop.iterations loop.decrement.reg loop.decrement
-    vector.reduce.add vector.reduce.fadd vector.reduce.mul
-    vector.reduce.fmul vector.reduce.and vector.reduce.or
-    vector.reduce.xor vector.reduce.smax vector.reduce.smin
-    vector.reduce.umax vector.reduce.umin vector.reduce.fmax
-    vector.reduce.fmin matrix.transpose matrix.multiply
-    matrix.column.major.load matrix.column.major.store convert.to.fp16
-    convert.from.fp16 init.trampoline adjust.trampoline lifetime.start
-    lifetime.end invariant.start invariant.end launder.invariant.group
-    strip.invariant.group experimental.constrained.fadd
-    experimental.constrained.fsub experimental.constrained.fmul
-    experimental.constrained.fdiv experimental.constrained.frem
-    experimental.constrained.fma experimental.constrained.fptoui
-    experimental.constrained.fptosi experimental.constrained.uitofp
-    experimental.constrained.sitofp experimental.constrained.fptrunc
-    experimental.constrained.fpext experimental.constrained.fmuladd
-    experimental.constrained.sqrt experimental.constrained.pow
-    experimental.constrained.powi experimental.constrained.sin
-    experimental.constrained.cos experimental.constrained.exp
-    experimental.constrained.exp2 experimental.constrained.log
-    experimental.constrained.log10 experimental.constrained.log2
-    experimental.constrained.rint experimental.constrained.lrint
-    experimental.constrained.llrint experimental.constrained.nearbyint
-    experimental.constrained.maxnum experimental.constrained.minnum
-    experimental.constrained.maximum experimental.constrained.minimum
-    experimental.constrained.ceil experimental.constrained.floor
-    experimental.constrained.round experimental.constrained.roundeven
-    experimental.constrained.lround experimental.constrained.llround
-    experimental.constrained.trunc flt.rounds var.annotation
-    ptr.annotation annotation codeview.annotation trap debugtrap
-    stackprotector stackguard objectsize expect expect.with.probability
-    assume ssa_copy type.test type.checked.load donothing
-    experimental.deoptimize experimental.guard
-    experimental.widenable.condition load.relative sideeffect is.constant
-    ptrmask vscale memcpy.element.unordered.atomic
-    memmove.element.unordered.atomic memset.element.unordered.atomic
-    objc.autorelease objc.autoreleasePoolPop objc.autoreleasePoolPush
+    memcpy.inline memmove sqrt powi sin cos pow exp exp2 log log10
+    log2 fma fabs minnum maxnum minimum maximum copysign floor ceil
+    trunc rint nearbyint round roundeven lround llround lrint llrint
+    ctpop ctlz cttz fshl fshr sadd.with.overflow uadd.with.overflow
+    ssub.with.overflow usub.with.overflow smul.with.overflow
+    umul.with.overflow sadd.sat uadd.sat ssub.sat usub.sat sshl.sat
+    ushl.sat smul.fix umul.fix smul.fix.sat umul.fix.sat sdiv.fix
+    udiv.fix sdiv.fix.sat udiv.fix.sat canonicalize fmuladd
+    set.loop.iterations test.set.loop.iterations loop.decrement.reg
+    loop.decrement vector.reduce.add vector.reduce.fadd
+    vector.reduce.mul vector.reduce.fmul vector.reduce.and
+    vector.reduce.or vector.reduce.xor vector.reduce.smax
+    vector.reduce.smin vector.reduce.umax vector.reduce.umin
+    vector.reduce.fmax vector.reduce.fmin matrix.transpose
+    matrix.multiply matrix.column.major.load matrix.column.major.store
+    convert.to.fp16 convert.from.fp16 init.trampoline
+    adjust.trampoline lifetime.start lifetime.end invariant.start
+    invariant.end launder.invariant.group strip.invariant.group
+    experimental.constrained.fadd experimental.constrained.fsub
+    experimental.constrained.fmul experimental.constrained.fdiv
+    experimental.constrained.frem experimental.constrained.fma
+    experimental.constrained.fptoui experimental.constrained.fptosi
+    experimental.constrained.uitofp experimental.constrained.sitofp
+    experimental.constrained.fptrunc experimental.constrained.fpext
+    experimental.constrained.fmuladd experimental.constrained.sqrt
+    experimental.constrained.pow experimental.constrained.powi
+    experimental.constrained.sin experimental.constrained.cos
+    experimental.constrained.exp experimental.constrained.exp2
+    experimental.constrained.log experimental.constrained.log10
+    experimental.constrained.log2 experimental.constrained.rint
+    experimental.constrained.lrint experimental.constrained.llrint
+    experimental.constrained.nearbyint experimental.constrained.maxnum
+    experimental.constrained.minnum experimental.constrained.maximum
+    experimental.constrained.minimum experimental.constrained.ceil
+    experimental.constrained.floor experimental.constrained.round
+    experimental.constrained.roundeven experimental.constrained.lround
+    experimental.constrained.llround experimental.constrained.trunc
+    flt.rounds var.annotation ptr.annotation annotation
+    codeview.annotation trap debugtrap stackprotector stackguard
+    objectsize expect expect.with.probability assume ssa_copy
+    type.test type.checked.load donothing experimental.deoptimize
+    experimental.guard experimental.widenable.condition load.relative
+    sideeffect is.constant ptrmask vscale
+    memcpy.element.unordered.atomic memmove.element.unordered.atomic
+    memset.element.unordered.atomic objc.autorelease
+    objc.autoreleasePoolPop objc.autoreleasePoolPush
     objc.autoreleaseReturnValue objc.copyWeak objc.destroyWeak
     objc.initWeak objc.loadWeak objc.loadWeakRetained objc.moveWeak
     objc.release objc.retain objc.retainAutorelease
-    objc.retainAutoreleaseReturnValue objc.retainAutoreleasedReturnValue
-    objc.retainBlock objc.storeStrong objc.storeWeak
-    preserve.array.access.index preserve.union.access.index
-    preserve.struct.access.index '''.strip().split())
+    objc.retainAutoreleaseReturnValue
+    objc.retainAutoreleasedReturnValue objc.retainBlock
+    objc.storeStrong objc.storeWeak preserve.array.access.index
+    preserve.union.access.index preserve.struct.access.index '''.strip().split())
 
 
 class NVVMIntrinsics(Library):

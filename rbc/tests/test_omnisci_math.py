@@ -126,30 +126,28 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
         pytest.skip(f'{fn_name}: not available in {math.__name__} module'
                     f' of Python {sys.version.split(None, 1)[0]}')
 
-    if not omnisci.has_cuda and \
-        fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
-                    'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
-                    'perm']:
+    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
+                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
+                   'perm']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation! [rbc issue 156]')
 
-    if omnisci.has_cuda and \
+    if omnisci.version < (5, 5) and omnisci.has_cuda and \
         fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
                     'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
                     'trunc', 'dist', 'fmod']:
         pytest.skip(f'CUDA target does not support {fn_name} function [rbc issue 156]')
 
-    if omnisci.has_cuda and fn_name in ['floor']:
+    if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['floor']:
         pytest.skip(f'{fn_name} compilation crashes due to typing differences with CPU target'
                     ' [rbc issue 203]')
 
-    if omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
+    if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
         pytest.skip(f'{fn_name} crashes with CUDA-enabled server [rbc issue 156/158]')
 
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
 
-    if omnisci.has_cuda and nb_version < (0, 52):
-        # Remove this skip when https://github.com/omnisci/omniscidb-internal/pull/4955 is merged
+    if omnisci.version < (5, 5) and omnisci.has_cuda and nb_version < (0, 52):
         if fn_name in ['expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
                        'cosh', 'sinh', 'tanh', 'erf', 'erfc', 'acos', 'asin',
                        'atan', 'atan2']:
@@ -373,14 +371,15 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
             pytest.skip(msg)
 
     if fn_name in ['spacing']:
+        # Skipping spacing__cpu_0 that uses undefined function `npy_spacing`
         pytest.skip(f'{fn_name}: FIXME')
 
-    if omnisci.has_cuda and fn_name in ['lcm']:
+    if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['lcm']:
         # https://github.com/xnd-project/rbc/issues/71
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 71]')
 
-    if nb_version < (0, 52) and omnisci.has_cuda and fn_name in [
+    if omnisci.version < (5, 2) and nb_version < (0, 52) and omnisci.has_cuda and fn_name in [
             'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
             'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
             'log1p', 'logaddexp2', 'ldexp', 'lcm', 'logaddexp', 'nextafter']:
