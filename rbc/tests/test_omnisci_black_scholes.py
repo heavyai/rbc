@@ -78,7 +78,7 @@ def cnd_numba(d):
 
 
 def test_black_scholes_udf(omnisci):
-    if omnisci.has_cuda:
+    if omnisci.has_cuda and omnisci.version < (5, 5):
         pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [issue 60]')
 
@@ -114,7 +114,8 @@ def test_black_scholes_udf(omnisci):
 
 
 def test_black_scholes_udtf(omnisci):
-    if omnisci.has_cuda:
+    if omnisci.has_cuda:  # and omnisci.version < (5, 5):
+        # Requires https://github.com/omnisci/omniscidb-internal/pull/4958
         pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [issue 169]')
 

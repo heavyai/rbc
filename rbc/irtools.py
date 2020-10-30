@@ -2,6 +2,7 @@
 # Created: February 2019
 
 import re
+import warnings
 from collections import defaultdict
 from llvmlite import ir
 import llvmlite.binding as llvm
@@ -272,11 +273,11 @@ def compile_instance(func, sig,
                                       pipeline_class=pipeline_class)
     except UnsupportedError as msg:
         for m in re.finditer(r'[|]UnsupportedError[|](.*?)\n', str(msg), re.S):
-            print(f'Skipping {fname}: {m.group(0)[18:]}')
+            warnings.warn(f'Skipping {fname}: {m.group(0)[18:]}')
         return
     except nb_errors.TypingError as msg:
         for m in re.finditer(r'[|]UnsupportedError[|](.*?)\n', str(msg), re.S):
-            print(f'Skipping {fname}: {m.group(0)[18:]}')
+            warnings.warn(f'Skipping {fname}: {m.group(0)[18:]}')
             break
         else:
             raise
@@ -289,7 +290,7 @@ def compile_instance(func, sig,
     for f in result['declarations']:
         if target.supports(f):
             continue
-        print(f'Skipping {fname} that uses undefined function `{f}`')
+        warnings.warn(f'Skipping {fname} that uses undefined function `{f}`')
         return
 
     nvvmlib = libfuncs.Library.get('nvvm')
@@ -303,7 +304,7 @@ def compile_instance(func, sig,
             if f in llvmlib:
                 continue
 
-        print(f'Skipping {fname} that uses unsupported intrinsic `{f}`')
+        warnings.warn(f'Skipping {fname} that uses unsupported intrinsic `{f}`')
         return
 
     make_wrapper(fname, args, return_type, cres, verbose=debug)

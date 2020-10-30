@@ -256,7 +256,7 @@ def test_even_sum(omnisci):
 
 
 def test_array_setitem(omnisci):
-    if omnisci.has_cuda:
+    if omnisci.has_cuda and omnisci.version < (5, 5):
         pytest.skip(
             'test_array_setitem: crashes CUDA enabled omniscidb server'
             ' [rbc issue 72]')
@@ -282,7 +282,7 @@ def test_array_setitem(omnisci):
 
 
 def test_array_constructor_noreturn(omnisci):
-    if omnisci.has_cuda:
+    if omnisci.has_cuda and omnisci.version < (5, 5):
         pytest.skip(
             'crashes CUDA enabled omniscidb server [issue 94]')
 
@@ -369,7 +369,7 @@ def test_array_constructor_len(omnisci):
 
 
 def test_array_constructor_getitem(omnisci):
-    if omnisci.has_cuda:
+    if omnisci.has_cuda and omnisci.version < (5, 5):
         pytest.skip(
             'test_array_constructor_getitem: crashes CUDA enabled omniscidb'
             ' server [rbc issue 72]')
