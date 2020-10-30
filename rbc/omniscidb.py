@@ -664,7 +664,7 @@ class RemoteOmnisci(RemoteJIT):
 
             version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
             target_info.set('software', f'OmnisciDB {version_str}')
-        print(device_params)
+
         return targets
 
     @property
