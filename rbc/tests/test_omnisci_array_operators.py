@@ -490,7 +490,7 @@ def operator_is_not2(size, v):
                          ids=[item[0] for item in operator_methods])
 def test_array_operators(omnisci, suffix, signature, args, expected):
 
-    if omnisci.has_cuda and suffix in ['countOf', 'in', 'not_in']:
+    if omnisci.has_cuda and suffix in ['countOf', 'in', 'not_in'] and omnisci.version < (5, 5):
         # https://github.com/xnd-project/rbc/issues/107
         pytest.skip(f'operator_{suffix}: crashes CUDA enabled omniscidb server'
                     ' [rbc issue 107]')

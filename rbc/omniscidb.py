@@ -5,7 +5,6 @@ import re
 import warnings
 import configparser
 from collections import defaultdict, namedtuple
-from llvmlite.binding import ModuleRef
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from .omnisci_backend import (
@@ -17,8 +16,8 @@ from .omnisci_backend import (
     OmnisciCompilerPipeline, OmnisciCursorType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import ForbiddenIntrinsicError, ForbiddenNameError
-from .utils import get_version
+from .errors import ForbiddenNameError, OmnisciServerError
+from .utils import parse_version
 
 
 def get_literal_return(func, verbose=False):
@@ -265,12 +264,7 @@ class RemoteOmnisci(RemoteJIT):
     def version(self):
         if self._version is None:
             version = self.thrift_call('get_version')
-            m = re.match(r'(\d+)[.](\d+)[.](\d+)(.*)', version)
-            if m is None:
-                raise RuntimeError('Could not parse OmniSci version=%r'
-                                   % (version))
-            major, minor, micro, dev = m.groups()
-            self._version = (int(major), int(minor), int(micro), dev)
+            return parse_version(version)
         return self._version
 
     @property
@@ -321,7 +315,15 @@ class RemoteOmnisci(RemoteJIT):
             if len(msg) > 200:
                 msg = msg[:180] + '...' + msg[-15:]
             print(msg)
-        return client(Omnisci={name: args})['Omnisci'][name]
+        try:
+            return client(Omnisci={name: args})['Omnisci'][name]
+        except client.thrift.TMapDException as msg:
+            m = re.match(r'.*CalciteContextException.*(No match found for function signature.*)',
+                         msg.error_msg)
+            if m:
+                raise OmnisciServerError(f'[Calcite] {m.group(1)}')
+            # TODO: catch more known server failures here.
+            raise
 
     def get_tables(self):
         """Return a list of table names stored in the OmnisciDB server.
@@ -650,6 +652,19 @@ class RemoteOmnisci(RemoteJIT):
                 # see https://github.com/numba/numba/issues/4546
                 target_info.set('name', 'skylake')
             targets[device] = target_info
+
+            if target_info.is_cpu:
+                target_info.set('driver', 'none')
+                target_info.add_library('m')
+                target_info.add_library('stdio')
+                target_info.add_library('stdlib')
+                target_info.add_library('omniscidb')
+            elif target_info.is_gpu and self.version >= (5, 5):
+                target_info.add_library('libdevice')
+
+            version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
+            target_info.set('software', f'OmnisciDB {version_str}')
+
         return targets
 
     @property
@@ -662,50 +677,147 @@ class RemoteOmnisci(RemoteJIT):
                     'exp2', 'log2', 'log1p', 'fmod']
         return []
 
-    def catch_invalid_intrinsics(self, llvm_module: ModuleRef, target_info: TargetInfo):
-        """When libdevice is not available, the GPU target will use the same intrinsics
-        as the CPU one. Although some CPU intrinsics works, a few ones crash the server
-        """
-
-        def use_array(llvm_module):
-            import re
-            regex = r"{\ ?\w+\*, i64, i8\ ?}"
-            return re.search(regex, str(llvm_module)) is not None
-
-        array = use_array(llvm_module)
-
-        invalid = []
-
-        # libdevice bindings is only available on omniscidb >= 5.5 and numba >= 0.52
-        nb_version = get_version('numba')
-        if not array and target_info.is_gpu and not \
-                (self.version >= (5, 5) and nb_version >= (0, 52)):
-            invalid = ['asin', 'acos', 'atan', 'atan2', 'hypot', 'sinh',
-                       'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
-                       'expm1', 'exp2', 'log2', 'log1p', 'exp', 'exp2',
-                       'ldexp', 'nextafter', 'acosf', 'acoshf', 'asinf',
-                       'asinhf', 'atan2f', 'atanf', 'atanhf', 'coshf',
-                       'exp2f', 'expm1f', 'hypotf', 'ldexpf',
-                       'log1pf', 'log2f', 'nextafterf', 'sinhf', 'tanhf']
-
-        for fn in llvm_module.functions:
-            if fn.is_declaration and fn.name in invalid:
-                raise ForbiddenIntrinsicError(
-                    f"\n\nAttempt to use function with name `{fn.name}`.\n"
-                    f"As a workaround, you might want to consider upgrade "
-                    f"OmniSciDB and RBC to the latest version.\n"
-                    f"For more information, see: "
-                    f"https://github.com/xnd-project/rbc/issues/207")
-
-    def register(self):
-        if self.have_last_compile:
-            return
+    def _make_udtf(self, caller, orig_sig, sig):
+        if self.version < (5, 4):
+            v = '.'.join(map(str, self.version))
+            raise RuntimeError(
+                'UDTFs with Column arguments require '
+                'omniscidb 5.4 or newer, currently '
+                'connected to ', v)
         thrift = self.thrift_client.thrift
-
+        ext_arguments_map = self._get_ext_arguments_map()
         sizer_map = dict(
             ConstantParameter='kUserSpecifiedConstantParameter',
             RowMultiplier='kUserSpecifiedRowMultiplier',
             Constant='kConstant')
+
+        unspecified = object()
+        inputArgTypes = []
+        outputArgTypes = []
+        sqlArgTypes = []
+        sizer = None
+        sizer_index = -1
+
+        consumed_index = 0
+        name = caller.func.__name__
+        for i, a in enumerate(orig_sig[1]):
+            annot = a.annotation()
+            _sizer = annot.get('sizer', unspecified)
+            if _sizer is not unspecified:
+                if not (a.is_int and a.bits == 32):
+                    raise ValueError(
+                        'sizer argument must have type int32')
+                if _sizer is None:
+                    _sizer = 'RowMultiplier'
+                _sizer = sizer_map[_sizer]
+                # cannot have multiple sizer arguments
+                assert sizer_index == -1
+                sizer_index = consumed_index + 1
+                sizer = _sizer
+
+            if isinstance(a, OmnisciCursorType):
+                sqlArgTypes.append(ext_arguments_map['Cursor'])
+                for a_ in a.as_consumed_args:
+                    assert not isinstance(
+                        a_, OmnisciOutputColumnType), (a_)
+                    atype = ext_arguments_map[
+                        a_.tostring(use_annotation=False)]
+                    inputArgTypes.append(atype)
+                    consumed_index += 1
+            else:
+                atype = ext_arguments_map[
+                    a.tostring(use_annotation=False)]
+                if isinstance(a, OmnisciOutputColumnType):
+                    outputArgTypes.append(atype)
+                elif isinstance(a, OmnisciColumnType):
+                    sqlArgTypes.append(
+                        ext_arguments_map['Cursor'])
+                    inputArgTypes.append(atype)
+                else:
+                    sqlArgTypes.append(atype)
+                    inputArgTypes.append(atype)
+                consumed_index += 1
+        if sizer is None:
+            sizer = 'kConstant'
+        if sizer == 'kConstant':
+            sizer_index = get_literal_return(
+                caller.func, verbose=self.debug)
+            if sizer_index is None:
+                raise TypeError(
+                    f'Table function `{caller.func.__name__}`'
+                    ' has no sizing parameter nor has'
+                    ' it `return <literal value>` statement')
+        if sizer_index < 0:
+            raise ValueError(
+                f'Table function `{caller.func.__name__}`'
+                ' sizing parameter must be non-negative'
+                f' integer (got {sizer_index})')
+        sizer_type = (thrift.TOutputBufferSizeType
+                      ._NAMES_TO_VALUES[sizer])
+        return thrift.TUserDefinedTableFunction(
+            name + sig.mangling(),
+            sizer_type, sizer_index,
+            inputArgTypes, outputArgTypes, sqlArgTypes)
+
+    def _make_udtf_old(self, caller, orig_sig, sig):
+        # old style UDTF for omniscidb <= 5.3, to be deprecated
+        if self.version >= (5, 4):
+            v = '.'.join(map(str, self.version))
+            raise RuntimeError(
+                'Old-style UDTFs require '
+                'omniscidb 5.3 or older, currently '
+                'connected to ', v)
+        thrift = self.thrift_client.thrift
+        ext_arguments_map = self._get_ext_arguments_map()
+
+        sizer = None
+        sizer_index = -1
+        inputArgTypes = []
+        outputArgTypes = []
+        sqlArgTypes = []
+        name = caller.func.__name__
+        for i, a in enumerate(sig[1]):
+            _sizer = a.annotation().get('sizer')
+            if _sizer is not None:
+                # expect no more than one sizer argument
+                assert sizer_index == -1
+                sizer_index = i + 1
+                sizer = _sizer
+            atype = ext_arguments_map[
+                a.tostring(use_annotation=False)]
+            if 'output' in a.annotation():
+                outputArgTypes.append(atype)
+            else:
+                if 'input' in a.annotation():
+                    sqlArgTypes.append(atype)
+                elif 'cursor' in a.annotation():
+                    sqlArgTypes.append(
+                        ext_arguments_map['Cursor'])
+                inputArgTypes.append(atype)
+        if sizer is None:
+            sizer = 'kConstant'
+        sizer_type = (thrift.TOutputBufferSizeType
+                      ._NAMES_TO_VALUES[sizer])
+        return thrift.TUserDefinedTableFunction(
+            name + sig.mangling(),
+            sizer_type, sizer_index,
+            inputArgTypes, outputArgTypes, sqlArgTypes)
+
+    def _make_udf(self, caller, orig_sig, sig):
+        name = caller.func.__name__
+        thrift = self.thrift_client.thrift
+        ext_arguments_map = self._get_ext_arguments_map()
+        rtype = ext_arguments_map[sig[0].tostring(
+            use_annotation=False)]
+        atypes = [ext_arguments_map[a.tostring(
+            use_annotation=False)] for a in sig[1]]
+        return thrift.TUserDefinedFunction(
+            name + sig.mangling(),
+            atypes, rtype)
+
+    def register(self):
+        if self.have_last_compile:
+            return
 
         def is_udtf(sig):
             for a in sig[1]:
@@ -713,17 +825,16 @@ class RemoteOmnisci(RemoteJIT):
                     return True
             return False
 
-        udfs = []
-        udtfs = []
         device_ir_map = {}
-        unspecified = object()
         llvm_function_names = []
+        fid = 0  # UDF/UDTF id
+        udfs, udtfs = [], []
         for device, target_info in self.targets.items():
+            udfs_map, udtfs_map = {}, {}
             functions_and_signatures = []
             function_signatures = defaultdict(list)
             for caller in reversed(self.get_callers()):
-                ext_arguments_map = self._get_ext_arguments_map()
-                signatures = []
+                signatures = {}
                 name = caller.func.__name__
                 if name in self.forbidden_names:
                     raise ForbiddenNameError(
@@ -745,156 +856,39 @@ class RemoteOmnisci(RemoteJIT):
                                   f' older definition of `{name}` for `{sig}`'
                                   f' in {f2}#{n2}.')
                         continue
+                    fid += 1
                     orig_sig = sig
                     sig = sig[0](*sig.argument_types)
                     function_signatures[name].append(sig)
                     sig_is_udtf = is_udtf(sig)
                     is_old_udtf = 'table' in sig[0].annotation()
 
-                    # Note: device info cannot be included in mangling string
                     if i == 0 and (self.version < (5, 2) or is_old_udtf or
                                    (self.version < (5, 5) and sig_is_udtf)):
                         sig.set_mangling('')
                     else:
-                        # TODO: include device to the name mangling of UDFs
-                        if self.version < (5, 5) or not sig_is_udtf:
+                        if self.version < (5, 5):
                             sig.set_mangling('__%s' % (i))
                         else:
                             sig.set_mangling('__%s_%s' % (device, i))
 
                     if sig_is_udtf:
                         # new style UDTF, requires omniscidb version >= 5.4
-
-                        if self.version < (5, 4):
-                            v = '.'.join(map(str, self.version))
-                            raise RuntimeError(
-                                'UDTFs with Column arguments require '
-                                'omniscidb 5.4 or newer, currently '
-                                'connected to ', v)
-
-                        inputArgTypes = []
-                        outputArgTypes = []
-                        sqlArgTypes = []
-                        sizer = None
-                        sizer_index = -1
-
-                        consumed_index = 0
-                        for i, a in enumerate(orig_sig[1]):
-                            annot = a.annotation()
-                            _sizer = annot.get('sizer', unspecified)
-                            if _sizer is not unspecified:
-                                if not (a.is_int and a.bits == 32):
-                                    raise ValueError(
-                                        'sizer argument must have type int32')
-                                if _sizer is None:
-                                    _sizer = 'RowMultiplier'
-                                _sizer = sizer_map[_sizer]
-                                # cannot have multiple sizer arguments
-                                assert sizer_index == -1
-                                sizer_index = consumed_index + 1
-                                sizer = _sizer
-
-                            if isinstance(a, OmnisciCursorType):
-                                sqlArgTypes.append(ext_arguments_map['Cursor'])
-                                for a_ in a.as_consumed_args:
-                                    assert not isinstance(
-                                        a_, OmnisciOutputColumnType), (a_)
-                                    atype = ext_arguments_map[
-                                        a_.tostring(use_annotation=False)]
-                                    inputArgTypes.append(atype)
-                                    consumed_index += 1
-                            else:
-                                atype = ext_arguments_map[
-                                    a.tostring(use_annotation=False)]
-                                if isinstance(a, OmnisciOutputColumnType):
-                                    outputArgTypes.append(atype)
-                                elif isinstance(a, OmnisciColumnType):
-                                    sqlArgTypes.append(
-                                        ext_arguments_map['Cursor'])
-                                    inputArgTypes.append(atype)
-                                else:
-                                    sqlArgTypes.append(atype)
-                                    inputArgTypes.append(atype)
-                                consumed_index += 1
-                        if sizer is None:
-                            sizer = 'kConstant'
-                        if sizer == 'kConstant':
-                            sizer_index = get_literal_return(
-                                caller.func, verbose=self.debug)
-                            if sizer_index is None:
-                                raise TypeError(
-                                    f'Table function `{caller.func.__name__}`'
-                                    ' has no sizing parameter nor has'
-                                    ' it `return <literal value>` statement')
-                        if sizer_index < 0:
-                            raise ValueError(
-                                f'Table function `{caller.func.__name__}`'
-                                ' sizing parameter must be non-negative'
-                                f' integer (got {sizer_index})')
-                        sizer_type = (thrift.TOutputBufferSizeType
-                                      ._NAMES_TO_VALUES[sizer])
-                        udtfs.append(thrift.TUserDefinedTableFunction(
-                            name + sig.mangling(),
-                            sizer_type, sizer_index,
-                            inputArgTypes, outputArgTypes, sqlArgTypes))
-
+                        udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
                     elif is_old_udtf:
                         # old style UDTF for omniscidb <= 5.3, to be deprecated
-
-                        if self.version >= (5, 4):
-                            v = '.'.join(map(str, self.version))
-                            raise RuntimeError(
-                                'Old-style UDTFs require '
-                                'omniscidb 5.3 or older, currently '
-                                'connected to ', v)
-
-                        sizer = None
-                        sizer_index = -1
-                        inputArgTypes = []
-                        outputArgTypes = []
-                        sqlArgTypes = []
-                        for i, a in enumerate(sig[1]):
-                            _sizer = a.annotation().get('sizer')
-                            if _sizer is not None:
-                                # expect no more than one sizer argument
-                                assert sizer_index == -1
-                                sizer_index = i + 1
-                                sizer = _sizer
-                            atype = ext_arguments_map[
-                                a.tostring(use_annotation=False)]
-                            if 'output' in a.annotation():
-                                outputArgTypes.append(atype)
-                            else:
-                                if 'input' in a.annotation():
-                                    sqlArgTypes.append(atype)
-                                elif 'cursor' in a.annotation():
-                                    sqlArgTypes.append(
-                                        ext_arguments_map['Cursor'])
-                                inputArgTypes.append(atype)
-                        if sizer is None:
-                            sizer = 'kConstant'
-                        sizer_type = (thrift.TOutputBufferSizeType
-                                      ._NAMES_TO_VALUES[sizer])
-                        udtfs.append(thrift.TUserDefinedTableFunction(
-                            name + sig.mangling(),
-                            sizer_type, sizer_index,
-                            inputArgTypes, outputArgTypes, sqlArgTypes))
+                        udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
                     else:
-                        rtype = ext_arguments_map[sig[0].tostring(
-                            use_annotation=False)]
-                        atypes = [ext_arguments_map[a.tostring(
-                            use_annotation=False)] for a in sig[1]]
-                        udfs.append(thrift.TUserDefinedFunction(
-                            name + sig.mangling(),
-                            atypes, rtype))
-                    signatures.append(sig)
-                functions_and_signatures.append((caller.func, signatures))
-            llvm_module = compile_to_LLVM(functions_and_signatures,
-                                          target_info,
-                                          pipeline_class=OmnisciCompilerPipeline,
-                                          debug=self.debug)
+                        udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
+                    signatures[fid] = sig
 
-            self.catch_invalid_intrinsics(llvm_module, target_info)
+                functions_and_signatures.append((caller.func, signatures))
+
+            llvm_module, succesful_fids = compile_to_LLVM(
+                functions_and_signatures,
+                target_info,
+                pipeline_class=OmnisciCompilerPipeline,
+                debug=self.debug)
 
             assert llvm_module.triple == target_info.triple
             assert llvm_module.data_layout == target_info.datalayout
@@ -902,6 +896,18 @@ class RemoteOmnisci(RemoteJIT):
                 llvm_function_names.append(f.name)
 
             device_ir_map[device] = str(llvm_module)
+            skipped_names = []
+            for fid, udf in udfs_map.items():
+                if fid in succesful_fids:
+                    udfs.append(udf)
+                else:
+                    skipped_names.append(udf.name)
+
+            for fid, udtf in udtfs_map.items():
+                if fid in succesful_fids:
+                    udtfs.append(udtf)
+                else:
+                    skipped_names.append(udtf.name)
 
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.
@@ -911,6 +917,6 @@ class RemoteOmnisci(RemoteJIT):
             assert f.name in llvm_function_names
 
         self.set_last_compile(device_ir_map)
-        return self.thrift_call('register_runtime_extension_functions',
-                                self.session_id,
-                                udfs, udtfs, device_ir_map)
+        return self.thrift_call(
+            'register_runtime_extension_functions',
+            self.session_id, udfs, udtfs, device_ir_map)

@@ -192,6 +192,10 @@ def test_numpy_forbidden_ufunc(omnisci, nb_version):
     if not omnisci.has_cuda:
         pytest.skip('forbidden ufunc not required for CUDA-disabled OmniSciDB')
 
+    if omnisci.version >= (5, 5):
+        # Requires: https://github.com/omnisci/omniscidb-internal/pull/4955
+        pytest.skip('forbidden ufunc not required if CPU ufuncs work [omniscidb-interal PR 4955]')
+
     msg = "Attempt to use function with name `{ufunc}`"
 
     @omnisci('double(double)')

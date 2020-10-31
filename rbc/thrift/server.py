@@ -17,8 +17,12 @@ import multiprocessing
 import sys
 import pickle
 from . import utils
-import thriftpy2 as thr
-import thriftpy2.rpc
+
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import thriftpy2 as thr
+    import thriftpy2.rpc
 
 try:
     import tblib

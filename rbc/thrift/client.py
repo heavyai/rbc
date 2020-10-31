@@ -9,8 +9,11 @@ method `thrift_content`).
 
 import os
 import tempfile
-import thriftpy2 as thr
-import thriftpy2.rpc
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import thriftpy2 as thr
+    import thriftpy2.rpc
 import pickle
 import six
 from . import types

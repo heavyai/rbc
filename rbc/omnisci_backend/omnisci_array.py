@@ -2,9 +2,8 @@
 """
 
 __all__ = ['ArrayPointer', 'Array', 'omnisci_array_constructor',
-           'array_type_converter']
+           'array_type_converter', 'OmnisciArrayType']
 
-import warnings
 from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
@@ -48,10 +47,6 @@ builder_buffers = defaultdict(list)
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
 def omnisci_array_constructor(context, builder, sig, args):
-    if not context.target_info.is_cpu:
-        warnings.warn(
-            f'allocating arrays in {context.target_info.name}'
-            ' is not supported')
     ptr_type, sz_type, null_type = sig.return_type.dtype.members
 
     # zero-extend the element count to int64_t

@@ -2,107 +2,70 @@
 # Created: February 2019
 
 import re
+import warnings
+from collections import defaultdict
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
-from typing import List, Set
 from .utils import get_version
+from .errors import UnsupportedError
+from . import libfuncs
+
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
         extending
     from numba.core import types as nb_types
+    from numba.core import errors as nb_errors
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
         sigutils, cgutils, extending
     from numba import types as nb_types
+    from numba import errors as nb_errors
 
 int32_t = ir.IntType(32)
 
 
-def _lf(lst):
-    return lst + [e + 'f' for e in lst] + [e + 'l' for e in lst]
+def get_called_functions(library, funcname=None):
+    result = defaultdict(set)
+    module = library._final_module
+    if funcname is None:
+        for df in library.get_defined_functions():
+            for k, v in get_called_functions(library, df.name).items():
+                result[k].update(v)
+        return result
 
-
-def _f(lst):
-    return lst + [e + 'f' for e in lst]
-
-
-exp_funcs = ['exp', 'exp2', 'expm1', 'log', 'log2', 'log10',
-             'log1p', 'ilogb', 'logb']
-power_funcs = ['sqrt', 'cbrt', 'hypot', 'pow']
-trigonometric_funcs = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2']
-hyperbolic_funcs = ['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']
-nearest_funcs = ['ceil', 'floor', 'trunc', 'round', 'lround', 'llround',
-                 'nearbyint', 'rint', 'lrint', 'llrint']
-fp_funcs = ['frexp', 'ldexp', 'modf', 'scalbn', 'scalbln', 'nextafter',
-            'nexttoward', 'spacing']
-classification_funcs = ['fpclassify', 'isfinite', 'isinf', 'isnan',
-                        'isnormal', 'signbit']
-
-pymath_funcs = _f(['erf', 'erfc', 'lgamma', 'tgamma'])
-
-fp_funcs = _lf([*exp_funcs, *power_funcs, *trigonometric_funcs,
-                *hyperbolic_funcs, *nearest_funcs, *fp_funcs])
-
-libm_funcs = [*fp_funcs, *classification_funcs]
-
-stdio_funcs = ['printf', 'puts', 'fflush']
-
-stdlib_funcs = ['free', 'calloc']
-
-
-def get_function_dependencies(module, funcname, _deps=None):
-    if _deps is None:
-        _deps = dict()
     func = module.get_function(funcname)
     assert func.name == funcname, (func.name, funcname)
+    result['defined'].add(funcname)
     for block in func.blocks:
         for instruction in block.instructions:
             if instruction.opcode == 'call':
                 name = list(instruction.operands)[-1].name
                 f = module.get_function(name)
                 if name.startswith('llvm.'):
-                    _deps[name] = 'intrinsic'
+                    result['intrinsics'].add(name)
                 elif f.is_declaration:
-                    if name in libm_funcs:
-                        _deps[name] = 'libm'
-                    elif name in stdio_funcs:
-                        _deps[name] = 'stdio'
-                    elif name in stdlib_funcs:
-                        _deps[name] = 'stdlib'
-                    elif name in ['allocate_varlen_buffer']:
-                        _deps[name] = 'omnisci_internal'
-                    elif name in pymath_funcs:
-                        _deps[name] = 'pymath'
-                    elif name.startswith('__nv'):
-                        _deps[name] = 'cuda'
-                    else:
-                        _deps[name] = 'undefined'
+                    found = False
+                    for lib in library._linking_libraries:
+                        for df in lib.get_defined_functions():
+                            if name == df.name:
+                                result['defined'].add(name)
+                                result['libraries'].add(lib)
+                                found = True
+                                for k, v in get_called_functions(lib, name).items():
+                                    result[k].update(v)
+                                break
+                        if found:
+                            break
+                    if not found:
+                        result['declarations'].add(name)
                 else:
-                    if name not in _deps:
-                        _deps[name] = 'defined'
-                        get_function_dependencies(module, name, _deps=_deps)
-    return _deps
-
-
-def catch_undefined_functions(main_module: llvm.ModuleRef, target: TargetInfo,
-                              function_names: List[str]) -> Set[str]:
-    used_functions = set(function_names)
-    for fname in function_names:
-        deps = get_function_dependencies(main_module, fname)
-        for fn_name, descr in deps.items():
-            used_functions.add(fn_name)
-            if descr == 'undefined':
-                if fn_name.startswith('numba_') and target.has_numba:
-                    continue
-                if fn_name.startswith('Py') and target.has_cpython:
-                    continue
-                if fn_name.startswith('npy_') and target.has_numpy:
-                    continue
-                raise RuntimeError('function `%s` is undefined' % (fn_name))
-    return used_functions
+                    result['defined'].add(name)
+                    for k, v in get_called_functions(library, name).items():
+                        result[k].update(v)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -180,8 +143,7 @@ class RemoteGPUTargetContext(cpu.CPUContext):
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
-        nb_version = get_version('numba')
-        if nb_version >= (0, 52):
+        if get_version('numba') >= (0, 52):
             from numba.cuda import libdeviceimpl, mathimpl
             from .omnisci_backend import cuda_npyimpl
             self.install_registry(libdeviceimpl.registry)
@@ -190,7 +152,7 @@ class RemoteGPUTargetContext(cpu.CPUContext):
         else:
             import warnings
             warnings.warn("libdevice bindings requires Numba 0.52 or newer,"
-                          f" got Numba v{'.'.join(map(str, nb_version))}")
+                          f" got Numba v{'.'.join(map(str, get_version('numba')))}")
         super().load_additional_registries()
 
 
@@ -281,6 +243,81 @@ def make_wrapper(fname, atypes, rtype, cres, verbose=False):
     cres.library.add_ir_module(module)
 
 
+def compile_instance(func, sig,
+                     target: TargetInfo,
+                     typing_context,
+                     target_context,
+                     pipeline_class,
+                     main_library,
+                     debug=False):
+    """Compile a function with given signature. Return function name when succesful.
+    """
+    flags = compiler.Flags()
+    flags.set('no_compile')
+    flags.set('no_cpython_wrapper')
+    if get_version('numba') >= (0, 49):
+        flags.set('no_cfunc_wrapper')
+
+    fname = func.__name__ + sig.mangling()
+    args, return_type = sigutils.normalize_signature(
+        sig.tonumba(bool_is_int8=True))
+    try:
+        cres = compiler.compile_extra(typingctx=typing_context,
+                                      targetctx=target_context,
+                                      func=func,
+                                      args=args,
+                                      return_type=return_type,
+                                      flags=flags,
+                                      library=main_library,
+                                      locals={},
+                                      pipeline_class=pipeline_class)
+    except UnsupportedError as msg:
+        for m in re.finditer(r'[|]UnsupportedError[|](.*?)\n', str(msg), re.S):
+            warnings.warn(f'Skipping {fname}: {m.group(0)[18:]}')
+        return
+    except nb_errors.TypingError as msg:
+        for m in re.finditer(r'[|]UnsupportedError[|](.*?)\n', str(msg), re.S):
+            warnings.warn(f'Skipping {fname}: {m.group(0)[18:]}')
+            break
+        else:
+            raise
+        return
+    except Exception:
+        raise
+
+    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name)
+
+    for f in result['declarations']:
+        if target.supports(f):
+            continue
+        warnings.warn(f'Skipping {fname} that uses undefined function `{f}`')
+        return
+
+    nvvmlib = libfuncs.Library.get('nvvm')
+    llvmlib = libfuncs.Library.get('llvm')
+    for f in result['intrinsics']:
+        if target.is_gpu:
+            if f in nvvmlib:
+                continue
+
+        if target.is_cpu:
+            if f in llvmlib:
+                continue
+
+        warnings.warn(f'Skipping {fname} that uses unsupported intrinsic `{f}`')
+        return
+
+    make_wrapper(fname, args, return_type, cres, verbose=debug)
+
+    main_module = main_library._final_module
+    for lib in result['libraries']:
+        main_module.link_in(
+            lib._get_module_for_linking(), preserve=True,
+        )
+
+    return fname
+
+
 def compile_to_LLVM(functions_and_signatures,
                     target: TargetInfo,
                     pipeline_class=compiler.Compiler,
@@ -301,7 +338,6 @@ def compile_to_LLVM(functions_and_signatures,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-
     target_desc = registry.cpu_target
 
     if target is None:
@@ -314,9 +350,11 @@ def compile_to_LLVM(functions_and_signatures,
         if target.is_cpu:
             typing_context = typing.Context()
             target_context = RemoteCPUContext(typing_context, target)
-        else:  # gpu
+        elif target.is_gpu:
             typing_context = RemoteGPUTypingContext()
             target_context = RemoteGPUTargetContext(typing_context, target)
+        else:
+            raise ValueError(f'Unknown target {target.name}')
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
@@ -331,80 +369,63 @@ def compile_to_LLVM(functions_and_signatures,
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
     main_module = main_library._final_module
 
-    flags = compiler.Flags()
-    flags.set('no_compile')
-    flags.set('no_cpython_wrapper')
-    if get_version('numba') >= (0, 49):
-        flags.set('no_cfunc_wrapper')
-
+    succesful_fids = []
     function_names = []
     for func, signatures in functions_and_signatures:
-        for sig in signatures:
-            fname = func.__name__ + sig.mangling()
-            function_names.append(fname)
-            args, return_type = sigutils.normalize_signature(
-                sig.tonumba(bool_is_int8=True))
-            cres = compiler.compile_extra(typingctx=typing_context,
-                                          targetctx=target_context,
-                                          func=func,
-                                          args=args,
-                                          return_type=return_type,
-                                          flags=flags,
-                                          library=main_library,
-                                          locals={},
-                                          pipeline_class=pipeline_class)
-            make_wrapper(fname, args, return_type, cres,
-                         verbose=debug)
-
-    seen = set()
-    for _library in main_library._linking_libraries:
-        if _library not in seen:
-            seen.add(_library)
-            main_module.link_in(
-                _library._get_module_for_linking(), preserve=True,
-            )
+        for fid, sig in signatures.items():
+            fname = compile_instance(func, sig, target, typing_context,
+                                     target_context, pipeline_class,
+                                     main_library,
+                                     debug=debug)
+            if fname is not None:
+                succesful_fids.append(fid)
+                function_names.append(fname)
 
     main_library._optimize_final_module()
 
-    # Catch undefined functions:
-    used_functions = catch_undefined_functions(main_module, target, function_names)
+    # Remove unused defined functions and declarations
+    used_symbols = defaultdict(set)
+    for fname in function_names:
+        for k, v in get_called_functions(main_library, fname).items():
+            used_symbols[k].update(v)
 
-    unused_functions = [f.name for f in main_module.functions
-                        if f.name not in used_functions]
+    all_symbols = get_called_functions(main_library)
 
-    if debug:
-        print('compile_to_IR: the following functions are used')
-        for fname in used_functions:
-            lf = main_module.get_function(fname)
-            print('  [ALIVE]', fname, 'with', lf.linkage)
+    unused_symbols = defaultdict(set)
+    for k, lst in all_symbols.items():
+        if k == 'libraries':
+            continue
+        for fn in lst:
+            if fn not in used_symbols[k]:
+                unused_symbols[k].add(fn)
 
-    if unused_functions:
-        if debug:
-            print('compile_to_IR: the following functions are not used'
-                  ' and will be removed:')
-        for fname in unused_functions:
-            lf = main_module.get_function(fname)
-            if lf.is_declaration:
-                # if the function is a declaration,
-                # we just put the linkage as external
-                lf.linkage = llvm.Linkage.external
-            else:
-                # but if the function is not a declaration,
-                # we change the linkage to private
-                lf.linkage = llvm.Linkage.private
-            if debug:
-                print('  [DEAD]', fname, 'with', lf.linkage)
+    changed = False
+    for f in main_module.functions:
+        fn = f.name
+        if fn.startswith('llvm.'):
+            if f.name in unused_symbols['intrinsics']:
+                f.linkage = llvm.Linkage.external
+                changed = True
+        elif f.is_declaration:
+            if f.name in unused_symbols['declarations']:
+                f.linkage = llvm.Linkage.external
+                changed = True
+        else:
+            if f.name in unused_symbols['defined']:
+                f.linkage = llvm.Linkage.private
+                changed = True
 
-        main_library._optimize_final_module()
     # TODO: determine unused global_variables and struct_types
+
+    if changed:
+        main_library._optimize_final_module()
 
     main_module.verify()
     main_library._finalized = True
-
     main_module.triple = target.triple
     main_module.data_layout = target.datalayout
 
-    return main_module
+    return main_module, succesful_fids
 
 
 def compile_IR(ir):
@@ -460,11 +481,14 @@ def cg_fflush(builder):
 @extending.intrinsic
 def fflush(typingctx):
     """fflush that can be called from Numba jit-decorated functions.
+
+    Note: fflush is available only for CPU target.
     """
     sig = nb_types.void(nb_types.void)
 
     def codegen(context, builder, signature, args):
-        cg_fflush(builder)
+        if typingctx.target_info.is_cpu:
+            cg_fflush(builder)
 
     return sig, codegen
 
@@ -472,12 +496,15 @@ def fflush(typingctx):
 @extending.intrinsic
 def printf(typingctx, format_type, *args):
     """printf that can be called from Numba jit-decorated functions.
+
+    Note: printf is available only for CPU target.
     """
     if isinstance(format_type, nb_types.StringLiteral):
         sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
 
         def codegen(context, builder, signature, args):
-            cgutils.printf(builder, format_type.literal_value, *args[1:])
-            cg_fflush(builder)
+            if typingctx.target_info.is_cpu:
+                cgutils.printf(builder, format_type.literal_value, *args[1:])
+                cg_fflush(builder)
 
         return sig, codegen
