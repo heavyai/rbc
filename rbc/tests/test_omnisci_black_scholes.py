@@ -114,8 +114,7 @@ def test_black_scholes_udf(omnisci):
 
 
 def test_black_scholes_udtf(omnisci):
-    if omnisci.has_cuda:  # and omnisci.version < (5, 5):
-        # Requires https://github.com/omnisci/omniscidb-internal/pull/4958
+    if omnisci.has_cuda and omnisci.version < (5, 5):
         pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [issue 169]')
 
