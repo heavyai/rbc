@@ -562,3 +562,58 @@ def test_overload(omnisci, step):
                 match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>,"
                        r" COLUMN<FLOAT>, INTEGER\) not supported")):
             descr, result = omnisci.sql_execute(sql_query)
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with aggregate udtf column"
+        " support (got %s) [issue 174]" % (
+            available_version,)))
+@pytest.mark.parametrize("agg", [
+    'avg', 'min', 'max', 'sum', 'count', 'approx_count_distinct', 'sample',
+    'single_value'])
+def test_aggregate_column(omnisci, agg):
+    omnisci.reset()
+    omnisci.register()
+
+    if agg == 'single_value':
+
+        @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+        def test_rbc_last(x, m, y):
+            y[0] = x[len(x)-1]
+            return 1
+
+        sql_query = (f'select f8 from {omnisci.table_name}')
+        descr, result = omnisci.sql_execute(sql_query)
+        expected_result = list(result)[-1:]
+
+        sql_query = (f'select {agg}(out0) from table(test_rbc_last(cursor('
+                     f'select f8 from {omnisci.table_name}), 1))')
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+
+        assert result == expected_result
+        return
+
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def test_rbc_mycopy(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    extra_args = ''
+    if agg == 'approx_count_distinct':
+        extra_args = ', 1'
+
+    sql_query = (f'select {agg}(f8{extra_args}) from {omnisci.table_name}')
+    descr, result = omnisci.sql_execute(sql_query)
+    expected_result = list(result)
+
+    sql_query = (
+        f'select {agg}(out0{extra_args}) from table(test_rbc_mycopy(cursor('
+        f'select f8 from {omnisci.table_name}), 1))')
+    descr, result = omnisci.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == expected_result
