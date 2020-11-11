@@ -613,6 +613,45 @@ def test_aggregate_column(omnisci, agg):
     sql_query = (
         f'select {agg}(out0{extra_args}) from table(test_rbc_mycopy(cursor('
         f'select f8 from {omnisci.table_name}), 1))')
+
+    descr, result = omnisci.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == expected_result
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with aggregate udtf column"
+        " support (got %s) [issue 174]" % (
+            available_version,)))
+@pytest.mark.parametrize("agg", [
+    'avg', 'min', 'max', 'sum', 'count', 'approx_count_distinct', 'sample'])
+def test_aggregate_column_groupby(omnisci, agg):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<bool>)')
+    def test_rbc_mycopy2(x, bx, m, y, by):
+        for i in range(len(x)):
+            y[i] = x[i]
+            by[i] = bx[i]
+        return len(x)
+
+    extra_args = ''
+    if agg == 'approx_count_distinct':
+        extra_args = ', 1'
+
+    sql_query = (f'select {agg}(f8{extra_args}) from {omnisci.table_name} group by b')
+    descr, result = omnisci.sql_execute(sql_query)
+    expected_result = list(result)
+
+    sql_query = (
+        f'select {agg}(out0{extra_args}) from table(test_rbc_mycopy2(cursor('
+        f'select f8, b from {omnisci.table_name}), 1)) group by out1')
+
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
 
