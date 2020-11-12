@@ -728,17 +728,24 @@ class RemoteOmnisci(RemoteJIT):
                     inputArgTypes.append(atype)
                     consumed_index += 1
             else:
-                atype = ext_arguments_map[
-                    a.tostring(use_annotation=False)]
                 if isinstance(a, OmnisciOutputColumnType):
+                    if self.version < (5, 5):
+                        atype = ext_arguments_map[
+                            a.tostring(use_annotation=False)]
+                    else:
+                        atype = ext_arguments_map[
+                            a[0][0].tostring(use_annotation=False)]
                     outputArgTypes.append(atype)
-                elif isinstance(a, OmnisciColumnType):
-                    sqlArgTypes.append(
-                        ext_arguments_map['Cursor'])
-                    inputArgTypes.append(atype)
                 else:
-                    sqlArgTypes.append(atype)
-                    inputArgTypes.append(atype)
+                    atype = ext_arguments_map[
+                        a.tostring(use_annotation=False)]
+                    if isinstance(a, OmnisciColumnType):
+                        sqlArgTypes.append(
+                            ext_arguments_map['Cursor'])
+                        inputArgTypes.append(atype)
+                    else:
+                        sqlArgTypes.append(atype)
+                        inputArgTypes.append(atype)
                 consumed_index += 1
         if sizer is None:
             sizer = 'kConstant'

@@ -564,20 +564,35 @@ def test_overload(omnisci, step):
             descr, result = omnisci.sql_execute(sql_query)
 
 
+omnisci_aggregators = [
+    'avg', 'min', 'max', 'sum', 'count',
+    'approx_count_distinct', 'sample', 'single_value', 'stddev',
+    'stddev_pop', 'stddev_samp', 'variance', 'var_pop', 'var_samp',
+]
+omnisci_aggregators2 = ['correlation', 'corr', 'covar_pop', 'covar_samp']
+# TODO: round_to_digit, mod, truncate
+omnisci_functions = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'abs', 'ceil', 'degrees',
+                     'exp', 'floor', 'ln', 'log', 'log10', 'radians', 'round', 'sign', 'sqrt']
+omnisci_functions2 = ['atan2', 'power']
+omnisci_unary_operations = ['+', '-']
+omnisci_binary_operations = ['+', '-', '*', '/']
+
+
 @pytest.mark.skipif(
     available_version < (5, 5),
     reason=(
         "test requires omniscidb with aggregate udtf column"
         " support (got %s) [issue 174]" % (
             available_version,)))
-@pytest.mark.parametrize("agg", [
-    'avg', 'min', 'max', 'sum', 'count', 'approx_count_distinct', 'sample',
-    'single_value'])
-def test_aggregate_column(omnisci, agg):
+@pytest.mark.parametrize("prop", ['', 'groupby'])
+@pytest.mark.parametrize("oper", omnisci_aggregators + omnisci_aggregators2)
+def test_column_aggregate(omnisci, prop, oper):
     omnisci.reset()
     omnisci.register()
 
-    if agg == 'single_value':
+    if oper == 'single_value':
+        if prop:
+            return
 
         @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
         def test_rbc_last(x, m, y):
@@ -588,7 +603,7 @@ def test_aggregate_column(omnisci, agg):
         descr, result = omnisci.sql_execute(sql_query)
         expected_result = list(result)[-1:]
 
-        sql_query = (f'select {agg}(out0) from table(test_rbc_last(cursor('
+        sql_query = (f'select {oper}(out0) from table(test_rbc_last(cursor('
                      f'select f8 from {omnisci.table_name}), 1))')
         descr, result = omnisci.sql_execute(sql_query)
         result = list(result)
@@ -602,22 +617,70 @@ def test_aggregate_column(omnisci, agg):
             y[i] = x[i]
         return len(x)
 
+    @omnisci('int32(Cursor<double, double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<double>)')
+    def test_rbc_mycopy2(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    @omnisci('int32(Cursor<double, bool>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<bool>)')
+    def test_rbc_mycopy2b(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    @omnisci('int32(Cursor<double, double, bool>, RowMultiplier,'
+             'OutputColumn<double>, OutputColumn<double>, OutputColumn<bool>)')
+    def test_rbc_mycopy3(x1, x2, x3, m, y1, y2, y3):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+            y3[i] = x3[i]
+        return len(x1)
+
     extra_args = ''
-    if agg == 'approx_count_distinct':
+    if oper == 'approx_count_distinct':
         extra_args = ', 1'
 
-    sql_query = (f'select {agg}(f8{extra_args}) from {omnisci.table_name}')
-    descr, result = omnisci.sql_execute(sql_query)
-    expected_result = list(result)
+    mycopy = 'test_rbc_mycopy'
 
-    sql_query = (
-        f'select {agg}(out0{extra_args}) from table(test_rbc_mycopy(cursor('
-        f'select f8 from {omnisci.table_name}), 1))')
+    if oper in omnisci_aggregators2:
+        if prop == 'groupby':
+            sql_query_expected = (
+                f'select {oper}(f8, d) from {omnisci.table_name} group by b')
+            sql_query = (
+                f'select {oper}(out0, out1) from table({mycopy}3(cursor('
+                f'select f8, d, b from {omnisci.table_name}), 1)) group by out2')
+            pytest.skip(f'server crashes on `{sql_query}`')
+        else:
+            sql_query_expected = (f'select {oper}(f8, d) from {omnisci.table_name}')
+            sql_query = (
+                f'select {oper}(out0, out1) from table({mycopy}2(cursor('
+                f'select f8, d from {omnisci.table_name}), 1))')
+    else:
+        if prop == 'groupby':
+            sql_query_expected = (
+                f'select {oper}(f8{extra_args}) from {omnisci.table_name} group by b')
+            sql_query = (
+                f'select {oper}(out0) from table({mycopy}2b(cursor('
+                f'select f8, b from {omnisci.table_name}), 1)) group by out1')
+        else:
+            sql_query_expected = (f'select {oper}(f8{extra_args}) from {omnisci.table_name}')
+            sql_query = (
+                f'select {oper}(out0) from table({mycopy}(cursor('
+                f'select f8 from {omnisci.table_name}), 1))')
+
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
 
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
 
-    assert result == expected_result
+    assert result == result_expected
 
 
 @pytest.mark.skipif(
@@ -626,33 +689,115 @@ def test_aggregate_column(omnisci, agg):
         "test requires omniscidb with aggregate udtf column"
         " support (got %s) [issue 174]" % (
             available_version,)))
-@pytest.mark.parametrize("agg", [
-    'avg', 'min', 'max', 'sum', 'count', 'approx_count_distinct', 'sample'])
-def test_aggregate_column_groupby(omnisci, agg):
+@pytest.mark.parametrize("oper", omnisci_functions + omnisci_functions2)
+def test_column_function(omnisci, oper):
     omnisci.reset()
     omnisci.register()
 
-    @omnisci('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
-             ' OutputColumn<double>, OutputColumn<bool>)')
-    def test_rbc_mycopy2(x, bx, m, y, by):
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def test_rbc_mycopy(x, m, y):
         for i in range(len(x)):
             y[i] = x[i]
-            by[i] = bx[i]
         return len(x)
 
-    extra_args = ''
-    if agg == 'approx_count_distinct':
-        extra_args = ', 1'
+    @omnisci('int32(Cursor<double, double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<double>)')
+    def test_rbc_mycopy2(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
 
-    sql_query = (f'select {agg}(f8{extra_args}) from {omnisci.table_name} group by b')
-    descr, result = omnisci.sql_execute(sql_query)
-    expected_result = list(result)
+    mycopy = 'test_rbc_mycopy'
 
-    sql_query = (
-        f'select {agg}(out0{extra_args}) from table(test_rbc_mycopy2(cursor('
-        f'select f8, b from {omnisci.table_name}), 1)) group by out1')
+    if oper in omnisci_functions2:
+        sql_query_expected = (f'select {oper}(f8, d) from {omnisci.table_name}')
+        sql_query = (
+            f'select {oper}(out0, out1) from table({mycopy}2(cursor('
+            f'select f8, d from {omnisci.table_name}), 1))')
+    else:
+        sql_query_expected = (f'select {oper}(f8) from {omnisci.table_name}')
+        sql_query = (
+            f'select {oper}(out0) from table({mycopy}(cursor('
+            f'select f8 from {omnisci.table_name}), 1))')
+
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
 
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
 
-    assert result == expected_result
+    if oper in ['asin', 'acos']:
+        # result contains nan
+        assert repr(result) == repr(result_expected)
+    else:
+        assert result == result_expected
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with aggregate udtf column"
+        " support (got %s) [issue 174]" % (
+            available_version,)))
+@pytest.mark.parametrize("oper", omnisci_binary_operations)
+def test_column_binary_operation(omnisci, oper):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Cursor<double, double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<double>)')
+    def test_rbc_mycopy2(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select f8 {oper} d from {omnisci.table_name}')
+    sql_query = (
+        f'select out0 {oper} out1 from table({mycopy}2(cursor('
+        f'select f8, d from {omnisci.table_name}), 1))')
+
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    descr, result = omnisci.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == result_expected
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with aggregate udtf column"
+        " support (got %s) [issue 174]" % (
+            available_version,)))
+@pytest.mark.parametrize("oper", omnisci_unary_operations)
+def test_column_unary_operation(omnisci, oper):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Cursor<double>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def test_rbc_mycopy(x1, m, y1):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select {oper} f8 from {omnisci.table_name}')
+    sql_query = (
+        f'select {oper} out0 from table({mycopy}(cursor('
+        f'select f8 from {omnisci.table_name}), 1))')
+
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    descr, result = omnisci.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == result_expected
