@@ -409,3 +409,35 @@ def test_array_constructor_is_null(omnisci):
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (0,)
+
+
+def test_omnisci_lazy_linking(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_backend import Array
+
+    @omnisci('int32[](int32[])')
+    def array_sum_int32(x):
+        n = len(x)
+        y = Array(n, 'int32')
+        for i in range(n):
+            y[i] = x[i]
+        return y
+    
+    @omnisci('int32(int32)')
+    def incr(x):
+        return x+1234567
+    
+    query = (
+        'EXPLAIN'
+        f'SELECT incr(4), array_sum_int32(i4)'
+        f'FROM {omnisci.table_name}'
+    )
+
+    _, result = omnisci.sql_execute(query)
+
+    llvm_ir = list(result)[0][0]
+
+    # array_sum_int32 will prevent `incr` to run in a GPU
+    assert 'incr__gpu_0' in llvm_ir
+    assert 'incr__cpu_0' not in llvm_ir
