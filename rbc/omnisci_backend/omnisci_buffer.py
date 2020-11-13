@@ -177,6 +177,29 @@ def omnisci_buffer_getitem(x, i):
 def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
+    eltype = data.eltype
+    nb_value = value
+
+    # [rbc issue-197] Numba promotes operations like
+    # int32(a) + int32(b) to int64
+    def truncate_or_extend(builder, value, buf_typ):
+        # buf[pos] = val
+
+        if isinstance(nb_value, types.Integer):
+            if eltype.bitwidth < nb_value.bitwidth:
+                return builder.trunc(value, buf_typ)
+            elif eltype.bitwidth > nb_value.bitwidth:
+                is_signed = nb_value.signed
+                return builder.zext(value, buf_typ) if is_signed else \
+                    builder.sext(value, buf_typ)
+            return value
+        else:  # Floating-point
+            if eltype.bitwidth < nb_value.bitwidth:
+                return builder.fptrunc(value, buf_typ)
+            elif eltype.bitwidth > nb_value.bitwidth:
+                return builder.fpext(value, buf_typ)
+            return value
+
     def codegen(context, builder, signature, args):
         zero = int32_t(0)
 
@@ -186,6 +209,7 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
         ptr = builder.load(rawptr)
 
         buf = builder.load(builder.gep(ptr, [zero, zero]))
+        value = truncate_or_extend(builder, value, buf.type.pointee)
         builder.store(value, builder.gep(buf, [index]))
 
     return sig, codegen

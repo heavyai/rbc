@@ -409,3 +409,25 @@ def test_array_constructor_is_null(omnisci):
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (0,)
+
+
+def test_issue197(omnisci):
+    omnisci.reset()
+
+    from rbc.omnisci_backend import Array
+    import numpy as np
+
+    @omnisci('int32[](int32[])')
+    def fn_issue197(x):
+        y = Array(5, 'int32')
+        for i in range(len(x)):
+            y[i] = x[i] + np.int32(3)
+        return y
+
+    _, result = omnisci.sql_execute(
+        f'select i4, fn_issue197(i4) from {omnisci.table_name};'
+    )
+
+    i4, ret = list(result)[0]
+    for x, y in zip(i4, ret):
+        assert y == x + 3
