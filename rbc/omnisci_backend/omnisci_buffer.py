@@ -190,14 +190,16 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
                 return builder.trunc(value, buf_typ)
             elif eltype.bitwidth > nb_value.bitwidth:
                 is_signed = nb_value.signed
-                return builder.zext(value, buf_typ) if is_signed else \
-                    builder.sext(value, buf_typ)
+                return builder.sext(value, buf_typ) if is_signed else \
+                    builder.zext(value, buf_typ)
             return value
-        else:  # Floating-point
+        elif isinstance(nb_value, types.Float):  # Floating-point
             if eltype.bitwidth < nb_value.bitwidth:
-                return builder.fptrunc(value, buf_typ)
+                return builder.fptrunc(value, buf_typ)  # truncate
             elif eltype.bitwidth > nb_value.bitwidth:
-                return builder.fpext(value, buf_typ)
+                return builder.fpext(value, buf_typ)  # extend
+            return value
+        else:
             return value
 
     def codegen(context, builder, signature, args):

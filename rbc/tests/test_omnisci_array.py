@@ -411,23 +411,59 @@ def test_array_constructor_is_null(omnisci):
     assert list(result)[0] == (0,)
 
 
-def test_issue197(omnisci):
+inps = [('int', 'i4', 'trunc'), ('int', 'i4', 'sext'),
+        ('int', 'i4', 'zext'), ('float', 'f4', 'fptrunc'),
+        ('float', 'f8', 'fpext')]
+
+
+@pytest.mark.parametrize("typ, col, suffix", inps,
+                         ids=[item[-1] for item in inps])
+def test_issue197(omnisci, typ, col, suffix):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Array
-    import numpy as np
+    import rbc.omnisci_backend as np
+    from numba import types
 
     @omnisci('int32[](int32[])')
-    def fn_issue197(x):
-        y = Array(5, 'int32')
+    def fn_issue197_int_trunc(x):
+        y = np.zeros_like(x)
         for i in range(len(x)):
-            y[i] = x[i] + np.int32(3)
+            y[i] = types.int64(x[i] + 3)  # trunc(i64) -> i32
         return y
 
+    @omnisci('int32[](int32[])')
+    def fn_issue197_int_sext(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = types.int8(x[i] + 3)  # sext(i8) -> i32
+        return y
+
+    @omnisci('int32[](int32[])')
+    def fn_issue197_int_zext(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = types.uint8(x[i] + 3)  # zext(i8) -> i32
+        return y
+
+    @omnisci('float[](float[])')
+    def fn_issue197_float_fptrunc(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = types.float64(x[i] + 3.0)  # fptrunc(f64) -> f3232
+        return y
+
+    @omnisci('double[](double[])')
+    def fn_issue197_float_fpext(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = types.float32(x[i] + 3.0)  # fpext(f32) -> f64
+        return y
+
+    fn_name = f"fn_issue197_{typ}_{suffix}"
     _, result = omnisci.sql_execute(
-        f'select i4, fn_issue197(i4) from {omnisci.table_name};'
+        f'SELECT {col}, {fn_name}({col}) FROM {omnisci.table_name};'
     )
 
-    i4, ret = list(result)[0]
-    for x, y in zip(i4, ret):
+    column, ret = list(result)[0]
+    for x, y in zip(column, ret):
         assert y == x + 3
