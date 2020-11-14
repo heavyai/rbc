@@ -78,8 +78,10 @@ def omnisci_np_zeros(shape, dtype=None):
     else:
         nb_dtype = dtype
 
+    fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
+
     def impl(shape, dtype=None):
-        return full(shape, 0, nb_dtype)  # noqa: F821
+        return full(shape, fill_value, nb_dtype)  # noqa: F821
     return impl
 
 
@@ -91,8 +93,10 @@ def omnisci_np_zeros_like(a, dtype=None):
         else:
             nb_dtype = dtype
 
+        fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
+
         def impl(a, dtype=None):
-            return full_like(a, 0, nb_dtype)  # noqa: F821
+            return full_like(a, fill_value, nb_dtype)  # noqa: F821
         return impl
 
 
@@ -104,8 +108,10 @@ def omnisci_np_ones(shape, dtype=None):
     else:
         nb_dtype = dtype
 
+    fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
+
     def impl(shape, dtype=None):
-        return full(shape, 1, nb_dtype)  # noqa: F821
+        return full(shape, fill_value, nb_dtype)  # noqa: F821
     return impl
 
 
@@ -117,8 +123,10 @@ def omnisci_np_ones_like(a, dtype=None):
         else:
             nb_dtype = dtype
 
+        fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
+
         def impl(a, dtype=None):
-            return full_like(a, 1, nb_dtype)  # noqa: F821
+            return full_like(a, fill_value, nb_dtype)  # noqa: F821
         return impl
 
 

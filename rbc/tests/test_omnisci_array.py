@@ -411,9 +411,9 @@ def test_array_constructor_is_null(omnisci):
     assert list(result)[0] == (0,)
 
 
-inps = [('int', 'i4', 'trunc'), ('int', 'i4', 'sext'),
-        ('int', 'i4', 'zext'), ('float', 'f4', 'fptrunc'),
-        ('float', 'f8', 'fpext')]
+inps = [('int32', 'i4', 'trunc'), ('int32', 'i4', 'sext'),
+        ('int32', 'i4', 'zext'), ('float', 'f4', 'fptrunc'),
+        ('double', 'f8', 'fpext')]
 
 
 @pytest.mark.parametrize("typ, col, suffix", inps,
@@ -424,42 +424,24 @@ def test_issue197(omnisci, typ, col, suffix):
     import rbc.omnisci_backend as np
     from numba import types
 
-    @omnisci('int32[](int32[])')
-    def fn_issue197_int_trunc(x):
-        y = np.zeros_like(x)
-        for i in range(len(x)):
-            y[i] = types.int64(x[i] + 3)  # trunc(i64) -> i32
-        return y
+    cast = dict(
+        trunc=types.int64,
+        sext=types.int8,
+        zext=types.uint8,
+        fptrunc=types.float64,
+        fpext=types.float32)[suffix]
 
-    @omnisci('int32[](int32[])')
-    def fn_issue197_int_sext(x):
+    def fn_issue197(x):
         y = np.zeros_like(x)
         for i in range(len(x)):
-            y[i] = types.int8(x[i] + 3)  # sext(i8) -> i32
-        return y
-
-    @omnisci('int32[](int32[])')
-    def fn_issue197_int_zext(x):
-        y = np.zeros_like(x)
-        for i in range(len(x)):
-            y[i] = types.uint8(x[i] + 3)  # zext(i8) -> i32
-        return y
-
-    @omnisci('float[](float[])')
-    def fn_issue197_float_fptrunc(x):
-        y = np.zeros_like(x)
-        for i in range(len(x)):
-            y[i] = types.float64(x[i] + 3.0)  # fptrunc(f64) -> f3232
-        return y
-
-    @omnisci('double[](double[])')
-    def fn_issue197_float_fpext(x):
-        y = np.zeros_like(x)
-        for i in range(len(x)):
-            y[i] = types.float32(x[i] + 3.0)  # fpext(f32) -> f64
+            y[i] = cast(x[i] + 3)
         return y
 
     fn_name = f"fn_issue197_{typ}_{suffix}"
+    fn_issue197.__name__ = fn_name
+
+    omnisci(f'{typ}[]({typ}[])')(fn_issue197)
+
     _, result = omnisci.sql_execute(
         f'SELECT {col}, {fn_name}({col}) FROM {omnisci.table_name};'
     )
@@ -467,3 +449,27 @@ def test_issue197(omnisci, typ, col, suffix):
     column, ret = list(result)[0]
     for x, y in zip(column, ret):
         assert y == x + 3
+
+
+def test_issue197_bool(omnisci):
+    omnisci.reset()
+
+    import rbc.omnisci_backend as np
+
+    @omnisci('bool[](bool[])')
+    def fn_issue197_bool(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = bool(x[i])
+        return y
+
+    col = 'b'
+    fn_name = 'fn_issue197_bool'
+
+    _, result = omnisci.sql_execute(
+        f'SELECT {col}, {fn_name}({col}) FROM {omnisci.table_name};'
+    )
+
+    column, ret = list(result)[0]
+    for x, y in zip(column, ret):
+        assert bool(x) == bool(y)
