@@ -409,3 +409,67 @@ def test_array_constructor_is_null(omnisci):
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (0,)
+
+
+inps = [('int32', 'i4', 'trunc'), ('int32', 'i4', 'sext'),
+        ('int32', 'i4', 'zext'), ('float', 'f4', 'fptrunc'),
+        ('double', 'f8', 'fpext')]
+
+
+@pytest.mark.parametrize("typ, col, suffix", inps,
+                         ids=[item[-1] for item in inps])
+def test_issue197(omnisci, typ, col, suffix):
+    omnisci.reset()
+
+    import rbc.omnisci_backend as np
+    from numba import types
+
+    cast = dict(
+        trunc=types.int64,
+        sext=types.int8,
+        zext=types.uint8,
+        fptrunc=types.float64,
+        fpext=types.float32)[suffix]
+
+    def fn_issue197(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = cast(x[i] + 3)
+        return y
+
+    fn_name = f"fn_issue197_{typ}_{suffix}"
+    fn_issue197.__name__ = fn_name
+
+    omnisci(f'{typ}[]({typ}[])')(fn_issue197)
+
+    _, result = omnisci.sql_execute(
+        f'SELECT {col}, {fn_name}({col}) FROM {omnisci.table_name};'
+    )
+
+    column, ret = list(result)[0]
+    for x, y in zip(column, ret):
+        assert y == x + 3
+
+
+def test_issue197_bool(omnisci):
+    omnisci.reset()
+
+    import rbc.omnisci_backend as np
+
+    @omnisci('bool[](bool[])')
+    def fn_issue197_bool(x):
+        y = np.zeros_like(x)
+        for i in range(len(x)):
+            y[i] = bool(x[i])
+        return y
+
+    col = 'b'
+    fn_name = 'fn_issue197_bool'
+
+    _, result = omnisci.sql_execute(
+        f'SELECT {col}, {fn_name}({col}) FROM {omnisci.table_name};'
+    )
+
+    column, ret = list(result)[0]
+    for x, y in zip(column, ret):
+        assert bool(x) == bool(y)

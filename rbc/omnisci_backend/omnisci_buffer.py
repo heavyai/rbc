@@ -58,6 +58,13 @@ class BufferType(types.Type):
     """Numba type class for Omnisci buffer structures.
     """
 
+    @property
+    def eltype(self):
+        """
+        Return buffer element dtype.
+        """
+        return self.members[0].dtype
+
 
 class BufferPointer(types.Type):
     """Numba type class for pointers to Omnisci buffer structures.
@@ -71,7 +78,7 @@ class BufferPointer(types.Type):
         self.dtype = dtype    # struct dtype
         self.eltype = eltype  # buffer element dtype
         name = "(%s)*" % dtype
-        types.Type.__init__(self, name)
+        super().__init__(name)
 
     @property
     def key(self):
@@ -149,7 +156,7 @@ def omnisci_buffer_ptr_getitem_(typingctx, data, index):
 
 @extending.intrinsic
 def omnisci_buffer_getitem_(typingctx, data, index):
-    eltype = data.members[0].dtype
+    eltype = data.eltype
     sig = eltype(data, index)
 
     def codegen(context, builder, signature, args):
@@ -173,9 +180,38 @@ def omnisci_buffer_getitem(x, i):
         return lambda x, i: omnisci_buffer_getitem_(x, i)
 
 
+# [rbc issue-197] Numba promotes operations like
+# int32(a) + int32(b) to int64
+def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
+    # buf[pos] = val
+
+    if isinstance(nb_value, types.Integer):  # Integer
+        if eltype.bitwidth < nb_value.bitwidth:
+            return builder.trunc(value, buf_typ)  # truncate
+        elif eltype.bitwidth > nb_value.bitwidth:
+            is_signed = nb_value.signed
+            return builder.sext(value, buf_typ) if is_signed else \
+                builder.zext(value, buf_typ)  # extend
+    elif isinstance(nb_value, types.Float):  # Floating-point
+        if eltype.bitwidth < nb_value.bitwidth:
+            return builder.fptrunc(value, buf_typ)  # truncate
+        elif eltype.bitwidth > nb_value.bitwidth:
+            return builder.fpext(value, buf_typ)  # extend
+    elif isinstance(nb_value, types.Boolean):
+        if buf_typ.width < value.type.width:
+            return builder.trunc(value, buf_typ)
+        elif buf_typ.width > value.type.width:
+            return builder.sext(value, buf_typ)
+
+    return value
+
+
 @extending.intrinsic
 def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
+
+    eltype = data.eltype
+    nb_value = value
 
     def codegen(context, builder, signature, args):
         zero = int32_t(0)
@@ -186,6 +222,7 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
         ptr = builder.load(rawptr)
 
         buf = builder.load(builder.gep(ptr, [zero, zero]))
+        value = truncate_or_extend(builder, nb_value, eltype, value, buf.type.pointee)
         builder.store(value, builder.gep(buf, [index]))
 
     return sig, codegen
@@ -194,6 +231,9 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
 @extending.intrinsic
 def omnisci_buffer_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
+
+    eltype = data.members[0].dtype
+    nb_value = value
 
     def codegen(context, builder, signature, args):
         zero = int32_t(0)
@@ -206,6 +246,7 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
         ptr = builder.load(builder.gep(
             buf, [zero, zero]))
 
+        value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
         builder.store(value, builder.gep(ptr, [index]))
 
     return sig, codegen
