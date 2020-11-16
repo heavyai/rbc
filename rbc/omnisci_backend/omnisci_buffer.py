@@ -58,6 +58,13 @@ class BufferType(types.Type):
     """Numba type class for Omnisci buffer structures.
     """
 
+    @property
+    def eltype(self):
+        """
+        Return buffer element dtype.
+        """
+        return self.members[0].dtype
+
 
 class BufferPointer(types.Type):
     """Numba type class for pointers to Omnisci buffer structures.
@@ -149,7 +156,7 @@ def omnisci_buffer_ptr_getitem_(typingctx, data, index):
 
 @extending.intrinsic
 def omnisci_buffer_getitem_(typingctx, data, index):
-    eltype = data.members[0].dtype
+    eltype = data.eltype
     sig = eltype(data, index)
 
     def codegen(context, builder, signature, args):

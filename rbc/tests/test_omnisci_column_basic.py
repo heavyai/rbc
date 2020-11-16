@@ -482,7 +482,7 @@ def test_redefine(omnisci):
     @omnisci('int32(Column<int32>, RowMultiplier, OutputColumn<int32>)')  # noqa: E501, F811
     def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
-            y[i] = x[i] + np.int32(3)
+            y[i] = x[i] + 3
         return len(x)
 
     descr, result = omnisci.sql_execute(
