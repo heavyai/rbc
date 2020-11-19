@@ -8,6 +8,7 @@ from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
+from rbc.targetinfo import TargetInfo
 from .omnisci_buffer import (BufferPointer, Buffer, BufferPointerModel,
                              buffer_type_converter, OmnisciBufferType)
 
@@ -84,7 +85,9 @@ def type_omnisci_array(context):
             typ = 'Array<{}>'.format(dtype.dtype)
         else:
             raise NotImplementedError(repr(dtype))
-        atyp = array_type_converter(context.target_info, typ)
+
+        target_info = TargetInfo.instance()
+        atyp = array_type_converter(target_info, typ)
         if atyp is not None:
             return atyp.tonumba()
         raise NotImplementedError((dtype, typ))

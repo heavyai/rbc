@@ -830,6 +830,9 @@ class RemoteOmnisci(RemoteJIT):
         fid = 0  # UDF/UDTF id
         udfs, udtfs = [], []
         for device, target_info in self.targets.items():
+            # Set a global target_info instance
+            TargetInfo.set_instance(target_info)
+
             udfs_map, udtfs_map = {}, {}
             functions_and_signatures = []
             function_signatures = defaultdict(list)
@@ -908,6 +911,8 @@ class RemoteOmnisci(RemoteJIT):
                     udtfs.append(udtf)
                 else:
                     skipped_names.append(udtf.name)
+
+            TargetInfo.clear_instance()
 
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.

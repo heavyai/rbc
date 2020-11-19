@@ -3,26 +3,23 @@ import json
 from . import libfuncs
 from .utils import parse_version
 
-from typing import Any
 
-
-class Singleton(type):
-    _instance = None
-
-    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
-        if cls._instance is None:
-            cls._instance = super().__call__(*args, **kwargs)
-        return cls._instance
-
-
-class TargetInfo(object, metaclass=Singleton):
+class TargetInfo(object):
     """Holds target device information.
     """
 
     @classmethod
+    def set_instance(cls, instance):
+        cls._instance = instance
+
+    @classmethod
     def instance(cls):
-        assert cls._instance is not None
+        assert cls._instance is not None, "No TargetInfo instance was set prior to this point."
         return cls._instance
+
+    @classmethod
+    def clear_instance(cls):
+        cls._instance = None
 
     def __init__(self, name, strict=False):
         """
