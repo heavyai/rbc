@@ -1,6 +1,5 @@
 import numpy as np
 from rbc.irtools import printf
-from rbc.targetinfo import TargetInfo
 from rbc import typesystem
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
@@ -34,8 +33,7 @@ def omnisci_np_full(shape, fill_value, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        target_info = TargetInfo.instance()
-        nb_dtype = typesystem.Type.fromobject(dtype, target_info).tonumba()
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, fill_value, dtype=None):
         a = Array(shape, nb_dtype)
@@ -50,8 +48,7 @@ def omnisci_np_full_like(a, fill_value, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            target_info = TargetInfo.instance()
-            nb_dtype = typesystem.Type.fromobject(dtype, target_info).tonumba()
+            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
         def impl(a, fill_value, dtype=None):
             sz = len(a)
@@ -67,8 +64,7 @@ def omnisci_np_empty(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        target_info = TargetInfo.instance()
-        nb_dtype = typesystem.Type.fromobject(dtype, target_info).tonumba()
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, dtype=None):
         return Array(shape, nb_dtype)
@@ -81,8 +77,7 @@ def omnisci_np_zeros(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        target_info = TargetInfo.instance()
-        nb_dtype = typesystem.Type.fromobject(dtype, target_info).tonumba()
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, dtype=None):
         return full(shape, 0, nb_dtype)  # noqa: F821
@@ -95,8 +90,7 @@ def omnisci_np_zeros_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            target_info = TargetInfo.instance()
-            nb_dtype = typesystem.Type.fromobject(dtype, target_info).tonumba()
+            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
         def impl(a, dtype=None):
             return full_like(a, 0, nb_dtype)  # noqa: F821
@@ -109,8 +103,7 @@ def omnisci_np_ones(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        target_info = TargetInfo.instance()
-        nb_dtype = typesystem.Type.fromobject(dtype, target_info).tonumba()
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, dtype=None):
         return full(shape, 1, nb_dtype)  # noqa: F821

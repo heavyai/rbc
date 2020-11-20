@@ -830,89 +830,85 @@ class RemoteOmnisci(RemoteJIT):
         fid = 0  # UDF/UDTF id
         udfs, udtfs = [], []
         for device, target_info in self.targets.items():
-            # Set a global target_info instance
-            TargetInfo.set_instance(target_info)
+            with target_info:
+                udfs_map, udtfs_map = {}, {}
+                functions_and_signatures = []
+                function_signatures = defaultdict(list)
+                for caller in reversed(self.get_callers()):
+                    signatures = {}
+                    name = caller.func.__name__
+                    if name in self.forbidden_names:
+                        raise ForbiddenNameError(
+                            f'\n\nAttempt to define function with name `{name}`.\n'
+                            f'As a workaround, add a prefix to the function name '
+                            f'or define it with another name:\n\n'
+                            f'   def prefix_{name}(x):\n'
+                            f'       return np.trunc(x)\n\n'
+                            f'For more information, see: '
+                            f'https://github.com/xnd-project/rbc/issues/32')
+                    for sig in caller.get_signatures(target_info):
+                        i = len(function_signatures[name])
+                        if sig in function_signatures[name]:
+                            if self.debug:
+                                f2 = os.path.basename(
+                                    caller.func.__code__.co_filename)
+                                n2 = caller.func.__code__.co_firstlineno
+                                print(f'{type(self).__name__}.register: ignoring'
+                                      f' older definition of `{name}` for `{sig}`'
+                                      f' in {f2}#{n2}.')
+                            continue
+                        fid += 1
+                        orig_sig = sig
+                        sig = sig[0](*sig.argument_types)
+                        function_signatures[name].append(sig)
+                        sig_is_udtf = is_udtf(sig)
+                        is_old_udtf = 'table' in sig[0].annotation()
 
-            udfs_map, udtfs_map = {}, {}
-            functions_and_signatures = []
-            function_signatures = defaultdict(list)
-            for caller in reversed(self.get_callers()):
-                signatures = {}
-                name = caller.func.__name__
-                if name in self.forbidden_names:
-                    raise ForbiddenNameError(
-                        f'\n\nAttempt to define function with name `{name}`.\n'
-                        f'As a workaround, add a prefix to the function name '
-                        f'or define it with another name:\n\n'
-                        f'   def prefix_{name}(x):\n'
-                        f'       return np.trunc(x)\n\n'
-                        f'For more information, see: '
-                        f'https://github.com/xnd-project/rbc/issues/32')
-                for sig in caller.get_signatures(target_info):
-                    i = len(function_signatures[name])
-                    if sig in function_signatures[name]:
-                        if self.debug:
-                            f2 = os.path.basename(
-                                caller.func.__code__.co_filename)
-                            n2 = caller.func.__code__.co_firstlineno
-                            print(f'{type(self).__name__}.register: ignoring'
-                                  f' older definition of `{name}` for `{sig}`'
-                                  f' in {f2}#{n2}.')
-                        continue
-                    fid += 1
-                    orig_sig = sig
-                    sig = sig[0](*sig.argument_types)
-                    function_signatures[name].append(sig)
-                    sig_is_udtf = is_udtf(sig)
-                    is_old_udtf = 'table' in sig[0].annotation()
-
-                    if i == 0 and (self.version < (5, 2) or is_old_udtf or
-                                   (self.version < (5, 5) and sig_is_udtf)):
-                        sig.set_mangling('')
-                    else:
-                        if self.version < (5, 5):
-                            sig.set_mangling('__%s' % (i))
+                        if i == 0 and (self.version < (5, 2) or is_old_udtf or
+                                       (self.version < (5, 5) and sig_is_udtf)):
+                            sig.set_mangling('')
                         else:
-                            sig.set_mangling('__%s_%s' % (device, i))
+                            if self.version < (5, 5):
+                                sig.set_mangling('__%s' % (i))
+                            else:
+                                sig.set_mangling('__%s_%s' % (device, i))
 
-                    if sig_is_udtf:
-                        # new style UDTF, requires omniscidb version >= 5.4
-                        udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
-                    elif is_old_udtf:
-                        # old style UDTF for omniscidb <= 5.3, to be deprecated
-                        udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
+                        if sig_is_udtf:
+                            # new style UDTF, requires omniscidb version >= 5.4
+                            udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
+                        elif is_old_udtf:
+                            # old style UDTF for omniscidb <= 5.3, to be deprecated
+                            udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
+                        else:
+                            udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
+                        signatures[fid] = sig
+
+                    functions_and_signatures.append((caller.func, signatures))
+
+                llvm_module, succesful_fids = compile_to_LLVM(
+                    functions_and_signatures,
+                    target_info,
+                    pipeline_class=OmnisciCompilerPipeline,
+                    debug=self.debug)
+
+                assert llvm_module.triple == target_info.triple
+                assert llvm_module.data_layout == target_info.datalayout
+                for f in llvm_module.functions:
+                    llvm_function_names.append(f.name)
+
+                device_ir_map[device] = str(llvm_module)
+                skipped_names = []
+                for fid, udf in udfs_map.items():
+                    if fid in succesful_fids:
+                        udfs.append(udf)
                     else:
-                        udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
-                    signatures[fid] = sig
+                        skipped_names.append(udf.name)
 
-                functions_and_signatures.append((caller.func, signatures))
-
-            llvm_module, succesful_fids = compile_to_LLVM(
-                functions_and_signatures,
-                target_info,
-                pipeline_class=OmnisciCompilerPipeline,
-                debug=self.debug)
-
-            assert llvm_module.triple == target_info.triple
-            assert llvm_module.data_layout == target_info.datalayout
-            for f in llvm_module.functions:
-                llvm_function_names.append(f.name)
-
-            device_ir_map[device] = str(llvm_module)
-            skipped_names = []
-            for fid, udf in udfs_map.items():
-                if fid in succesful_fids:
-                    udfs.append(udf)
-                else:
-                    skipped_names.append(udf.name)
-
-            for fid, udtf in udtfs_map.items():
-                if fid in succesful_fids:
-                    udtfs.append(udtf)
-                else:
-                    skipped_names.append(udtf.name)
-
-            TargetInfo.clear_instance()
+                for fid, udtf in udtfs_map.items():
+                    if fid in succesful_fids:
+                        udtfs.append(udtf)
+                    else:
+                        skipped_names.append(udtf.name)
 
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.

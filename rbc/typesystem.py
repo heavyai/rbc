@@ -8,6 +8,7 @@ import re
 import ctypes
 import inspect
 from .utils import get_version
+from .targetinfo import TargetInfo
 try:
     import numba as nb
     if get_version('numba') >= (0, 49):
@@ -895,7 +896,7 @@ class Type(tuple):
                                   % (cls.__name__, obj))
 
     @classmethod
-    def fromobject(cls, obj, target_info):
+    def fromobject(cls, obj, target_info=None):
         """Return new Type instance from any object.
 
         Parameters
@@ -915,6 +916,9 @@ class Type(tuple):
         non-standard type specifications (e.g. typedef-s, named
         struct-s, C++ classes) to standard type specifications.
         """
+        if target_info is None:
+            target_info = TargetInfo.instance()
+
         if isinstance(obj, cls):
             return obj
         if isinstance(obj, str):

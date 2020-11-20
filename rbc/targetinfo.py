@@ -7,6 +7,7 @@ from .utils import parse_version
 class TargetInfo(object):
     """Holds target device information.
     """
+    _instance = None
 
     @classmethod
     def set_instance(cls, instance):
@@ -14,12 +15,25 @@ class TargetInfo(object):
 
     @classmethod
     def instance(cls):
-        assert cls._instance is not None, "No TargetInfo instance was set prior to this point."
+        if cls._instance is None:
+            raise RuntimeError('Target not specified.')
         return cls._instance
 
     @classmethod
     def clear_instance(cls):
         cls._instance = None
+
+    def __enter__(self):
+        self.__class__.set_instance(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if traceback:
+            traceback.print_exception(exc_type, exc_value, traceback)
+            return False
+        else:
+            self.__class__.clear_instance()
+            return True
 
     def __init__(self, name, strict=False):
         """
