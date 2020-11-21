@@ -480,7 +480,7 @@ def fflush(typingctx):
     """
     sig = nb_types.void(nb_types.void)
 
-    target_info = TargetInfo.instance()
+    target_info = TargetInfo()
 
     def codegen(context, builder, signature, args):
         if target_info.is_cpu:
@@ -495,7 +495,7 @@ def printf(typingctx, format_type, *args):
 
     Note: printf is available only for CPU target.
     """
-    target_info = TargetInfo.instance()
+    target_info = TargetInfo()
 
     if isinstance(format_type, nb_types.StringLiteral):
         sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))

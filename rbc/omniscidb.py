@@ -846,7 +846,7 @@ class RemoteOmnisci(RemoteJIT):
                             f'       return np.trunc(x)\n\n'
                             f'For more information, see: '
                             f'https://github.com/xnd-project/rbc/issues/32')
-                    for sig in caller.get_signatures(target_info):
+                    for sig in caller.get_signatures():
                         i = len(function_signatures[name])
                         if sig in function_signatures[name]:
                             if self.debug:

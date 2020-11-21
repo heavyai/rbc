@@ -6,36 +6,68 @@ from .utils import parse_version
 
 class TargetInfo(object):
     """Holds target device information.
+
+    The information within a TargetInfo instance can be accessed
+    only when the instance has been activated as a context manager::
+
+      target_info = TargetInfo(<name>)
+      # construct target_info
+      ...
+
+      with target_info:
+          '''
+          TargetInfo instance target_info is made available globally
+          and it can be acquired from any Python module function, for
+          example:
+
+            from rbc.targetinfo import TargetInfo
+
+            def foo():
+                ti = TargetInfo()
+                # here `ti` is the same object as `target_info`
+          '''
+          ...
+
+      # target_info is now disabled globally and when a Python module
+      # function tries to access it as `TargetInfo()`, a RuntimeError
+      # exception will be raised.
     """
+
     _instance = None
 
     @classmethod
-    def set_instance(cls, instance):
+    def _set_instance(cls, instance):
+        if instance is None:
+            assert cls._instance is not None
+        else:
+            assert cls._instance is None
         cls._instance = instance
+        return instance
 
     @classmethod
-    def instance(cls):
+    def _get_instance(cls):
         if cls._instance is None:
             raise RuntimeError('Target not specified.')
         return cls._instance
 
-    @classmethod
-    def clear_instance(cls):
-        cls._instance = None
-
     def __enter__(self):
-        self.__class__.set_instance(self)
-        return self
+        return type(self)._set_instance(self)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if traceback:
-            traceback.print_exception(exc_type, exc_value, traceback)
-            return False
-        else:
-            self.__class__.clear_instance()
+        type(self)._set_instance(None)
+        if exc_type is None:
             return True
 
-    def __init__(self, name, strict=False):
+    def __new__(cls, *args, **kwargs):
+        """Return a global or a newly constructed TargetInfo instance.
+        """
+        if not (args or kwargs):
+            return cls._get_instance()
+        obj = object.__new__(cls)
+        obj._init(*args, **kwargs)
+        return obj
+
+    def _init(self, name, strict=False):
         """
         Parameters
         ----------
@@ -332,6 +364,6 @@ class TargetInfo(object):
         """Return custom type of an object.
         """
         for converter in self.custom_type_converters:
-            r = converter(self, t)
+            r = converter(t)
             if r is not None:
                 return r

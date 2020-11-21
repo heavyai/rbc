@@ -231,17 +231,11 @@ def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
     return ptr_type
 
 
-def buffer_type_converter(target_info, obj, typesystem_buffer_type,
+def buffer_type_converter(obj, typesystem_buffer_type,
                           buffer_typename, buffer_ptr_cls,
                           extra_members=[]):
     """Template function for converting typesystem Type instances to
     Omnisci Buffer Type instance.
-
-    Note
-    ----
-    It is assumed that the caller of this function is registered to
-    TargetInfo. Otherwise, the convertion from a string object will
-    not function correctly.
 
     Parameters
     ----------
@@ -269,7 +263,7 @@ def buffer_type_converter(target_info, obj, typesystem_buffer_type,
     if name is None or name != buffer_typename:
         return
     assert len(params) == 1, params
-    t = typesystem.Type.fromstring(params[0], target_info)
+    t = typesystem.Type.fromstring(params[0])
     if not t.is_concrete:
         return
 
@@ -278,8 +272,7 @@ def buffer_type_converter(target_info, obj, typesystem_buffer_type,
 
     # Construct buffer type as a struct with ptr and sz as members.
     ptr_t = typesystem.Type(t, '*', name='ptr')
-    size_t = typesystem.Type.fromstring('size_t sz',
-                                        target_info=target_info)
+    size_t = typesystem.Type.fromstring('size_t sz')
     buffer_type = typesystem_buffer_type(
         ptr_t,
         size_t,

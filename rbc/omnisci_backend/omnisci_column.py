@@ -53,7 +53,7 @@ class ColumnPointerModel(BufferPointerModel):
     pass
 
 
-def column_type_converter(target_info, obj):
+def column_type_converter(obj):
     """Return Type instance corresponding to Omnisci :code:`Column<T>` type.
 
     :code:`Omnisci Column<T>` is defined as follows (using C++ syntax)::
@@ -67,21 +67,21 @@ def column_type_converter(target_info, obj):
     See :code:`buffer_type_converter` for details.
     """
     return buffer_type_converter(
-        target_info, obj, OmnisciColumnType, 'Column', ColumnPointer,
+        obj, OmnisciColumnType, 'Column', ColumnPointer,
         extra_members=[])
 
 
-def output_column_type_converter(target_info, obj):
+def output_column_type_converter(obj):
     """Return Type instance corresponding to Omnisci :code:`OutputColumn<T>` type.
 
     See :code:`column_type_converter` for implementation detail.
     """
     return buffer_type_converter(
-        target_info, obj, OmnisciOutputColumnType, 'OutputColumn',
+        obj, OmnisciOutputColumnType, 'OutputColumn',
         ColumnPointer, extra_members=[])
 
 
-def table_function_sizer_type_converter(target_info, obj):
+def table_function_sizer_type_converter(obj):
     """Return Type instance corresponding to sizer argument of a
     user-defined table function.
     """
@@ -91,8 +91,7 @@ def table_function_sizer_type_converter(target_info, obj):
         sizer_name = obj[0]
         sizer_types = ['RowMultiplier', 'ConstantParameter', 'Constant']
         if sizer_name in sizer_types:
-            return typesystem.Type.fromstring(f'int32|sizer={sizer_name}',
-                                              target_info=target_info)
+            return typesystem.Type.fromstring(f'int32|sizer={sizer_name}')
 
 
 class OmnisciCursorType(typesystem.Type):
@@ -102,7 +101,7 @@ class OmnisciCursorType(typesystem.Type):
         return list(self)
 
 
-def cursor_type_converter(target_info, obj):
+def cursor_type_converter(obj):
     """Return Type instance corresponding to cursor argument of a
     user-defined table function.
     """
@@ -112,10 +111,9 @@ def cursor_type_converter(target_info, obj):
     if name == 'Cursor':
         new_params = []
         for p in params:
-            p = typesystem.Type.fromstring(p, target_info=target_info)
+            p = typesystem.Type.fromstring(p)
             if p.is_float or p.is_int or p.is_bool:
-                p = typesystem.Type.fromstring(
-                    f'Column<{p}>', target_info=target_info)
+                p = typesystem.Type.fromstring(f'Column<{p}>')
             if not isinstance(p, OmnisciColumnType):
                 raise TypeError(
                     f'expected OmnisciColumnType|float|int|bool as'
