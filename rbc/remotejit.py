@@ -87,7 +87,7 @@ class Signature(object):
         etc) depend on the target device which information will be
         available at the compile stage. The target dependent
         signatures can be retrieved using
-        `signature.get_signatures(target_info)`.
+        `signature.get_signatures()`.
         """
         if obj is None:
             return self
@@ -110,7 +110,7 @@ class Signature(object):
         self.remotejit.discard_last_compile()
         return self
 
-    def best_match(self, func, atypes: tuple, target_info: TargetInfo) -> Type:
+    def best_match(self, func, atypes: tuple) -> Type:
         """Return function type from signatures that matches best with given
         argument types.
 
@@ -120,8 +120,6 @@ class Signature(object):
         ----------
         atypes : Type-tuple
           Specify a tuple of argument types.
-        target_info : TargetInfo
-          Specify target device information.
 
         Returns
         -------
@@ -131,7 +129,7 @@ class Signature(object):
         """
         ftype = None
         match_penalty = None
-        available_types = self.normalized(func, target_info).signatures
+        available_types = self.normalized(func).signatures
         for typ in available_types:
             penalty = typ.match(atypes)
             if penalty is not None:
@@ -146,26 +144,25 @@ class Signature(object):
                 f' `{satypes}`. Available function types: {available}')
         return ftype
 
-    def normalized(self, func, target_info: TargetInfo):
+    def normalized(self, func):
         """Return a copy of Signature object where all signatures are
-        normalized to Type instances using given target device
+        normalized to Type instances using the current target device
         information.
 
         Parameters
         ----------
         func : function
           Python function that annotations are attached to signature.
-        target_info : TargetInfo
 
         Returns
         -------
         signature : Signature
         """
         signature = Signature(self.remotejit)
-        fsig = Type.fromcallable(func, target_info)
+        fsig = Type.fromcallable(func)
         nargs = fsig.arity
         for sig in self.signatures:
-            sig = Type.fromobject(sig, target_info)
+            sig = Type.fromobject(sig)
             if not sig.is_complete:
                 continue
             if not sig.is_function:
@@ -235,24 +232,25 @@ class Caller(object):
         lst = ['']
         fid = 0
         for device, target_info in self.remotejit.targets.items():
-            lst.append(f'{device:-^80}')
-            signatures = self.get_signatures(target_info)
-            signatures_map = {}
-            for sig in signatures:
-                fid += 1
-                signatures_map[fid] = sig
-            llvm_module, succesful_fids = irtools.compile_to_LLVM(
-                [(self.func, signatures_map)],
-                target_info,
-                debug=self.remotejit.debug)
-            lst.append(str(llvm_module))
+            with target_info:
+                lst.append(f'{device:-^80}')
+                signatures = self.get_signatures()
+                signatures_map = {}
+                for sig in signatures:
+                    fid += 1
+                    signatures_map[fid] = sig
+                llvm_module, succesful_fids = irtools.compile_to_LLVM(
+                    [(self.func, signatures_map)],
+                    target_info,
+                    debug=self.remotejit.debug)
+                lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
         return '\n'.join(lst)
 
-    def get_signatures(self, target_info: TargetInfo):
+    def get_signatures(self):
         """Return a list of normalized signatures for given target device.
         """
-        return self.signature.normalized(self.func, target_info).signatures
+        return self.signature.normalized(self.func).signatures
 
     # RBC user-interface
 
@@ -268,13 +266,14 @@ class Caller(object):
                     f' one device. Available devices: {", ".join(targets)}')
             device = tuple(targets)[0]
         target_info = targets[device]
-        atypes = tuple(Type.fromvalue(a, target_info) for a in arguments)
-        ftype = self.signature.best_match(self.func, atypes, target_info)
-        key = self.func.__name__, ftype
-        if key not in self._is_compiled:
-            self.remotejit.remote_compile(self.func, ftype, target_info)
-            self._is_compiled.add(key)
-        return self.remotejit.remote_call(self.func, ftype, arguments)
+        with target_info:
+            atypes = tuple(map(Type.fromvalue, arguments))
+            ftype = self.signature.best_match(self.func, atypes)
+            key = self.func.__name__, ftype
+            if key not in self._is_compiled:
+                self.remotejit.remote_compile(self.func, ftype, target_info)
+                self._is_compiled.add(key)
+            return self.remotejit.remote_call(self.func, ftype, arguments)
 
 
 class RemoteJIT(object):

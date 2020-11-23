@@ -84,7 +84,8 @@ def type_omnisci_array(context):
             typ = 'Array<{}>'.format(dtype.dtype)
         else:
             raise NotImplementedError(repr(dtype))
-        atyp = array_type_converter(context.target_info, typ)
+
+        atyp = array_type_converter(typ)
         if atyp is not None:
             return atyp.tonumba()
         raise NotImplementedError((dtype, typ))
@@ -113,7 +114,7 @@ def omnisci_array_is_null(x):
         return impl
 
 
-def array_type_converter(target_info, obj):
+def array_type_converter(obj):
     """Return Type instance corresponding to :code:`Omnisci Array<T>` type.
 
     :code:`Omnisci Array<T>` is defined as follows (using C++ syntax)::
@@ -128,11 +129,8 @@ def array_type_converter(target_info, obj):
     See :code:`buffer_type_converter` for details.
     """
     buffer_type = buffer_type_converter(
-        target_info, obj, OmnisciArrayType,
-        'Array', ArrayPointer,
-        extra_members=[
-            typesystem.Type.fromstring('bool is_null',
-                                       target_info=target_info)])
+        obj, OmnisciArrayType, 'Array', ArrayPointer,
+        extra_members=[typesystem.Type.fromstring('bool is_null')])
     if buffer_type is not None:
         return buffer_type.pointer()
     return buffer_type

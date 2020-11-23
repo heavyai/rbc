@@ -1,5 +1,6 @@
 import numpy as np
 from rbc.irtools import printf
+from rbc import typesystem
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
 if get_version('numba') >= (0, 49):
@@ -32,7 +33,7 @@ def omnisci_np_full(shape, fill_value, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        nb_dtype = dtype
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, fill_value, dtype=None):
         a = Array(shape, nb_dtype)
@@ -47,7 +48,7 @@ def omnisci_np_full_like(a, fill_value, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = dtype
+            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
         def impl(a, fill_value, dtype=None):
             sz = len(a)
@@ -63,7 +64,7 @@ def omnisci_np_empty(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        nb_dtype = dtype
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, dtype=None):
         return Array(shape, nb_dtype)
@@ -76,7 +77,7 @@ def omnisci_np_zeros(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        nb_dtype = dtype
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
 
@@ -91,7 +92,7 @@ def omnisci_np_zeros_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = dtype
+            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
         fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
 
@@ -106,7 +107,7 @@ def omnisci_np_ones(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        nb_dtype = dtype
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
 

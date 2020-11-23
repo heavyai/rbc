@@ -358,12 +358,6 @@ def compile_to_LLVM(functions_and_signatures,
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
-        # Fixes rbc issue 74:
-        target_desc.typing_context.target_info = target
-        target_desc.target_context.target_info = target
-
-    typing_context.target_info = target
-    target_context.target_info = target
 
     codegen = target_context.codegen()
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
@@ -486,8 +480,10 @@ def fflush(typingctx):
     """
     sig = nb_types.void(nb_types.void)
 
+    target_info = TargetInfo()
+
     def codegen(context, builder, signature, args):
-        if typingctx.target_info.is_cpu:
+        if target_info.is_cpu:
             cg_fflush(builder)
 
     return sig, codegen
@@ -499,11 +495,13 @@ def printf(typingctx, format_type, *args):
 
     Note: printf is available only for CPU target.
     """
+    target_info = TargetInfo()
+
     if isinstance(format_type, nb_types.StringLiteral):
         sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
 
         def codegen(context, builder, signature, args):
-            if typingctx.target_info.is_cpu:
+            if target_info.is_cpu:
                 cgutils.printf(builder, format_type.literal_value, *args[1:])
                 cg_fflush(builder)
 

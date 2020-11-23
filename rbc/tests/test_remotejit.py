@@ -7,10 +7,6 @@ from rbc.typesystem import Type
 win32 = sys.platform == 'win32'
 
 
-def Type_fromstring(s):
-    return Type.fromstring(s, None)
-
-
 @pytest.fixture(scope="module")
 def rjit(request):
     rjit = RemoteJIT(debug=True)
@@ -20,95 +16,103 @@ def rjit(request):
     return rjit
 
 
-def test_construction():
+def with_localjit(test_func):
+    ljit = RemoteJIT(local=True)
+    device = tuple(ljit.targets)[0]
+    target_info = ljit.targets[device]
 
-    rjit = RemoteJIT(local=True)
-    device = tuple(rjit.targets)[0]
-    target_info = rjit.targets[device]
+    def test_func_():
+        with target_info:
+            return test_func(ljit)
+    return test_func_
 
-    assert isinstance(rjit, RemoteJIT)
+
+@with_localjit
+def test_construction(ljit):
+
+    assert isinstance(ljit, RemoteJIT)
 
     # Case 1
 
-    @rjit
+    @ljit
     def add(a: int, b: int) -> int:
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 1
-    assert signatures[0] == Type_fromstring('i64(i64,i64)')
+    assert signatures[0] == Type.fromstring('i64(i64,i64)')
 
     # Case 2
 
-    @rjit('double(double, double)')
+    @ljit('double(double, double)')
     def add(a, b):
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 1
-    assert signatures[0] == Type_fromstring('f64(f64,f64)')
+    assert signatures[0] == Type.fromstring('f64(f64,f64)')
 
     # Case 3
 
-    @rjit('double(double, double)')
-    @rjit('int(int, int)')
+    @ljit('double(double, double)')
+    @ljit('int(int, int)')
     def add(a, b):
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 2
-    assert signatures[1] == Type_fromstring('i32(i32,i32)')
-    assert signatures[0] == Type_fromstring('f64(f64,f64)')
+    assert signatures[1] == Type.fromstring('i32(i32,i32)')
+    assert signatures[0] == Type.fromstring('f64(f64,f64)')
 
     # Case 4
 
-    @rjit('double(double, double)',
+    @ljit('double(double, double)',
           'int(int, int)')
     def add(a, b):
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 2
-    assert signatures[0] == Type_fromstring('f64(f64,f64)')
-    assert signatures[1] == Type_fromstring('i32(i32,i32)')
+    assert signatures[0] == Type.fromstring('f64(f64,f64)')
+    assert signatures[1] == Type.fromstring('i32(i32,i32)')
 
     # Case 5
 
-    rjit_int = rjit('int(int, int)')
-    rjit_double = rjit('double(double, double)')
-    assert isinstance(rjit_int, Signature)
+    ljit_int = ljit('int(int, int)')
+    ljit_double = ljit('double(double, double)')
+    assert isinstance(ljit_int, Signature)
 
-    rjit_types = rjit_int(rjit_double)
-    assert isinstance(rjit_types, Signature)
+    ljit_types = ljit_int(ljit_double)
+    assert isinstance(ljit_types, Signature)
 
-    @rjit_types
+    @ljit_types
     def add(a, b):
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 2
-    assert signatures[0] == Type_fromstring('i32(i32,i32)')
-    assert signatures[1] == Type_fromstring('f64(f64,f64)')
+    assert signatures[0] == Type.fromstring('i32(i32,i32)')
+    assert signatures[1] == Type.fromstring('f64(f64,f64)')
 
     # Case 6
 
-    @rjit
+    @ljit
     def add(a, b):
         return a + b
 
     assert isinstance(add, Caller)
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 0
 
     add.signature('i32(i32,i32)')
-    signatures = add.get_signatures(target_info)
+    signatures = add.get_signatures()
     assert len(signatures) == 1
-    assert signatures[0] == Type_fromstring('i32(i32,i32)')
+    assert signatures[0] == Type.fromstring('i32(i32,i32)')
 
     # invalid cases are now handled at compile stage
 

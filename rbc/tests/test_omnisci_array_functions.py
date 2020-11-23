@@ -75,7 +75,7 @@ def np_ones_like(i4):
 
 
 def np_zeros(sz):
-    return omni.zeros(sz, types.int32)
+    return omni.zeros(sz, np.int32)
 
 
 def np_zeros_dtype(sz):
