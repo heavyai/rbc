@@ -592,7 +592,7 @@ class RemoteOmnisci(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
         ]:
-            ext_arguments_map['{%s* ptr, uint64 sz}' % ptr_type] \
+            ext_arguments_map['{%s* ptr, uint64 sz, int64 table_id}' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
 
         values = list(ext_arguments_map.values())

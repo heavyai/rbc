@@ -72,6 +72,61 @@ def test_sizer_row_multiplier_orig(omnisci):
         assert r == (float((i % 5) * 2),)
 
 
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with table_id attribute"
+        " support (got %s) [issue 124]" % (
+            available_version,)))
+def test_input_column_table_id(omnisci):
+    omnisci.reset()
+
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def udtf_table_id(x, m, z):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            if x.table_id >= 0:
+                z[i] = 1.0
+            else:
+                z[i] = -1.0
+        return m * input_row_count
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(udtf_table_id('
+        'cursor(select f8 from {omnisci.table_name}),'
+        '1));'
+        .format(**locals()))
+
+    for i, r in enumerate(result):
+        assert r == (-1.0,)
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with table_id attribute"
+        " support (got %s) [issue 124]" % (
+            available_version,)))
+def test_output_column_table_id(omnisci):
+    omnisci.reset()
+
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def udtf_table_id(x, m, z):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            z[i] = z.table_id + 0.0
+        return m * input_row_count
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(udtf_table_id('
+        'cursor(select f8 from {omnisci.table_name}),'
+        '1));'
+        .format(**locals()))
+
+    for i, r in enumerate(result):
+        assert r == (-1.0,)
+
+
 def test_sizer_row_multiplier_param1(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering

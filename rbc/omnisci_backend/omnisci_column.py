@@ -10,6 +10,8 @@ __all__ = ['ColumnPointer', 'OutputColumn', 'Column',
            'output_column_type_converter', 'column_type_converter',
            'table_function_sizer_type_converter']
 
+
+from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
 from .omnisci_buffer import (
@@ -21,6 +23,8 @@ if get_version('numba') >= (0, 49):
     from numba.core import datamodel
 else:
     from numba import datamodel
+
+int32_t = ir.IntType(32)
 
 
 class OmnisciColumnType(OmnisciBufferType):
@@ -62,13 +66,15 @@ def column_type_converter(obj):
       struct Column {
         T* ptr;
         size_t sz;
+        int64_t table_id;
       }
 
     See :code:`buffer_type_converter` for details.
     """
     return buffer_type_converter(
         obj, OmnisciColumnType, 'Column', ColumnPointer,
-        extra_members=[])
+        extra_members=[
+            typesystem.Type.fromstring('int64_t table_id')])
 
 
 def output_column_type_converter(obj):
@@ -77,8 +83,10 @@ def output_column_type_converter(obj):
     See :code:`column_type_converter` for implementation detail.
     """
     return buffer_type_converter(
-        obj, OmnisciOutputColumnType, 'OutputColumn',
-        ColumnPointer, extra_members=[])
+        target_info, obj, OmnisciOutputColumnType, 'OutputColumn',
+        ColumnPointer,
+        extra_members=[
+            typesystem.Type.fromstring('int64_t table_id')])
 
 
 def table_function_sizer_type_converter(obj):
