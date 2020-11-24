@@ -83,7 +83,7 @@ def output_column_type_converter(obj):
     See :code:`column_type_converter` for implementation detail.
     """
     return buffer_type_converter(
-        target_info, obj, OmnisciOutputColumnType, 'OutputColumn',
+        obj, OmnisciOutputColumnType, 'OutputColumn',
         ColumnPointer,
         extra_members=[
             typesystem.Type.fromstring('int64_t table_id')])

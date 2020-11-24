@@ -281,25 +281,6 @@ def omnisci_buffer_table_id(x):
     return impl
 
 
-# @extending.intrinsic
-# def omnisci_buffer_ptr_table_id_(typingctx, data):
-#     sig = types.uint64(data)
-
-#     def codegen(context, builder, signature, args):
-#         rawptr = cgutils.alloca_once_value(builder, value=args[0])
-#         ptr = builder.load(rawptr)
-#         return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
-
-#     return sig, codegen
-
-
-# @extending.overload_attribute(BufferPointer, 'table_id')
-# def omnisci_buffer_ptr_table_id(x):
-#     def impl(x):
-#         return omnisci_buffer_ptr_table_id_(x)
-#     return impl
-
-
 def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
     ptr_type = buffer_type.pointer()
 
