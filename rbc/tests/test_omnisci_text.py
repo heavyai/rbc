@@ -114,7 +114,7 @@ def test_bytes_return(omnisci):
             r[i] = first + i
         return r
 
-    sql_query = f"select make_abc(97, 10)"
+    sql_query = "select make_abc(97, 10)"
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
 

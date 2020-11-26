@@ -123,7 +123,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
       extending.lower_builtin(MyBuffer, numba.types.Integer, ...)(omnisci_buffer_constructor)
 
-    will enable creating MyBuffer intance from a Omnisci UDF/UDTF definition:
+    will enable creating MyBuffer instance from a Omnisci UDF/UDTF definition:
 
       b = MyBuffer(<size>, ...)
 
