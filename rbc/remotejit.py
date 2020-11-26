@@ -55,6 +55,11 @@ class Signature(object):
         assert isinstance(remotejit, RemoteJIT), type(remotejit)
         self.remotejit = remotejit
         self.signatures = []
+        self.signature_devices = {}
+
+    @property
+    def debug(self):
+        return self.remotejit.debug
 
     @property
     def local(self):
@@ -66,13 +71,15 @@ class Signature(object):
         lst = ["'%s'" % (s,) for s in self.signatures]
         return '%s(%s)' % (self.__class__.__name__, ', '.join(lst))
 
-    def __call__(self, obj):
+    def __call__(self, obj, **options):
         """Decorate signatures or a function.
 
         Parameters
         ----------
         obj : {str, Signature, function, ...}
           Specify object that represents a function type.
+        devices : list
+          Specify device names for the given set of signatures.
 
         Returns
         -------
@@ -91,9 +98,14 @@ class Signature(object):
         """
         if obj is None:
             return self
+        devices = options.get('devices')
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
+            self.signature_devices.update(obj.signature_devices)
             self.remotejit.discard_last_compile()
+            if devices is not None:
+                for s in obj.signatures:
+                    self.signature_devices[s] = devices
             return self
         if isinstance(obj, Caller):
             # return new Caller with extended signatures set
@@ -101,13 +113,17 @@ class Signature(object):
             final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             final(obj.signature)  # copies the signatures from obj to final
+            assert devices is None
             return Caller(obj.func, final)
         if isfunctionlike(obj):
             final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
+            assert devices is None
             return Caller(obj, final)
         self.signatures.append(obj)
         self.remotejit.discard_last_compile()
+        if devices is not None:
+            self.signature_devices[obj] = devices
         return self
 
     def best_match(self, func, atypes: tuple) -> Type:
@@ -161,7 +177,14 @@ class Signature(object):
         signature = Signature(self.remotejit)
         fsig = Type.fromcallable(func)
         nargs = fsig.arity
+        target_info = TargetInfo()
         for sig in self.signatures:
+            devices = self.signature_devices.get(sig)
+            if not target_info.check_enabled(devices):
+                if self.debug:
+                    print(f'{type(self).__name__}.normalized: skipping {sig} as'
+                          f' not supported by devices: {devices}')
+                continue
             sig = Type.fromobject(sig)
             if not sig.is_complete:
                 continue
@@ -203,6 +226,7 @@ class Caller(object):
         """
         self.remotejit = signature.remotejit
         self.signature = signature
+        func = self.remotejit.preprocess_callable(func)
         self.func = func
         self.nargs = len(get_signature(func).parameters)
 
@@ -456,6 +480,8 @@ class RemoteJIT(object):
           function as a template from which the remote JIT function
           will be compiled.
         local : bool
+        devices : list
+          Specify device names for the given set of signatures.
 
         Returns
         -------
@@ -475,8 +501,9 @@ class RemoteJIT(object):
             s = Signature(self.local)
         else:
             s = Signature(self)
+        devices = options.get('devices')
         for sig in signatures:
-            s = s(sig)
+            s = s(sig, devices=devices)
         return s
 
     def start_server(self, background=False):
@@ -552,6 +579,20 @@ class RemoteJIT(object):
         fullname = func.__name__ + ftype.mangle()
         response = self.client(remotejit=dict(call=(fullname, arguments)))
         return response['remotejit']['call']
+
+    def preprocess_callable(self, func):
+        """Preprocess func to be used as a remotejit function definition.
+
+        Parameters
+        ----------
+        func : callable
+
+        Returns
+        -------
+        func : callable
+          Preprocessed func.
+        """
+        return func
 
 
 class DispatcherRJIT(Dispatcher):
