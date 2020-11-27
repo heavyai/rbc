@@ -31,6 +31,7 @@ def omnisci():
     data = defaultdict(list)
     for i in range(5):
         for j, n in enumerate(colnames):
+            # todo: to check is_null, use empty string
             if n in ['t4', 't2']:
                 data[n].append(['foofoo', 'bar', 'fun', 'bar', 'foo'][i])
             if n in ['t1', 'n']:
