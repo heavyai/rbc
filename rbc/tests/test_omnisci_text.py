@@ -87,7 +87,7 @@ def test_bytes_len(omnisci):
 def test_bytes_ord(omnisci):
     omnisci.reset()
 
-    @omnisci('int64(Bytes, int64)')
+    @omnisci('int64(Bytes, int32)', devices=['gpu', 'cpu'])
     def myord(s, i):
         return s[i] if i < len(s) else 0
 

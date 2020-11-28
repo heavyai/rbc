@@ -924,13 +924,18 @@ class RemoteOmnisci(RemoteJIT):
                         udtfs.append(udtf)
                     else:
                         skipped_names.append(udtf.name)
-
+                if self.debug:
+                    print(f'Skipping: {", ".join(skipped_names)}')
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.
         for f in udtfs:
             assert f.name in llvm_function_names
         for f in udfs:
             assert f.name in llvm_function_names
+
+        if self.debug:
+            names = ", ".join([f.name for f in udfs] + [f.name for f in udtfs])
+            print(f'Registering: {names}')
 
         self.set_last_compile(device_ir_map)
         return self.thrift_call(
