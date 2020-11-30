@@ -21,6 +21,7 @@ def omnisci():
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}2'.format(**locals()))
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN', 'DOUBLE']
@@ -29,6 +30,10 @@ def omnisci():
                             for t, n in zip(sqltypes, colnames))
     m.sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
+        .format(**locals()))
+
+    m.sql_execute(
+        'CREATE TABLE IF NOT EXISTS {table_name}2 ({table_defn});'
         .format(**locals()))
 
     data = defaultdict(list)
@@ -42,9 +47,11 @@ def omnisci():
                 data[n].append(i)
 
     m.load_table_columnar(table_name, **data)
+    m.load_table_columnar(table_name + '2', **data)
     m.table_name = table_name
     yield m
     m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute('DROP TABLE IF EXISTS {table_name}2'.format(**locals()))
 
 
 def test_sizer_row_multiplier_orig(omnisci):
@@ -856,3 +863,51 @@ def test_column_unary_operation(omnisci, oper):
     result = list(result)
 
     assert result == result_expected
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with table_id attribute"
+        " support (got %s) [issue 124]" % (
+            available_version,)))
+def test_column_get_table_id(omnisci):
+
+    @omnisci('int32(Cursor<double, int32>, Cursor<int32, double>, OutputColumn<int32>)')
+    def get_table_id(f8, i4, i4_2, f8_2, out):
+        out[0] = f8.table_id
+        out[1] = i4.table_id
+        out[2] = f8_2.table_id
+        out[3] = i4_2.table_id
+        out[4] = out.table_id
+        return 5
+
+    sql_query = ('select * from table(get_table_id('
+                 f'cursor(select f8, i4 from {omnisci.table_name}),'
+                 f'cursor(select i4, f8 from {omnisci.table_name}2)))')
+
+    descr, result = omnisci.sql_execute(sql_query)
+    result = list(zip(*result))[0]
+
+    f8_id, i4_id, i4_2_id, f8_2_id, out_id = result
+
+    assert f8_id == i4_id
+    assert f8_2_id == i4_2_id
+    assert f8_id != out_id
+    assert f8_2_id != out_id
+    assert f8_id != f8_2_id
+
+    sql_query = ('select * from table(get_table_id('
+                 f'cursor(select f8, i4 from {omnisci.table_name}),'
+                 f'cursor(select i4, f8 from {omnisci.table_name})))')
+
+    descr, result = omnisci.sql_execute(sql_query)
+    result = list(zip(*result))[0]
+
+    f8_id, i4_id, i4_2_id, f8_2_id, out_id = result
+
+    assert f8_id == i4_id
+    assert f8_2_id == i4_2_id
+    assert f8_id != out_id
+    assert f8_2_id != out_id
+    assert f8_id == f8_2_id   # fails because the table ids correspond to temporary tables
