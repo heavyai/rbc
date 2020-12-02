@@ -295,6 +295,7 @@ numpy_functions = [
     ('copysign', 'double(double, double)', np.copysign),
     # Bit functions:
     ('invert', 'int(int)', np.invert),
+    ('bitwise_not', 'int(int)', np.bitwise_not),
     ('bitwise_or', 'int(int, int)', np.bitwise_or),
     ('bitwise_xor', 'int(int, int)', np.bitwise_xor),
     ('bitwise_and', 'int(int, int)', np.bitwise_and),

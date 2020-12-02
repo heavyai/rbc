@@ -114,6 +114,7 @@ def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_binary_ufunc(np.bitwise_and)
 @overload_elementwise_binary_ufunc(np.bitwise_or)
 @overload_elementwise_binary_ufunc(np.bitwise_xor)
+@overload_elementwise_binary_ufunc(np.bitwise_not, name='bitwise_not')
 @overload_elementwise_binary_ufunc(np.left_shift)
 @overload_elementwise_binary_ufunc(np.right_shift)
 # trigonometric functions
