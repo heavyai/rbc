@@ -1,6 +1,5 @@
-numpy
 numba
-llvmlite>=0.29
+llvmlite>=0.29,<0.35
 tblib
 thriftpy2
 six
