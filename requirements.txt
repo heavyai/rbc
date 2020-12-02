@@ -1,4 +1,4 @@
-numba
+numba<0.52
 llvmlite>=0.29,<0.35
 tblib
 thriftpy2
