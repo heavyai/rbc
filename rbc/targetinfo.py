@@ -1,5 +1,6 @@
 import ctypes
 import json
+import warnings
 from . import libfuncs
 from .utils import parse_version
 
@@ -305,6 +306,44 @@ class TargetInfo(object):
 
     # TODO: info may also contain: count, threads, cores
 
+    def check_enabled(self, desired_devices):
+        """Check if target supports desired devices
+
+        Checks if target is in a set of desired devices. If not, the
+        target is considered disabled by the caller.
+
+        Parameters
+        ----------
+        desired_devices: list
+          Device names that is a subset of `['cpu', 'gpu', 'cuda']` or
+          None.
+
+        Returns
+        -------
+        is_contained : bool
+          Return True when `desired_devices` is None or when the
+          target device name is listed in `desired_devices`.
+          Otherwise, return False.
+
+        """
+        if desired_devices is None:
+            return True
+        for d in desired_devices:
+            d = d.lower()
+            if d == 'cpu':
+                if self.is_cpu:
+                    return True
+            elif d == 'gpu':
+                if self.is_gpu:
+                    return True
+            elif d == 'cuda':
+                if self.driver[0] == 'CUDA':
+                    return True
+            else:
+                warnings.warn(
+                    f'Ignoring unknown desired device specification: {d}')
+        return False
+
     # Worker methods
 
     def sizeof(self, t):
@@ -338,6 +377,8 @@ class TargetInfo(object):
                 return 4
             if t == 'size_t':
                 return self.bits // 8
+            if t == 'char':
+                return 1
         if isinstance(t, type) and issubclass(t, ctypes._SimpleCData):
             return ctypes.sizeof(t)
         raise NotImplementedError(
