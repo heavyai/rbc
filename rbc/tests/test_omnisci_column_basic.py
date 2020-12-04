@@ -546,8 +546,8 @@ def test_overload(omnisci, step):
     else:
         with pytest.raises(
                 Exception,
-                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\)"
-                       " not supported")):
+                match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\) not supported"
+                       r"|Could not bind overloaded_udtf\(COLUMN<FLOAT>, INTEGER\))")):
             descr, result = omnisci.sql_execute(sql_query)
 
     sql_query = ('select * from table(overloaded_udtf(cursor('
@@ -559,8 +559,9 @@ def test_overload(omnisci, step):
     else:
         with pytest.raises(
                 Exception,
-                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>,"
-                       r" COLUMN<FLOAT>, INTEGER\) not supported")):
+                match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>,"
+                       r" COLUMN<FLOAT>, INTEGER\) not supported|Could not bind"
+                       r" overloaded_udtf\(COLUMN<FLOAT>, COLUMN<FLOAT>, INTEGER\))")):
             descr, result = omnisci.sql_execute(sql_query)
 
 
@@ -655,7 +656,6 @@ def test_column_aggregate(omnisci, prop, oper):
             sql_query = (
                 f'select {oper}(out0, out1) from table({mycopy}3(cursor('
                 f'select f8, d, b from {omnisci.table_name}), 1)) group by out2')
-            pytest.skip(f'server crashes on `{sql_query}`')
         else:
             sql_query_expected = (f'select {oper}(f8, d) from {omnisci.table_name}')
             sql_query = (
@@ -801,3 +801,178 @@ def test_column_unary_operation(omnisci, oper):
     result = list(result)
 
     assert result == result_expected
+
+
+@pytest.fixture(scope='function')
+def add_nulls(omnisci):
+    omnisci.sql_execute(
+        f'insert into {omnisci.table_name} '
+        f'values (NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);'
+    )
+    yield omnisci
+    omnisci.sql_execute(
+        f'delete from {omnisci.table_name} where f4 is NULL;'
+    )
+
+
+colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
+types = ['float', 'double', 'int8', 'int16', 'int32', 'int64', 'bool', 'double']
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with type_limits"
+        " support (got %s) [issue 188]" % (
+            available_version,)))
+@pytest.mark.usefixtures('add_nulls')
+@pytest.mark.parametrize('col,typ', zip(colnames, types))
+def test_null_value(omnisci, col, typ):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci(f'int32(Column<{typ}>, RowMultiplier, OutputColumn<{typ}>)')
+    def my_row_copier_mul(x, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            if x.is_null(i):
+                y[i] = y.null_value
+            else:
+                y[i] = x[i]
+        return m * input_row_count
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(my_row_copier_mul(cursor(select {col} '
+        'from {omnisci.table_name}), 1));'
+        .format(**locals()))
+
+    assert list(result).count((None,)) == 1
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb create as support"
+        " (got %s)" % (
+            available_version,)))
+def test_create_as(omnisci):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Cursor<double>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def test_rbc_mycopy(x1, m, y1):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select f8 from {omnisci.table_name}')
+    sql_queries = [
+        f'DROP TABLE IF EXISTS {omnisci.table_name}_f8',
+        (f'CREATE TABLE {omnisci.table_name}_f8 AS SELECT out0 FROM TABLE({mycopy}(CURSOR('
+         f'SELECT f8 FROM {omnisci.table_name}), 1))'),
+        f'SELECT * FROM {omnisci.table_name}_f8']
+
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    for sql_query in sql_queries:
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+
+    assert result == result_expected
+
+
+@pytest.fixture(scope='function')
+def create_columns(omnisci):
+    # delete tables
+    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
+    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    # create tables
+    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
+    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
+    # add data
+    omnisci.load_table_columnar('datatable', **{'x': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    omnisci.load_table_columnar('kerneltable', **{'kernel': [10.0, 20.0, 30.0]})
+    yield omnisci
+    # delete tables
+    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
+    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test with different column sizes requires omnisci 5.5"
+        " support (got %s) [issue 176]" % (
+            available_version,)))
+@pytest.mark.usefixtures('create_columns')
+def test_column_different_sizes(omnisci):
+
+    @omnisci('int32(Column<double>, Column<double>, RowMultiplier, OutputColumn<double>)')
+    def convolve(x, kernel, m, y):
+        for i in range(len(y)):
+            y[i] = 0.0
+        for i in range(len(x)):
+            for j in range(len(kernel)):
+                k = i + j
+                if (k < len(x)):
+                    y[k] += kernel[j] * x[k]
+        # output has the same size as @x
+        return len(x)
+
+    _, result = omnisci.sql_execute(
+        'select * from table('
+        'convolve(cursor(select x from datatable),'
+        'cursor(select kernel from kerneltable), 1))')
+
+    expected = [(10.0,), (60.0,), (180.0,), (240.0,), (300.0,)]
+    assert list(result) == expected
+
+
+@pytest.fixture(scope='function')
+def add_nulls(omnisci):
+    omnisci.sql_execute(
+        f'insert into {omnisci.table_name} '
+        f'values (NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);'
+    )
+    yield omnisci
+    omnisci.sql_execute(
+        f'delete from {omnisci.table_name} where f4 is NULL;'
+    )
+
+
+colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'd']
+types = ['float', 'double', 'int8', 'int16', 'int32', 'int64', 'double']
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with type_limits"
+        " support (got %s) [issue 188]" % (
+            available_version,)))
+@pytest.mark.usefixtures('add_nulls')
+@pytest.mark.parametrize('col,typ', zip(colnames, types))
+def test_null_value(omnisci, col, typ):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci(f'int32(Column<{typ}>, RowMultiplier, OutputColumn<{typ}>)')
+    def my_row_copier_mul(x, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            if x.is_null(i):
+                y.set_null(i)
+            else:
+                y[i] = x[i] + x[i]
+        return m * input_row_count
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(my_row_copier_mul(cursor(select {col} '
+        'from {omnisci.table_name}), 1));'
+        .format(**locals()))
+
+    assert list(result).count((None,)) == 1

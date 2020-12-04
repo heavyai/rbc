@@ -454,6 +454,16 @@ class Type(tuple):
             isinstance(self[1], tuple) and not isinstance(self[1], Type)
 
     @property
+    def is_signed(self):
+        # https://en.cppreference.com/w/cpp/types/numeric_limits/is_signed
+        return self.is_atomic and (self.is_char or self.is_int or self.is_float)
+
+    @property
+    def is_unsigned(self):
+        # https://en.cppreference.com/w/cpp/types/numeric_limits/is_signed
+        return self.is_atomic and not self.is_signed
+
+    @property
     def is_complete(self):
         """Return True when the Type instance does not contain unknown types.
         """
@@ -1212,6 +1222,9 @@ def _demangle(s):
 if nb is not None:
     class Boolean1(nb.types.Boolean):
 
+        def __name__(self):
+            return 'Boolean1'
+
         def can_convert_from(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
 
@@ -1224,6 +1237,9 @@ if nb is not None:
     class Boolean8(nb.types.Boolean):
 
         bitwidth = 8
+
+        def __name__(self):
+            return 'Boolean8'
 
         def can_convert_to(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)

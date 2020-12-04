@@ -7,17 +7,21 @@ import configparser
 from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
+from . import omnisci_backend
 from .omnisci_backend import (
     array_type_converter,
     output_column_type_converter, column_type_converter,
     table_function_sizer_type_converter,
-    cursor_type_converter,
+    cursor_type_converter, bytes_type_converter,
     OmnisciOutputColumnType, OmnisciColumnType,
-    OmnisciCompilerPipeline, OmnisciCursorType)
+    OmnisciCompilerPipeline, OmnisciCursorType,
+    BufferMeta)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
+from .typesystem import Type
+from . import typesystem
 
 
 def get_literal_return(func, verbose=False):
@@ -217,7 +221,7 @@ class RemoteOmnisci(RemoteJIT):
     converters = [array_type_converter,
                   output_column_type_converter, column_type_converter,
                   table_function_sizer_type_converter,
-                  cursor_type_converter]
+                  cursor_type_converter, bytes_type_converter]
     multiplexed = False
     mangle_prefix = ''
 
@@ -318,7 +322,9 @@ class RemoteOmnisci(RemoteJIT):
         try:
             return client(Omnisci={name: args})['Omnisci'][name]
         except client.thrift.TMapDException as msg:
-            m = re.match(r'.*CalciteContextException.*(No match found for function signature.*)',
+            m = re.match(r'.*CalciteContextException.*('
+                         r'No match found for function signature.*'
+                         r'|Cannot apply.*)',
                          msg.error_msg)
             if m:
                 raise OmnisciServerError(f'[Calcite] {m.group(1)}')
@@ -562,26 +568,15 @@ class RemoteOmnisci(RemoteJIT):
             'GeoPolygon': typemap['TExtArgumentType'].get('GeoPolygon'),
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
+            'Bytes': typemap['TExtArgumentType'].get('TextEncodingNone'),
+            'Text<8>': typemap['TExtArgumentType'].get('TextEncodingDict8'),
+            'Text<16>': typemap['TExtArgumentType'].get('TextEncodingDict16'),
+            'Text<32>': typemap['TExtArgumentType'].get('TextEncodingDict32'),
         }
 
         if self.version[:2] < (5, 4):
             ext_arguments_map['Array<bool>'] = typemap[
                 'TExtArgumentType']['ArrayInt8']
-
-        ext_arguments_map['{bool* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<bool>']
-        ext_arguments_map['{int8* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<int8_t>']
-        ext_arguments_map['{int16* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<int16_t>']
-        ext_arguments_map['{int32* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<int32_t>']
-        ext_arguments_map['{int64* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<int64_t>']
-        ext_arguments_map['{float32* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<float>']
-        ext_arguments_map['{float64* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map['Array<double>']
 
         for ptr_type, T in [
                 ('bool', 'bool'),
@@ -592,8 +587,14 @@ class RemoteOmnisci(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
         ]:
+            ext_arguments_map[
+                '{%s* ptr, uint64 sz, bool is_null}*' % ptr_type] \
+                = ext_arguments_map.get('Array<%s>' % T)
             ext_arguments_map['{%s* ptr, uint64 sz}' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
+
+        ext_arguments_map['{char8* ptr, uint64 sz, bool is_null}*'] \
+            = ext_arguments_map.get('Bytes')
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
@@ -602,6 +603,33 @@ class RemoteOmnisci(RemoteJIT):
                               'in ext_arguments_map' % (n, v))
         self._ext_arguments_map = ext_arguments_map
         return ext_arguments_map
+
+    def _parse_sql_null_values(self, sql_nv):
+        conv = {
+            'BOOL': 'int8',
+            'TYNYINT': 'int8',
+            'SMALLINT': 'int16',
+            'INT': 'int32',
+            'BIGINT': 'int64',
+            'FLOAT': 'float32',
+            'DOUBLE': 'float64',
+        }
+        L = sql_nv.strip(';').split(';')
+        return {Type.fromstring(conv[k]):
+                v for k, v in map(lambda s: s.split(':'), L) if k in conv.keys()}
+
+    def type_to_extarg(self, t):
+        if isinstance(t, typesystem.Type):
+            t = t.tostring(use_annotation=False)
+        if isinstance(t, str):
+            extarg = self._get_ext_arguments_map().get(t)
+            if extarg is None:
+                raise ValueError(f'cannot convert {t} to ExtArgumentType')
+            return extarg
+        elif isinstance(t, tuple):
+            return tuple(map(self.type_to_extarg, t))
+        else:
+            raise TypeError(f'expected typesystem Type|tuple|str, got {type(t).__name__}')
 
     def retrieve_targets(self):
         device_params = self.thrift_call('get_device_parameters',
@@ -671,6 +699,12 @@ class RemoteOmnisci(RemoteJIT):
             llvm_version = device_params.get('llvm_version')
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
+
+            sql_nv = device_params.get('sql_null_values')
+            if sql_nv is not None:
+                with target_info:
+                    target_info.set('sql_null_values', self._parse_sql_null_values(sql_nv))
+
         return targets
 
     @property
@@ -691,7 +725,6 @@ class RemoteOmnisci(RemoteJIT):
                 'omniscidb 5.4 or newer, currently '
                 'connected to ', v)
         thrift = self.thrift_client.thrift
-        ext_arguments_map = self._get_ext_arguments_map()
         sizer_map = dict(
             ConstantParameter='kUserSpecifiedConstantParameter',
             RowMultiplier='kUserSpecifiedRowMultiplier',
@@ -722,29 +755,23 @@ class RemoteOmnisci(RemoteJIT):
                 sizer = _sizer
 
             if isinstance(a, OmnisciCursorType):
-                sqlArgTypes.append(ext_arguments_map['Cursor'])
+                sqlArgTypes.append(self.type_to_extarg('Cursor'))
                 for a_ in a.as_consumed_args:
                     assert not isinstance(
                         a_, OmnisciOutputColumnType), (a_)
-                    atype = ext_arguments_map[
-                        a_.tostring(use_annotation=False)]
-                    inputArgTypes.append(atype)
+                    inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     if self.version < (5, 5):
-                        atype = ext_arguments_map[
-                            a.tostring(use_annotation=False)]
+                        atype = self.type_to_extarg(a)
                     else:
-                        atype = ext_arguments_map[
-                            a[0][0].tostring(use_annotation=False)]
+                        atype = self.type_to_extarg(a[0][0])
                     outputArgTypes.append(atype)
                 else:
-                    atype = ext_arguments_map[
-                        a.tostring(use_annotation=False)]
+                    atype = self.type_to_extarg(a)
                     if isinstance(a, OmnisciColumnType):
-                        sqlArgTypes.append(
-                            ext_arguments_map['Cursor'])
+                        sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:
                         sqlArgTypes.append(atype)
@@ -781,7 +808,6 @@ class RemoteOmnisci(RemoteJIT):
                 'omniscidb 5.3 or older, currently '
                 'connected to ', v)
         thrift = self.thrift_client.thrift
-        ext_arguments_map = self._get_ext_arguments_map()
 
         sizer = None
         sizer_index = -1
@@ -796,16 +822,14 @@ class RemoteOmnisci(RemoteJIT):
                 assert sizer_index == -1
                 sizer_index = i + 1
                 sizer = _sizer
-            atype = ext_arguments_map[
-                a.tostring(use_annotation=False)]
+            atype = self.type_to_extarg(a)
             if 'output' in a.annotation():
                 outputArgTypes.append(atype)
             else:
                 if 'input' in a.annotation():
                     sqlArgTypes.append(atype)
                 elif 'cursor' in a.annotation():
-                    sqlArgTypes.append(
-                        ext_arguments_map['Cursor'])
+                    sqlArgTypes.append(self.type_to_extarg('Cursor'))
                 inputArgTypes.append(atype)
         if sizer is None:
             sizer = 'kConstant'
@@ -819,11 +843,8 @@ class RemoteOmnisci(RemoteJIT):
     def _make_udf(self, caller, orig_sig, sig):
         name = caller.func.__name__
         thrift = self.thrift_client.thrift
-        ext_arguments_map = self._get_ext_arguments_map()
-        rtype = ext_arguments_map[sig[0].tostring(
-            use_annotation=False)]
-        atypes = [ext_arguments_map[a.tostring(
-            use_annotation=False)] for a in sig[1]]
+        rtype = self.type_to_extarg(sig[0])
+        atypes = self.type_to_extarg(sig[1])
         return thrift.TUserDefinedFunction(
             name + sig.mangling(),
             atypes, rtype)
@@ -922,7 +943,8 @@ class RemoteOmnisci(RemoteJIT):
                         udtfs.append(udtf)
                     else:
                         skipped_names.append(udtf.name)
-
+                if self.debug:
+                    print(f'Skipping: {", ".join(skipped_names)}')
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.
         for f in udtfs:
@@ -930,7 +952,24 @@ class RemoteOmnisci(RemoteJIT):
         for f in udfs:
             assert f.name in llvm_function_names
 
+        if self.debug:
+            names = ", ".join([f.name for f in udfs] + [f.name for f in udtfs])
+            print(f'Registering: {names}')
+
         self.set_last_compile(device_ir_map)
         return self.thrift_call(
             'register_runtime_extension_functions',
             self.session_id, udfs, udtfs, device_ir_map)
+
+    def preprocess_callable(self, func):
+        func = super().preprocess_callable(func)
+        if 'omnisci_backend' not in func.__code__.co_names:
+            for symbol in BufferMeta.class_names:
+                if symbol in func.__code__.co_names and symbol not in func.__globals__:
+                    warnings.warn(
+                        f'{func.__name__} uses {symbol} that may be undefined.'
+                        f' Inserting {symbol} to global namespace.'
+                        f' Use `from rbc.omnisci_backend import {symbol}`'
+                        ' to remove this warning.')
+                    func.__globals__[symbol] = omnisci_backend.__dict__.get(symbol)
+        return func

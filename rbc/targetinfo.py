@@ -182,7 +182,7 @@ class TargetInfo(object):
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
                           'has_cpython', 'has_numba', 'driver', 'software',
-                          'llvm_version')
+                          'llvm_version', 'sql_null_values')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
@@ -311,6 +311,12 @@ class TargetInfo(object):
         """
         return self.info.get('llvm_version')
 
+    @property
+    def sql_null_values(self):
+        """Return the sql null values for some types
+        """
+        return self.info.get('sql_null_values', {})
+
     # TODO: info may also contain: count, threads, cores
 
     def check_enabled(self, desired_devices):
@@ -331,7 +337,6 @@ class TargetInfo(object):
           Return True when `desired_devices` is None or when the
           target device name is listed in `desired_devices`.
           Otherwise, return False.
-
         """
         if desired_devices is None:
             return True

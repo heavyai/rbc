@@ -182,7 +182,7 @@ class RemoteGPUTypingContext(typing.Context):
 # Code generation methods
 
 
-def make_wrapper(fname, atypes, rtype, cres, verbose=False):
+def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
     """Make wrapper function to numba compile result.
 
     The compilation result contains a function with prototype::
@@ -194,7 +194,7 @@ def make_wrapper(fname, atypes, rtype, cres, verbose=False):
 
       <rtype> <fname>(<arguments>)
 
-    or, if <rtype> is Omnisci Array, then
+    or, if <rtype>.return_as_first_argument == True, then
 
       void <fname>(<rtype>* <arguments>)
 
@@ -209,8 +209,8 @@ def make_wrapper(fname, atypes, rtype, cres, verbose=False):
     cres : CompileResult
       Numba compilation result.
     verbose: bool
-      When True, insert printf statements for debugging errors. Use
-      False for CUDA target.
+      When True, insert printf statements for debugging errors. For
+      CUDA target this feature is disabled.
 
     """
     fndesc = cres.fndesc
@@ -219,8 +219,9 @@ def make_wrapper(fname, atypes, rtype, cres, verbose=False):
     ll_argtypes = [context.get_value_type(ty) for ty in atypes]
     ll_return_type = context.get_value_type(rtype)
 
-    # TODO: design a API for custom wrapping
-    if type(rtype).__name__ == 'ArrayPointer':
+    return_as_first_argument = getattr(rtype, 'return_as_first_argument', False)
+    assert isinstance(return_as_first_argument, bool)
+    if return_as_first_argument:
         wrapty = ir.FunctionType(ir.VoidType(),
                                  [ll_return_type] + ll_argtypes)
         wrapfn = module.add_function(wrapty, fname)
@@ -230,10 +231,11 @@ def make_wrapper(fname, atypes, rtype, cres, verbose=False):
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args[1:])
         with cgutils.if_unlikely(builder, status.is_error):
-            if verbose:
+            if verbose and target.is_cpu:
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
+                cg_fflush(builder)
             builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
@@ -245,11 +247,12 @@ def make_wrapper(fname, atypes, rtype, cres, verbose=False):
         fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args)
-        if verbose:
+        if verbose and target.is_cpu:
             with cgutils.if_unlikely(builder, status.is_error):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
+                cg_fflush(builder)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
@@ -262,7 +265,8 @@ def compile_instance(func, sig,
                      pipeline_class,
                      main_library,
                      debug=False):
-    """Compile a function with given signature. Return function name when succesful.
+    """Compile a function with given signature. Return function name when
+    succesful.
     """
     flags = compiler.Flags()
     flags.set('no_compile')
@@ -319,7 +323,7 @@ def compile_instance(func, sig,
         warnings.warn(f'Skipping {fname} that uses unsupported intrinsic `{f}`')
         return
 
-    make_wrapper(fname, args, return_type, cres, verbose=debug)
+    make_wrapper(fname, args, return_type, cres, target, verbose=debug)
 
     main_module = main_library._final_module
     for lib in result['libraries']:
@@ -492,9 +496,8 @@ def fflush(typingctx):
     """
     sig = nb_types.void(nb_types.void)
 
-    target_info = TargetInfo()
-
     def codegen(context, builder, signature, args):
+        target_info = TargetInfo()
         if target_info.is_cpu:
             cg_fflush(builder)
 
@@ -507,14 +510,17 @@ def printf(typingctx, format_type, *args):
 
     Note: printf is available only for CPU target.
     """
-    target_info = TargetInfo()
 
     if isinstance(format_type, nb_types.StringLiteral):
         sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
 
         def codegen(context, builder, signature, args):
+            target_info = TargetInfo()
             if target_info.is_cpu:
                 cgutils.printf(builder, format_type.literal_value, *args[1:])
                 cg_fflush(builder)
 
         return sig, codegen
+
+    else:
+        raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')

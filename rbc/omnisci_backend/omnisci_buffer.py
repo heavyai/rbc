@@ -24,9 +24,12 @@ Omnisci buffer objects from UDF/UDTFs.
 
 
 import operator
+from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
+from rbc.targetinfo import TargetInfo
+from llvmlite import ir as llvm_ir
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
 else:
@@ -37,6 +40,8 @@ int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
 void_t = ir.VoidType()
+fp32 = ir.FloatType()
+fp64 = ir.DoubleType()
 
 
 class OmnisciBufferType(typesystem.Type):
@@ -73,6 +78,7 @@ class BufferPointer(types.Type):
     used to access the data stored in Buffer ptr member.
     """
     mutable = True
+    return_as_first_argument = True
 
     def __init__(self, dtype, eltype):
         self.dtype = dtype    # struct dtype
@@ -85,7 +91,15 @@ class BufferPointer(types.Type):
         return self.dtype
 
 
-class Buffer(object):
+class BufferMeta(type):
+
+    class_names = set()
+
+    def __init__(cls, name, bases, dct):
+        type(cls).class_names.add(name)
+
+
+class Buffer(object, metaclass=BufferMeta):
     """Represents Omnisci Buffer that can be constructed within UDF/UDTFs.
     """
 
@@ -100,6 +114,81 @@ class BufferPointerModel(datamodel.models.PointerModel):
       class ArrayPointerModel(BufferPointerModel):
           pass
     """
+
+
+builder_buffers = defaultdict(list)
+
+
+def omnisci_buffer_constructor(context, builder, sig, args):
+    """
+
+    Usage:
+
+      extending.lower_builtin(MyBuffer, numba.types.Integer, ...)(omnisci_buffer_constructor)
+
+    will enable creating MyBuffer instance from a Omnisci UDF/UDTF definition:
+
+      b = MyBuffer(<size>, ...)
+
+    """
+    ptr_type, sz_type = sig.return_type.dtype.members[:2]
+    if len(sig.return_type.dtype.members) > 2:
+        assert len(sig.return_type.dtype.members) == 3
+        null_type = sig.return_type.dtype.members[2]
+    else:
+        null_type = None
+    assert isinstance(args[0].type, ir.IntType), (args[0].type)
+    element_count = builder.zext(args[0], int64_t)
+    element_size = int64_t(ptr_type.dtype.bitwidth // 8)
+
+    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+
+    # TODO: use omnisci alloc function instead of calloc, see rbc issue 87
+    alloc_fn = builder.module.get_or_insert_function(
+        alloc_fnty, name="calloc")
+    ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    # remember possible temporary allocations so that when leaving a
+    # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.
+    builder_buffers[builder].append(ptr8)
+    ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
+
+    fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
+    fa.ptr = ptr                  # T*
+    fa.sz = element_count         # size_t
+    if null_type is not None:
+        is_null = context.get_value_type(null_type)(0)
+        fa.is_null = is_null      # int8_t
+    return fa._getpointer()
+
+
+@extending.intrinsic
+def free_omnisci_buffer(typingctx, ret):
+    sig = types.void(ret)
+
+    def codegen(context, builder, signature, args):
+        buffers = builder_buffers[builder]
+
+        # TODO: using stdlib `free` that works only for CPU. For CUDA
+        # devices, we need to use omniscidb provided deallocator.
+        free_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
+        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
+
+        # We skip the ret pointer iff we're returning a Buffer
+        # otherwise, we free everything
+        if isinstance(ret, BufferPointer):
+            [arg] = args
+            ptr = builder.load(builder.gep(arg, [int32_t(0), int32_t(0)]))
+            ptr = builder.bitcast(ptr, int8_t.as_pointer())
+            for ptr8 in buffers:
+                with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
+                    builder.call(free_fn, [ptr8])
+        else:
+            for ptr8 in buffers:
+                builder.call(free_fn, [ptr8])
+
+        del builder_buffers[builder]
+
+    return sig, codegen
 
 
 @extending.intrinsic
@@ -260,6 +349,120 @@ def omnisci_buffer_setitem(a, i, v):
         return lambda a, i, v: omnisci_buffer_setitem_(a, i, v)
 
 
+@extending.intrinsic
+def omnisci_column_set_null_(typingctx, col_var, row_idx):
+    # Float values are serialized as integers by OmniSciDB
+    # For reference, here is the conversion table for float and double
+    #   FLOAT:  1.1754944e-38            -> 8388608
+    #   DOUBLE: 2.2250738585072014e-308  -> 4503599627370496
+    #                    ^                          ^
+    #                 fp value                  serialized
+    T = col_var.eltype
+    sig = types.void(col_var, row_idx)
+
+    target_info = TargetInfo()
+    if isinstance(T, types.Boolean):
+        null_value = int(target_info.sql_null_values[typesystem.Type.fromstring('int8')])
+    else:
+        null_value = int(target_info.sql_null_values[typesystem.Type.fromobject(T)])
+
+    def codegen(context, builder, signature, args):
+        zero = int32_t(0)
+
+        data, index = args
+
+        assert data.opname == 'load'
+        buf = data.operands[0]
+
+        ptr = builder.load(builder.gep(
+            buf, [zero, zero]))
+
+        ty = ptr.type.pointee
+        if isinstance(T, types.Float):
+            (int_ty, ty) = (int32_t, fp32) if T == types.float32 else (int64_t, fp64)
+            nv = builder.bitcast(ir.Constant(int_ty, null_value), ty)
+        else:
+            nv = ir.Constant(ty, null_value)
+        builder.store(nv, builder.gep(ptr, [index]))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferType, 'set_null')
+def omnisci_column_set_null(col_var, index):
+    def impl(col_var, index):
+        return omnisci_column_set_null_(col_var, index)
+    return impl
+
+
+@extending.intrinsic
+def omnisci_column_is_null_(typingctx, col_var, row_idx):
+    T = col_var.eltype
+    sig = types.boolean(col_var, row_idx)
+
+    target_info = TargetInfo()
+    if isinstance(T, types.Boolean):
+        null_value = int(target_info.sql_null_values[typesystem.Type.fromstring('int8')])
+    else:
+        null_value = int(target_info.sql_null_values[typesystem.Type.fromobject(T)])
+
+    def codegen(context, builder, signature, args):
+        data, index = args
+        assert data.opname == 'load'
+        buf = data.operands[0]
+
+        ptr = builder.load(builder.gep(
+            buf, [int32_t(0), int32_t(0)]))
+        res = builder.load(builder.gep(ptr, [index]))
+
+        ty = res.type
+        if isinstance(T, types.Float):
+            ty = int32_t if T == types.float32 else int64_t
+            res = builder.bitcast(res, ty)
+        nv = ir.Constant(ty, null_value)
+        return builder.icmp_signed('==', res, nv)
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferType, 'isNull')
+@extending.overload_method(BufferType, 'is_null')
+def omnisci_column_is_null(col_var, row_idx):
+    def impl(col_var, row_idx):
+        return omnisci_column_is_null_(col_var, row_idx)
+    return impl
+
+
+@extending.intrinsic
+def omnisci_buffer_is_null_(typingctx, data):
+    sig = types.int8(data)
+
+    def codegen(context, builder, signature, args):
+
+        rawptr = cgutils.alloca_once_value(builder, value=args[0])
+        ptr = builder.load(rawptr)
+
+        return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferType, 'isNull')
+@extending.overload_method(BufferType, 'is_null')
+def omnisci_column_is_null(col_var, row_idx):
+    def impl(col_var, row_idx):
+        return omnisci_column_is_null_(col_var, row_idx, col_var.null_value)
+    return impl
+
+
+@extending.overload_method(BufferPointer, 'is_null')
+def omnisci_buffer_is_null(x):
+    if isinstance(x, BufferPointer):
+        def impl(x):
+            return omnisci_buffer_is_null_(x)
+        return impl
+
+
 def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
     ptr_type = buffer_type.pointer()
 
@@ -274,7 +477,7 @@ def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
 
 def buffer_type_converter(obj, typesystem_buffer_type,
                           buffer_typename, buffer_ptr_cls,
-                          extra_members=[]):
+                          extra_members=[], element_type=None):
     """Template function for converting typesystem Type instances to
     Omnisci Buffer Type instance.
 
@@ -288,7 +491,8 @@ def buffer_type_converter(obj, typesystem_buffer_type,
     buffer_ptr_cls : {BufferPointer subclass}
     extra_members : {list of typesystem Type instances}
       Additional members of the buffer structure.
-
+    element_type : {None, typesystem Type instance}
+      Specify element type. Otherwise deduce it from `obj` parameters.
     """
     if isinstance(obj, str):
         obj = typesystem.Type(obj,)
@@ -300,19 +504,24 @@ def buffer_type_converter(obj, typesystem_buffer_type,
     #   typesystem.Type('BufferTypeName<ElementType>', )
     # In all other cases refuse by returning None.
 
-    name, params = obj.get_name_and_parameters()
-    if name is None or name != buffer_typename:
-        return
-    assert len(params) == 1, params
-    t = typesystem.Type.fromstring(params[0])
-    if not t.is_concrete:
-        return
+    if element_type is None:
+        name, params = obj.get_name_and_parameters()
+        if name is None or name != buffer_typename:
+            return
+        assert len(params) == 1, params
+        element_type = typesystem.Type.fromstring(params[0])
+        if not element_type.is_concrete:
+            return
+        typename = '%s<%s>' % (buffer_typename, element_type.toprototype())
+    else:
+        element_type = typesystem.Type.fromobject(element_type)
+        typename = buffer_typename
 
     assert issubclass(buffer_ptr_cls, BufferPointer)
     assert issubclass(typesystem_buffer_type, OmnisciBufferType)
 
     # Construct buffer type as a struct with ptr and sz as members.
-    ptr_t = typesystem.Type(t, '*', name='ptr')
+    ptr_t = typesystem.Type(element_type, '*', name='ptr')
     size_t = typesystem.Type.fromstring('size_t sz')
     buffer_type = typesystem_buffer_type(
         ptr_t,
@@ -326,7 +535,6 @@ def buffer_type_converter(obj, typesystem_buffer_type,
     buffer_type._params['numba.Type'] = BufferType
 
     # Create alias to buffer type
-    typename = '%s<%s>' % (buffer_typename, t.toprototype())
     buffer_type._params['typename'] = typename
 
     # In omniscidb, boolean values are stored as int8 because
