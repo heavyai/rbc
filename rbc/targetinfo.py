@@ -180,7 +180,8 @@ class TargetInfo(object):
         """
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
-                          'has_cpython', 'has_numba', 'driver', 'software')
+                          'has_cpython', 'has_numba', 'driver', 'software',
+                          'llvm_version')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
@@ -302,6 +303,12 @@ class TargetInfo(object):
         """Check if target supports Python C/API symbols
         """
         return self.info.get('has_cpython', False)
+
+    @property
+    def llvm_version(self):
+        """Return target system LLVM versions tuple.
+        """
+        return self.info.get('llvm_version')
 
     # TODO: info may also contain: count, threads, cores
 

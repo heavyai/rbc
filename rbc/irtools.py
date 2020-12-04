@@ -83,10 +83,20 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
 
     def _get_host_cpu_features(self):
         features = self.target_info.device_features
-        if llvm.llvm_version_info[0] < 9:
-            # See https://github.com/xnd-project/rbc/issues/45
-            for f in ['cx8', 'enqcmd', 'avx512bf16']:
-                features = features.replace('+' + f, '').replace('-' + f, '')
+        server_llvm_version = self.target_info.llvm_version[0]
+        client_llvm_version = llvm.llvm_version_info[0]
+
+        # See https://github.com/xnd-project/rbc/issues/45
+        remove_features = {
+            (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
+                      'avx512vp2intersect', 'tsxldtrk', 'amx-tile', 'amx-bf16',
+                      'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
+                      'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
+                      'avx512vp2intersect', 'cx8', 'enqcmd', 'avx512bf16'],
+            (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
+        }.get((server_llvm_version, client_llvm_version), [])
+        for f in remove_features:
+            features = features.replace('+' + f, '').replace('-' + f, '')
         return features
 
     def _customize_tm_options(self, options):

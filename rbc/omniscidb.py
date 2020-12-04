@@ -668,6 +668,9 @@ class RemoteOmnisci(RemoteJIT):
             version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
             target_info.set('software', f'OmnisciDB {version_str}')
 
+            llvm_version = device_params.get('llvm_version')
+            if llvm_version is not None:
+                target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
         return targets
 
     @property
