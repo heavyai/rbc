@@ -8,13 +8,20 @@ def omnisci():
     for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
         define(o)
 
-        def require_loadtime(kind):
+        def require_loadtime(kind, _cache=[None]):
+            msg = _cache[0]
             if kind == 'lt':
                 try:
-                    o.sql_execute('select lt_device_selection_udf_any(0)')
+                    if msg is not None:
+                        raise msg
+                    if o.has_cuda:
+                        o.sql_execute('select lt_device_selection_udf_gpu(0)')
+                    else:
+                        o.sql_execute('select lt_device_selection_udf_cpu(0)')
                 except Exception as msg:
+                    _cache[0] = msg
                     pytest.skip(f'test requires load-time device selection UDFs ({msg}):'
-                                f' run server with `--cpu ../Tests/device_selection_samples.cpp`')
+                                f' run server with `--udf ../Tests/device_selection_samples.cpp`')
 
         o.require_loadtime = require_loadtime
         yield o
