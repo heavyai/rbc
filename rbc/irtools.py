@@ -83,8 +83,10 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
 
     def _get_host_cpu_features(self):
         features = self.target_info.device_features
-        server_llvm_version = self.target_info.llvm_version[0]
-        client_llvm_version = llvm.llvm_version_info[0]
+        server_llvm_version = self.target_info.llvm_version
+        if server_llvm_version is None:
+            return ''
+        client_llvm_version = llvm.llvm_version_info
 
         # See https://github.com/xnd-project/rbc/issues/45
         remove_features = {
@@ -94,7 +96,7 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
                       'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'cx8', 'enqcmd', 'avx512bf16'],
             (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
-        }.get((server_llvm_version, client_llvm_version), [])
+        }.get((server_llvm_version[0], client_llvm_version[0]), [])
         for f in remove_features:
             features = features.replace('+' + f, '').replace('-' + f, '')
         return features
