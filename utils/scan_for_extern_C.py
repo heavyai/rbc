@@ -94,7 +94,7 @@ def main():
 
     fn = os.path.join(rootdir, 'QueryEngine', 'defined_symbols_omnisci.h')
     f = open(fn, 'w')
-    f.write(f'''/*
+    f.write('''/*
     This file contains all function names that omniscidb defines.
 
     To be included only in NativeCodegen.cpp.
