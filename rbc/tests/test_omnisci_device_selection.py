@@ -21,7 +21,8 @@ def omnisci():
                 except Exception as msg:
                     _cache[0] = msg
                     pytest.skip(f'test requires load-time device selection UDFs ({msg}):'
-                                f' run server with `--udf ../Tests/device_selection_samples.cpp`')
+                                f' run server with `--udf ../Tests/device_selection_samples.cpp`'
+                                ' or check server logs for errors')
 
         o.require_loadtime = require_loadtime
         yield o
