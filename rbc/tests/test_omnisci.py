@@ -315,8 +315,9 @@ entry:
                             ast_signatures, device_ir_map)
 
 
-@pytest.mark.skip(reason='omnisci server crashes')
 def test_ir_query_error(omnisci):
+    if omnisci.version < (5, 5):
+        pytest.skip("requires omniscidb-internal PR 5026")
     device_params = omnisci.thrift_call('get_device_parameters',
                                         omnisci.session_id)
     gpu_target_triple = device_params.get('gpu_triple')
@@ -336,9 +337,12 @@ entry:
 
     omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
                         ast_signatures, device_ir_map)
-    descr, result = omnisci.sql_execute(
-        'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'
-        .format(**locals()))
+    try:
+        omnisci.sql_execute(
+            'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'
+            .format(**locals()))
+    except errors.OmnisciServerError as msg:
+        assert "use of undefined value '@foobar'" in str(msg)
 
 
 def test_multiple_implementation(omnisci):
@@ -610,7 +614,8 @@ def test_casting(omnisci):
     ]:
         q = ('select '+f+'('+v+') from {omnisci.table_name} limit 1'
              .format(**locals()))
-        match = r".*Function "+f+r"\("+t+r"\) not supported"
+        match = (r".*(Function "+f+r"\("+t+r"\) not supported"
+                 r"|Could not bind "+f+r"\("+t+r"\))")
         with pytest.raises(Exception, match=match):
             descr, result = omnisci.sql_execute(q)
             print('query: ', q)
@@ -635,7 +640,8 @@ def test_casting(omnisci):
                 continue
             with pytest.raises(
                     Exception,
-                    match=r".*Function "+f+r"\("+at+r"\) not supported"):
+                    match=(r".*(Function "+f+r"\("+at+r"\) not supported"
+                           r"|Could not bind "+f+r"\("+at+r"\))")):
                 descr, result = omnisci.sql_execute(
                     'select '+f+'('+av+') from {omnisci.table_name} limit 1'
                     .format(**locals()))
@@ -649,7 +655,8 @@ def test_casting(omnisci):
         ]:
             with pytest.raises(
                     Exception,
-                    match=r".*Function "+f+r"\("+at+r"\) not supported"):
+                    match=(r".*(Function "+f+r"\("+at+r"\) not supported"
+                           r"|Could not bind "+f+r"\("+at+r"\))")):
                 descr, result = omnisci.sql_execute(
                     'select '+f+'('+av+') from {omnisci.table_name} limit 1'
                     .format(**locals()))
