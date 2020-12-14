@@ -544,10 +544,14 @@ def test_overload(omnisci, step):
         result = list(result)
         assert result[0][0] == 32
     else:
+        if available_version <= (5, 5):
+            match_msg = r".*Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\) not supported"
+        else:
+            match_msg = (r".*Could not bind overloaded_udtf\(COLUMN<FLOAT>, INTEGER\)"
+                         r" to any CPU UDTF implementation.")
         with pytest.raises(
                 Exception,
-                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\)"
-                       " not supported")):
+                match=match_msg):
             descr, result = omnisci.sql_execute(sql_query)
 
     sql_query = ('select * from table(overloaded_udtf(cursor('
@@ -557,10 +561,14 @@ def test_overload(omnisci, step):
         result = list(result)
         assert result[0][0] == 132
     else:
+        if available_version <= (5, 5):
+            match_msg = r".*Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\) not supported"
+        else:
+            match_msg = (r".*Could not bind overloaded_udtf\(COLUMN<FLOAT>,"
+                         r" COLUMN<FLOAT>, INTEGER\) to any CPU UDTF implementation")
         with pytest.raises(
                 Exception,
-                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>,"
-                       r" COLUMN<FLOAT>, INTEGER\) not supported")):
+                match=match_msg):
             descr, result = omnisci.sql_execute(sql_query)
 
 
