@@ -718,7 +718,6 @@ class RemoteOmnisci(RemoteJIT):
 
         consumed_index = 0
         name = caller.func.__name__
-        type_to_extarg = self.type_to_extarg
         for i, a in enumerate(orig_sig[1]):
             annot = a.annotation()
             _sizer = annot.get('sizer', unspecified)
@@ -735,23 +734,23 @@ class RemoteOmnisci(RemoteJIT):
                 sizer = _sizer
 
             if isinstance(a, OmnisciCursorType):
-                sqlArgTypes.append(type_to_extarg('Cursor'))
+                sqlArgTypes.append(self.type_to_extarg('Cursor'))
                 for a_ in a.as_consumed_args:
                     assert not isinstance(
                         a_, OmnisciOutputColumnType), (a_)
-                    inputArgTypes.append(type_to_extarg(a_))
+                    inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     if self.version < (5, 5):
-                        atype = type_to_extarg(a)
+                        atype = self.type_to_extarg(a)
                     else:
-                        atype = type_to_extarg(a[0][0])
+                        atype = self.type_to_extarg(a[0][0])
                     outputArgTypes.append(atype)
                 else:
-                    atype = type_to_extarg(a)
+                    atype = self.type_to_extarg(a)
                     if isinstance(a, OmnisciColumnType):
-                        sqlArgTypes.append(type_to_extarg('Cursor'))
+                        sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:
                         sqlArgTypes.append(atype)
@@ -911,7 +910,6 @@ class RemoteOmnisci(RemoteJIT):
                     llvm_function_names.append(f.name)
 
                 device_ir_map[device] = str(llvm_module)
-                # print(device_ir_map[device])
                 skipped_names = []
                 for fid, udf in udfs_map.items():
                     if fid in succesful_fids:
