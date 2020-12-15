@@ -501,6 +501,8 @@ def test_redefine(omnisci):
         assert result[i][0] == f8[i] + 2
 
 
+# remove xfail after rbc pull request #232 is merged
+@pytest.mark.xfail(reason="rbc pr #232")
 @pytest.mark.skipif(
     available_version < (5, 5),
     reason=(
@@ -867,6 +869,8 @@ def test_column_different_sizes(omnisci):
 
     @omnisci('int32(Column<double>, Column<double>, RowMultiplier, OutputColumn<double>)')
     def convolve(x, kernel, m, y):
+        for i in range(len(y)):
+            y[i] = 0.0
         for i in range(len(x)):
             for j in range(len(kernel)):
                 k = i + j
