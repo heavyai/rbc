@@ -801,3 +801,39 @@ def test_column_unary_operation(omnisci, oper):
     result = list(result)
 
     assert result == result_expected
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb create as support"
+        " (got %s)" % (
+            available_version,)))
+def test_create_as(omnisci):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Cursor<double>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def test_rbc_mycopy(x1, m, y1):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select f8 from {omnisci.table_name}')
+    sql_queries = [
+        f'DROP TABLE IF EXISTS {omnisci.table_name}_f8',
+        (f'CREATE TABLE {omnisci.table_name}_f8 AS SELECT out0 FROM TABLE({mycopy}(CURSOR('
+         f'SELECT f8 FROM {omnisci.table_name}), 1))'),
+        f'SELECT * FROM {omnisci.table_name}_f8']
+
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    for sql_query in sql_queries:
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+
+    assert result == result_expected

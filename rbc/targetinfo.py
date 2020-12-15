@@ -331,7 +331,6 @@ class TargetInfo(object):
           Return True when `desired_devices` is None or when the
           target device name is listed in `desired_devices`.
           Otherwise, return False.
-
         """
         if desired_devices is None:
             return True
