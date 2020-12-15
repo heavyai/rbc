@@ -546,8 +546,8 @@ def test_overload(omnisci, step):
     else:
         with pytest.raises(
                 Exception,
-                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\)"
-                       " not supported")):
+                match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\) not supported"
+                       r"|Could not bind overloaded_udtf\(COLUMN<FLOAT>, INTEGER\))")):
             descr, result = omnisci.sql_execute(sql_query)
 
     sql_query = ('select * from table(overloaded_udtf(cursor('
@@ -559,8 +559,9 @@ def test_overload(omnisci, step):
     else:
         with pytest.raises(
                 Exception,
-                match=(r".*Function overloaded_udtf\(COLUMN<FLOAT>,"
-                       r" COLUMN<FLOAT>, INTEGER\) not supported")):
+                match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>,"
+                       r" COLUMN<FLOAT>, INTEGER\) not supported|Could not bind"
+                       r" overloaded_udtf\(COLUMN<FLOAT>, COLUMN<FLOAT>, INTEGER\))")):
             descr, result = omnisci.sql_execute(sql_query)
 
 
@@ -655,7 +656,6 @@ def test_column_aggregate(omnisci, prop, oper):
             sql_query = (
                 f'select {oper}(out0, out1) from table({mycopy}3(cursor('
                 f'select f8, d, b from {omnisci.table_name}), 1)) group by out2')
-            pytest.skip(f'server crashes on `{sql_query}`')
         else:
             sql_query_expected = (f'select {oper}(f8, d) from {omnisci.table_name}')
             sql_query = (
