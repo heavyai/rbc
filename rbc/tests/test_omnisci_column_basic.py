@@ -501,8 +501,6 @@ def test_redefine(omnisci):
         assert result[i][0] == f8[i] + 2
 
 
-# remove xfail after rbc pull request #232 is merged
-@pytest.mark.xfail(reason="rbc pr #232")
 @pytest.mark.skipif(
     available_version < (5, 5),
     reason=(
