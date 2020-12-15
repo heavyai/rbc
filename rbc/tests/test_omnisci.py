@@ -316,8 +316,8 @@ entry:
 
 
 def test_ir_query_error(omnisci):
-    if omnisci.version < (5, 5):
-        pytest.skip("requires omniscidb-internal PR 5026")
+    pytest.skip("requires omniscidb-internal catching undefined symbols")
+
     device_params = omnisci.thrift_call('get_device_parameters',
                                         omnisci.session_id)
     gpu_target_triple = device_params.get('gpu_triple')
