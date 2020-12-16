@@ -837,3 +837,50 @@ def test_create_as(omnisci):
         result = list(result)
 
     assert result == result_expected
+
+
+@pytest.fixture(scope='function')
+def create_columns(omnisci):
+    # delete tables
+    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
+    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    # create tables
+    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
+    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
+    # add data
+    omnisci.load_table_columnar('datatable', **{'x': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    omnisci.load_table_columnar('kerneltable', **{'kernel': [10.0, 20.0, 30.0]})
+    yield omnisci
+    # delete tables
+    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
+    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test with different column sizes requires omnisci 5.5"
+        " support (got %s) [issue 176]" % (
+            available_version,)))
+@pytest.mark.usefixtures('create_columns')
+def test_column_different_sizes(omnisci):
+
+    @omnisci('int32(Column<double>, Column<double>, RowMultiplier, OutputColumn<double>)')
+    def convolve(x, kernel, m, y):
+        for i in range(len(y)):
+            y[i] = 0.0
+        for i in range(len(x)):
+            for j in range(len(kernel)):
+                k = i + j
+                if (k < len(x)):
+                    y[k] += kernel[j] * x[k]
+        # output has the same size as @x
+        return len(x)
+
+    _, result = omnisci.sql_execute(
+        'select * from table('
+        'convolve(cursor(select x from datatable),'
+        'cursor(select kernel from kerneltable), 1))')
+
+    expected = [(10.0,), (60.0,), (180.0,), (240.0,), (300.0,)]
+    assert list(result) == expected
