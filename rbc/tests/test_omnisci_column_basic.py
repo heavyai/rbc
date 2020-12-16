@@ -580,8 +580,7 @@ def test_overload_uniform(omnisci):
              'int32(Column<int64>, RowMultiplier, OutputColumn<int64>)',
              'int32(Column<int32>, RowMultiplier, OutputColumn<int32>)',
              'int32(Column<int16>, RowMultiplier, OutputColumn<int16>)',
-             'int32(Column<int8>, RowMultiplier, OutputColumn<int8>)',
-    )  # noqa: E501, F811
+             'int32(Column<int8>, RowMultiplier, OutputColumn<int8>)')  # noqa: E501, F811
     def mycopy(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = x[i]
