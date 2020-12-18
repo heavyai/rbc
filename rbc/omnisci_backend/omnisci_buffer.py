@@ -170,9 +170,8 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
 
-    # TODO: use omnisci alloc function instead of calloc, see rbc issue 87
     alloc_fn = builder.module.get_or_insert_function(
-        alloc_fnty, name="calloc")
+        alloc_fnty, name="allocate_varlen_buffer")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     # remember possible temporary allocations so that when leaving a
     # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.

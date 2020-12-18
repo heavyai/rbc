@@ -70,20 +70,40 @@ def get_called_functions(library, funcname=None):
 
 # ---------------------------------------------------------------------------
 # CPU Context classes
-class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
-    # TODO: introduce JITRemoteCodeLibrary?
-    _library_class = codegen.JITCodeLibrary
+class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
+    """JITRemoteCodeLibrary was introduce to prevent numba from calling functions
+    that checks if the module is final. See xnd-project/rbc issue #87.
+    """
 
-    def __init__(self, name, target_info):
-        self.target_info = target_info
+    def get_pointer_to_function(self, name):
+        """We can return any random number here! This is just to prevent numba from
+        trying to check if the symbol given by "name" is defined in the module.
+        In cases were RBC is calling an external function (i.e. allocate_varlen_buffer)
+        the symbol will not be defined in the module, resulting in an error.
+        """
+        return 0
+
+    def _finalize_specific(self):
+        """Same as codegen.JITCodeLibrary._finalize_specific but without
+        calling _ensure_finalize at the end
+        """
+        self._codegen._scan_and_fix_unresolved_refs(self._final_module)
+
+
+class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
+    _library_class = JITRemoteCodeLibrary
+
+    def __init__(self, name):
         super(JITRemoteCPUCodegen, self).__init__(name)
 
     def _get_host_cpu_name(self):
-        return self.target_info.device_name
+        target_info = TargetInfo()
+        return target_info.device_name
 
     def _get_host_cpu_features(self):
-        features = self.target_info.device_features
-        server_llvm_version = self.target_info.llvm_version
+        target_info = TargetInfo()
+        features = target_info.device_features
+        server_llvm_version = target_info.llvm_version
         if server_llvm_version is None:
             return ''
         client_llvm_version = llvm.llvm_version_info
@@ -104,25 +124,31 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
     def _customize_tm_options(self, options):
         super(JITRemoteCPUCodegen, self)._customize_tm_options(options)
         # fix reloc_model as the base method sets it using local target
-        if self.target_info.arch.startswith('x86'):
+        target_info = TargetInfo()
+        if target_info.arch.startswith('x86'):
             reloc_model = 'static'
         else:
             reloc_model = 'default'
         options['reloc'] = reloc_model
 
+    def set_env(self, env_name, env):
+        return None
 
-class RemoteCPUContext(cpu.CPUContext):
 
-    def __init__(self, typing_context, target_info):
-        self.target_info = target_info
-        super(RemoteCPUContext, self).__init__(typing_context)
+class JITRemoteCPUContext(cpu.CPUContext):
+
+    def __init__(self, typing_context):
+        super(JITRemoteCPUContext, self).__init__(typing_context)
 
     @compiler_lock.global_compiler_lock
     def init(self):
-        self.address_size = self.target_info.bits
+        target_info = TargetInfo()
+        self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
-                                                     self.target_info)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
+
+    def get_executable(self, library, fndesc, env):
+        return None
 
         # Map external C functions.
         # nb.core.externals.c_math_functions.install(self)
@@ -140,18 +166,17 @@ class RemoteCPUContext(cpu.CPUContext):
 # GPU Context classes
 
 
-class RemoteGPUTargetContext(cpu.CPUContext):
+class JITRemoteGPUTargetContext(cpu.CPUContext):
 
-    def __init__(self, typing_context, target_info):
-        self.target_info = target_info
+    def __init__(self, typing_context):
         super().__init__(typing_context)
 
     @compiler_lock.global_compiler_lock
     def init(self):
-        self.address_size = self.target_info.bits
+        target_info = TargetInfo()
+        self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
-                                                     self.target_info)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
@@ -168,7 +193,7 @@ class RemoteGPUTargetContext(cpu.CPUContext):
         super().load_additional_registries()
 
 
-class RemoteGPUTypingContext(typing.Context):
+class JITRemoteGPUTypingContext(typing.Context):
     def load_additional_registries(self):
         if get_version('numba') >= (0, 52):
             from numba.core.typing import npydecl
@@ -335,7 +360,7 @@ def compile_instance(func, sig,
 
 
 def compile_to_LLVM(functions_and_signatures,
-                    target: TargetInfo,
+                    target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
                     debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
@@ -356,24 +381,28 @@ def compile_to_LLVM(functions_and_signatures,
     """
     target_desc = registry.cpu_target
 
-    if target is None:
+    if target_info is None:
         # RemoteJIT
-        target = TargetInfo.host()
+        target_info = TargetInfo.host()
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
         # OmnisciDB target
-        if target.is_cpu:
+        if target_info.is_cpu:
             typing_context = typing.Context()
-            target_context = RemoteCPUContext(typing_context, target)
-        elif target.is_gpu:
-            typing_context = RemoteGPUTypingContext()
-            target_context = RemoteGPUTargetContext(typing_context, target)
+            target_context = JITRemoteCPUContext(typing_context)
+        elif target_info.is_gpu:
+            typing_context = JITRemoteGPUTypingContext()
+            target_context = JITRemoteGPUTargetContext(typing_context)
         else:
-            raise ValueError(f'Unknown target {target.name}')
+            raise ValueError(f'Unknown target {target_info.name}')
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
+
+    # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
+    registry.cpu_target.target_context._internal_codegen.set_env = lambda env_name, env: None
+    registry.cpu_target.target_context._internal_codegen._library_class = JITRemoteCodeLibrary
 
     codegen = target_context.codegen()
     main_library = codegen.create_library('rbc.irtools.compile_to_IR')
@@ -383,7 +412,7 @@ def compile_to_LLVM(functions_and_signatures,
     function_names = []
     for func, signatures in functions_and_signatures:
         for fid, sig in signatures.items():
-            fname = compile_instance(func, sig, target, typing_context,
+            fname = compile_instance(func, sig, target_info, typing_context,
                                      target_context, pipeline_class,
                                      main_library,
                                      debug=debug)
@@ -432,8 +461,8 @@ def compile_to_LLVM(functions_and_signatures,
 
     main_module.verify()
     main_library._finalized = True
-    main_module.triple = target.triple
-    main_module.data_layout = target.datalayout
+    main_module.triple = target_info.triple
+    main_module.data_layout = target_info.datalayout
 
     return main_module, succesful_fids
 
