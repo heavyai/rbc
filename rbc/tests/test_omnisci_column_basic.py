@@ -508,7 +508,7 @@ def test_redefine(omnisci):
         " support (got %s) [issue 175]" % (
             available_version,)))
 @pytest.mark.parametrize("step", [1, 2, 3])
-def test_overload(omnisci, step):
+def test_overload_nonuniform(omnisci, step):
     omnisci.reset()
     omnisci.register()
 
@@ -563,6 +563,38 @@ def test_overload(omnisci, step):
                        r" COLUMN<FLOAT>, INTEGER\) not supported|Could not bind"
                        r" overloaded_udtf\(COLUMN<FLOAT>, COLUMN<FLOAT>, INTEGER\))")):
             descr, result = omnisci.sql_execute(sql_query)
+
+
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with udtf overload"
+        " support (got %s) [issue 182]" % (
+            available_version,)))
+def test_overload_uniform(omnisci):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)',
+             'int32(Column<float>, RowMultiplier, OutputColumn<float>)',
+             'int32(Column<int64>, RowMultiplier, OutputColumn<int64>)',
+             'int32(Column<int32>, RowMultiplier, OutputColumn<int32>)',
+             'int32(Column<int16>, RowMultiplier, OutputColumn<int16>)',
+             'int32(Column<int8>, RowMultiplier, OutputColumn<int8>)')  # noqa: E501, F811
+    def mycopy(x, m, y):  # noqa: E501, F811
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    for colname in ['f8', 'f4', 'i8', 'i4', 'i2', 'i1', 'b']:
+        sql_query = (f'select {colname} from {omnisci.table_name}')
+        descr, result = omnisci.sql_execute(sql_query)
+        expected = list(result)
+        sql_query = ('select * from table(mycopy(cursor('
+                     f'select {colname} from {omnisci.table_name}), 1))')
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+        assert result == expected
 
 
 omnisci_aggregators = [
