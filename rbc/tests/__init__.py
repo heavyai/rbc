@@ -6,8 +6,7 @@ import pytest
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
-    """
-    Usage from a rbc/tests/test_xyz.py file:
+    """Usage from a rbc/tests/test_xyz.py file:
 
       import pytest
       from rbc.tests import omnisci_fixture
@@ -17,6 +16,17 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
               # do some customization here
               yield o
 
+    This fixture creates the following tables:
+
+    f'{omnisci.table_name}' - contains columns f8, f4, i8, i4, i2, i1,
+                              b with row size 5.
+
+    f'{omnisci.table_name}10' - contains columns f8, f4, i8, i4, i2,
+                                i1, b with row size 10.
+
+    f'{omnisci.table_name}null' - contains columns f8, f4, i8, i4, i2,
+                                  i1, b with row size 5, contains null
+                                  values.
     """
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
@@ -41,7 +51,10 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
 
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}10')
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}null')
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN']
     # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
@@ -51,22 +64,31 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}10 ({table_defn});')
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}null ({table_defn});')
 
-    def row_value(row, col, colname):
+    def row_value(row, col, colname, null=False):
+        if null:
+            return 'NULL'
         if colname == 'b':
             return ("'true'" if row % 2 == 0 else "'false'")
         return row
 
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(
-            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+    for i in range(10):
+        if i < 5:
+            table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
+            m.sql_execute(f'INSERT INTO {table_name} VALUES ({table_row})')
+            table_row = ', '.join(str(row_value(i, j, n, null=(0 == (i + j) % (len(colnames)))))
+                                  for j, n in enumerate(colnames))
+            m.sql_execute(f'INSERT INTO {table_name}null VALUES ({table_row})')
+        if i < 10:
+            table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
+            m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
+
     m.table_name = table_name
     m.require_version = require_version
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}10')
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}null')
