@@ -1,0 +1,71 @@
+import pytest
+from rbc.tests import omnisci_fixture
+
+
+@pytest.fixture(scope='module')
+def omnisci():
+
+    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+        define(o)
+        yield o
+
+
+def define(omnisci):
+
+    @omnisci('int32(Column<int8>, RowMultiplier, OutputColumn<int8>)',
+             'int32(Column<int16>, RowMultiplier, OutputColumn<int16>)',
+             'int32(Column<int32>, RowMultiplier, OutputColumn<int32>)',
+             'int32(Column<int64>, RowMultiplier, OutputColumn<int64>)',
+             'int32(Column<float32>, RowMultiplier, OutputColumn<float32>)',
+             'int32(Column<float64>, RowMultiplier, OutputColumn<float64>)')
+    def my_row_copier_mul(x, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            if x.is_null(i):
+                y.set_null(i)
+            else:
+                y[i] = x[i] + x[i]
+        return m * input_row_count
+
+    # cannot overload boolean8 and int8 as boolean8 is interpreted as int8
+    @omnisci('int32(Column<bool>, RowMultiplier, OutputColumn<bool>)')
+    def my_row_copier_mul_bool(x, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            if x.is_null(i):
+                y.set_null(i)
+            elif x[i]:
+                y[i] = False
+            else:
+                y[i] = True
+        return m * input_row_count
+
+
+colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+types = ['float', 'double', 'int8', 'int16', 'int32', 'int64', 'bool']
+
+
+@pytest.mark.parametrize('col,typ', zip(colnames, types))
+def test_null_value(omnisci, col, typ):
+    omnisci.require_version((5, 6),
+                            'Requires omniscidb-internal PR 5104 [rbc issue 188]')
+
+    if typ == 'bool':
+        prefix = '_bool'
+        descr, expected = omnisci.sql_execute(
+            f'select {col}, not {col} from {omnisci.table_name}null')
+        data, expected = zip(*list(expected))
+
+    else:
+        prefix = ''
+        descr, expected = omnisci.sql_execute(
+            f'select {col}, {col} + {col} from {omnisci.table_name}null')
+        data, expected = zip(*list(expected))
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(my_row_copier_mul{prefix}(cursor(select {col} '
+        'from {omnisci.table_name}null), 1));'
+        .format(**locals()))
+    result, = zip(*list(result))
+
+    assert result == expected, (result, expected, data)
