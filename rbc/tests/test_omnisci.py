@@ -247,7 +247,6 @@ def test_manual_ir(omnisci):
                       (4.0, 4.0, 4, 4, 4, 4, 1)]
     device_params = omnisci.thrift_call('get_device_parameters',
                                         omnisci.session_id)
-    # print(device_params)
     cpu_target_triple = device_params['cpu_triple']
     cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
     gpu_target_triple = device_params.get('gpu_triple')

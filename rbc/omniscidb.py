@@ -16,6 +16,7 @@ from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
+from .typesystem import Type
 from . import typesystem
 
 
@@ -595,6 +596,20 @@ class RemoteOmnisci(RemoteJIT):
         self._ext_arguments_map = ext_arguments_map
         return ext_arguments_map
 
+    def _parse_sql_null_values(self, sql_nv):
+        conv = {
+            'BOOL': 'int8',
+            'TYNYINT': 'int8',
+            'SMALLINT': 'int16',
+            'INT': 'int32',
+            'BIGINT': 'int64',
+            'FLOAT': 'float32',
+            'DOUBLE': 'float64',
+        }
+        L = sql_nv.strip(';').split(';')
+        return {Type.fromstring(conv[k]):
+                v for k, v in map(lambda s: s.split(':'), L) if k in conv.keys()}
+
     def type_to_extarg(self, t):
         if isinstance(t, typesystem.Type):
             s = t.tostring(use_annotation=False)
@@ -680,6 +695,12 @@ class RemoteOmnisci(RemoteJIT):
             llvm_version = device_params.get('llvm_version')
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
+
+            sql_nv = device_params.get('sql_null_values')
+            if sql_nv is not None:
+                with target_info:
+                    target_info.set('sql_null_values', self._parse_sql_null_values(sql_nv))
+
         return targets
 
     @property

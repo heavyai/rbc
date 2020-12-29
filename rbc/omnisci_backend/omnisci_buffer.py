@@ -28,6 +28,7 @@ from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
+from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
@@ -39,6 +40,8 @@ int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
 void_t = ir.VoidType()
+fp32 = ir.FloatType()
+fp64 = ir.DoubleType()
 
 
 class OmnisciBufferType(typesystem.Type):
@@ -375,15 +378,40 @@ def omnisci_buffer_setitem(a, i, v):
 
 
 @extending.intrinsic
-def omnisci_buffer_is_null_(typingctx, data):
-    sig = types.int8(data)
+def omnisci_column_set_null_(typingctx, col_var, row_idx):
+    # Float values are serialized as integers by OmniSciDB
+    # For reference, here is the conversion table for float and double
+    #   FLOAT:  1.1754944e-38            -> 8388608
+    #   DOUBLE: 2.2250738585072014e-308  -> 4503599627370496
+    #                    ^                          ^
+    #                 fp value                  serialized
+    T = col_var.eltype
+    sig = types.void(col_var, row_idx)
+
+    target_info = TargetInfo()
+    if isinstance(T, types.Boolean):
+        null_value = int(target_info.sql_null_values[typesystem.Type.fromstring('int8')])
+    else:
+        null_value = int(target_info.sql_null_values[typesystem.Type.fromobject(T)])
 
     def codegen(context, builder, signature, args):
+        zero = int32_t(0)
 
-        rawptr = cgutils.alloca_once_value(builder, value=args[0])
-        ptr = builder.load(rawptr)
+        data, index = args
 
-        return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
+        assert data.opname == 'load'
+        buf = data.operands[0]
+
+        ptr = builder.load(builder.gep(
+            buf, [zero, zero]))
+
+        ty = ptr.type.pointee
+        if isinstance(T, types.Float):
+            (int_ty, ty) = (int32_t, fp32) if T == types.float32 else (int64_t, fp64)
+            nv = builder.bitcast(ir.Constant(int_ty, null_value), ty)
+        else:
+            nv = ir.Constant(ty, null_value)
+        builder.store(nv, builder.gep(ptr, [index]))
 
     return sig, codegen
 
