@@ -66,7 +66,7 @@ def test_null_value(omnisci, col):
 
     descr, result = omnisci.sql_execute(
         f'select * from table(my_row_copier_mul{prefix}(cursor(select {col} '
-        'from {omnisci.table_name}null), 1));')
+        f'from {omnisci.table_name}null), 1));')
     result, = zip(*list(result))
 
     assert result == expected, (result, expected, data)

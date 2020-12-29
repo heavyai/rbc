@@ -181,7 +181,7 @@ class TargetInfo(object):
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
                           'has_cpython', 'has_numba', 'driver', 'software',
-                          'llvm_version', 'sql_null_values', 'null_values')
+                          'llvm_version', 'null_values')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
@@ -311,14 +311,8 @@ class TargetInfo(object):
         return self.info.get('llvm_version')
 
     @property
-    def sql_null_values(self):
-        """Return the sql null values for some types
-        """
-        return self.info.get('sql_null_values', {})
-
-    @property
     def null_values(self):
-        """Return the null values for scalar types encoded as integers.
+        """Return the null values for scalar types serialized as integers.
         """
         return self.info.get('null_values', {})
 
