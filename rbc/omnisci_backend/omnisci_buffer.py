@@ -318,7 +318,7 @@ def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
         if buf_typ.width < value.type.width:
             return builder.trunc(value, buf_typ)
         elif buf_typ.width > value.type.width:
-            return builder.sext(value, buf_typ)
+            return builder.zext(value, buf_typ)
 
     return value
 
@@ -360,10 +360,9 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
         assert data.opname == 'load'
         buf = data.operands[0]
 
-        ptr = builder.load(builder.gep(
-            buf, [zero, zero]))
-
+        ptr = builder.load(builder.gep(buf, [zero, zero]))
         value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
+
         builder.store(value, builder.gep(ptr, [index]))
 
     return sig, codegen
@@ -389,10 +388,7 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
     sig = types.void(col_var, row_idx)
 
     target_info = TargetInfo()
-    if isinstance(T, types.Boolean):
-        null_value = int(target_info.sql_null_values[typesystem.Type.fromstring('int8')])
-    else:
-        null_value = int(target_info.sql_null_values[typesystem.Type.fromobject(T)])
+    null_value = target_info.null_values[str(T)]
 
     def codegen(context, builder, signature, args):
         zero = int32_t(0)
@@ -402,15 +398,12 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
         assert data.opname == 'load'
         buf = data.operands[0]
 
-        ptr = builder.load(builder.gep(
-            buf, [zero, zero]))
+        ptr = builder.load(builder.gep(buf, [zero, zero]))
 
         ty = ptr.type.pointee
+        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
         if isinstance(T, types.Float):
-            (int_ty, ty) = (int32_t, fp32) if T == types.float32 else (int64_t, fp64)
-            nv = builder.bitcast(ir.Constant(int_ty, null_value), ty)
-        else:
-            nv = ir.Constant(ty, null_value)
+            nv = builder.bitcast(nv, ty)
         builder.store(nv, builder.gep(ptr, [index]))
 
     return sig, codegen

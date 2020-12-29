@@ -42,13 +42,15 @@ def define(omnisci):
 
 
 colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-types = ['float', 'double', 'int8', 'int16', 'int32', 'int64', 'bool']
 
 
-@pytest.mark.parametrize('col,typ', zip(colnames, types))
-def test_null_value(omnisci, col, typ):
+@pytest.mark.parametrize('col', colnames)
+def test_null_value(omnisci, col):
     omnisci.require_version((5, 6),
                             'Requires omniscidb-internal PR 5104 [rbc issue 188]')
+
+    typ = dict(f4='float32', f8='float64', i1='int8', i2='int16',
+               i4='int32', i8='int64', b='bool')[col]
 
     if typ == 'bool':
         prefix = '_bool'

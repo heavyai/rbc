@@ -79,7 +79,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
         if i < 5:
             table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
             m.sql_execute(f'INSERT INTO {table_name} VALUES ({table_row})')
-            table_row = ', '.join(str(row_value(i, j, n, null=(0 == (i + j) % (len(colnames)))))
+            table_row = ', '.join(str(row_value(i, j, n, null=(0 == (i + j) % 3)))
                                   for j, n in enumerate(colnames))
             m.sql_execute(f'INSERT INTO {table_name}null VALUES ({table_row})')
         if i < 10:

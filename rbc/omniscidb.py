@@ -16,7 +16,6 @@ from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
-from .typesystem import Type
 from . import typesystem
 
 
@@ -607,7 +606,7 @@ class RemoteOmnisci(RemoteJIT):
             'DOUBLE': 'float64',
         }
         L = sql_nv.strip(';').split(';')
-        return {Type.fromstring(conv[k]):
+        return {typesystem.Type.fromstring(conv[k]):
                 v for k, v in map(lambda s: s.split(':'), L) if k in conv.keys()}
 
     def type_to_extarg(self, t):
@@ -701,6 +700,15 @@ class RemoteOmnisci(RemoteJIT):
                 with target_info:
                     target_info.set('sql_null_values', self._parse_sql_null_values(sql_nv))
 
+            null_values = device_params.get('null_values')
+            if null_values is not None:
+                d = dict()
+                for tname_value in null_values.split(';'):
+                    if not tname_value:
+                        continue
+                    tname, value = tname_value.split(':')
+                    d[tname] = int(value)
+                target_info.set('null_values', d)
         return targets
 
     @property
