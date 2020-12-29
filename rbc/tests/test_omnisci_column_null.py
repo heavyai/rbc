@@ -65,9 +65,24 @@ def test_null_value(omnisci, col):
         data, expected = zip(*list(expected))
 
     descr, result = omnisci.sql_execute(
-        'select * from table(my_row_copier_mul{prefix}(cursor(select {col} '
-        'from {omnisci.table_name}null), 1));'
-        .format(**locals()))
+        f'select * from table(my_row_copier_mul{prefix}(cursor(select {col} '
+        'from {omnisci.table_name}null), 1));')
+    result, = zip(*list(result))
+
+    assert result == expected, (result, expected, data)
+
+
+def test_row_adder(omnisci):
+    omnisci.require_version((5, 6),
+                            'Requires omniscidb-internal PR 5104 [rbc issue 188]')
+
+    descr, expected = omnisci.sql_execute(
+        f'select f8, f8 + f8 from {omnisci.table_name}null')
+    data, expected = zip(*list(expected))
+
+    descr, result = omnisci.sql_execute(
+        'select * from table(row_adder(1, cursor(select f8, f8 '
+        f'from {omnisci.table_name}null)))')
     result, = zip(*list(result))
 
     assert result == expected, (result, expected, data)
