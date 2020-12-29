@@ -620,6 +620,9 @@ omnisci_binary_operations = ['+', '-', '*', '/']
 @pytest.mark.parametrize("prop", ['', 'groupby'])
 @pytest.mark.parametrize("oper", omnisci_aggregators + omnisci_aggregators2)
 def test_column_aggregate(omnisci, prop, oper):
+    if not omnisci.has_cuda and oper in omnisci_aggregators2 and prop == 'groupby':
+        pytest.skip(f'{oper}-{prop} test crashes CPU-only omnisci server [rbc issue 237]')
+
     omnisci.reset()
     omnisci.register()
 
