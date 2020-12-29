@@ -433,36 +433,6 @@ def omnisci_column_is_null(col_var, row_idx):
     return impl
 
 
-@extending.intrinsic
-def omnisci_buffer_is_null_(typingctx, data):
-    sig = types.int8(data)
-
-    def codegen(context, builder, signature, args):
-
-        rawptr = cgutils.alloca_once_value(builder, value=args[0])
-        ptr = builder.load(rawptr)
-
-        return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
-
-    return sig, codegen
-
-
-@extending.overload_method(BufferType, 'isNull')
-@extending.overload_method(BufferType, 'is_null')
-def omnisci_column_is_null(col_var, row_idx):
-    def impl(col_var, row_idx):
-        return omnisci_column_is_null_(col_var, row_idx, col_var.null_value)
-    return impl
-
-
-@extending.overload_method(BufferPointer, 'is_null')
-def omnisci_buffer_is_null(x):
-    if isinstance(x, BufferPointer):
-        def impl(x):
-            return omnisci_buffer_is_null_(x)
-        return impl
-
-
 def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
     ptr_type = buffer_type.pointer()
 

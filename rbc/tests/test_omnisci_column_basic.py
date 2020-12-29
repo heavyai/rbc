@@ -508,7 +508,7 @@ def test_redefine(omnisci):
         " support (got %s) [issue 175]" % (
             available_version,)))
 @pytest.mark.parametrize("step", [1, 2, 3])
-def test_overload(omnisci, step):
+def test_overload_nonuniform(omnisci, step):
     omnisci.reset()
     omnisci.register()
 
@@ -565,6 +565,38 @@ def test_overload(omnisci, step):
             descr, result = omnisci.sql_execute(sql_query)
 
 
+@pytest.mark.skipif(
+    available_version < (5, 5),
+    reason=(
+        "test requires omniscidb with udtf overload"
+        " support (got %s) [issue 182]" % (
+            available_version,)))
+def test_overload_uniform(omnisci):
+    omnisci.reset()
+    omnisci.register()
+
+    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)',
+             'int32(Column<float>, RowMultiplier, OutputColumn<float>)',
+             'int32(Column<int64>, RowMultiplier, OutputColumn<int64>)',
+             'int32(Column<int32>, RowMultiplier, OutputColumn<int32>)',
+             'int32(Column<int16>, RowMultiplier, OutputColumn<int16>)',
+             'int32(Column<int8>, RowMultiplier, OutputColumn<int8>)')  # noqa: E501, F811
+    def mycopy(x, m, y):  # noqa: E501, F811
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    for colname in ['f8', 'f4', 'i8', 'i4', 'i2', 'i1', 'b']:
+        sql_query = (f'select {colname} from {omnisci.table_name}')
+        descr, result = omnisci.sql_execute(sql_query)
+        expected = list(result)
+        sql_query = ('select * from table(mycopy(cursor('
+                     f'select {colname} from {omnisci.table_name}), 1))')
+        descr, result = omnisci.sql_execute(sql_query)
+        result = list(result)
+        assert result == expected
+
+
 omnisci_aggregators = [
     'avg', 'min', 'max', 'sum', 'count',
     'approx_count_distinct', 'sample', 'single_value', 'stddev',
@@ -588,6 +620,9 @@ omnisci_binary_operations = ['+', '-', '*', '/']
 @pytest.mark.parametrize("prop", ['', 'groupby'])
 @pytest.mark.parametrize("oper", omnisci_aggregators + omnisci_aggregators2)
 def test_column_aggregate(omnisci, prop, oper):
+    if not omnisci.has_cuda and oper in omnisci_aggregators2 and prop == 'groupby':
+        pytest.skip(f'{oper}-{prop} test crashes CPU-only omnisci server [rbc issue 237]')
+
     omnisci.reset()
     omnisci.register()
 
@@ -801,52 +836,6 @@ def test_column_unary_operation(omnisci, oper):
     result = list(result)
 
     assert result == result_expected
-
-
-@pytest.fixture(scope='function')
-def add_nulls(omnisci):
-    omnisci.sql_execute(
-        f'insert into {omnisci.table_name} '
-        f'values (NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);'
-    )
-    yield omnisci
-    omnisci.sql_execute(
-        f'delete from {omnisci.table_name} where f4 is NULL;'
-    )
-
-
-colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
-types = ['float', 'double', 'int8', 'int16', 'int32', 'int64', 'bool', 'double']
-
-
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with type_limits"
-        " support (got %s) [issue 188]" % (
-            available_version,)))
-@pytest.mark.usefixtures('add_nulls')
-@pytest.mark.parametrize('col,typ', zip(colnames, types))
-def test_null_value(omnisci, col, typ):
-    omnisci.reset()
-    omnisci.register()
-
-    @omnisci(f'int32(Column<{typ}>, RowMultiplier, OutputColumn<{typ}>)')
-    def my_row_copier_mul(x, m, y):
-        input_row_count = len(x)
-        for i in range(input_row_count):
-            if x.is_null(i):
-                y[i] = y.null_value
-            else:
-                y[i] = x[i]
-        return m * input_row_count
-
-    descr, result = omnisci.sql_execute(
-        'select * from table(my_row_copier_mul(cursor(select {col} '
-        'from {omnisci.table_name}), 1));'
-        .format(**locals()))
-
-    assert list(result).count((None,)) == 1
 
 
 @pytest.mark.skipif(
