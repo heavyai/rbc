@@ -407,11 +407,3 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
         builder.store(nv, builder.gep(ptr, [index]))
 
     return sig, codegen
-
-
-@extending.overload_method(BufferPointer, 'is_null')
-def omnisci_buffer_is_null(x):
-    if isinstance(x, BufferPointer):
-        def impl(x):
-            return omnisci_buffer_is_null_(x)
-        return impl
