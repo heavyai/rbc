@@ -198,3 +198,107 @@ def test_composition(rjit):
         return y
 
     # print(bar.get_IR())
+
+
+@with_localjit
+def test_templates(ljit):
+
+    assert isinstance(ljit, RemoteJIT)
+
+    def check_normalized(sig1, sig2):
+        sig1 = set(sig1.normalized().signatures)
+        sig2 = set(sig2.normalized().signatures)
+        assert sig1 == sig2
+
+    # API
+
+    check_normalized(ljit('T(T)', templates=dict(T=['i8', 'i4'])),
+                     ljit('i8(i8)', 'i4(i4)'))
+
+    check_normalized(ljit('T(T*)', templates=dict(T=['i8', 'i4'])),
+                     ljit('i8(i8*)', 'i4(i4*)'))
+
+    check_normalized(ljit('T({T})', templates=dict(T=['i8', 'i4'])),
+                     ljit('i8({i8})', 'i4({i4})'))
+
+    check_normalized(ljit('T(T2)', templates=dict(T=['i8', 'i4'], T2=['i8', 'i4'])),
+                     ljit('i8(i8)', 'i4(i4)', 'i8(i4)', 'i4(i8)'))
+
+    check_normalized(ljit('T(T2*)', templates=dict(T=['i8', 'i4'], T2=['i8', 'i4'])),
+                     ljit('i8(i8*)', 'i4(i4*)', 'i8(i4*)', 'i4(i8*)'))
+
+    check_normalized(ljit('T({T2})', templates=dict(T=['i8', 'i4'], T2=['i8', 'i4'])),
+                     ljit('i8({i8})', 'i4({i4})', 'i8({i4})', 'i4({i8})'))
+
+    check_normalized(ljit('T({T2, T})', templates=dict(T=['i8', 'i4'], T2=['i8', 'i4'])),
+                     ljit('i8({i8, i8})', 'i4({i4, i4})', 'i8({i4, i8})', 'i4({i8, i4})'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8', 'i4'], U=['f32'])),
+                     ljit('i8(f32)', 'i4(f32)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8', 'i4'], U=['T'])),
+                     ljit('i8(i8)', 'i4(i4)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8', 'i4'], U=['T*'])),
+                     ljit('i8(i8*)', 'i4(i4*)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8', 'i4'], U=['T*', '{T*}'])),
+                     ljit('i8(i8*)', 'i4(i4*)', 'i8({i8*})', 'i4({i4*})'))
+
+    # recursion
+
+    with pytest.raises(
+            TypeError,
+            match=r"cannot make T concrete"):
+        ljit('T(U)', templates=dict(T=['U'], U=['T'])).normalized()
+
+    with pytest.raises(
+            TypeError,
+            match=r"cannot make T concrete"):
+        ljit('T(U)', templates=dict(T=['U'], U=['V'], V=['T'])).normalized()
+
+    # not a concrete type
+
+    with pytest.raises(
+            TypeError,
+            match=r"cannot make T concrete"):
+        ljit('T(T)').normalized()
+
+    # custom types
+
+    class MyClass(Type):
+        pass
+
+    class MyClass2(Type):
+        pass
+
+    check_normalized(ljit('T(MyClass<T>)', templates=dict(T=['i8', 'i4'])),
+                     ljit('i8(MyClass<int8>)', 'int4(MyClass<i4>)'))
+
+    check_normalized(ljit('T(MyClass3<T>)', templates=dict(T=['i8', 'i4'])),
+                     ljit('i8(MyClass3<int8>)', 'int4(MyClass3<i4>)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8', 'i4'], U=['MyClass<T>'])),
+                     ljit('i8(MyClass<int8>)', 'int4(MyClass<i4>)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8', 'i4'], U=['MyClass2<T>'])),
+                     ljit('i8(MyClass2<int8>)', 'int4(MyClass2<i4>)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8'], U=['C<T>'],
+                                                 C=['MyClass2', 'MyClass3'])),
+                     ljit('i8(MyClass2<int8>)', 'i8(MyClass3<int8>)'))
+
+    check_normalized(ljit('T(U)', templates=dict(T=['i8'], U=['C<T>'],
+                                                 C=['MyClass', 'MyClass2', 'MyClass3'])),
+                     ljit('i8(MyClass2<int8>)', 'i8(MyClass<int8>)', 'i8(MyClass3<int8>)'))
+
+    # user-friendly interface
+
+    check_normalized(ljit('T(T)', T=['i8', 'i4']),
+                     ljit('i8(i8)', 'i4(i4)'))
+
+    check_normalized(ljit('T(U)', T=['i8', 'i4'], U=['MyClass<T>']),
+                     ljit('i8(MyClass<int8>)', 'int4(MyClass<i4>)'))
+
+    check_normalized(ljit('T(U)', T=['i8', 'i4'], U=['MyClass3<T>']),
+                     ljit('i8(MyClass3<int8>)', 'int4(MyClass3<i4>)'))

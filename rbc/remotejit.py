@@ -20,6 +20,44 @@ def isfunctionlike(obj):
     return True
 
 
+def extract_templates(options):
+    """Extract templates mapping data from options dictionary.
+
+    If options does not contain "templates", it will be constructed
+    from all unknown options that have list values. Otherwise, the
+    corresponding value is returned with no further processing of
+    options content.
+
+    Parameters
+    ----------
+    options : dict
+
+    Returns
+    -------
+    options : dict
+      A copy of input without templates mapping data.
+    templates : dict
+      Templates mapping which is a collections of pairs of template
+      name and a list of concrete types. Template name cannot
+      correspond to a concrete type.
+
+    """
+    known_options = ['devices', 'local']
+    new_options = {}
+    templates = options.get('templates')
+    if templates is not None:
+        new_options.update(options)
+        del new_options['templates']
+    else:
+        templates = {}
+        for k, v in options.items():
+            if (isinstance(k, str) and isinstance(v, list) and k not in known_options):
+                templates[k] = v
+            else:
+                new_options[k] = v
+    return new_options, templates
+
+
 class Signature(object):
     """Signature decorator for Python functions.
 
@@ -56,6 +94,7 @@ class Signature(object):
         self.remotejit = remotejit
         self.signatures = []
         self.signature_devices = {}
+        self.signature_templates = {}
 
     @property
     def debug(self):
@@ -65,6 +104,7 @@ class Signature(object):
     def local(self):
         sig = Signature(self.remotejit.local)
         sig.signatures.extend(self.signatures)
+        # sig.signature_templates.update(self.signature_templates)
         return sig
 
     def __str__(self):
@@ -78,8 +118,13 @@ class Signature(object):
         ----------
         obj : {str, Signature, function, ...}
           Specify object that represents a function type.
+
+        Keyword parameters
+        ------------------
         devices : list
           Specify device names for the given set of signatures.
+        templates : dict
+          Specify template types mapping.
 
         Returns
         -------
@@ -98,6 +143,7 @@ class Signature(object):
         """
         if obj is None:
             return self
+        options, templates = extract_templates(options)
         devices = options.get('devices')
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
@@ -106,6 +152,11 @@ class Signature(object):
             if devices is not None:
                 for s in obj.signatures:
                     self.signature_devices[s] = devices
+            assert not templates
+            for s in obj.signatures:
+                t = obj.signature_templates.get(s)
+                if t is not None:
+                    self.signature_templates[s] = t
             return self
         if isinstance(obj, Caller):
             # return new Caller with extended signatures set
@@ -114,16 +165,20 @@ class Signature(object):
             final(self)  # copies the signatures from self to final
             final(obj.signature)  # copies the signatures from obj to final
             assert devices is None
+            assert not templates
             return Caller(obj.func, final)
         if isfunctionlike(obj):
             final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             assert devices is None
+            assert not templates
             return Caller(obj, final)
         self.signatures.append(obj)
         self.remotejit.discard_last_compile()
         if devices is not None:
             self.signature_devices[obj] = devices
+        if templates:
+            self.signature_templates[obj] = templates
         return self
 
     def best_match(self, func, atypes: tuple) -> Type:
@@ -160,14 +215,14 @@ class Signature(object):
                 f' `{satypes}`. Available function types: {available}')
         return ftype
 
-    def normalized(self, func):
+    def normalized(self, func=None):
         """Return a copy of Signature object where all signatures are
         normalized to Type instances using the current target device
         information.
 
         Parameters
         ----------
-        func : function
+        func : {None, callable}
           Python function that annotations are attached to signature.
 
         Returns
@@ -175,8 +230,8 @@ class Signature(object):
         signature : Signature
         """
         signature = Signature(self.remotejit)
-        fsig = Type.fromcallable(func)
-        nargs = fsig.arity
+        fsig = Type.fromcallable(func) if func is not None else None
+        nargs = fsig.arity if func is not None else None
         target_info = TargetInfo()
         for sig in self.signatures:
             devices = self.signature_devices.get(sig)
@@ -185,21 +240,32 @@ class Signature(object):
                     print(f'{type(self).__name__}.normalized: skipping {sig} as'
                           f' not supported by devices: {devices}')
                 continue
+            templates = self.signature_templates.get(sig, {})
             sig = Type.fromobject(sig)
             if not sig.is_complete:
+                print('Ignore incomplete type: ', sig)
                 continue
             if not sig.is_function:
                 raise ValueError(
                     'expected signature representing function type,'
                     f' got `{sig}`')
-            if sig.arity != nargs:
+            if nargs is None:
+                nargs = sig.arity
+            elif sig.arity != nargs:
                 raise ValueError(f'signature `{sig}` must have arity {nargs}'
                                  f' but got {len(sig[1])}')
             if fsig is not None:
                 sig.inherit_annotations(fsig)
-            if sig not in signature.signatures:
-                signature.signatures.append(sig)
-        if fsig.is_complete:
+
+            if not sig.is_concrete:
+                for csig in sig.apply_templates(templates):
+                    assert isinstance(csig, Type), (sig, csig, type(csig))
+                    if csig not in signature.signatures:
+                        signature.signatures.append(csig)
+            else:
+                if sig not in signature.signatures:
+                    signature.signatures.append(sig)
+        if fsig is not None and fsig.is_complete:
             if fsig not in signature.signatures:
                 signature.signatures.append(fsig)
         return signature
@@ -326,8 +392,6 @@ class RemoteJIT(object):
 
     The sum will be evaluated in the remote host.
     """
-
-    converters = []
 
     multiplexed = True
 
@@ -464,10 +528,7 @@ class RemoteJIT(object):
         """Return device-target_info mapping of the remote server.
         """
         if self._targets is None:
-            self._targets = targets = self.retrieve_targets()
-            for target in targets.values():
-                for c in self.converters:
-                    target.add_converter(c)
+            self._targets = self.retrieve_targets()
         return self._targets
 
     def __call__(self, *signatures, **options):
@@ -479,9 +540,14 @@ class RemoteJIT(object):
           Specify signatures of a remote JIT function, or a Python
           function as a template from which the remote JIT function
           will be compiled.
+
+        Keyword parameters
+        ------------------
         local : bool
         devices : list
           Specify device names for the given set of signatures.
+        templates : dict
+          Specify template types mapping.
 
         Returns
         -------
@@ -502,8 +568,9 @@ class RemoteJIT(object):
         else:
             s = Signature(self)
         devices = options.get('devices')
+        options, templates = extract_templates(options)
         for sig in signatures:
-            s = s(sig, devices=devices)
+            s = s(sig, devices=devices, templates=templates)
         return s
 
     def start_server(self, background=False):
@@ -546,7 +613,7 @@ class RemoteJIT(object):
                 port=self.port,
                 multiplexed=self.multiplexed,
                 thrift_content=self.thrift_content,
-                socket_timeout=10000)
+                socket_timeout=60000)
         return self._client
 
     def remote_compile(self, func, ftype: Type, target_info: TargetInfo):

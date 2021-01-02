@@ -84,6 +84,9 @@ def test_fromstring(target_info):
     assert Type.fromstring('{i a,j b} c') == Type(Type('int32', name='a'),
                                                   Type('j', name='b'),
                                                   name='c')
+    assert Type.fromstring('A<i>') == Type(('A', Type('int32')))
+    assert Type.fromstring('A<i*>') == Type(('A', Type(Type('int32'), '*')))
+    assert Type.fromstring('A<i>*') == Type(Type(('A', Type('int32'),)), '*')
 
     with pytest.raises(ValueError, match=r'failed to find lparen index in'):
         Type.fromstring('a)')
@@ -123,6 +126,8 @@ def test_is_properties(target_info):
     assert t._is_ok and t.is_function
     t = Type.fromstring('{i, j}')
     assert t._is_ok and t.is_struct
+    t = Type.fromstring('A<i>')
+    assert t._is_ok and t.is_custom
 
     with pytest.raises(ValueError,
                        match=r'attempt to create an invalid Type object from'):
@@ -148,6 +153,7 @@ def test_tostring(target_info):
     assert tostr('*') == 'void*'
     assert tostr('void *') == 'void*'
     assert tostr('*(*,{*,*})') == 'void*(void*, {void*, void*})'
+    assert tostr('A<a>') == 'A<a>'
 
 
 def test_normalize(target_info):
@@ -194,6 +200,7 @@ def test_normalize(target_info):
     assert tostr('i(i*, i15)') == 'int32(int32*, int15)'
     assert tostr('{i,d,c, bool,f,str*}') \
         == '{int32, float64, complex64, bool, float32, string*}'
+    assert tostr('A<i(B<f64>)>') == 'A<int32(B<float64>)>'
 
     datamodel = get_datamodel()
     if datamodel == 'LP64':
@@ -460,9 +467,10 @@ def test_mangling(target_info):
     random_types = ['i8', 'bool', 'f', 'd', '{f}', '{f,d}', '{{f},d}',
                     '{f,{d}}', '{{f},{d}}', '{{{{f}}}}', '()', 'f(d)',
                     'f(())', 'f(d(f))', 'f(d)()', 'f(d)(f(d,d))',
-                    '{f}()', '{f,d}({f},f(d,d,d))']
+                    '{f}()', '{f,d}({f},f(d,d,d))', 'A<d, d>']
     unknown_types = ['a', 'a*', 'a()', '(a)', 'a(a)', '{a}', '({a})', '{a,a}',
-                     'foo', 'bar123', 'V', 'VVV', '_abc_', '_', 'A', 'K', 'P']
+                     'foo', 'bar123', 'V', 'VVV', '_abc_', '_', 'A', 'K', 'P',
+                     'A<a>']
     for s in atomic_types + random_types + unknown_types:
         check(s)
         check(s+'*')

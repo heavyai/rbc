@@ -81,7 +81,7 @@ def define(omnisci):
                           'cursor(i4,i8);f8', 'cursor(i4,i8);cursor(f8,f4)',
                           'cursor(i4,i8,f8,f4)'])
 def test_copy(omnisci, inputs):
-    omnisci.require_version((5, 6), 'Requires omniscidb-internal PR 5134')
+    omnisci.require_version((5, 7), 'Requires omniscidb-internal PR 5134')
 
     groups = inputs.split(';')
     table_names = [f'{omnisci.table_name}'] * len(groups)

@@ -240,7 +240,7 @@ _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
 _mangling_suffices = '_V'
-_mangling_prefixes = 'PKaAM'
+_mangling_prefixes = 'PKaAMrR'
 _mangling_map = dict(
     void='v', bool='b',
     char8='c', char16='z', char32='w',
@@ -261,24 +261,49 @@ _i = set(_mangling_imap).intersection(_mangling_suffices+_mangling_prefixes)
 assert not _i, repr(_i)
 
 
-class Type(tuple):
+class MetaType(type):
+
+    custom_types = dict()
+    aliases = dict()
+
+    def __new__(cls, name, bases, dct):
+        cls = super().__new__(cls, name, bases, dct)
+        if name != 'Type':
+            cls.custom_types[name] = cls
+        return cls
+
+    def alias(cls, **aliases):
+        """
+        Define type aliases. For instance, defining
+
+          Type.alias(myint='int64')
+
+        will ensure that
+
+          Type.fromstring('myint') == Type.fromstring('int64')
+        """
+        cls.aliases.update(aliases)
+
+
+class Type(tuple, metaclass=MetaType):
     """Represents a type.
 
-    There are five kinds of a types:
+    There are six kinds of a types:
 
-      ========    ============================
-      Type        Description
-      ========    ============================
-      void        a "no type"
-      atomic      e.g. ``int32``
-      pointer     e.g. ``int32*``
-      struct      e.g. ``{int32, int32}``
-      function    e.g. ``int32(int32, int32)``
-      ========    ============================
+      ==========    ==============================
+      Type          Description
+      ==========    ==============================
+      void          a "no type"
+      atomic        e.g. ``int32``
+      pointer       e.g. ``int32*``
+      struct        e.g. ``{int32, int32}``
+      function      e.g. ``int32(int32, int32)``
+      custom        e.g. ``MyClass<int32, int32>``
+      ==========    ==============================
 
     Atomic types are types with names (Type contains a single
     string). All other types (except "no type") are certain
-    constructions of atomic types.
+    implementations of atomic types.
 
     The name content of an atomic type is arbitrary but it cannot be
     empty. For instance, Type('a') and Type('a long name') are atomic
@@ -330,28 +355,42 @@ class Type(tuple):
     ------------
 
     The typesystem supports processing custom types that are usually
-    named structures or C++ template specifications. The custom types
-    support is provided via `TargetInfo` instance that has a
-    `add_converter` method that can be used to register custom type
-    converters. A type converter is a function that takes takes
-    incomplete atomic `Type` instance, say
-    `Type("MyCustomType<double>")`, as input, and either returns a new
-    complete `Type` instance, say a struct type corresponding to
-    `MyCustomType<double>`, or `None` when conversion is not provided
-    for this particular input. One can add many type converter
-    functons to `TargetInfo` instance.
+    named structures or C++ template specifications, but not only.
 
+    Custom type can have arbitrary number of (hashable) parameters.  A
+    custom type is concrete when the parameters with type Type are
+    concrete.
+
+    Custom types must implement tonumba method if needed. For that,
+    one must derive MyClass from Type.
+
+    Internally, a custom type has two possible representations: if
+    MyClass is derived from Type then `MyClass<a, b>` is represented
+    as `MyClass(('a', 'b'))`, otherwise, it is represented as
+    `Type(('MyClass', 'a', 'b'))`. If the parameters of a custom types
+    need to be Type instances, use `preprocess_args` for required
+    conversion of arguments.
     """
 
     _mangling = None
 
     def __new__(cls, *args, **params):
+        args = cls.preprocess_args(args)
         obj = tuple.__new__(cls, args)
         if not obj._is_ok:
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
         obj._params = params
         return obj
+
+    @classmethod
+    def preprocess_args(cls, args):
+        """Preprocess the arguments of Type constructor.
+
+        Overloading this classmethod may be useful for custom types
+        for processing its parameters.
+        """
+        return args
 
     def annotation(self, **annotations):
         """Set and get annotations.
@@ -451,7 +490,12 @@ class Type(tuple):
     @property
     def is_function(self):
         return len(self) == 2 and isinstance(self[0], Type) and \
-            isinstance(self[1], tuple) and not isinstance(self[1], Type)
+            isinstance(self[1], tuple) and not isinstance(self[1], Type) \
+            and all([isinstance(p, Type) for p in self[1]])
+
+    @property
+    def is_custom(self):
+        return len(self) == 1 and not isinstance(self[0], Type) and isinstance(self[0], tuple)
 
     @property
     def is_complete(self):
@@ -473,6 +517,10 @@ class Type(tuple):
                     return False
         elif self.is_void:
             pass
+        elif self.is_custom:
+            for a in self[0]:
+                if isinstance(a, Type) and not a.is_complete:
+                    return False
         else:
             raise NotImplementedError(repr(self))
         return True
@@ -499,6 +547,10 @@ class Type(tuple):
                     return False
         elif self.is_void:
             pass
+        elif self.is_custom:
+            for a in self[0]:
+                if isinstance(a, Type) and not a.is_concrete:
+                    return False
         else:
             raise NotImplementedError(repr(self))
         return True
@@ -507,7 +559,8 @@ class Type(tuple):
     def _is_ok(self):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct \
-            or (self.is_function and len(self[1]) > 0)
+            or (self.is_function and len(self[1]) > 0) \
+            or self.is_custom
 
     def __repr__(self):
         if self._params:
@@ -602,6 +655,21 @@ class Type(tuple):
                     + '(' + ', '.join(
                         a.tostring(use_typename=use_typename)
                         for a in self[1]) + ')' + suffix)
+        if self.is_custom:
+            params = self[0]
+            if type(self) is Type:
+                name = params[0]
+                params = params[1:]
+            else:
+                name = type(self).__name__
+            new_params = []
+            for a in params:
+                if isinstance(a, Type):
+                    s = a.tostring(use_typename=use_typename)
+                else:
+                    s = str(a)
+                new_params.append(s)
+            return (name + '<' + ', '.join(new_params) + '>' + suffix)
         raise NotImplementedError(repr(self))
 
     def toprototype(self):
@@ -628,6 +696,8 @@ class Type(tuple):
         if self.is_function:
             return self[0].toprototype() + '(' + ', '.join(
                 a.toprototype() for a in self[1]) + ')'
+        if self.is_custom:
+            raise NotImplementedError(f'{type(self).__name__}.toprototype()')
         raise NotImplementedError(repr(self))
 
     def tonumba(self, bool_is_int8=None):
@@ -688,6 +758,8 @@ class Type(tuple):
             return _numba_int_map.get(int(self[0][4:]))
         if self.is_atomic:
             return nb.types.Type(self[0])
+        if self.is_custom:
+            raise NotImplementedError(f'{type(self).__name__}.tonumba(bool_is_int8=None)')
         raise NotImplementedError(repr(self))
 
     def toctypes(self):
@@ -726,6 +798,8 @@ class Type(tuple):
             return ctypes.CFUNCTYPE(rtype, *atypes)
         if self.is_string:
             return ctypes.c_wchar_p
+        if self.is_custom:
+            raise NotImplementedError(f'{type(self).__name__}.toctypes()')
         raise NotImplementedError(repr((self, self.is_string)))
 
     @classmethod
@@ -747,6 +821,17 @@ class Type(tuple):
             atypes = tuple(map(cls._fromstring,
                                _commasplit(s[i+1:-1].strip())))
             return cls(rtype, atypes)
+        if s.endswith('>') and not s.startswith('<'):  # custom
+            i = s.index('<')
+            name = s[:i]
+            params = tuple(map(cls._fromstring,
+                               _commasplit(s[i+1:-1].strip())))
+            name = cls.aliases.get(name, name)
+            if name in cls.custom_types:
+                cls = cls.custom_types[name]
+                return cls(params)
+            else:
+                return cls((name,) + params)
         if s == 'void' or s == 'none' or not s:  # void
             return cls()
         if '|' in s:
@@ -926,12 +1011,15 @@ class Type(tuple):
             return self
         if self.is_atomic:
             s = self[0]
+            a = type(self).aliases.get(s)
+            if a is not None:
+                return Type.fromobject(a)._normalize()
             m = _bool_match(s)
             if m is not None:
-                return self.__class__('bool', **params)
+                return Type('bool', **params)
             m = _string_match(s)
             if m is not None:
-                return self.__class__('string', **params)
+                return Type('string', **params)
             for match, ntype in [
                     (_charn_match, 'char'),
                     (_intn_match, 'int'),
@@ -942,7 +1030,9 @@ class Type(tuple):
                 m = match(s)
                 if m is not None:
                     bits = m.group(2)
-                    return self.__class__(ntype + bits, **params)
+                    return Type(ntype + bits, **params)
+            if s.endswith('[]'):
+                return Type.fromstring(f'Array<{s[:-2]}>')._normalize()
             target_info = TargetInfo()
             for match, otype, ntype in [
                     (_char_match, 'char', 'char'),
@@ -976,24 +1066,28 @@ class Type(tuple):
             ]:
                 if match(s) is not None:
                     bits = str(target_info.sizeof(otype) * 8)
-                    return self.__class__(ntype + bits, **params)
-            t = target_info.custom_type(self)
-            if t is not None:
-                return t
+                    return Type(ntype + bits, **params)
             if target_info.strict:
                 raise ValueError('%s is not concrete' % (self))
             return self
         if self.is_pointer:
-            return self.__class__(
+            return Type(
                 self[0]._normalize(), self[1], **params)
         if self.is_struct:
-            return self.__class__(
+            return Type(
                 *(t._normalize() for t in self), **params)
         if self.is_function:
-            return self.__class__(
+            return Type(
                 self[0]._normalize(),
                 tuple(t._normalize() for t in self[1]),
                 **params)
+        if self.is_custom:
+            params = []
+            for a in self[0]:
+                if isinstance(a, Type):
+                    a = a._normalize()
+                params.append(a)
+            return type(self)(tuple(params))
         raise NotImplementedError(repr(self))
 
     def mangle(self):
@@ -1014,6 +1108,18 @@ class Type(tuple):
             r = self[0].mangle()
             a = ''.join([a.mangle() for a in self[1]])
             return '_' + r + 'a' + a + 'A'
+        if self.is_custom:
+            params = self[0]
+            if type(self) is Type:
+                name = params[0]
+                params = params[1:]
+            else:
+                name = type(self).__name__
+            n = _mangling_map.get(name)
+            n = name if n is None else n
+            r = 'V' + str(len(n)) + 'V' + n
+            a = ''.join([a.mangle() for a in params])
+            return '_' + r + 'r' + a + 'R'
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
@@ -1136,30 +1242,114 @@ class Type(tuple):
         raise NotImplementedError(repr(type(other)))
 
     def __call__(self, *atypes, **params):
-        return self.__class__(self, atypes, **params)
+        return Type(self, atypes, **params)
 
     def pointer(self):
-        return self.__class__(self, '*')
+        return Type(self, '*')
 
-    def get_name_and_parameters(self):
-        """Return the name and the parameters of a custom type.
+    def apply_templates(self, templates):
+        """Iterator of concrete types derived from applying templates mapping
+        to self.
 
-        A custom type has a name in the following form::
-
-          CustomType<param1, param2, ...>
-
-        Return None, None if the `Type` instance is not a custom type.
+        The caller must allow templates dictionary to be changed in-situ.
         """
-        if self.is_atomic:
-            if self[0].endswith('[]'):
-                return 'Array', (self[0][:-2].strip(),)
-
-            m = _custom_type_name_params_match(self[0])
-            if m is not None:
-                name = m.group(1).strip()
-                params = [p.strip() for p in m.group(2).split(',')]
-                return name, tuple(params)
-        return None, None
+        if self.is_concrete:
+            yield self
+        elif self.is_atomic:
+            type_list = templates.get(self[0])
+            if type_list:
+                for i, t in enumerate(type_list):
+                    t = Type.fromobject(t)
+                    t._params.update(self._params)
+                    if t.is_concrete:
+                        # templates is changed in-situ! This ensures that
+                        # `T(T)` produces `i4(i4)`, `i8(i8)` for `T in
+                        # [i4, i8]`. To produce all possible combinations
+                        # `i4(i4)`, `i8(i8)`, `i8(i4)`, `i4(i8)`, use
+                        # `T1(T2)` where `T1 in [i4, i8]` and `T2 in [i4,
+                        # i8]`
+                        templates[self[0]] = [t]
+                        # assert not self._params, (t, self, self._params)
+                        yield t
+                        # restore templates
+                        templates[self[0]] = type_list
+                    else:
+                        # this will avoid infinite recursion when
+                        # templates is `T in [U]` and `U in [T]`
+                        templates[self[0]] = []
+                        for ct in t.apply_templates(templates):
+                            templates[self[0]] = [ct]
+                            yield ct
+                            templates[self[0]] = []
+                        templates[self[0]] = type_list
+            else:
+                raise TypeError(f'cannot make {self} concrete using template mapping {templates}')
+        elif self.is_pointer:
+            for t in self[0].apply_templates(templates):
+                yield Type(t, self[1], **self._params)
+        elif self.is_struct:
+            for i, t in enumerate(self):
+                if not t.is_concrete:
+                    for ct in t.apply_templates(templates):
+                        yield from Type(
+                            *(self[:i] + (ct,) + self[i+1:]),
+                            **self._params).apply_templates(templates)
+                    return
+            assert 0
+        elif self.is_function:
+            rtype, atypes = self
+            if not rtype.is_concrete:
+                for rt in rtype.apply_templates(templates):
+                    yield from Type(rt, atypes).apply_templates(templates)
+                return
+            for i, t in enumerate(atypes):
+                if not t.is_concrete:
+                    for ct in t.apply_templates(templates):
+                        yield from Type(
+                            rtype, atypes[:i] + (ct,) + atypes[i+1:],
+                            **self._params).apply_templates(templates)
+                    return
+            assert 0
+        elif self.is_custom:
+            params = self[0]
+            cls = type(self)
+            if cls is Type:
+                name = params[0]
+                params = params[1:]
+            else:
+                name = cls.__name__
+            if name in templates:
+                for cname in templates[name]:
+                    cname = Type.aliases.get(cname, cname)
+                    if isinstance(cname, str):
+                        cls = Type.custom_types.get(cname, Type)
+                    else:
+                        assert issubclass(cname, Type), cname
+                        cls = cname
+                        cname = cls.__name__
+                    if cls is Type:
+                        yield from cls((cname,) + params,
+                                       **self._params).apply_templates(templates)
+                    else:
+                        yield from cls(params, **self._params).apply_templates(templates)
+                return
+            for i, t in enumerate(params):
+                if not isinstance(t, Type):
+                    continue
+                if not t.is_concrete:
+                    for ct in t.apply_templates(templates):
+                        if cls is Type:
+                            yield from cls(
+                                (name,) + params[:i] + (ct,) + params[i+1:],
+                                **self._params).apply_templates(templates)
+                        else:
+                            yield from cls(
+                                params[:i] + (ct,) + params[i+1:],
+                                **self._params).apply_templates(templates)
+                    return
+            assert 0, repr(self)
+        else:
+            raise NotImplementedError(f'apply_templates: {self} {templates}')
 
 
 def _demangle(s):
@@ -1191,8 +1381,18 @@ def _demangle(s):
             rtype = block[0]
             atypes, rest = _demangle('_' + rest)
             typ = Type(rtype, atypes)
-        elif kind == 'A':
+        elif kind in 'AR':
             return block, rest
+        elif kind == 'r':  # custom
+            assert len(block) == 1, repr(block)
+            name = block[0]
+            assert name.is_atomic, name
+            name = name[0]
+            atypes, rest = _demangle('_' + rest)
+            if name in Type.custom_types:
+                typ = Type.custom_types[name](atypes)
+            else:
+                typ = Type((name,)+atypes)
         else:
             raise NotImplementedError(repr((kind, s)))
     else:
