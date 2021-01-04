@@ -5,6 +5,7 @@ __all__ = ['RemoteJIT', 'Signature', 'Caller']
 
 import os
 import inspect
+import warnings
 from . import irtools
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
@@ -104,7 +105,8 @@ class Signature(object):
     def local(self):
         sig = Signature(self.remotejit.local)
         sig.signatures.extend(self.signatures)
-        # sig.signature_templates.update(self.signature_templates)
+        assert not self.signature_devices
+        assert not self.signature_templates
         return sig
 
     def __str__(self):
@@ -243,7 +245,7 @@ class Signature(object):
             templates = self.signature_templates.get(sig, {})
             sig = Type.fromobject(sig)
             if not sig.is_complete:
-                print('Ignore incomplete type: ', sig)
+                warnings.warn(f'Incomplete signature {sig} will be ignored')
                 continue
             if not sig.is_function:
                 raise ValueError(
