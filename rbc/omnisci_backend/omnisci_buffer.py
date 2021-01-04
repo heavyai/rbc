@@ -28,7 +28,6 @@ from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
-from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
@@ -377,33 +376,23 @@ def omnisci_buffer_setitem(a, i, v):
 
 
 @extending.intrinsic
-def omnisci_column_set_null_(typingctx, col_var, row_idx):
-    # Float values are serialized as integers by OmniSciDB
-    # For reference, here is the conversion table for float and double
-    #   FLOAT:  1.1754944e-38            -> 8388608
-    #   DOUBLE: 2.2250738585072014e-308  -> 4503599627370496
-    #                    ^                          ^
-    #                 fp value                  serialized
-    T = col_var.eltype
-    sig = types.void(col_var, row_idx)
+def omnisci_buffer_is_null_(typingctx, data):
+    sig = types.int8(data)
 
-    target_info = TargetInfo()
-    null_value = target_info.null_values[str(T)]
-
-    def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
-        data, index = args
-
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
-
-        ty = ptr.type.pointee
-        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
-        if isinstance(T, types.Float):
-            nv = builder.bitcast(nv, ty)
-        builder.store(nv, builder.gep(ptr, [index]))
+    def codegen(context, builder, sig, args):
+        rawptr = cgutils.alloca_once_value(builder, value=args[0])
+        ptr = builder.load(rawptr)
+        return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
 
     return sig, codegen
+
+
+# "BufferPointer.is_null" checks if a given array or column is null
+# as opposed to "BufferType.is_null" that checks if an index in a
+# column is null
+@extending.overload_method(BufferPointer, 'is_null')
+def omnisci_buffer_is_null(x):
+    if isinstance(x, BufferPointer):
+        def impl(x):
+            return omnisci_buffer_is_null_(x)
+        return impl

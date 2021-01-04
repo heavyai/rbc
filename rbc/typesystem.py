@@ -1422,9 +1422,6 @@ def _demangle(s):
 if nb is not None:
     class Boolean1(nb.types.Boolean):
 
-        def __name__(self):
-            return 'Boolean1'
-
         def can_convert_from(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
 
@@ -1437,9 +1434,6 @@ if nb is not None:
     class Boolean8(nb.types.Boolean):
 
         bitwidth = 8
-
-        def __name__(self):
-            return 'Boolean8'
 
         def can_convert_to(self, typingctx, other):
             return isinstance(other, nb.types.Boolean)
