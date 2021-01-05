@@ -680,6 +680,16 @@ class RemoteOmnisci(RemoteJIT):
             llvm_version = device_params.get('llvm_version')
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
+
+            null_values = device_params.get('null_values')
+            if null_values is not None:
+                d = dict()
+                for tname_value in null_values.split(';'):
+                    if not tname_value:
+                        continue
+                    tname, value = tname_value.split(':')
+                    d[tname] = int(value)
+                target_info.set('null_values', d)
         return targets
 
     @property

@@ -498,6 +498,16 @@ class Type(tuple, metaclass=MetaType):
         return len(self) == 1 and not isinstance(self[0], Type) and isinstance(self[0], tuple)
 
     @property
+    def is_signed(self):
+        # https://en.cppreference.com/w/cpp/types/numeric_limits/is_signed
+        return self.is_atomic and (self.is_char or self.is_int or self.is_float)
+
+    @property
+    def is_unsigned(self):
+        # https://en.cppreference.com/w/cpp/types/numeric_limits/is_signed
+        return self.is_atomic and not self.is_signed
+
+    @property
     def is_complete(self):
         """Return True when the Type instance does not contain unknown types.
         """

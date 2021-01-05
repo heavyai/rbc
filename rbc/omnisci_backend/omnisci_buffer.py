@@ -39,6 +39,8 @@ int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
 void_t = ir.VoidType()
+fp32 = ir.FloatType()
+fp64 = ir.DoubleType()
 
 
 class OmnisciBufferType(typesystem.Type):
@@ -315,7 +317,7 @@ def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
         if buf_typ.width < value.type.width:
             return builder.trunc(value, buf_typ)
         elif buf_typ.width > value.type.width:
-            return builder.sext(value, buf_typ)
+            return builder.zext(value, buf_typ)
 
     return value
 
@@ -357,10 +359,9 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
         assert data.opname == 'load'
         buf = data.operands[0]
 
-        ptr = builder.load(builder.gep(
-            buf, [zero, zero]))
-
+        ptr = builder.load(builder.gep(buf, [zero, zero]))
         value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
+
         builder.store(value, builder.gep(ptr, [index]))
 
     return sig, codegen
@@ -378,16 +379,17 @@ def omnisci_buffer_setitem(a, i, v):
 def omnisci_buffer_is_null_(typingctx, data):
     sig = types.int8(data)
 
-    def codegen(context, builder, signature, args):
-
+    def codegen(context, builder, sig, args):
         rawptr = cgutils.alloca_once_value(builder, value=args[0])
         ptr = builder.load(rawptr)
-
         return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
 
     return sig, codegen
 
 
+# "BufferPointer.is_null" checks if a given array or column is null
+# as opposed to "BufferType.is_null" that checks if an index in a
+# column is null
 @extending.overload_method(BufferPointer, 'is_null')
 def omnisci_buffer_is_null(x):
     if isinstance(x, BufferPointer):

@@ -181,7 +181,7 @@ class TargetInfo(object):
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
                           'has_cpython', 'has_numba', 'driver', 'software',
-                          'llvm_version')
+                          'llvm_version', 'null_values')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
@@ -309,6 +309,15 @@ class TargetInfo(object):
         """Return target system LLVM versions tuple.
         """
         return self.info.get('llvm_version')
+
+    @property
+    def null_values(self):
+        """Return the null values for scalar types serialized as integers.
+        """
+        null_values = self.info.get('null_values', {})
+        if not null_values:
+            raise RuntimeError('null value support requires omniscidb-internal PR 5104')
+        return null_values
 
     # TODO: info may also contain: count, threads, cores
 
