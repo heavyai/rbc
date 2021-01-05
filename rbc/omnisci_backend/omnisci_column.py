@@ -9,24 +9,16 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
 
 from llvmlite import ir
 from rbc import typesystem
-<<<<<<< HEAD
-from .omnisci_buffer import Buffer, OmnisciBufferType
-=======
-from rbc.utils import get_version
+from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType, BufferPointer
 from rbc.targetinfo import TargetInfo
-from .omnisci_buffer import (
-    BufferType, BufferPointer, Buffer, BufferPointerModel,
-    buffer_type_converter, OmnisciBufferType,
-)
-
+from rbc.utils import get_version
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, extending, types
+    from numba.core import extending, types
 else:
-    from numba import datamodel, extending, types
+    from numba import extending, types
 
 
 int32_t = ir.IntType(32)
->>>>>>> move implementation to omnisci_column.py
 
 
 class OmnisciColumnType(OmnisciBufferType):

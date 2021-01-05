@@ -12,12 +12,8 @@ def omnisci():
 
 def define(omnisci):
 
-    @omnisci('int32(Column<int8>, RowMultiplier, OutputColumn<int8>)',
-             'int32(Column<int16>, RowMultiplier, OutputColumn<int16>)',
-             'int32(Column<int32>, RowMultiplier, OutputColumn<int32>)',
-             'int32(Column<int64>, RowMultiplier, OutputColumn<int64>)',
-             'int32(Column<float32>, RowMultiplier, OutputColumn<float32>)',
-             'int32(Column<float64>, RowMultiplier, OutputColumn<float64>)')
+    @omnisci('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
+             T=['int8', 'int16', 'int32', 'int64', 'float32', 'float64'])
     def my_row_copier_mul(x, m, y):
         input_row_count = len(x)
         for i in range(input_row_count):

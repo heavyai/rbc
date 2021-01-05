@@ -314,7 +314,10 @@ class TargetInfo(object):
     def null_values(self):
         """Return the null values for scalar types serialized as integers.
         """
-        return self.info.get('null_values', {})
+        null_values = self.info.get('null_values', {})
+        if not null_values:
+            raise RuntimeError('null value support requires omniscidb-internal PR 5104')
+        return null_values
 
     # TODO: info may also contain: count, threads, cores
 

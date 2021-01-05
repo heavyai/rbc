@@ -76,7 +76,6 @@ def define(omnisci):
         return len(x)
 
 
-@pytest.mark.skip('Wait until PR omniscidb-internal #5134 is merged')
 @pytest.mark.parametrize("inputs",
                          ['i8', 'cursor(i8,f8)', 'i8;f8', 'i4;cursor(f8,i8)',
                           'cursor(i4,i8);f8', 'cursor(i4,i8);cursor(f8,f4)',
