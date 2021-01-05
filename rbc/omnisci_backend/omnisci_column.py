@@ -9,7 +9,7 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
 
 from llvmlite import ir
 from rbc import typesystem
-from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType, BufferPointer
+from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
 from rbc.targetinfo import TargetInfo
 from rbc.utils import get_version
 if get_version('numba') >= (0, 49):
