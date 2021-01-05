@@ -7,7 +7,7 @@ jobs:
       - run:
           name: Set up environment variables
           command: |
-            echo 'export MINICONDA=$HOME/miniconda' >> $BASH_ENV
+            echo 'export MINIMAMBA=$HOME/minimamba' >> $BASH_ENV
             echo 'export PROJECT=$HOME/project' >> $BASH_ENV
             source $BASH_ENV
       - run:
@@ -17,30 +17,30 @@ jobs:
             apt-get install --assume-yes wget git bzip2 libc6-dbg binutils
       - checkout
       - run:
-          name: Install miniconda
+          name: Install minimamba
           command: |
             cd $HOME
-            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-            bash miniconda.sh -b -f -p $MINICONDA
-            source $MINICONDA/etc/profile.d/conda.sh
-            conda update --quiet --yes conda
-            conda env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
-            conda info -a
+            wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -O minimamba.sh
+            bash minimamba.sh -b -f -p $MINIMAMBA
+            source $MINIMAMBA/etc/profile.d/conda.sh
+            mamba update --quiet --yes mamba
+            mamba env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
+            mamba info -a
       - run:
           name: Install dependencies from PYPI
           command: |
-            source $MINICONDA/etc/profile.d/conda.sh
+            source $MINIMAMBA/etc/profile.d/conda.sh
             conda activate rbc-circleci
             pip install thriftpy2
       - run:
           name: Build RBC
           command: |
-            source $MINICONDA/etc/profile.d/conda.sh
+            source $MINIMAMBA/etc/profile.d/conda.sh
             conda activate rbc-circleci
             python setup.py develop
       - run:
           name: Run RBC tests
           command: |
-            source $MINICONDA/etc/profile.d/conda.sh
+            source $MINIMAMBA/etc/profile.d/conda.sh
             conda activate rbc-circleci
             pytest -v -r s rbc/
