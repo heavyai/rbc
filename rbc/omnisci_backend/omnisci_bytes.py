@@ -8,57 +8,37 @@ Omnisci Bytes represents the following structure:
   }
 '''
 
-__all__ = ['BytesPointer', 'Bytes', 'bytes_type_converter', 'OmnisciBytesType']
+__all__ = ['BytesPointer', 'Bytes', 'OmnisciBytesType']
 
 from rbc import typesystem
 from rbc.utils import get_version
 from .omnisci_buffer import (
-    BufferPointer, Buffer, BufferPointerModel,
-    buffer_type_converter, OmnisciBufferType,
-    omnisci_buffer_constructor
-)
+    BufferPointer, Buffer, OmnisciBufferType,
+    omnisci_buffer_constructor)
 
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, types, extending
+    from numba.core import types, extending
 else:
-    from numba import datamodel, types, extending
+    from numba import types, extending
 
 
 class OmnisciBytesType(OmnisciBufferType):
     """Omnisci Bytes type for RBC typesystem.
     """
 
+    @property
+    def buffer_extra_members(self):
+        return ('bool is_null',)
 
-class BytesPointer(BufferPointer):
-    """Type class for pointers to :code:`Omnisci Bytes` structure."""
+
+typesystem.Type.alias(Bytes='OmnisciBytesType<char8>')
+
+
+BytesPointer = BufferPointer
 
 
 class Bytes(Buffer):
     pass
-
-
-@datamodel.register_default(BytesPointer)
-class BytesPointerModel(BufferPointerModel):
-    pass
-
-
-def bytes_type_converter(obj):
-    """Return Type instance corresponding to Omnisci :code:`Bytes` type.
-
-    :code:`Omnisci Bytes` is defined as follows (using C++ syntax)::
-
-      struct Column {
-        char* ptr;
-        size_t sz;
-        bool is_null;
-      }
-
-    See :code:`buffer_type_converter` for details.
-    """
-    return buffer_type_converter(
-        obj, OmnisciBytesType, 'Bytes', BytesPointer,
-        extra_members=[typesystem.Type.fromstring('bool is_null')],
-        element_type='char').pointer()
 
 
 @extending.lower_builtin(Bytes, types.Integer)
@@ -69,6 +49,5 @@ def omnisci_bytes_constructor(context, builder, sig, args):
 @extending.type_callable(Bytes)
 def type_omnisci_bytes(context):
     def typer(size):
-        atyp = bytes_type_converter('Bytes')
-        return atyp.tonumba()
+        return typesystem.Type.fromobject('Bytes').tonumba()
     return typer

@@ -44,16 +44,43 @@ void_t = ir.VoidType()
 class OmnisciBufferType(typesystem.Type):
     """Typesystem type class for Omnisci buffer structures.
     """
+    # When True, buffer type arguments are passed by value to
+    # functions [not recommended].
+    pass_by_value = False
+
+    @classmethod
+    def preprocess_args(cls, args):
+        assert len(args) == 1, args
+        assert len(args[0]) == 1, args
+        element_type = args[0][0]
+        if not isinstance(element_type, typesystem.Type):
+            element_type = typesystem.Type.fromobject(element_type)
+        return ((element_type,),)
 
     @property
-    def _buffer_typename(self):
-        return self._params['typename']
+    def element_type(self):
+        return self[0][0]
 
-    def pointer(self):
-        ptr_type = self._params.get('pointer')
-        if ptr_type is not None:
-            return ptr_type
-        return typesystem.Type.pointer(self)
+    @property
+    def buffer_extra_members(self):
+        return ()
+
+    def tonumba(self, bool_is_int8=None):
+        ptr_t = typesystem.Type(self.element_type, '*', name='ptr')
+        size_t = typesystem.Type.fromstring('size_t sz')
+        extra_members = tuple(map(typesystem.Type.fromobject, self.buffer_extra_members))
+        buffer_type = typesystem.Type(
+            ptr_t,
+            size_t,
+            *extra_members
+        )
+        buffer_type._params['numba.Type'] = BufferType
+        numba_type = buffer_type.tonumba(bool_is_int8=True)
+        if self.pass_by_value:
+            return numba_type
+        numba_eltype = self.element_type.tonumba(bool_is_int8=True)
+        numba_type_ptr = BufferPointer(numba_type, numba_eltype)
+        return numba_type_ptr
 
 
 class BufferType(types.Type):
@@ -101,6 +128,7 @@ class Buffer(object, metaclass=BufferMeta):
     """
 
 
+@datamodel.register_default(BufferPointer)
 class BufferPointerModel(datamodel.models.PointerModel):
     """Base class for Omnisci buffer pointer models.
 
@@ -366,88 +394,3 @@ def omnisci_buffer_is_null(x):
         def impl(x):
             return omnisci_buffer_is_null_(x)
         return impl
-
-
-def make_buffer_ptr_type(buffer_type, buffer_ptr_cls):
-    ptr_type = buffer_type.pointer()
-
-    numba_type = buffer_type.tonumba(bool_is_int8=True)
-    numba_eltype = buffer_type[0][0].tonumba(bool_is_int8=True)
-    numba_type_ptr = buffer_ptr_cls(numba_type, numba_eltype)
-
-    ptr_type._params['tonumba'] = numba_type_ptr
-    ptr_type._params['typename'] = buffer_type._params['typename'] + '*'
-    return ptr_type
-
-
-def buffer_type_converter(obj, typesystem_buffer_type,
-                          buffer_typename, buffer_ptr_cls,
-                          extra_members=[], element_type=None):
-    """Template function for converting typesystem Type instances to
-    Omnisci Buffer Type instance.
-
-    Parameters
-    ----------
-    obj : {str, typesystem.Type}
-      Custom atomic type corresponding to Omnisci Buffer.
-    typesystem_buffer_type : {OmnisciBufferType subclass}
-    buffer_typename : str
-      The name of buffer type.
-    buffer_ptr_cls : {BufferPointer subclass}
-    extra_members : {list of typesystem Type instances}
-      Additional members of the buffer structure.
-    element_type : {None, typesystem Type instance}
-      Specify element type. Otherwise deduce it from `obj` parameters.
-    """
-    if isinstance(obj, str):
-        obj = typesystem.Type(obj,)
-
-    if not isinstance(obj, typesystem.Type):
-        raise NotImplementedError(type(obj))
-
-    # A valid obj for buffer type is in the form
-    #   typesystem.Type('BufferTypeName<ElementType>', )
-    # In all other cases refuse by returning None.
-
-    if element_type is None:
-        name, params = obj.get_name_and_parameters()
-        if name is None or name != buffer_typename:
-            return
-        assert len(params) == 1, params
-        element_type = typesystem.Type.fromstring(params[0])
-        if not element_type.is_concrete:
-            return
-        typename = '%s<%s>' % (buffer_typename, element_type.toprototype())
-    else:
-        element_type = typesystem.Type.fromobject(element_type)
-        typename = buffer_typename
-
-    assert issubclass(buffer_ptr_cls, BufferPointer)
-    assert issubclass(typesystem_buffer_type, OmnisciBufferType)
-
-    # Construct buffer type as a struct with ptr and sz as members.
-    ptr_t = typesystem.Type(element_type, '*', name='ptr')
-    size_t = typesystem.Type.fromstring('size_t sz')
-    buffer_type = typesystem_buffer_type(
-        ptr_t,
-        size_t,
-        *extra_members
-    )
-
-    # Converting buffer type to numba type results BufferType instance
-    # that simplifies checking types when overloading generic methods
-    # like len, getitem, setitem, etc.
-    buffer_type._params['numba.Type'] = BufferType
-
-    # Create alias to buffer type
-    buffer_type._params['typename'] = typename
-
-    # In omniscidb, boolean values are stored as int8 because
-    # boolean has three states: false, true, and null.
-    numba_type = buffer_type.tonumba(bool_is_int8=True)
-
-    buffer_type._params['tonumba'] = numba_type
-    buffer_type._params['pointer'] = make_buffer_ptr_type(buffer_type,
-                                                          buffer_ptr_cls)
-
-    return buffer_type

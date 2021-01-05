@@ -80,7 +80,6 @@ class TargetInfo(object):
         """
         self.name = name
         self.strict = strict
-        self.custom_type_converters = []
         self.info = {}
         self.type_sizeof = {}
         self._supported_libraries = set()  # libfuncs.Library instances
@@ -389,28 +388,3 @@ class TargetInfo(object):
             return ctypes.sizeof(t)
         raise NotImplementedError(
             f"{type(self).__name__}[{self.name},{self.triple}].sizeof({t!r})")
-
-    def add_converter(self, converter):
-        """Add custom type converter.
-
-        Custom type converters are called on non-concrete atomic
-        types.
-
-        Parameters
-        ----------
-        converter : callable
-          Specify a function with signature `converter(target_info,
-          obj)` that returns `Type` instance corresponding to
-          `obj`. If the conversion is unsuccesful, the `converter`
-          returns `None` so that other converter functions could be
-          tried.
-        """
-        self.custom_type_converters.append(converter)
-
-    def custom_type(self, t):
-        """Return custom type of an object.
-        """
-        for converter in self.custom_type_converters:
-            r = converter(t)
-            if r is not None:
-                return r

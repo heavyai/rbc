@@ -9,10 +9,6 @@ from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
 from . import omnisci_backend
 from .omnisci_backend import (
-    array_type_converter,
-    output_column_type_converter, column_type_converter,
-    table_function_sizer_type_converter,
-    cursor_type_converter, bytes_type_converter,
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
     BufferMeta)
@@ -217,10 +213,6 @@ class RemoteOmnisci(RemoteJIT):
     Use pymapd, for instance, to make a SQL query `select add(c1,
     c2) from table`
     """
-    converters = [array_type_converter,
-                  output_column_type_converter, column_type_converter,
-                  table_function_sizer_type_converter,
-                  cursor_type_converter, bytes_type_converter]
     multiplexed = False
     mangle_prefix = ''
 
@@ -586,14 +578,14 @@ class RemoteOmnisci(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
         ]:
-            ext_arguments_map[
-                '{%s* ptr, uint64 sz, bool is_null}*' % ptr_type] \
+            ext_arguments_map['OmnisciArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
-            ext_arguments_map['{%s* ptr, uint64 sz}' % ptr_type] \
+            ext_arguments_map['OmnisciColumnType<%s>' % ptr_type] \
+                = ext_arguments_map.get('Column<%s>' % T)
+            ext_arguments_map['OmnisciOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
 
-        ext_arguments_map['{char8* ptr, uint64 sz, bool is_null}*'] \
-            = ext_arguments_map.get('Bytes')
+        ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
@@ -605,8 +597,12 @@ class RemoteOmnisci(RemoteJIT):
 
     def type_to_extarg(self, t):
         if isinstance(t, typesystem.Type):
-            t = t.tostring(use_annotation=False)
-        if isinstance(t, str):
+            s = t.tostring(use_annotation=False)
+            extarg = self._get_ext_arguments_map().get(s)
+            if extarg is None:
+                raise ValueError(f'cannot convert {t} to ExtArgumentType')
+            return extarg
+        elif isinstance(t, str):
             extarg = self._get_ext_arguments_map().get(t)
             if extarg is None:
                 raise ValueError(f'cannot convert {t} to ExtArgumentType')
@@ -742,10 +738,7 @@ class RemoteOmnisci(RemoteJIT):
                     consumed_index += 1
             else:
                 if isinstance(a, OmnisciOutputColumnType):
-                    if self.version < (5, 5):
-                        atype = self.type_to_extarg(a)
-                    else:
-                        atype = self.type_to_extarg(a[0][0])
+                    atype = self.type_to_extarg(a)
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
@@ -895,7 +888,6 @@ class RemoteOmnisci(RemoteJIT):
                         else:
                             udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
                         signatures[fid] = sig
-
                     functions_and_signatures.append((caller.func, signatures))
 
                 llvm_module, succesful_fids = compile_to_LLVM(

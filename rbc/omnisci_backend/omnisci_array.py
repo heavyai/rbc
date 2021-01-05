@@ -1,36 +1,44 @@
 """Implement Omnisci Array type support
 """
 
-__all__ = ['ArrayPointer', 'Array', 'omnisci_array_constructor',
-           'array_type_converter', 'OmnisciArrayType']
+__all__ = ['ArrayPointer', 'Array', 'OmnisciArrayType']
 
 from rbc import typesystem
 from rbc.utils import get_version
-from .omnisci_buffer import (BufferPointer, Buffer, BufferPointerModel,
-                             buffer_type_converter, OmnisciBufferType,
+from .omnisci_buffer import (BufferPointer, Buffer,
+                             OmnisciBufferType,
                              omnisci_buffer_constructor)
 
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, extending, types
+    from numba.core import extending, types
 else:
-    from numba import datamodel, extending, types
+    from numba import extending, types
 
 
 class OmnisciArrayType(OmnisciBufferType):
     """Omnisci Array type for RBC typesystem.
+
+    :code:`Omnisci Array<T>` is defined as follows (using C++ syntax)::
+
+      template<typename T>
+      struct Array {
+        T* ptr;
+        size_t sz;
+        bool is_null;
+      }
     """
+    @property
+    def buffer_extra_members(self):
+        return ('bool is_null',)
 
 
-class ArrayPointer(BufferPointer):
-    """Type class for pointers to :code:`Omnisci Array<T>` structure."""
+typesystem.Type.alias(Array='OmnisciArrayType')
+
+
+ArrayPointer = BufferPointer
 
 
 class Array(Buffer):
-    pass
-
-
-@datamodel.register_default(ArrayPointer)
-class ArrayPointerModel(BufferPointerModel):
     pass
 
 
@@ -44,36 +52,10 @@ def omnisci_array_constructor(context, builder, sig, args):
 def type_omnisci_array(context):
     def typer(size, dtype):
         if isinstance(dtype, types.StringLiteral):
-            typ = 'Array<{}>'.format(dtype.literal_value)
+            element_type = typesystem.Type.fromstring(dtype.literal_value)
         elif isinstance(dtype, types.NumberClass):
-            typ = 'Array<{}>'.format(dtype.dtype)
+            element_type = typesystem.Type.fromobject(dtype)
         else:
             raise NotImplementedError(repr(dtype))
-
-        atyp = array_type_converter(typ)
-        if atyp is not None:
-            return atyp.tonumba()
-        raise NotImplementedError((dtype, typ))
+        return OmnisciArrayType((element_type,)).tonumba()
     return typer
-
-
-def array_type_converter(obj):
-    """Return Type instance corresponding to :code:`Omnisci Array<T>` type.
-
-    :code:`Omnisci Array<T>` is defined as follows (using C++ syntax)::
-
-      template<typename T>
-      struct Array {
-        T* ptr;
-        size_t sz;
-        bool is_null;
-      }
-
-    See :code:`buffer_type_converter` for details.
-    """
-    buffer_type = buffer_type_converter(
-        obj, OmnisciArrayType, 'Array', ArrayPointer,
-        extra_members=[typesystem.Type.fromstring('bool is_null')])
-    if buffer_type is not None:
-        return buffer_type.pointer()
-    return buffer_type
