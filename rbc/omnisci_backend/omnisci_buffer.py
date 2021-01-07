@@ -28,6 +28,7 @@ from collections import defaultdict
 from llvmlite import ir
 from rbc import typesystem
 from rbc.utils import get_version
+from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
@@ -387,12 +388,34 @@ def omnisci_buffer_is_null_(typingctx, data):
     return sig, codegen
 
 
+@extending.intrinsic
+def omnisci_array_is_null_(typingctx, T, elem):
+    sig = types.boolean(T, elem)
+
+    target_info = TargetInfo()
+    null_value = target_info.null_values[str(T.dtype)]
+    nv = ir.Constant(ir.IntType(T.dtype.bitwidth), null_value)
+
+    def codegen(context, builder, signature, args):
+        _, elem = args
+        if isinstance(T.dtype, types.Float):
+            elem = builder.bitcast(elem, nv.type)
+        return builder.icmp_signed('==', elem, nv)
+
+    return sig, codegen
+
+
 # "BufferPointer.is_null" checks if a given array or column is null
 # as opposed to "BufferType.is_null" that checks if an index in a
 # column is null
 @extending.overload_method(BufferPointer, 'is_null')
-def omnisci_buffer_is_null(x):
+def omnisci_buffer_is_null(x, row_idx=None):
+    T = x.eltype
     if isinstance(x, BufferPointer):
-        def impl(x):
-            return omnisci_buffer_is_null_(x)
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_is_null_(x)
+        else:
+            def impl(x, row_idx=None):
+                return omnisci_array_is_null_(T, x[row_idx])
         return impl

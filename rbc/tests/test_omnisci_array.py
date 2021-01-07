@@ -46,7 +46,7 @@ def omnisci():
         print('%s in deardown' % (type(msg)))
 
 
-def _test_get_array_size_ir1(omnisci):
+def size_ir1(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
