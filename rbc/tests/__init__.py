@@ -63,10 +63,14 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
     # https://www.omnisci.com/docs/latest/5_datatypes.html
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
     table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
+                            for n, t in zip(colnames, sqltypes))
     m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
     m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}10 ({table_defn});')
     m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}null ({table_defn});')
+
+    array_table_defn = ',\n'.join(f'{n} {t}[]'
+                                  for n, t in zip(colnames, sqltypes))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}array_null ({array_table_defn});')
 
     def row_value(row, col, colname, null=False):
         if null:
@@ -86,9 +90,16 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
             table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
             m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
 
+    m.sql_execute(f'insert into {table_name}array_null values '
+                  '(NULL, NULL, NULL, NULL, NULL, NULL, NULL);')
+    m.sql_execute(f"insert into {table_name}array_null values ("
+                  "{NULL, 2.0}, {NULL, 3.0}, {NULL, 1}, {NULL, 2},"
+                  "{NULL, 3}, {NULL, 4}, {NULL, 'true'});")
+
     m.table_name = table_name
     m.require_version = require_version
     yield m
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}10')
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}null')
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}array_null')

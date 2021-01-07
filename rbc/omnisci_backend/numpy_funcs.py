@@ -58,6 +58,22 @@ def omnisci_np_full_like(a, fill_value, dtype=None):
         return impl
 
 
+@expose_and_overload(np.empty_like)
+def omnisci_np_empty_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+
+        def impl(a, dtype=None):
+            sz = len(a)
+            other = Array(sz, nb_dtype)
+            other.set_null()
+            return other
+        return impl
+
+
 @expose_and_overload(np.empty)
 def omnisci_np_empty(shape, dtype=None):
 
@@ -67,7 +83,9 @@ def omnisci_np_empty(shape, dtype=None):
         nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, dtype=None):
-        return Array(shape, nb_dtype)
+        arr = Array(shape, nb_dtype)
+        arr.set_null()
+        return arr
     return impl
 
 

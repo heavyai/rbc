@@ -389,6 +389,18 @@ def omnisci_buffer_is_null_(typingctx, data):
 
 
 @extending.intrinsic
+def omnisci_buffer_set_null_(typingctx, data):
+    sig = types.none(data)
+
+    def codegen(context, builder, sig, args):
+        rawptr = cgutils.alloca_once_value(builder, value=args[0])
+        ptr = builder.load(rawptr)
+        builder.store(int8_t(1), builder.gep(ptr, [int32_t(0), int32_t(2)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
 def omnisci_array_is_null_(typingctx, T, elem):
     sig = types.boolean(T, elem)
 
@@ -418,4 +430,46 @@ def omnisci_buffer_is_null(x, row_idx=None):
         else:
             def impl(x, row_idx=None):
                 return omnisci_array_is_null_(T, x[row_idx])
+        return impl
+
+
+@extending.intrinsic
+def omnisci_array_set_null_(typingctx, arr, row_idx):
+    T = arr.eltype
+    sig = types.none(arr, row_idx)
+
+    target_info = TargetInfo()
+    null_value = target_info.null_values[f'Array<{T}>']
+    # it looks like that the null values for arrays are:
+    null_value = (null_value - 1) * (-1)
+
+    def codegen(context, builder, signature, args):
+        # get the operator.setitem intrinsic
+        fnop = context.typing_context.resolve_value_type(omnisci_buffer_ptr_setitem_)
+        setitem_sig = types.none(arr, row_idx, T)
+        # register the intrinsic in the typing ctx
+        fnop.get_call_type(context, setitem_sig.args, {})
+        intrinsic = context.get_function(fnop, setitem_sig)
+
+        data, index = args
+        # data = {T*, i64, i8}*
+        ty = data.type.pointee.elements[0].pointee
+        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
+        if isinstance(T, types.Float):
+            nv = builder.bitcast(nv, ty)
+        intrinsic(builder, (data, index, nv,))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferPointer, 'set_null')
+def omnisci_buffer_set_null(x, row_idx=None):
+    if isinstance(x, BufferPointer):
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_set_null_(x)
+        else:
+            def impl(x, row_idx=None):
+                return omnisci_array_set_null_(x, row_idx)
+            return impl
         return impl
