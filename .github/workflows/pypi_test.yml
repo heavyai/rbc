@@ -1,8 +1,10 @@
-name: Upload RBC to Pypi
+name: Upload RBC to test.PyPI
 
 on:
-  release:
-    types: [published]
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
   pypi-release:
@@ -26,10 +28,12 @@ jobs:
       - name: Build distribution
         shell: bash -l {0}
         run: python setup.py sdist bdist_wheel
-  
-      - name: Publish package to PyPI
+
+      - name: Publish package to test.PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@master
         with:
           verbose: true
           user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
