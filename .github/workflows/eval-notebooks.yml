@@ -42,7 +42,16 @@ jobs:
           omnisci_server --version
           omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
           sleep 10
-      
+
+      - name: conda config
+        shell: bash -l {0}
+        run: conda config --show  
+
+      - name: conda list
+        shell: bash -l {0}
+        run: |
+          conda list
+
       - name: Execute pytest
         shell: bash -l {0}
         run: |
