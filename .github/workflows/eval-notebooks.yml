@@ -1,4 +1,4 @@
-name: Upload RBC to Pypi
+name: Eval notebooks 
 
 on:
   # Trigger the workflow on push or pull request,
@@ -11,13 +11,14 @@ on:
       - master
 
 jobs:
-  pypi-release:
+  eval-notebooks:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: 3.8
     
@@ -26,7 +27,27 @@ jobs:
           python-version: 3.8
           mamba-version: "*"
           channels: conda-forge
-          activate-environment: rbc-env
           environment-file: .conda/environment.yml
-          miniforge-version: latest
-      - run: mamba install omniscidb matplotlib ibis-framework nbval -c conda-forge
+ 
+      - name: Install additional packages
+        shell: bash -l {0}
+        run: |
+          mamba install omniscidb matplotlib ibis-framework pytest nbval -c conda-forge
+
+      - name: Start omniscidb server
+        shell: bash -l {0}
+        run: |
+          mkdir data && omnisci_initdb data -f
+          omnisci_server --version
+          omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+          sleep 10
+      
+      - name: Execute pytest
+        shell: bash -l {0}
+        run: |
+          echo $(pwd)
+          ls
+          python setup.py develop
+          python -m pytest -v -r s --nbval notebooks
+          pkill -f omnisci_server
+          cat omniscidb-output.txt
