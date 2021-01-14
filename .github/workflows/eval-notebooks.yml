@@ -1,0 +1,32 @@
+name: Upload RBC to Pypi
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  pypi-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+    
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.8
+          mamba-version: "*"
+          channels: conda-forge
+          activate-environment: rbc-env
+          environment-file: .conda/environment.yml
+          miniforge-version: latest
+      - run: mamba install omniscidb matplotlib ibis-framework nbval -c conda-forge
