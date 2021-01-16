@@ -94,9 +94,6 @@ class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
 class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
     _library_class = JITRemoteCodeLibrary
 
-    def __init__(self, name):
-        super(JITRemoteCPUCodegen, self).__init__(name)
-
     def _get_host_cpu_name(self):
         target_info = TargetInfo()
         return target_info.device_name
@@ -105,7 +102,7 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
         target_info = TargetInfo()
         features = target_info.device_features
         server_llvm_version = target_info.llvm_version
-        if server_llvm_version is None:
+        if server_llvm_version is None or target_info.is_gpu:
             return ''
         client_llvm_version = llvm.llvm_version_info
 
@@ -123,7 +120,7 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
         return features
 
     def _customize_tm_options(self, options):
-        super(JITRemoteCPUCodegen, self)._customize_tm_options(options)
+        super()._customize_tm_options(options)
         # fix reloc_model as the base method sets it using local target
         target_info = TargetInfo()
         if target_info.arch.startswith('x86'):
@@ -138,9 +135,6 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteCPUContext(cpu.CPUContext):
 
-    def __init__(self, typing_context):
-        super(JITRemoteCPUContext, self).__init__(typing_context)
-
     @compiler_lock.global_compiler_lock
     def init(self):
         target_info = TargetInfo()
@@ -151,26 +145,15 @@ class JITRemoteCPUContext(cpu.CPUContext):
     def get_executable(self, library, fndesc, env):
         return None
 
-        # Map external C functions.
-        # nb.core.externals.c_math_functions.install(self)
-        # TODO, seems problematic only for 32bit cases
+    def post_lowering(self, mod, library):
+        pass
 
-        # Initialize NRT runtime
-        # nb.core.argets.cpu.rtsys.initialize(self)
-        # TODO: is this needed for LLVM IR generation?
-
-        # import numba.unicode  # unicode support is not relevant here
-
-    # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
 # ---------------------------------------------------------------------------
 # GPU Context classes
 
 
 class JITRemoteGPUTargetContext(cpu.CPUContext):
-
-    def __init__(self, typing_context):
-        super().__init__(typing_context)
 
     @compiler_lock.global_compiler_lock
     def init(self):
@@ -195,6 +178,7 @@ class JITRemoteGPUTargetContext(cpu.CPUContext):
 
 
 class JITRemoteGPUTypingContext(typing.Context):
+
     def load_additional_registries(self):
         if get_version('numba') >= (0, 52):
             from numba.core.typing import npydecl
