@@ -113,6 +113,7 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
                       'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
                       'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'cx8', 'enqcmd', 'avx512bf16'],
+            (11, 10): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8'],
             (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
         }.get((server_llvm_version[0], client_llvm_version[0]), [])
         for f in remove_features:
