@@ -3,6 +3,7 @@
 
 import re
 import warnings
+from contextlib import contextmanager
 from collections import defaultdict
 from llvmlite import ir
 import llvmlite.binding as llvm
@@ -70,21 +71,38 @@ def get_called_functions(library, funcname=None):
 
 # ---------------------------------------------------------------------------
 # CPU Context classes
-class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
-    # TODO: introduce JITRemoteCodeLibrary?
-    _library_class = codegen.JITCodeLibrary
+class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
+    """JITRemoteCodeLibrary was introduce to prevent numba from calling functions
+    that checks if the module is final. See xnd-project/rbc issue #87.
+    """
 
-    def __init__(self, name, target_info):
-        self.target_info = target_info
-        super(JITRemoteCPUCodegen, self).__init__(name)
+    def get_pointer_to_function(self, name):
+        """We can return any random number here! This is just to prevent numba from
+        trying to check if the symbol given by "name" is defined in the module.
+        In cases were RBC is calling an external function (i.e. allocate_varlen_buffer)
+        the symbol will not be defined in the module, resulting in an error.
+        """
+        return 0
+
+    def _finalize_specific(self):
+        """Same as codegen.JITCodeLibrary._finalize_specific but without
+        calling _ensure_finalize at the end
+        """
+        self._codegen._scan_and_fix_unresolved_refs(self._final_module)
+
+
+class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
+    _library_class = JITRemoteCodeLibrary
 
     def _get_host_cpu_name(self):
-        return self.target_info.device_name
+        target_info = TargetInfo()
+        return target_info.device_name
 
     def _get_host_cpu_features(self):
-        features = self.target_info.device_features
-        server_llvm_version = self.target_info.llvm_version
-        if server_llvm_version is None:
+        target_info = TargetInfo()
+        features = target_info.device_features
+        server_llvm_version = target_info.llvm_version
+        if server_llvm_version is None or target_info.is_gpu:
             return ''
         client_llvm_version = llvm.llvm_version_info
 
@@ -102,56 +120,47 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
         return features
 
     def _customize_tm_options(self, options):
-        super(JITRemoteCPUCodegen, self)._customize_tm_options(options)
+        super()._customize_tm_options(options)
         # fix reloc_model as the base method sets it using local target
-        if self.target_info.arch.startswith('x86'):
+        target_info = TargetInfo()
+        if target_info.arch.startswith('x86'):
             reloc_model = 'static'
         else:
             reloc_model = 'default'
         options['reloc'] = reloc_model
 
+    def set_env(self, env_name, env):
+        return None
 
-class RemoteCPUContext(cpu.CPUContext):
 
-    def __init__(self, typing_context, target_info):
-        self.target_info = target_info
-        super(RemoteCPUContext, self).__init__(typing_context)
+class JITRemoteCPUContext(cpu.CPUContext):
 
     @compiler_lock.global_compiler_lock
     def init(self):
-        self.address_size = self.target_info.bits
+        target_info = TargetInfo()
+        self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
-                                                     self.target_info)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
 
-        # Map external C functions.
-        # nb.core.externals.c_math_functions.install(self)
-        # TODO, seems problematic only for 32bit cases
+    def get_executable(self, library, fndesc, env):
+        return None
 
-        # Initialize NRT runtime
-        # nb.core.argets.cpu.rtsys.initialize(self)
-        # TODO: is this needed for LLVM IR generation?
+    def post_lowering(self, mod, library):
+        pass
 
-        # import numba.unicode  # unicode support is not relevant here
-
-    # TODO: overwrite load_additional_registries, call_conv?, post_lowering
 
 # ---------------------------------------------------------------------------
 # GPU Context classes
 
 
-class RemoteGPUTargetContext(cpu.CPUContext):
-
-    def __init__(self, typing_context, target_info):
-        self.target_info = target_info
-        super().__init__(typing_context)
+class JITRemoteGPUTargetContext(cpu.CPUContext):
 
     @compiler_lock.global_compiler_lock
     def init(self):
-        self.address_size = self.target_info.bits
+        target_info = TargetInfo()
+        self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec",
-                                                     self.target_info)
+        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
 
     def load_additional_registries(self):
         # libdevice and math from cuda have precedence over the ones from CPU
@@ -168,7 +177,8 @@ class RemoteGPUTargetContext(cpu.CPUContext):
         super().load_additional_registries()
 
 
-class RemoteGPUTypingContext(typing.Context):
+class JITRemoteGPUTypingContext(typing.Context):
+
     def load_additional_registries(self):
         if get_version('numba') >= (0, 52):
             from numba.core.typing import npydecl
@@ -180,6 +190,15 @@ class RemoteGPUTypingContext(typing.Context):
 
 # ---------------------------------------------------------------------------
 # Code generation methods
+
+
+@contextmanager
+def replace_numba_internals_hack():
+    # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
+    _internal_codegen_bkp = registry.cpu_target.target_context._internal_codegen
+    registry.cpu_target.target_context._internal_codegen = JITRemoteCPUCodegen("numba.exec")
+    yield
+    registry.cpu_target.target_context._internal_codegen = _internal_codegen_bkp
 
 
 def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
@@ -335,7 +354,7 @@ def compile_instance(func, sig,
 
 
 def compile_to_LLVM(functions_and_signatures,
-                    target: TargetInfo,
+                    target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
                     debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
@@ -356,84 +375,85 @@ def compile_to_LLVM(functions_and_signatures,
     """
     target_desc = registry.cpu_target
 
-    if target is None:
+    if target_info is None:
         # RemoteJIT
-        target = TargetInfo.host()
+        target_info = TargetInfo.host()
         typing_context = target_desc.typing_context
         target_context = target_desc.target_context
     else:
         # OmnisciDB target
-        if target.is_cpu:
+        if target_info.is_cpu:
             typing_context = typing.Context()
-            target_context = RemoteCPUContext(typing_context, target)
-        elif target.is_gpu:
-            typing_context = RemoteGPUTypingContext()
-            target_context = RemoteGPUTargetContext(typing_context, target)
+            target_context = JITRemoteCPUContext(typing_context)
+        elif target_info.is_gpu:
+            typing_context = JITRemoteGPUTypingContext()
+            target_context = JITRemoteGPUTargetContext(typing_context)
         else:
-            raise ValueError(f'Unknown target {target.name}')
+            raise ValueError(f'Unknown target {target_info.name}')
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns
 
-    codegen = target_context.codegen()
-    main_library = codegen.create_library('rbc.irtools.compile_to_IR')
-    main_module = main_library._final_module
+    with replace_numba_internals_hack():
+        codegen = target_context.codegen()
+        main_library = codegen.create_library('rbc.irtools.compile_to_IR')
+        main_module = main_library._final_module
 
-    succesful_fids = []
-    function_names = []
-    for func, signatures in functions_and_signatures:
-        for fid, sig in signatures.items():
-            fname = compile_instance(func, sig, target, typing_context,
-                                     target_context, pipeline_class,
-                                     main_library,
-                                     debug=debug)
-            if fname is not None:
-                succesful_fids.append(fid)
-                function_names.append(fname)
+        succesful_fids = []
+        function_names = []
+        for func, signatures in functions_and_signatures:
+            for fid, sig in signatures.items():
+                fname = compile_instance(func, sig, target_info, typing_context,
+                                         target_context, pipeline_class,
+                                         main_library,
+                                         debug=debug)
+                if fname is not None:
+                    succesful_fids.append(fid)
+                    function_names.append(fname)
 
-    main_library._optimize_final_module()
-
-    # Remove unused defined functions and declarations
-    used_symbols = defaultdict(set)
-    for fname in function_names:
-        for k, v in get_called_functions(main_library, fname).items():
-            used_symbols[k].update(v)
-
-    all_symbols = get_called_functions(main_library)
-
-    unused_symbols = defaultdict(set)
-    for k, lst in all_symbols.items():
-        if k == 'libraries':
-            continue
-        for fn in lst:
-            if fn not in used_symbols[k]:
-                unused_symbols[k].add(fn)
-
-    changed = False
-    for f in main_module.functions:
-        fn = f.name
-        if fn.startswith('llvm.'):
-            if f.name in unused_symbols['intrinsics']:
-                f.linkage = llvm.Linkage.external
-                changed = True
-        elif f.is_declaration:
-            if f.name in unused_symbols['declarations']:
-                f.linkage = llvm.Linkage.external
-                changed = True
-        else:
-            if f.name in unused_symbols['defined']:
-                f.linkage = llvm.Linkage.private
-                changed = True
-
-    # TODO: determine unused global_variables and struct_types
-
-    if changed:
         main_library._optimize_final_module()
 
-    main_module.verify()
-    main_library._finalized = True
-    main_module.triple = target.triple
-    main_module.data_layout = target.datalayout
+        # Remove unused defined functions and declarations
+        used_symbols = defaultdict(set)
+        for fname in function_names:
+            for k, v in get_called_functions(main_library, fname).items():
+                used_symbols[k].update(v)
+
+        all_symbols = get_called_functions(main_library)
+
+        unused_symbols = defaultdict(set)
+        for k, lst in all_symbols.items():
+            if k == 'libraries':
+                continue
+            for fn in lst:
+                if fn not in used_symbols[k]:
+                    unused_symbols[k].add(fn)
+
+        changed = False
+        for f in main_module.functions:
+            fn = f.name
+            if fn.startswith('llvm.'):
+                if f.name in unused_symbols['intrinsics']:
+                    f.linkage = llvm.Linkage.external
+                    changed = True
+            elif f.is_declaration:
+                if f.name in unused_symbols['declarations']:
+                    f.linkage = llvm.Linkage.external
+                    changed = True
+            else:
+                if f.name in unused_symbols['defined']:
+                    f.linkage = llvm.Linkage.private
+                    changed = True
+
+        # TODO: determine unused global_variables and struct_types
+
+        if changed:
+            main_library._optimize_final_module()
+
+        main_module.verify()
+        main_library._finalized = True
+        main_module.triple = target_info.triple
+        main_module.data_layout = target_info.datalayout
 
     return main_module, succesful_fids
 
