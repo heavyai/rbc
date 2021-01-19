@@ -1,0 +1,35 @@
+name: Upload RBC to Pypi
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  pypi-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+    
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.8
+          mamba-version: "*"
+          channels: conda-forge
+          activate-environment: rbc-env
+          environment-file: .conda/environment.yml
+
+      - name: Build distribution
+        shell: bash -l {0}
+        run: python setup.py sdist bdist_wheel
+  
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          verbose: true
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}

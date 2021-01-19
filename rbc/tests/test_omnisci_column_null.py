@@ -5,7 +5,7 @@ from rbc.tests import omnisci_fixture
 @pytest.fixture(scope='module')
 def omnisci():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
         define(o)
         yield o
 
@@ -42,7 +42,7 @@ colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
 
 @pytest.mark.parametrize('col', colnames)
 def test_null_value(omnisci, col):
-    omnisci.require_version((5, 6),
+    omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 188]')
 
     typ = dict(f4='float32', f8='float64', i1='int8', i2='int16',
@@ -69,7 +69,7 @@ def test_null_value(omnisci, col):
 
 
 def test_row_adder(omnisci):
-    omnisci.require_version((5, 6),
+    omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 188]')
 
     descr, expected = omnisci.sql_execute(
