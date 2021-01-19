@@ -12,13 +12,17 @@ environment:
       RUNTEST: "runtest64.bat"
       PYTHON: "C:\\Python37-x64"
 
+install:
+  - docker version
+
 before_build:
-  "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %PLATFORM%"
+  - "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %PLATFORM%"
+  - docker pull omnisci/core-os-cpu
+  - docker run -d --name omnisci -p 6274:6274 -v $(pwd)/.omnisci/:/omnisci-storage omnisci/core-os-cpu 
 
 build_script:
   - "%PYTHON%\\python.exe -m pip install pytest"
   - "%PYTHON%\\python.exe setup.py develop"
-  - "%PYTHON%\\python.exe -m pytest rbc -vs"
-  - git clean -xdf
-  - "%PYTHON%\\python.exe setup.py install"
-  - "%PYTHON%\\python.exe -m pytest rbc -vs"
+
+test_script:
+  - "%PYTHON%\\python.exe -m pytest -v -rA rbc/ -x"
