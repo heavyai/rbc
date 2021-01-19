@@ -93,8 +93,8 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
     m.sql_execute(f'insert into {table_name}array_null values '
                   '(NULL, NULL, NULL, NULL, NULL, NULL, NULL);')
     m.sql_execute(f"insert into {table_name}array_null values ("
-                  "{NULL, 2.0}, {NULL, 3.0}, {NULL, 1}, {NULL, 2},"
-                  "{NULL, 3}, {NULL, 4}, {NULL, 'true'});")
+                  "{1.0, 2.0}, {2.0, 3.0}, {0, 1}, {2, 2},"
+                  "{2, 3}, {3, 4}, {'false', 'true'});")
 
     m.table_name = table_name
     m.require_version = require_version

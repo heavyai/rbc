@@ -26,6 +26,7 @@ Omnisci buffer objects from UDF/UDTFs.
 import operator
 from collections import defaultdict
 from llvmlite import ir
+import numpy as np
 from rbc import typesystem
 from rbc.utils import get_version
 from rbc.targetinfo import TargetInfo
@@ -183,7 +184,12 @@ def omnisci_buffer_constructor(context, builder, sig, args):
     fa.ptr = ptr                  # T*
     fa.sz = element_count         # size_t
     if null_type is not None:
-        is_null = context.get_value_type(null_type)(0)
+        is_zero = builder.icmp_signed('==', element_count, int64_t(0))
+        with builder.if_else(is_zero) as (then, orelse):
+            with then:
+                is_null = context.get_value_type(null_type)(1)
+            with orelse:
+                is_null = context.get_value_type(null_type)(0)
         fa.is_null = is_null      # int8_t
     return fa._getpointer()
 
@@ -404,7 +410,11 @@ def omnisci_array_is_null_(typingctx, T, elem):
     sig = types.boolean(T, elem)
 
     target_info = TargetInfo()
-    null_value = target_info.null_values[str(T.dtype)]
+    null_value = target_info.null_values[f'Array<{T.dtype}>']
+    # The server sends numbers as unsigned values rather than signed ones.
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
+    if str(T.dtype) not in ['float32', 'float64']:
+        null_value = np.uint64(null_value).astype(str(T.dtype))
     nv = ir.Constant(ir.IntType(T.dtype.bitwidth), null_value)
 
     def codegen(context, builder, signature, args):
@@ -439,8 +449,11 @@ def omnisci_array_set_null_(typingctx, arr, row_idx):
 
     target_info = TargetInfo()
     null_value = target_info.null_values[f'Array<{T}>']
-    # it looks like that the null values for arrays are:
-    null_value = (null_value - 1) * (-1)
+
+    # The server sends numbers as unsigned values rather than signed ones.
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #129
+    if str(T) not in ['float32', 'float64']:
+        null_value = np.uint64(null_value).astype(str(T))
 
     def codegen(context, builder, signature, args):
         # get the operator.setitem intrinsic
