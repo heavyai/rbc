@@ -451,7 +451,7 @@ def omnisci_array_set_null_(typingctx, arr, row_idx):
     null_value = target_info.null_values[f'Array<{T}>']
 
     # The server sends numbers as unsigned values rather than signed ones.
-    # Thus, 129 should be read as -127 (overflow). See rbc issue #129
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
     if str(T) not in ['float32', 'float64']:
         null_value = np.uint64(null_value).astype(str(T))
 
