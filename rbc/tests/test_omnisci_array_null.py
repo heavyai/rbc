@@ -8,7 +8,7 @@ ARRAY_NOT_NULL = 2
 
 @pytest.fixture(scope='module')
 def omnisci():
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
         define(o)
         yield o
 
@@ -38,7 +38,7 @@ colnames = ['i1', 'i2', 'i4', 'i8', 'f4', 'f8']
 
 @pytest.mark.parametrize('col', colnames)
 def test_array_is_null(omnisci, col):
-    omnisci.require_version((5, 6),
+    omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
 
     # Query null value
@@ -51,7 +51,7 @@ def test_array_is_null(omnisci, col):
 
 @pytest.mark.parametrize('col', colnames)
 def test_array_is_not_null(omnisci, col):
-    omnisci.require_version((5, 6),
+    omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
 
     # Query null value
@@ -64,7 +64,7 @@ def test_array_is_not_null(omnisci, col):
 
 @pytest.mark.parametrize('col', colnames)
 def test_array_idx_is_null(omnisci, col):
-    omnisci.require_version((5, 6),
+    omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
 
     # Use a new table called "array_null_temp"
@@ -88,7 +88,7 @@ def test_array_idx_is_null(omnisci, col):
 
 @pytest.mark.parametrize('col', colnames)
 def test_array_idx_not_null(omnisci, col):
-    omnisci.require_version((5, 6),
+    omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
 
     # Query null value

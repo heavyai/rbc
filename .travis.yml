@@ -48,7 +48,7 @@ before_script:
 
 script:
   - flake8 .
-  - pytest -v -r s rbc/ -x
+  - pytest -v -r A rbc/ -x
 
 after_script:
   - if [ "$OMNISCIDB_FROM" = "conda" ]; then pkill -f omnisci_server ; fi
