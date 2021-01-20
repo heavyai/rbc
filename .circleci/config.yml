@@ -1,95 +1,46 @@
-version: 2.1
-
-orbs:
-  docker: circleci/docker@1.5.0
-
-# -------------------------------------------------------------------------------------
-# Re-usable commands
-# -------------------------------------------------------------------------------------
-setup_env_vars: &setup_env_vars
-  - run:
-      name: Set up environment variables
-      command: |
-        echo 'export MINIMAMBA=$HOME/minimamba' >> $BASH_ENV
-        echo 'export PROJECT=$HOME/project' >> $BASH_ENV
-        source $BASH_ENV
-
-install_dependencies: &install_dependencies
-  - run:
-      name: Install minimamba
-      command: |
-        cd $HOME
-        wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -O minimamba.sh
-        bash minimamba.sh -b -f -p $MINIMAMBA
-        source $MINIMAMBA/etc/profile.d/conda.sh
-        mamba update --quiet --yes mamba
-        mamba env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
-        mamba info -a
-  - run:
-      name: Install dependencies from PYPI
-      command: |
-        source $MINIMAMBA/etc/profile.d/conda.sh
-        conda activate rbc-circleci
-        pip install thriftpy2
-
-build_rbc: &build_rbc
-  - run:
-      name: Build RBC
-      command: |
-        source $MINIMAMBA/etc/profile.d/conda.sh
-        conda activate rbc-circleci
-        python setup.py develop
-
-pull_omniscidb_docker: &pull_omniscidb_docker
-  - run:
-      name: Get OmniSciDB docker
-      command: |
-        docker pull omnisci/core-os-cpu
-
-run_omniscidb_container: &run_omniscidb_container
-  - run:
-      name: Start OmniSciDB container
-      command: |
-        docker run -d --name omnisci -p 6274:6274 -v $(pwd)/.omnisci/:/omnisci-storage omnisci/core-os-cpu
-        sleep 30
-
-
+version: 2
 jobs:
-  # build-windows:
-  #   machine:
-  #     image: windows-server-2019-vs2019:stable
-  #     shell: bash.exe
-
-  build-linux:
+  build:
     docker:
-      - image: cimg/base:stable
+      - image: debian:stretch
     steps:
-      - <<: *setup_env_vars
+      - run:
+          name: Set up environment variables
+          command: |
+            echo 'export MINIMAMBA=$HOME/minimamba' >> $BASH_ENV
+            echo 'export PROJECT=$HOME/project' >> $BASH_ENV
+            source $BASH_ENV
       - run:
           name: Update and install system packages
           command: |
-            sudo apt-get update --assume-yes
-            sudo apt-get install --assume-yes wget git bzip2 libc6-dbg binutils
+            apt-get update --assume-yes
+            apt-get install --assume-yes wget git bzip2 libc6-dbg binutils
       - checkout
-      - setup_remote_docker:
-          version: 19.03.13
-      - <<: *pull_omniscidb_docker
-      - <<: *run_omniscidb_container
-      - <<: *install_dependencies
-      - <<: *build_rbc
+      - run:
+          name: Install minimamba
+          command: |
+            cd $HOME
+            wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -O minimamba.sh
+            bash minimamba.sh -b -f -p $MINIMAMBA
+            source $MINIMAMBA/etc/profile.d/conda.sh
+            mamba update --quiet --yes mamba
+            mamba env create --quiet -n rbc-circleci --file $PROJECT/.conda/environment.yml
+            mamba info -a
+      - run:
+          name: Install dependencies from PYPI
+          command: |
+            source $MINIMAMBA/etc/profile.d/conda.sh
+            conda activate rbc-circleci
+            pip install thriftpy2
+      - run:
+          name: Build RBC
+          command: |
+            source $MINIMAMBA/etc/profile.d/conda.sh
+            conda activate rbc-circleci
+            python setup.py develop
       - run:
           name: Run RBC tests
           command: |
             source $MINIMAMBA/etc/profile.d/conda.sh
             conda activate rbc-circleci
             pytest -v -r s rbc/
-
-# -------------------------------------------------------------------------------------
-# Workflows
-# -------------------------------------------------------------------------------------
-workflows:
-  version: 2
-  rbc_tests:
-    jobs:
-      - build-linux
-      # - build-windows

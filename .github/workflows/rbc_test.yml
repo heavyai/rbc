@@ -1,0 +1,122 @@
+name: Test RBC
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    # container: 
+    #   image: omnisci/core-os-cpu
+    #   ports:
+    #     - 6274
+    #   volumes:
+    #     - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+
+      - name: Install flake8
+        run: |
+          pip install flake8
+      
+      - name: Lint:flake8
+        run: |
+          flake8 .
+
+  build:
+    name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.6, 3.7, 3.8]
+        omniscidb-version: [5.2.2, 5.4.1, 5.5.0]
+        include:
+          - os: windows-latest
+            python-version: 3.6
+            omniscidb-version: None
+          - os: windows-latest
+            python-version: 3.7
+            omniscidb-version: None
+          - os: windows-latest
+            python-version: 3.8
+            omniscidb-version: None
+          - os: macos-latest
+            python-version: 3.6
+            omniscidb-version: None
+          - os: macos-latest
+            python-version: 3.7
+            omniscidb-version: None
+          - os: macos-latest
+            python-version: 3.8
+            omniscidb-version: None
+          
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+        
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.8
+          mamba-version: "*"
+          channels: conda-forge
+          environment-file: .conda/environment.yml
+      
+      - name: Install omniscidb
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mamba install omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
+      
+      - name: Start Omniscidb
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir data && omnisci_initdb data -f
+          omnisci_server --version
+          omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+          sleep 10
+
+      - name: Install pytest
+        shell: bash -l {0}
+        run: |
+          pip install pytest
+
+      - name: conda config
+        shell: bash -l {0}
+        run: conda config --show  
+
+      - name: conda list
+        shell: bash -l {0}
+        run: |
+          conda list
+
+      - name: Install rbc
+        shell: bash -l {0}
+        run: |
+          python setup.py develop
+
+      - name: test rbc
+        shell: bash -l {0}
+        run: |
+          pytest -v -r A rbc/ -x
+      
