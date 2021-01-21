@@ -413,9 +413,9 @@ def omnisci_array_is_null_(typingctx, T, elem):
     null_value = target_info.null_values[f'Array<{T.dtype}>']
     # The server sends numbers as unsigned values rather than signed ones.
     # Thus, 129 should be read as -127 (overflow). See rbc issue #254
-    if str(T.dtype) not in ['float32', 'float64']:
-        null_value = np.uint64(null_value).astype(str(T.dtype))
-    nv = ir.Constant(ir.IntType(T.dtype.bitwidth), null_value)
+    bitwidth = T.dtype.bitwidth
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
+    nv = ir.Constant(ir.IntType(bitwidth), null_value)
 
     def codegen(context, builder, signature, args):
         _, elem = args
@@ -452,8 +452,8 @@ def omnisci_array_set_null_(typingctx, arr, row_idx):
 
     # The server sends numbers as unsigned values rather than signed ones.
     # Thus, 129 should be read as -127 (overflow). See rbc issue #254
-    if str(T) not in ['float32', 'float64']:
-        null_value = np.uint64(null_value).astype(str(T))
+    bitwidth = T.bitwidth
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
 
     def codegen(context, builder, signature, args):
         # get the operator.setitem intrinsic
