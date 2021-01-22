@@ -464,10 +464,12 @@ class RemoteOmnisci(RemoteJIT):
         def extract_col_vals(desc, val):
             typename = thrift.TDatumType._VALUES_TO_NAMES[desc.col_type.type]
             nulls = val.nulls
-
             if hasattr(val.data, 'arr_col') and val.data.arr_col:
                 vals = [
-                    None if null else getattr(v.data, _typeattr[typename] + '_col')
+                    None if null else [
+                        None if _n else _v
+                        for _n, _v in zip(
+                                v.nulls, getattr(v.data, _typeattr[typename] + '_col'))]
                     for null, v in zip(nulls, val.data.arr_col)
                 ]
             else:
