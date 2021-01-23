@@ -2,26 +2,20 @@ import pytest
 from rbc.tests import omnisci_fixture
 
 
-@pytest.fixture(scope='module')
-def omnisci():
-
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
-        define(o)
-        yield o
-
-
-def define(omnisci):
-
-    # define any UDF/UDTFs here
-    pass
-
-
+@pytest.mark.parametrize('mth', ['columnar', 'query'])
 @pytest.mark.parametrize('suffix', ['', '10', 'null', 'array', 'arraynull'])
-def test_table(omnisci, suffix):
+def test_table_load(mth, suffix):
 
-    descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}')
-    result = list(result)
-    colnames = [d.name for d in descr]
+    load_columnar = mth == 'columnar'
+
+    count = 0
+    for omnisci in omnisci_fixture(globals(), load_columnar=load_columnar):
+        count += 1
+        descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}')
+        result = list(result)
+        colnames = [d.name for d in descr]
+
+    assert count == 1
 
     if suffix == '':
         assert colnames == ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']

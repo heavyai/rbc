@@ -4,6 +4,7 @@ import os
 import re
 import warnings
 import configparser
+import numpy
 from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
@@ -245,6 +246,7 @@ class RemoteOmnisci(RemoteJIT):
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
         self.has_cuda = None
+        self._null_values = dict()
 
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.
@@ -359,6 +361,23 @@ class RemoteOmnisci(RemoteJIT):
         str_col_types = ['STR', 'POINT', 'LINESTRING', 'POLYGON',
                          'MULTIPOLYGON']
 
+        datumtype_map = {
+            'BOOL': 'boolean8',
+            'TINYINT': 'int8',
+            'SMALLINT': 'int16',
+            'INT': 'int32',
+            'BIGINT': 'int64',
+            'FLOAT': 'float32',
+            'DOUBLE': 'float64',
+            'BOOL[]': 'Array<boolean8>',
+            'TINYINT[]': 'Array<int8>',
+            'SMALLINT[]': 'Array<int16>',
+            'INT[]': 'Array<int32>',
+            'BIGINT[]': 'Array<int64>',
+            'FLOAT[]': 'Array<float32>',
+            'DOUBLE[]': 'Array<float64>',
+        }
+
         thrift = self.thrift_client.thrift
         table_details = self.get_table_details(table_name)
         if self.version[:2] < (5, 3):
@@ -405,32 +424,43 @@ class RemoteOmnisci(RemoteJIT):
                 raise ValueError(
                     f'OmnisciDB `{table_name}` has no column `{column_name}`')
             datumtype = thrift.TDatumType._VALUES_TO_NAMES[typeinfo.type]
+            nulls = [v is None for v in column_data]
             if typeinfo.is_array:
-                rows = []
-                for row in column_data:
+                arrays = []
+                for arr in column_data:
+                    if arr is None:
+                        arr_nulls = None
+                    else:
+                        arr_nulls = [v is None for v in arr]
+                        if True in arr_nulls:
+                            # TODO: null support for text
+                            null_value = self._null_values[datumtype_map[datumtype]]
+                            arr = [(null_value if v is None else v) for v in arr]
                     if datumtype in int_col_types:
-                        row_data = thrift.TColumnData(int_col=row)
+                        arr_data = thrift.TColumnData(int_col=arr)
                     elif datumtype in real_col_types:
-                        row_data = thrift.TColumnData(real_col=row)
+                        arr_data = thrift.TColumnData(real_col=arr)
                     elif datumtype in str_col_types:
-                        row_data = thrift.TColumnData(str_col=row)
+                        arr_data = thrift.TColumnData(str_col=arr)
                     else:
                         raise NotImplementedError(
                             f'loading {datumtype} array data')
-                    rows.append(thrift.TColumn(
-                        data=row_data,
-                        nulls=[False] * len(row)))
-                col_data = thrift.TColumnData(arr_col=rows)
-            elif datumtype in int_col_types:
-                col_data = thrift.TColumnData(int_col=column_data)
-            elif datumtype in real_col_types:
-                col_data = thrift.TColumnData(real_col=column_data)
-            elif datumtype in str_col_types:
-                col_data = thrift.TColumnData(str_col=column_data)
+                    arrays.append(thrift.TColumn(data=arr_data, nulls=arr_nulls))
+                col_data = thrift.TColumnData(arr_col=arrays)
             else:
-                raise NotImplementedError(f'loading {datumtype} data')
-            columns.append(thrift.TColumn(
-                data=col_data, nulls=[False] * len(column_data)))
+                if True in nulls:
+                    # TODO: null support for text
+                    null_value = self._null_values[datumtype_map[datumtype]]
+                    column_data = [(null_value if v is None else v) for v in column_data]
+                if datumtype in int_col_types:
+                    col_data = thrift.TColumnData(int_col=column_data)
+                elif datumtype in real_col_types:
+                    col_data = thrift.TColumnData(real_col=column_data)
+                elif datumtype in str_col_types:
+                    col_data = thrift.TColumnData(str_col=column_data)
+                else:
+                    raise NotImplementedError(f'loading {datumtype} data')
+            columns.append(thrift.TColumn(data=col_data, nulls=nulls))
 
         self.thrift_call('load_table_binary_columnar',
                          self.session_id, table_name, columns)
@@ -653,6 +683,25 @@ class RemoteOmnisci(RemoteJIT):
         if messages:
             warnings.warn('\n  '.join([''] + messages))
 
+        null_values = device_params.get('null_values')
+        null_values_asint = dict()
+        null_values_astype = dict()
+        if null_values is not None:
+            for tname_value in null_values.split(';'):
+                if not tname_value:
+                    continue
+                tname, value = tname_value.split(':')
+                null_values_asint[tname] = int(value)
+                dtype = tname
+                if dtype.startswith('Array<'):
+                    dtype = dtype[6:-1]
+                bitwidth = int(''.join(filter(str.isdigit, dtype)))
+                if bitwidth > 1:
+                    null_value = numpy.dtype(f'uint{bitwidth}').type(int(value)).view(
+                        'int8' if dtype == 'boolean8' else dtype)
+                    null_values_astype[tname] = null_value
+        self._null_values = null_values_astype
+
         targets = {}
         for device, target in device_target_map.items():
             target_info = TargetInfo(name=device)
@@ -683,15 +732,7 @@ class RemoteOmnisci(RemoteJIT):
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
 
-            null_values = device_params.get('null_values')
-            if null_values is not None:
-                d = dict()
-                for tname_value in null_values.split(';'):
-                    if not tname_value:
-                        continue
-                    tname, value = tname_value.split(':')
-                    d[tname] = int(value)
-                target_info.set('null_values', d)
+            target_info.set('null_values', null_values_asint)
         return targets
 
     @property
