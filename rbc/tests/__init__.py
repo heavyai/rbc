@@ -31,11 +31,10 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                                   i1, b with row size 5, contains null
                                   values.
 
-    f'{omnisci.table_name}array' - contains columns f8, f4, i8, i4, i2,
-                                   i1, b with row size 5, contains null
-                                   values.
+    f'{omnisci.table_name}array' - contains arrays f8, f4, i8, i4, i2,
+                                   i1, b with row size 5
 
-    f'{omnisci.table_name}arraynull' - contains columns f8, f4, i8, i4, i2,
+    f'{omnisci.table_name}arraynull' - contains arrays f8, f4, i8, i4, i2,
                                        i1, b with row size 5, contains null
                                        values.
     """
