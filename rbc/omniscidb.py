@@ -380,7 +380,24 @@ class RemoteOmnisci(RemoteJIT):
 
         thrift = self.thrift_client.thrift
         table_details = self.get_table_details(table_name)
-        if self.version[:2] < (5, 3):
+        use_sql = self.version[:2] < (5, 3)
+        if not use_sql and self.version[:2] < (5, 5):
+            for column_data in columnar_data.values():
+                for v in column_data:
+                    if v is None:
+                        break
+                    elif isinstance(v, (tuple, list)):
+                        for _v in v:
+                            if _v is None:
+                                break
+                        else:
+                            continue
+                        break
+                else:
+                    continue
+                use_sql = True
+                break
+        if use_sql:
             rows = None
             for column_name, column_data in columnar_data.items():
                 if rows is None:
@@ -397,10 +414,16 @@ class RemoteOmnisci(RemoteJIT):
                         break
                 assert col_index is not None
                 for i, v in enumerate(column_data):
-                    if is_array:
+                    if v is None:
+                        v = "NULL"
+                    elif is_array:
                         if datumtype == 'BOOL':
-                            v = ["'true'" if v_ else "'false'" for v_ in v]
-                        v = ', '.join(map(str, v))
+                            v = ["'true'" if v_ else ("'false'"
+                                                      if v_ is not None else "NULL")
+                                 for v_ in v]
+                        else:
+                            v = [(str(v_) if v_ is not None else "NULL") for v_ in v]
+                        v = ', '.join(v)
                         v = f'ARRAY[{v}]'
                     else:
                         if datumtype == 'BOOL':
