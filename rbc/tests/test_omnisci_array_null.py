@@ -41,6 +41,13 @@ def test_array_null(omnisci, col):
             {omnisci.table_name}arraynull
     ''')
 
-    expected = [(ARRAY_NULL,), (ARRAY_NOT_NULL,),
-                (ARRAY_NULL,), (ARRAY_IDX_IS_NULL,), (ARRAY_NULL,)]
-    assert list(result) == expected
+    expected = {
+        'i1': [(0,), (1,), (0,), (2,), (0,)],
+        'i2': [(2,), (2,), (2,), (0,), (2,)],
+        'i4': [(0,), (2,), (0,), (2,), (0,)],
+        'i8': [(2,), (2,), (2,), (0,), (1,)],
+        'f4': [(0,), (2,), (0,), (1,), (0,)],
+        'f8': [(1,), (1,), (1,), (0,), (2,)],
+    }
+
+    assert list(result) == expected[col]

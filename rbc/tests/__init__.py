@@ -87,11 +87,11 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
         # fast method using load_table_columnar thrift endpoint, use for large tables
         def row_value(row, col, colname, null=False, arr=False):
             if arr:
-                if null and (0 == (row) % 2):
+                if null and (0 == (row + col) % 2):
                     return None
                 a = [row_value(row + i, col, colname, null=null, arr=False) for i in range(row)]
                 return a
-            if null and (0 == (row) % 3):
+            if null and (0 == (row + col) % 3):
                 return None
             if colname == 'b':
                 return row % 2 == 0
@@ -109,11 +109,11 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
         # slow method using SQL query statements
         def row_value(row, col, colname, null=False, arr=False):
             if arr:
-                if null and (0 == (row) % 2):
+                if null and (0 == (row + col) % 2):
                     return 'NULL'
                 a = [row_value(row + i, col, colname, null=null, arr=False) for i in range(row)]
                 return '{' + ', '.join(map(str, a)) + '}'
-            if null and (0 == (row) % 3):
+            if null and (0 == (row + col) % 3):
                 return 'NULL'
             if colname == 'b':
                 return ("'true'" if row % 2 == 0 else "'false'")
