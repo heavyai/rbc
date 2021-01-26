@@ -39,16 +39,20 @@ enum TExtArgumentType {
   ColumnInt64,
   ColumnFloat,
   ColumnDouble,
-  ColumnBool
+  ColumnBool,
+  TextEncodingNone,
+  TextEncodingDict8,
+  TextEncodingDict16,
+  TextEncodingDict32
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required
 values. Same comments apply as for TExtArgumentType in above. */
 
 enum TOutputBufferSizeType {
+  kConstant,
   kUserSpecifiedConstantParameter,
-  kUserSpecifiedRowMultiplier,
-  kConstant
+  kUserSpecifiedRowMultiplier
 }
 
 struct TUserDefinedFunction {
