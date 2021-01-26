@@ -3,9 +3,12 @@ __all__ = ['omnisci_fixture']
 
 import os
 import pytest
+from collections import defaultdict
 
 
-def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
+def omnisci_fixture(caller_globals, minimal_version=(0, 0),
+                    suffices=['', '10', 'null', 'array', 'arraynull'],
+                    load_columnar=True):
     """Usage from a rbc/tests/test_xyz.py file:
 
       import pytest
@@ -27,6 +30,14 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
     f'{omnisci.table_name}null' - contains columns f8, f4, i8, i4, i2,
                                   i1, b with row size 5, contains null
                                   values.
+
+    f'{omnisci.table_name}array' - contains columns f8, f4, i8, i4, i2,
+                                   i1, b with row size 5, contains null
+                                   values.
+
+    f'{omnisci.table_name}arraynull' - contains columns f8, f4, i8, i4, i2,
+                                       i1, b with row size 5, contains null
+                                       values.
     """
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
@@ -52,54 +63,86 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0)):
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
 
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}10')
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}null')
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN']
+    arrsqltypes = [t + '[]' for t in sqltypes]
     # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
     # https://www.omnisci.com/docs/latest/5_datatypes.html
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
     table_defn = ',\n'.join('%s %s' % (n, t)
-                            for n, t in zip(colnames, sqltypes))
-    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
-    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}10 ({table_defn});')
-    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}null ({table_defn});')
+                            for t, n in zip(sqltypes, colnames))
+    arrtable_defn = ',\n'.join('%s %s' % (n, t)
+                               for t, n in zip(arrsqltypes, colnames))
 
-    array_table_defn = ',\n'.join(f'{n} {t}[]'
-                                  for n, t in zip(colnames, sqltypes))
-    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}array_null ({array_table_defn});')
+    for suffix in suffices:
+        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
+        if 'array' in suffix:
+            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({arrtable_defn});')
+        else:
+            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({table_defn});')
 
-    def row_value(row, col, colname, null=False):
-        if null:
-            return 'NULL'
-        if colname == 'b':
-            return ("'true'" if row % 2 == 0 else "'false'")
-        return row
+    if load_columnar:
+        # fast method using load_table_columnar thrift endpoint, use for large tables
+        def row_value(row, col, colname, null=False, arr=False):
+            if arr:
+                if null and (0 == (row) % 2):
+                    return None
+                a = [row_value(row + i, col, colname, null=null, arr=False) for i in range(row)]
+                return a
+            if null and (0 == (row) % 3):
+                return None
+            if colname == 'b':
+                return row % 2 == 0
+            return row
 
-    for i in range(10):
-        if i < 5:
-            table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
-            m.sql_execute(f'INSERT INTO {table_name} VALUES ({table_row})')
-            table_row = ', '.join(str(row_value(i, j, n, null=(0 == (i + j) % 3)))
-                                  for j, n in enumerate(colnames))
-            m.sql_execute(f'INSERT INTO {table_name}null VALUES ({table_row})')
-        if i < 10:
-            table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
-            m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
+        for suffix in suffices:
+            columns = defaultdict(list)
+            for j, n in enumerate(colnames):
+                for i in range(10 if '10' in suffix else 5):
+                    v = row_value(i, j, n, null=('null' in suffix), arr=('array' in suffix))
+                    columns[n].append(v)
+            m.load_table_columnar(f'{table_name}{suffix}', **columns)
 
-    m.sql_execute(f'insert into {table_name}array_null values '
-                  '(NULL, NULL, NULL, NULL, NULL, NULL, NULL);')
-    m.sql_execute(f"insert into {table_name}array_null values ("
-                  "{1.0, 2.0}, {2.0, 3.0}, {0, 1}, {2, 2},"
-                  "{2, 3}, {3, 4}, {'false', 'true'});")
+    else:
+        # slow method using SQL query statements
+        def row_value(row, col, colname, null=False, arr=False):
+            if arr:
+                if null and (0 == (row) % 2):
+                    return 'NULL'
+                a = [row_value(row + i, col, colname, null=null, arr=False) for i in range(row)]
+                return '{' + ', '.join(map(str, a)) + '}'
+            if null and (0 == (row) % 3):
+                return 'NULL'
+            if colname == 'b':
+                return ("'true'" if row % 2 == 0 else "'false'")
+            return row
+
+        for i in range(10):
+            if i < 5:
+                for suffix in suffices:
+                    if suffix == '':
+                        table_row = ', '.join(str(row_value(i, j, n))
+                                              for j, n in enumerate(colnames))
+                    elif suffix == 'null':
+                        table_row = ', '.join(str(row_value(i, j, n, null=True))
+                                              for j, n in enumerate(colnames))
+                    elif suffix == 'array':
+                        table_row = ', '.join(str(row_value(i, j, n, arr=True))
+                                              for j, n in enumerate(colnames))
+                    elif suffix == 'arraynull':
+                        table_row = ', '.join(str(row_value(i, j, n, null=True, arr=True))
+                                              for j, n in enumerate(colnames))
+                    else:
+                        continue
+                    m.sql_execute(f'INSERT INTO {table_name}{suffix} VALUES ({table_row})')
+            if i < 10 and '10' in suffices:
+                table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
+                m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
 
     m.table_name = table_name
     m.require_version = require_version
     yield m
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}10')
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}null')
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}array_null')
+    for suffix in suffices:
+        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
