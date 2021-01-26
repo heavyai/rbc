@@ -410,7 +410,7 @@ def omnisci_array_is_null_(typingctx, T, elem):
     sig = types.boolean(T, elem)
 
     target_info = TargetInfo()
-    null_value = target_info.null_values[f'Array<{T.dtype}>']
+    null_value = target_info.null_values[f'{T.dtype}']
     # The server sends numbers as unsigned values rather than signed ones.
     # Thus, 129 should be read as -127 (overflow). See rbc issue #254
     bitwidth = T.dtype.bitwidth
@@ -448,7 +448,7 @@ def omnisci_array_set_null_(typingctx, arr, row_idx):
     sig = types.none(arr, row_idx)
 
     target_info = TargetInfo()
-    null_value = target_info.null_values[f'Array<{T}>']
+    null_value = target_info.null_values[f'{T}']
 
     # The server sends numbers as unsigned values rather than signed ones.
     # Thus, 129 should be read as -127 (overflow). See rbc issue #254
