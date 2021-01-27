@@ -15,7 +15,7 @@ def omnisci():
 
 def define(omnisci):
 
-    @omnisci('int64(T[], int64)', T=['int8', 'int16', 'int32', 'int64', 'float', 'double'])
+    @omnisci('int64(T[], int64)', T=['bool', 'int8', 'int16', 'int32', 'int64', 'float', 'double'])
     def array_null_check(x, index):
         if x.is_null():  # array row is null
             return ARRAY_NULL
@@ -24,14 +24,17 @@ def define(omnisci):
         return ARRAY_NOT_NULL
 
 
-# skipping bool test since NULL is converted to true - rbc issue #245
-colnames = ['i1', 'i2', 'i4', 'i8', 'f4', 'f8']
+colnames = ['b', 'i1', 'i2', 'i4', 'i8', 'f4', 'f8']
 
 
 @pytest.mark.parametrize('col', colnames)
 def test_array_null(omnisci, col):
     omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
+
+    # skipping bool test since NULL is converted to true - rbc issue #245
+    if col == 'b':
+        pytest.skip('Skipping Array<boolean> test [RBC issue 240]')
 
     # Query null value
     _, result = omnisci.sql_execute(f'''
