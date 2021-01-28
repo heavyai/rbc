@@ -26,8 +26,10 @@ Omnisci buffer objects from UDF/UDTFs.
 import operator
 from collections import defaultdict
 from llvmlite import ir
+import numpy as np
 from rbc import typesystem
 from rbc.utils import get_version
+from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 if get_version('numba') >= (0, 49):
     from numba.core import datamodel, cgutils, extending, types
@@ -182,7 +184,12 @@ def omnisci_buffer_constructor(context, builder, sig, args):
     fa.ptr = ptr                  # T*
     fa.sz = element_count         # size_t
     if null_type is not None:
-        is_null = context.get_value_type(null_type)(0)
+        is_zero = builder.icmp_signed('==', element_count, int64_t(0))
+        with builder.if_else(is_zero) as (then, orelse):
+            with then:
+                is_null = context.get_value_type(null_type)(1)
+            with orelse:
+                is_null = context.get_value_type(null_type)(0)
         fa.is_null = is_null      # int8_t
     return fa._getpointer()
 
@@ -386,12 +393,95 @@ def omnisci_buffer_is_null_(typingctx, data):
     return sig, codegen
 
 
+@extending.intrinsic
+def omnisci_buffer_set_null_(typingctx, data):
+    sig = types.none(data)
+
+    def codegen(context, builder, sig, args):
+        rawptr = cgutils.alloca_once_value(builder, value=args[0])
+        ptr = builder.load(rawptr)
+        builder.store(int8_t(1), builder.gep(ptr, [int32_t(0), int32_t(2)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_array_is_null_(typingctx, T, elem):
+    sig = types.boolean(T, elem)
+
+    target_info = TargetInfo()
+    null_value = target_info.null_values[f'{T.dtype}']
+    # The server sends numbers as unsigned values rather than signed ones.
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
+    bitwidth = T.dtype.bitwidth
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
+    nv = ir.Constant(ir.IntType(bitwidth), null_value)
+
+    def codegen(context, builder, signature, args):
+        _, elem = args
+        if isinstance(T.dtype, types.Float):
+            elem = builder.bitcast(elem, nv.type)
+        return builder.icmp_signed('==', elem, nv)
+
+    return sig, codegen
+
+
 # "BufferPointer.is_null" checks if a given array or column is null
 # as opposed to "BufferType.is_null" that checks if an index in a
 # column is null
 @extending.overload_method(BufferPointer, 'is_null')
-def omnisci_buffer_is_null(x):
+def omnisci_buffer_is_null(x, row_idx=None):
+    T = x.eltype
     if isinstance(x, BufferPointer):
-        def impl(x):
-            return omnisci_buffer_is_null_(x)
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_is_null_(x)
+        else:
+            def impl(x, row_idx=None):
+                return omnisci_array_is_null_(T, x[row_idx])
+        return impl
+
+
+@extending.intrinsic
+def omnisci_array_set_null_(typingctx, arr, row_idx):
+    T = arr.eltype
+    sig = types.none(arr, row_idx)
+
+    target_info = TargetInfo()
+    null_value = target_info.null_values[f'{T}']
+
+    # The server sends numbers as unsigned values rather than signed ones.
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
+    bitwidth = T.bitwidth
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
+
+    def codegen(context, builder, signature, args):
+        # get the operator.setitem intrinsic
+        fnop = context.typing_context.resolve_value_type(omnisci_buffer_ptr_setitem_)
+        setitem_sig = types.none(arr, row_idx, T)
+        # register the intrinsic in the typing ctx
+        fnop.get_call_type(context, setitem_sig.args, {})
+        intrinsic = context.get_function(fnop, setitem_sig)
+
+        data, index = args
+        # data = {T*, i64, i8}*
+        ty = data.type.pointee.elements[0].pointee
+        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
+        if isinstance(T, types.Float):
+            nv = builder.bitcast(nv, ty)
+        intrinsic(builder, (data, index, nv,))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferPointer, 'set_null')
+def omnisci_buffer_set_null(x, row_idx=None):
+    if isinstance(x, BufferPointer):
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_set_null_(x)
+        else:
+            def impl(x, row_idx=None):
+                return omnisci_array_set_null_(x, row_idx)
+            return impl
         return impl
