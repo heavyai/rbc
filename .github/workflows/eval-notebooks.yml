@@ -32,8 +32,8 @@ jobs:
       - name: Install additional packages
         shell: bash -l {0}
         run: |
-          mamba install omniscidb matplotlib ibis-framework -c conda-forge
-          pip install treon
+          mamba install omniscidb -c conda-forge
+          pip install nbval ibis-framework matplotlib
 
       - name: Start omniscidb server
         shell: bash -l {0}
@@ -56,6 +56,6 @@ jobs:
         shell: bash -l {0}
         run: |
           python setup.py develop
-          treon --threads=1 -v notebooks/
+          pytest -v -rs --nbval notebooks/ -x
           pkill -f omnisci_server
           cat omniscidb-output.txt
