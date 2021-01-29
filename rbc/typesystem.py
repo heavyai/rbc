@@ -290,16 +290,17 @@ class Type(tuple, metaclass=MetaType):
 
     There are six kinds of a types:
 
-      ==========    ==============================
-      Type          Description
-      ==========    ==============================
-      void          a "no type"
-      atomic        e.g. ``int32``
-      pointer       e.g. ``int32*``
-      struct        e.g. ``{int32, int32}``
-      function      e.g. ``int32(int32, int32)``
-      custom        e.g. ``MyClass<int32, int32>``
-      ==========    ==============================
+      ==========    ==============================    ==============================
+      Type          Description                       Internal structure
+      ==========    ==============================    ==============================
+      void          a "no type"                       Type()
+      atomic        e.g. ``int32``                    Type(<str>,)
+      pointer       e.g. ``int32*``                   Type(<Type instance>, '*')
+      struct        e.g. ``{int32, int32}``           Type(<Type instances>, <Type instances>, ...)
+      function      e.g. ``int32(int32, int32)``      Type(<Type instance>,
+                                                           (<Type instances>, ...), name='')
+      custom        e.g. ``MyClass<int32, int32>``    Type((<object>,))
+      ==========    ==============================    ==============================
 
     Atomic types are types with names (Type contains a single
     string). All other types (except "no type") are certain
@@ -377,10 +378,10 @@ class Type(tuple, metaclass=MetaType):
     def __new__(cls, *args, **params):
         args = cls.preprocess_args(args)
         obj = tuple.__new__(cls, args)
+        obj._params = params
         if not obj._is_ok:
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
-        obj._params = params
         return obj
 
     @classmethod
@@ -491,7 +492,7 @@ class Type(tuple, metaclass=MetaType):
     def is_function(self):
         return len(self) == 2 and isinstance(self[0], Type) and \
             isinstance(self[1], tuple) and not isinstance(self[1], Type) \
-            and all([isinstance(p, Type) for p in self[1]])
+            and all([isinstance(p, Type) for p in self[1]]) and 'name' in self._params
 
     @property
     def is_custom(self):
@@ -619,6 +620,18 @@ class Type(tuple, metaclass=MetaType):
             atypes.extend(t.as_consumed_args)
         return atypes
 
+    @property
+    def name(self):
+        """Return declarator name.
+
+        Function types always define a name: when not specified then
+        the name value will be an empty string.
+
+        For other types the name is optional: when not specified then
+        the name value will be None.
+        """
+        return self._params.get('name')
+
     def __str__(self):
         if self._is_ok:
             return self.tostring()
@@ -640,6 +653,18 @@ class Type(tuple, metaclass=MetaType):
         if self.is_void:
             return 'void'
         name = self._params.get('name')
+        if self.is_function:
+            if use_typename:
+                typename = self._params.get('typename')
+                if typename is not None:
+                    return typename
+            if name:
+                name = ' ' + name
+            return (self[0].tostring(use_typename=use_typename)
+                    + name + '(' + ', '.join(
+                        a.tostring(use_typename=use_typename)
+                        for a in self[1]) + ')')
+
         if name is not None:
             suffix = ' ' + name
         else:
@@ -660,11 +685,7 @@ class Type(tuple, metaclass=MetaType):
                      for t in self]) + '>' + suffix
             return '{' + ', '.join([t.tostring(use_typename=use_typename)
                                     for t in self]) + '}' + suffix
-        if self.is_function:
-            return (self[0].tostring(use_typename=use_typename)
-                    + '(' + ', '.join(
-                        a.tostring(use_typename=use_typename)
-                        for a in self[1]) + ')' + suffix)
+
         if self.is_custom:
             params = self[0]
             if type(self) is Type:
@@ -815,7 +836,7 @@ class Type(tuple, metaclass=MetaType):
     @classmethod
     def _fromstring(cls, s):
         s = s.strip()
-        if s.endswith('*'):       # pointer
+        if len(s) > 1 and s.endswith('*'):       # pointer
             return cls(cls._fromstring(s[:-1]), '*')
         if s.endswith('}'):       # struct
             if not s.startswith('{'):
@@ -827,10 +848,34 @@ class Type(tuple, metaclass=MetaType):
             i = _findparen(s)
             if i < 0:
                 raise TypeParseError('mismatching parenthesis in `%s`' % (s))
-            rtype = cls._fromstring(s[:i])
             atypes = tuple(map(cls._fromstring,
                                _commasplit(s[i+1:-1].strip())))
-            return cls(rtype, atypes)
+            r = s[:i].strip()
+            if r.endswith(')'):
+                j = _findparen(r)
+                if j < 0:
+                    raise TypeParseError('mismatching parenthesis in `%s`' % (r))
+                rtype = cls._fromstring(r[:j])
+                d = r[j+1:-1].strip()
+                if d.startswith('*'):
+                    while d.startswith('*'):
+                        d = d[1:].lstrip()
+                    if d.endswith(')'):
+                        k = _findparen(d)
+                        name = d[:k]
+                        rtype = cls(rtype, atypes, name='')
+                        atypes = tuple(map(cls._fromstring,
+                                           _commasplit(d[k+1:-1].strip())))
+                        return cls(rtype, atypes, name=name)
+                    name = d
+                    return cls(rtype, atypes, name=name)
+            rtype = cls._fromstring(r)
+            if rtype.is_function:
+                name = rtype._params['name']
+                rtype._params['name'] = ''
+            else:
+                name = rtype._params.pop('name', '')
+            return cls(rtype, atypes, name=name)
         if s.endswith('>') and not s.startswith('<'):  # custom
             i = s.index('<')
             name = s[:i]
@@ -905,7 +950,7 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(t, typing.templates.Signature):
             atypes = (cls.fromnumba(a) for a in t.args)
             rtype = cls.fromnumba(t.return_type)
-            return cls(rtype, tuple(atypes) or (Type(),))
+            return cls(rtype, tuple(atypes) or (Type(),), name='')
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype), '*')
         if isinstance(t, nb.types.NumberClass):
@@ -929,7 +974,7 @@ class Type(tuple, metaclass=MetaType):
             return cls(cls.fromctypes(t._type_), '*')
         if issubclass(t, ctypes._CFuncPtr):
             atypes = tuple(cls.fromctypes(a) for a in t._argtypes_)
-            return cls(cls.fromctypes(t._restype_), atypes or (Type(),))
+            return cls(cls.fromctypes(t._restype_), atypes or (Type(),), name='')
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -970,7 +1015,7 @@ class Type(tuple, metaclass=MetaType):
                 atypes.append(cls('<type of %s>' % n))
             else:
                 atypes.append(cls.fromobject(annot))
-        return cls(rtype, tuple(atypes) or (Type(),))
+        return cls(rtype, tuple(atypes) or (Type(),), name=func.__name__)
 
     @classmethod
     def fromvalue(cls, obj):
@@ -1117,7 +1162,10 @@ class Type(tuple, metaclass=MetaType):
         if self.is_function:
             r = self[0].mangle()
             a = ''.join([a.mangle() for a in self[1]])
-            return '_' + r + 'a' + a + 'A'
+
+            name = self._params['name']
+            n = 'V' + str(len(name)) + 'V' + name
+            return '_' + r + 'a' + a + 'A' + n
         if self.is_custom:
             params = self[0]
             if type(self) is Type:
@@ -1386,11 +1434,17 @@ def _demangle(s):
             typ = Type(block[0], '*')
         elif kind == 'K':
             typ = Type(*block)
-        elif kind == 'a':
+        elif kind == 'a':  # function
             assert len(block) == 1, repr(block)
             rtype = block[0]
             atypes, rest = _demangle('_' + rest)
-            typ = Type(rtype, atypes)
+            assert rest[0] == 'V'
+            i = rest.find('V', 1)
+            assert i != -1, repr(rest)
+            ln = int(rest[1:i])
+            name = rest[i+1:i+ln+1]
+            rest = rest[i+ln+1:]
+            typ = Type(rtype, atypes, name=name)
         elif kind in 'AR':
             return block, rest
         elif kind == 'r':  # custom
