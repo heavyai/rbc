@@ -380,6 +380,8 @@ class Type(tuple, metaclass=MetaType):
         obj = tuple.__new__(cls, args)
         obj._params = params
         if not obj._is_ok:
+            if obj._is_function:
+                raise ValueError('cannot create named function type from `%s`' % (args,))
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
         return obj
@@ -489,10 +491,14 @@ class Type(tuple, metaclass=MetaType):
         return len(self) > 0 and all(isinstance(s, Type) for s in self)
 
     @property
-    def is_function(self):
+    def _is_function(self):
         return len(self) == 2 and isinstance(self[0], Type) and \
             isinstance(self[1], tuple) and not isinstance(self[1], Type) \
-            and all([isinstance(p, Type) for p in self[1]]) and 'name' in self._params
+            and all([isinstance(p, Type) for p in self[1]])
+
+    @property
+    def is_function(self):
+        return self._is_function and 'name' in self._params
 
     @property
     def is_custom(self):
@@ -1358,7 +1364,7 @@ class Type(tuple, metaclass=MetaType):
             rtype, atypes = self
             if not rtype.is_concrete:
                 for rt in rtype.apply_templates(templates):
-                    yield from Type(rt, atypes).apply_templates(templates)
+                    yield from Type(rt, atypes, **self._params).apply_templates(templates)
                 return
             for i, t in enumerate(atypes):
                 if not t.is_concrete:
