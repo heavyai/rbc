@@ -941,7 +941,7 @@ class RemoteOmnisci(RemoteJIT):
                             continue
                         fid += 1
                         orig_sig = sig
-                        sig = sig[0](*sig.argument_types)
+                        sig = sig[0](*sig.argument_types, **dict(name=name))
                         function_signatures[name].append(sig)
                         sig_is_udtf = is_udtf(sig)
                         is_old_udtf = 'table' in sig[0].annotation()
