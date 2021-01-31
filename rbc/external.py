@@ -1,3 +1,5 @@
+# This code has heavily inspired in the numba.extending.intrisic code
+
 from numba.core import extending, funcdesc, types
 from rbc.typesystem import Type
 
@@ -33,6 +35,13 @@ class _External:
     def register(self):
         self._type_infer()
         self._lower_external_call()
+
+    def __call__(self, *args, **kwargs):
+        """
+        This is only defined to pretend to be a callable from CPython.
+        """
+        msg = f'{self.symbol} is not usable in pure-python'
+        raise NotImplementedError(msg)
 
 
 def external(*args):
