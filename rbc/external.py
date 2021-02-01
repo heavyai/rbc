@@ -52,6 +52,10 @@ class _External:
     def signature(self):
         return self._signature
 
+    @property
+    def name(self):
+        return self.symbol
+
 
 def external(signature, name=None):
 

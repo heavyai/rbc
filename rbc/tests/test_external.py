@@ -205,6 +205,11 @@ def test_external_cmath(omnisci, fname, sig):
             assert np.isclose(r, fn(a))
 
 
+def test_valid_signatures(omnisci):
+    assert external("f64 log2(f64)").name == "log2"
+    assert external("f64(f64)", name="log2").name == "log2"
+
+
 def test_invalid_signature(omnisci):
     with pytest.raises(ValueError) as excinfo:
         external(types.int64, name="test")
