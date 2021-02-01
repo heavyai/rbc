@@ -1,6 +1,7 @@
 import pytest
 from rbc.tests import omnisci_fixture
 from rbc.external import external
+from numba import types
 import numpy as np
 import math
 
@@ -15,83 +16,86 @@ def omnisci():
 
 cmath = (
     # Trigonometric
-    "cos",
-    "sin",
-    "tan",
-    "acos",
-    "asin",
-    "atan",
-    "atan2",
+    ("cos", "float64(float64)"),
+    ("sin", "float64(float64)"),
+    ("tan", "float64(float64)"),
+    ("acos", "float64(float64)"),
+    ("asin", "float64(float64)"),
+    ("atan", "float64(float64)"),
+    ("atan2", "float64(float64, float64)"),
     # Hyperbolic
-    "cosh",
-    "sinh",
-    "tanh",
-    "acosh",
-    "asinh",
-    "atanh",
+    ("cosh", "float64(float64)"),
+    ("sinh", "float64(float64)"),
+    ("tanh", "float64(float64)"),
+    ("acosh", "float64(float64)"),
+    ("asinh", "float64(float64)"),
+    ("atanh", "float64(float64)"),
     # Exponential and logarithmic functions
-    "exp",
-    "frexp",
-    "ldexp",
-    "log",
-    "log10",
-    "modf",
-    "exp2",
-    "expm1",
-    "ilogb",
-    "log1p",
-    "log2",
-    "logb",
+    ("exp", "float64(float64)"),
+    ("frexp", "float64(float64)"),
+    ("ldexp", "float64(float64, int64)"),
+    ("log", "float64(float64)"),
+    ("log10", "float64(float64)"),
+    ("modf", "float64(float64)"),
+    ("exp2", "float64(float64)"),
+    ("expm1", "float64(float64)"),
+    ("ilogb", "float64(float64)"),
+    ("log1p", "float64(float64)"),
+    ("log2", "float64(float64)"),
+    ("logb", "float64(float64)"),
     # power functions
-    "pow",
-    "sqrt",
-    "cbrt",
-    "hypot",
+    ("pow", "float64(float64, float64)"),
+    ("sqrt", "float64(float64)"),
+    ("cbrt", "float64(float64)"),
+    ("hypot", "float64(float64, float64)"),
     # error and gamma functions
-    "erf",
-    "erfc",
-    "tgamma",
-    "lgamma",
+    ("erf", "float64(float64)"),
+    ("erfc", "float64(float64)"),
+    ("tgamma", "float64(float64)"),
+    ("lgamma", "float64(float64)"),
     # Rounding
-    "ceil",
-    "floor",
-    "fmod",
-    "trunc",
-    "round",
-    "lround",
-    "llround",
-    "rint",
-    "lrint",
-    "llrint",
-    "nearbyint",
-    "remainder",
+    ("ceil", "float64(float64)"),
+    ("floor", "float64(float64)"),
+    ("fmod", "float64(float64, float64)"),
+    ("trunc", "float64(float64)"),
+    ("round", "float64(float64)"),
+    ("lround", "int64(float64)"),
+    ("llround", "int64(float64)"),
+    ("rint", "float64(float64)"),
+    ("lrint", "int64(float64)"),
+    ("llrint", "int64(float64)"),
+    ("nearbyint", "float64(float64)"),
+    ("remainder", "float64(float64, float64)"),
     # Floating-point manipulation
-    "copysign",
-    "nan",
-    "nextafter",
-    "nexttoward",
+    ("copysign", "float64(float64, float64)"),
+    ("nan", "float64(float64)"),
+    ("nextafter", "float64(float64, float64)"),
+    ("nexttoward", "float64(float64, float64)"),
     # Minimum, maximum, difference functions
-    "fdim",
-    "fmax",
-    "fmin",
+    ("fdim", "float64(float64, float64)"),
+    ("fmax", "float64(float64, float64)"),
+    ("fmin", "float64(float64, float64)"),
     # Other functions
-    "fabs",
-    "abs",
-    "fma",
+    ("fabs", "float64(float64)"),
+    ("abs", "int64(int64)"),
+    ("fma", "float64(float64, float64, float64)"),
 )
 
 
 def define(omnisci):
-    def inner(fname, retty="float64", argtypes=["float64"]):
-        cmath_fn = external(f"{retty} {fname}({', '.join(argtypes)})")
+    def inner(fname, signature):
+        cmath_fn = external(signature, name=fname)
+        retty = str(cmath_fn.return_type)
+        argtypes = tuple(map(str, cmath_fn.args))
+        arity = len(cmath_fn.signature.args)
 
         # define omnisci callable
-        if len(argtypes) == 1:
+        if arity == 1:
 
             def fn(a):
                 return cmath_fn(a)
 
-        elif len(argtypes) == 2:
+        elif arity == 2:
 
             def fn(a, b):
                 return cmath_fn(a, b)
@@ -104,35 +108,12 @@ def define(omnisci):
         fn.__name__ = f"omnisci_{fname}"
         fn = omnisci(f"{retty}({', '.join(argtypes)})")(fn)
 
-    for _fname in cmath:
-        if _fname in [
-            "atan2",
-            "pow",
-            "hypot",
-            "fmod",
-            "remainder",
-            "copysign",
-            "nextafter",
-            "nexttoward",
-            "fdim",
-            "fmax",
-            "fmin",
-        ]:
-            inner(_fname, argtypes=["float64", "float64"])
-        elif _fname == "ldexp":
-            inner(_fname, argtypes=["float64", "int64"])
-        elif _fname == "abs":
-            inner(_fname, retty="int64", argtypes=["int64"])
-        elif _fname in ["lround", "llround", "lrint", "llrint"]:
-            inner(_fname, retty="int64")
-        elif _fname == "fma":
-            inner(_fname, argtypes=["float64", "float64", "float64"])
-        else:
-            inner(_fname)
+    for _fname, signature in cmath:
+        inner(_fname, signature)
 
 
-@pytest.mark.parametrize("fname", cmath)
-def test_external_cmath(omnisci, fname):
+@pytest.mark.parametrize("fname,sig", cmath)
+def test_external_cmath(omnisci, fname, sig):
 
     if fname in ["logb", "ilogb"]:
         pytest.skip(f"cmath function {fname} not supported")
@@ -222,3 +203,17 @@ def test_external_cmath(omnisci, fname):
         else:
             a, r = values
             assert np.isclose(r, fn(a))
+
+
+def test_invalid_signature(omnisci):
+    with pytest.raises(ValueError) as excinfo:
+        external(types.int64, name="test")
+
+    assert "signature must represent a function type" in str(excinfo)
+
+
+def test_unnamed_external(omnisci):
+    with pytest.raises(ValueError) as excinfo:
+        external("f64(f64)")
+
+    assert "external function name not specified for signature" in str(excinfo)

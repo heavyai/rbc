@@ -5,11 +5,12 @@ from rbc.typesystem import Type
 
 
 class _External:
-    def __init__(self, symbol, retty, argtys):
+    def __init__(self, symbol, signature):
         self.symbol = symbol
-        self.signature = retty(*argtys)
+        self._signature = signature
 
-    def _type_infer(self):
+    def register(self):
+        # typing
         from numba.core.typing.templates import (
             make_concrete_template,
             infer_global,
@@ -22,7 +23,7 @@ class _External:
         infer(template)
         infer_global(self, types.Function(template))
 
-    def _lower_external_call(self):
+        # lowering
         def codegen(context, builder, sig, args):
             fndesc = funcdesc.ExternalFunctionDescriptor(
                 self.symbol, sig.return_type, sig.args
@@ -32,29 +33,40 @@ class _External:
 
         extending.lower_builtin(self.symbol, *self.signature.args)(codegen)
 
-    def register(self):
-        self._type_infer()
-        self._lower_external_call()
-
     def __call__(self, *args, **kwargs):
         """
         This is only defined to pretend to be a callable from CPython.
         """
-        msg = f'{self.symbol} is not usable in pure-python'
+        msg = f"{self.symbol} is not usable in pure-python"
         raise NotImplementedError(msg)
 
+    @property
+    def return_type(self):
+        return self.signature.return_type
 
-def external(*args):
+    @property
+    def args(self):
+        return self.signature.args
+
+    @property
+    def signature(self):
+        return self._signature
+
+
+def external(signature, name=None):
 
     # Make inner function for the actual work
-    t = Type.fromstring(args[0])
-    if t.is_function:
-        name = t.name
-        retty = t[0].tonumba()
-        argtys = tuple(map(lambda x: x.tonumba(), t[1]))
+    t = Type.fromobject(signature)
+    if not t.is_function:
+        raise ValueError("signature must represent a function type")
 
-        llc = _External(name, retty, argtys)
-        llc.register()
-        return llc
-    else:
-        raise ValueError
+    if name is None:
+        name = t.name
+    if not name:
+        raise ValueError(
+            f"external function name not specified for signature {signature}"
+        )
+
+    llc = _External(name, t.tonumba())
+    llc.register()
+    return llc
