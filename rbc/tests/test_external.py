@@ -105,7 +105,7 @@ def define(omnisci):
             def fn(a, b, c):
                 return cmath_fn(a, b, c)
 
-        fn.__name__ = f"omnisci_{fname}"
+        fn.__name__ = f"{omnisci.table_name}_{fname}"
         fn = omnisci(f"{retty}({', '.join(argtypes)})")(fn)
 
     for _fname, signature in cmath:
@@ -125,7 +125,7 @@ def test_external_cmath(omnisci, fname, sig):
         pytest.skip(f"cmath.{fname} wrong output!")
 
     table = omnisci.table_name
-    cmath_func = "omnisci_" + fname
+    cmath_func = f"{table}_{fname}"
 
     remap = {
         "acos": "arccos",
@@ -222,3 +222,17 @@ def test_unnamed_external(omnisci):
         external("f64(f64)")
 
     assert "external function name not specified for signature" in str(excinfo)
+
+
+def test_replace_declaration(omnisci):
+
+    _ = external("f64(f64)", name="fma")
+    fma = external("f64(f64, f64, f64)", name="fma")
+
+    @omnisci("double(double, double, double)")
+    def test_fma(a, b, c):
+        return fma(a, b, c)
+
+    _, result = omnisci.sql_execute('select test_fma(1.0, 2.0, 3.0)')
+
+    assert list(result) == [(5.0,)]

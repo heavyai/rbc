@@ -6,7 +6,15 @@ from rbc.typesystem import Type
 
 class External:
     @classmethod
-    def fromobject(cls, signature, name=None):
+    def fromobject(cls, signature, name: str = None):
+        """
+        Parameters
+        ----------
+        signature : Numba function signature
+            A numba function type signature. i.e. (float64, float64) -> int64
+        name : str
+            The name of the external function
+        """
         # Make inner function for the actual work
         t = Type.fromobject(signature)
         if not t.is_function:
