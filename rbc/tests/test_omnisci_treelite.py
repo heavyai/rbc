@@ -11,6 +11,7 @@ def omnisci():
 
 
 def test_boston_house_prices(omnisci):
+    device = 'cpu'
     import numpy as np
     import tempfile
     try:
@@ -70,19 +71,16 @@ def test_boston_house_prices(omnisci):
       return predict((union Entry*)data, pred_margin);
     }
     '''
-    # to make UDF construction easier.
-
-    with omnisci.targets['cpu']:
-        # make predict_float rbc-external so that it can be called
-        # from UDFs
-        predict_float = external('float predict_float(float*, int)')
+    predict_float = external('float predict_float(float*, int32)')
+    # to make UDF construction easier. Notice that predict_float can
+    # be now called from a UDF.
 
     # Define predict function as UDF. Notice that the xgboost null
     # values are different from omniscidb null values, so we'll remap
     # before calling predict_float:
     null_value = np.int32(-1).view(np.float32)
 
-    @omnisci('float(float[], int32)', devices=['cpu'])
+    @omnisci('float(float[], int32)', devices=[device])
     def predict(data, pred_margin):
         for i in range(len(data)):
             if data.is_null(i):
@@ -95,7 +93,7 @@ def test_boston_house_prices(omnisci):
     model_llvmir = compile_ccode(model_c, include_dirs=[working_dir])
 
     # RBC will link_in the LLVM IR module
-    omnisci.user_defined_llvm_ir['cpu'] = model_llvmir
+    omnisci.user_defined_llvm_ir[device] = model_llvmir
 
     # Call predict on data in the server:
     descr, result = omnisci.sql_execute('SELECT rowid, predict(data, 2) FROM'
