@@ -10,8 +10,8 @@ class External:
         """
         Parameters
         ----------
-        signature : Numba function signature
-            A numba function type signature. i.e. (float64, float64) -> int64
+        signature : object (str, ctypes function, python callable, numba function)
+            Any object convertible to a Numba function via Type.fromobject(...).tonumba()
         name : str
             The name of the external function
         """
