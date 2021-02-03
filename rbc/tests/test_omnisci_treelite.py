@@ -1,6 +1,7 @@
 import pytest
 from rbc.tests import omnisci_fixture
 from rbc.ctools import compile_ccode
+from rbc.external import external
 
 
 @pytest.fixture(scope='module')
@@ -25,8 +26,8 @@ def test_boston_house_prices(omnisci):
     # row values expect the last one (MEDV) to a FLOAT array.
     import os
     csv_file = os.path.join(os.path.dirname(__file__), 'boston_house_prices.csv')
-    data = []
-    medv = []
+    data0 = []
+    medv0 = []
     for i, line in enumerate(open(csv_file).readlines()):
         line = line.strip().replace(' ', '')
         if i == 0:
@@ -34,16 +35,18 @@ def test_boston_house_prices(omnisci):
         else:
             row = list(map(float, line.split(',')))
             assert len(row) == len(header)
-            data.append(row[:-1])
-            medv.append(row[-1])
+            data0.append(row[:-1])
+            medv0.append(row[-1])
     table_name = f'{omnisci.table_name}bhp'
     omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     omnisci.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} (data FLOAT[], medv FLOAT);')
-    omnisci.load_table_columnar(table_name, data=data, medv=medv)
-
+    omnisci.load_table_columnar(table_name, data=data0, medv=medv0)
     # Get training data from server:
-    descr, result = omnisci.sql_execute(f'SELECT data, medv FROM {table_name} LIMIT 50')
-    data, medv = map(np.array, zip(*list(result)))
+    descr, result = omnisci.sql_execute('SELECT rowid, data, medv FROM '
+                                        f'{table_name} ORDER BY rowid LIMIT 50')
+    result = list(result)
+    medv = np.array([medv for _, data, medv in result])
+    data = np.array([data for _, data, medv in result])
     assert len(medv) == 50
 
     # Train model using xgboost
@@ -69,30 +72,10 @@ def test_boston_house_prices(omnisci):
     '''
     # to make UDF construction easier.
 
-    # Helper function that makes the wrapper function intrinsic. This
-    # is temporary solution that will be hidden from an user.
-    from numba.core import cgutils, extending
-    from numba.core import types as nb_types
-    from llvmlite import ir
-    from rbc.typesystem import Type
-
-    @extending.intrinsic
-    def predict_float(typingctx, data, pred_margin):
-        sig = nb_types.float32(Type.fromstring('float32[]').tonumba(), nb_types.int32)
-
-        def codegen(context, builder, signature, args):
-            data, pred_margin = args
-            fp32 = ir.FloatType()
-            int32_t = ir.IntType(32)
-            wrap_fnty = ir.FunctionType(fp32, [fp32.as_pointer(), int32_t])
-            wrap_fn = builder.module.get_or_insert_function(wrap_fnty, name="predict_float")
-            rawptr = cgutils.alloca_once_value(builder, value=data)
-            buf = builder.load(builder.gep(rawptr, [int32_t(0)]))
-            ptr = builder.load(builder.gep(buf, [int32_t(0), int32_t(0)]))
-            r = builder.call(wrap_fn, [ptr, pred_margin])
-            return r
-
-        return sig, codegen
+    with omnisci.targets['cpu']:
+        # make predict_float rbc-external so that it can be called
+        # from UDFs
+        predict_float = external('float predict_float(float*, int)')
 
     # Define predict function as UDF. Notice that the xgboost null
     # values are different from omniscidb null values, so we'll remap
@@ -104,7 +87,7 @@ def test_boston_house_prices(omnisci):
         for i in range(len(data)):
             if data.is_null(i):
                 data[i] = null_value
-        return predict_float(data, pred_margin)
+        return predict_float(data.get_ptr(), pred_margin)
 
     # Compile C model to LLVM IR. In future, we might want this
     # compilation to happen in the server side as the client might not
@@ -115,12 +98,14 @@ def test_boston_house_prices(omnisci):
     omnisci.user_defined_llvm_ir['cpu'] = model_llvmir
 
     # Call predict on data in the server:
-    descr, result = omnisci.sql_execute(f'SELECT predict(data, 2) FROM {table_name}')
-    predict_medv = np.array(list(result))[:, 0]
+    descr, result = omnisci.sql_execute('SELECT rowid, predict(data, 2) FROM'
+                                        f' {table_name} ORDER BY rowid')
+    result = list(result)
+    predict_medv = np.array([r[1] for r in result])
+
+    # Clean up
+    omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     # predict on the first 50 elements should be close to training labels
     error = abs(predict_medv[:len(medv)] - medv).max()/len(medv)
     assert error < 1e-4, error
-
-    # Clean up
-    omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')

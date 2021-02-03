@@ -485,3 +485,30 @@ def omnisci_buffer_set_null(x, row_idx=None):
                 return omnisci_array_set_null_(x, row_idx)
             return impl
         return impl
+
+
+@extending.intrinsic
+def omnisci_buffer_ptr_get_ptr_(typingctx, data):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data)
+
+    def codegen(context, builder, signature, args):
+        data,  = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        struct = builder.load(builder.gep(rawptr,
+                                          [int32_t(0)]))
+        return builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferPointer, 'get_ptr')
+def omnisci_buffer_ptr_get_ptr(x, row_idx=None):
+    if isinstance(x, BufferPointer):
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_ptr_get_ptr_(x)
+        else:
+            raise NotImplementedError(f'omnisci_buffer_ptr_get_ptr({x}, {row_idx})')
+        return impl
