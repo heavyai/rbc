@@ -120,7 +120,8 @@ class Mlib(Library):
     totalorderf totalorderl totalordermag totalorderf totalorderl fmin
     fminf fminl fmax fmaxf fmaxl fminmag fminmagf fminmagl fmaxmag
     fmaxmagf fmaxmagl fdim fdimf fdiml fma fmaf fmal fadd faddf faddl
-    fsub fsubf fsubl fmul fmulf fmull fdiv fdivf fdivl '''.strip().split())
+    fsub fsubf fsubl fmul fmulf fmull fdiv fdivf fdivl llrint llrintf
+    llrintl'''.strip().split())
 
 
 def drop_suffix(f):
