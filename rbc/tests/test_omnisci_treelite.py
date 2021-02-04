@@ -1,6 +1,6 @@
 import pytest
 from rbc.tests import omnisci_fixture
-from rbc.ctools import compile_ccode
+from rbc.ctools import ccompile, has_ccompiler
 from rbc.external import external
 
 
@@ -11,6 +11,9 @@ def omnisci():
 
 
 def test_boston_house_prices(omnisci):
+    if not has_ccompiler():
+        pytest.skip('test requires clang compiler')
+
     device = 'cpu'
     import numpy as np
     import tempfile
@@ -85,12 +88,12 @@ def test_boston_house_prices(omnisci):
         for i in range(len(data)):
             if data.is_null(i):
                 data[i] = null_value
-        return predict_float(data.get_ptr(), pred_margin)
+        return predict_float(data.ptr(), pred_margin)
 
     # Compile C model to LLVM IR. In future, we might want this
     # compilation to happen in the server side as the client might not
     # have clang compiler installed.
-    model_llvmir = compile_ccode(model_c, include_dirs=[working_dir])
+    model_llvmir = ccompile(model_c, include_dirs=[working_dir])
 
     # RBC will link_in the LLVM IR module
     omnisci.user_defined_llvm_ir[device] = model_llvmir

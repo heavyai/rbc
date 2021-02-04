@@ -21,4 +21,5 @@ dependencies:
   - thriftpy2
   - netifaces
   - flake8
+  - clang
   # - cudatoolkit-dev   # disable temporary

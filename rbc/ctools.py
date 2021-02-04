@@ -1,8 +1,20 @@
+__all__ = ['has_ccompiler', 'ccompile']
+
 import os
 import tempfile
 
 
-def compile_ccode(src, include_dirs=[]):
+def has_ccompiler(_cache=[]):
+    """Check for the availability of clang compiler.
+    """
+    if not _cache:
+        cmd = 'clang --version'
+        s = os.system(cmd)
+        _cache.append(s == 0)
+    return _cache[0]
+
+
+def ccompile(src, include_dirs=[]):
     """Compile C source code to LLVM IR module.
 
     Parameters
