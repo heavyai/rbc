@@ -102,6 +102,9 @@ target triple = "{cpu_target_triple}"
         assert len(a) == sz
 
 
+@pytest.mark.skipif(available_version[:2] < (5, 4),
+                    reason="test requires 5.4 or newer (got %s)" % (
+                        available_version,))
 @pytest.mark.parametrize('c_name', ['int8_t i1', 'int16_t i2', 'int32_t i4', 'int64_t i8',
                                     'float f4', 'double f8'])
 @pytest.mark.parametrize('device', ['cpu', 'gpu'])
