@@ -1,6 +1,7 @@
 import pytest
 from rbc.tests import omnisci_fixture
 from rbc.external import external
+from rbc.typesystem import Type
 from numba import types
 import numpy as np
 import math
@@ -85,9 +86,10 @@ cmath = (
 def define(omnisci):
     def inner(fname, signature):
         cmath_fn = external(signature, name=fname)
-        retty = str(cmath_fn.return_type)
-        argtypes = tuple(map(str, cmath_fn.args))
-        arity = len(cmath_fn.signature.args)
+        t = Type.fromstring(signature)
+        retty = str(t[0])
+        argtypes = tuple(map(str, t[1]))
+        arity = len(argtypes)
 
         # define omnisci callable
         if arity == 1:
@@ -233,6 +235,19 @@ def test_replace_declaration(omnisci):
     def test_fma(a, b, c):
         return fma(a, b, c)
 
-    _, result = omnisci.sql_execute('select test_fma(1.0, 2.0, 3.0)')
+    _, result = omnisci.sql_execute("select test_fma(1.0, 2.0, 3.0)")
 
     assert list(result) == [(5.0,)]
+
+
+def test_require_target_info(omnisci):
+
+    log2 = external("double log2(double)", name="log2")
+
+    @omnisci("double(double)")
+    def test_log2(a):
+        return log2(a)
+
+    _, result = omnisci.sql_execute("select test_log2(8.0)")
+
+    assert list(result) == [(3.0,)]

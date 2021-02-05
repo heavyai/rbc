@@ -1,7 +1,8 @@
 # This code has heavily inspired in the numba.extending.intrisic code
 
-from numba.core import extending, funcdesc, types
+from numba.core import extending, funcdesc, types, typing
 from rbc.typesystem import Type
+from rbc.targetinfo import TargetInfo
 
 
 class External:
@@ -16,18 +17,20 @@ class External:
             The name of the external function
         """
         # Make inner function for the actual work
-        t = Type.fromobject(signature)
-        if not t.is_function:
-            raise ValueError("signature must represent a function type")
+        target_info = TargetInfo.dummy()
+        with target_info:
+            t = Type.fromobject(signature)
+            if not t.is_function:
+                raise ValueError("signature must represent a function type")
 
-        if name is None:
-            name = t.name
-        if not name:
-            raise ValueError(
-                f"external function name not specified for signature {signature}"
-            )
+            if name is None:
+                name = t.name
+            if not name:
+                raise ValueError(
+                    f"external function name not specified for signature {signature}"
+                )
 
-        return cls(name, t.tonumba())
+        return cls(name, t)
 
     def __init__(self, name: str, signature: types.FunctionType):
         """
@@ -44,27 +47,28 @@ class External:
 
     def register(self):
         # typing
-        from numba.core.typing.templates import (
-            make_concrete_template,
-            infer_global,
-            infer,
-        )
+        class ExternalTemplate(typing.templates.AbstractTemplate):
+            obj = self
+            key = self.name
 
-        template = make_concrete_template(
-            self.name, key=self.name, signatures=[self.signature]
-        )
-        infer(template)
-        infer_global(self, types.Function(template))
+            def generic(self, args, kws):
+                t = Type.fromobject(self.obj._signature).tonumba()
 
-        # lowering
-        def codegen(context, builder, sig, args):
-            fndesc = funcdesc.ExternalFunctionDescriptor(
-                self.name, sig.return_type, sig.args
-            )
-            func = context.declare_external_function(builder.module, fndesc)
-            return builder.call(func, args)
+                name = self.key
 
-        extending.lower_builtin(self.name, *self.signature.args)(codegen)
+                # lowering
+                def codegen(context, builder, sig, args):
+                    fndesc = funcdesc.ExternalFunctionDescriptor(
+                        name, sig.return_type, sig.args
+                    )
+                    func = context.declare_external_function(builder.module, fndesc)
+                    return builder.call(func, args)
+
+                extending.lower_builtin(name, *t.args)(codegen)
+                return t
+
+        typing.templates.infer(ExternalTemplate)
+        typing.templates.infer_global(self, types.Function(ExternalTemplate))
 
     def __call__(self, *args, **kwargs):
         """
@@ -72,18 +76,6 @@ class External:
         """
         msg = f"{self.name} is not usable in pure-python"
         raise NotImplementedError(msg)
-
-    @property
-    def return_type(self):
-        return self.signature.return_type
-
-    @property
-    def args(self):
-        return self.signature.args
-
-    @property
-    def signature(self):
-        return self._signature
 
 
 external = External.fromobject
