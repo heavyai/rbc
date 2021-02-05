@@ -10,7 +10,7 @@ import math
 def omnisci():
 
     for o in omnisci_fixture(globals()):
-        # define(o)
+        define(o)
         yield o
 
 
