@@ -23,6 +23,28 @@ from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
 
+def test_dummy():
+    with pytest.raises(
+            RuntimeError,
+            match=r'Target not specified.'):
+        Type.fromobject('int')
+
+    with TargetInfo.dummy():
+        t = Type.fromobject('int')
+        assert str(t) == 'int'
+
+        t = Type.fromobject('int(int)')
+        assert t.is_function
+
+        t = Type.fromobject('foo(bar)')
+        assert t.is_function
+
+    with pytest.raises(
+            RuntimeError,
+            match=r'Target not specified.'):
+        Type.fromobject('foo(bar)')
+
+
 @pytest.fixture(scope='module')
 def target_info():
 

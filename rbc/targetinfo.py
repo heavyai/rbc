@@ -123,6 +123,10 @@ class TargetInfo(object):
     def fromjson(cls, data):
         return cls.fromdict(json.loads(data))
 
+    @classmethod
+    def dummy(cls):
+        return TargetInfo(name='dummy', strict=False)
+
     _host_target_info_cache = {}
 
     @classmethod
@@ -131,12 +135,12 @@ class TargetInfo(object):
         """
         key = (name, strict)
 
-        target_info = cls._host_target_info_cache.get(key)
+        target_info = TargetInfo._host_target_info_cache.get(key)
         if target_info is not None:
             return target_info
 
         import llvmlite.binding as ll
-        target_info = TargetInfo(name=name, strict=strict)
+        target_info = cls(name=name, strict=strict)
         target_info.set('name', ll.get_host_cpu_name())
         target_info.set('triple', ll.get_default_triple())
         features = ','.join(['-+'[int(v)] + k
@@ -374,8 +378,9 @@ class TargetInfo(object):
 
         Returns
         -------
-        size : int
-          Byte-size of the input type.
+        size : {int, None}
+          Byte-size of the input type. Dummy target info will not try
+          to guess the sizeof of type and will return None.
         """
         s = self.type_sizeof.get(t)
         if s is not None:
@@ -384,15 +389,18 @@ class TargetInfo(object):
             if t == 'complex':
                 return self.sizeof('float') * 2
             if t == 'double':
-                return 8
+                return 8  # IEC 60559
             if t == 'float':
-                return 4
+                return 4  # IEC 60559
+            if t == 'char':
+                return 1  # IEC 9899
+        if self.name == 'dummy':
+            return
+        if isinstance(t, str):
             if t == 'int':
-                return 4
+                return 4  # this is a guess
             if t == 'size_t':
                 return self.bits // 8
-            if t == 'char':
-                return 1
         if isinstance(t, type) and issubclass(t, ctypes._SimpleCData):
             return ctypes.sizeof(t)
         raise NotImplementedError(
