@@ -1094,13 +1094,18 @@ class Type(tuple, metaclass=MetaType):
                     return Type(ntype + bits, **params)
             if s.endswith('[]'):
                 return Type.fromstring(f'Array<{s[:-2]}>')._normalize()
+            if _char_match(s):
+                return Type('char8', **params)   # IEC 9899 defines sizeof(char)==1
+            if _float_match(s):
+                return Type('float32', **params)  # IEC 60559 defines sizeof(float)==4
+            if _double_match(s):
+                return Type('float64', **params)  # IEC 60559 defines sizeof(double)==8
             target_info = TargetInfo()
             for match, otype, ntype in [
-                    (_char_match, 'char', 'char'),
                     (_wchar_match, 'wchar', 'char'),
 
-                    (_uchar_match, 'uchar', 'uint'),
                     (_schar_match, 'char', 'int'),
+                    (_uchar_match, 'uchar', 'uint'),
 
                     (_byte_match, 'byte', 'int'),
                     (_ubyte_match, 'ubyte', 'uint'),
@@ -1120,14 +1125,15 @@ class Type(tuple, metaclass=MetaType):
                     (_size_t_match, 'size_t', 'uint'),
                     (_ssize_t_match, 'ssize_t', 'int'),
 
-                    (_float_match, 'float', 'float'),
-                    (_double_match, 'double', 'float'),
                     (_longdouble_match, 'longdouble', 'float'),
                     (_complex_match, 'complex', 'complex'),
             ]:
                 if match(s) is not None:
-                    bits = str(target_info.sizeof(otype) * 8)
-                    return Type(ntype + bits, **params)
+                    sz = target_info.sizeof(otype)
+                    if sz is not None:
+                        bits = str(sz * 8)
+                        return Type(ntype + bits, **params)
+                    break
             if target_info.strict:
                 raise ValueError('%s is not concrete' % (self))
             return self
