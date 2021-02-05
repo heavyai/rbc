@@ -1,7 +1,8 @@
 # This code has heavily inspired in the numba.extending.intrisic code
 
-from numba.core import extending, funcdesc, types
+from numba.core import extending, funcdesc, types, typing
 from rbc.typesystem import Type
+from rbc.targetinfo import TargetInfo
 
 
 class External:
@@ -16,20 +17,25 @@ class External:
             The name of the external function
         """
         # Make inner function for the actual work
-        t = Type.fromobject(signature)
-        if not t.is_function:
-            raise ValueError("signature must represent a function type")
+        target_info = TargetInfo.host()
+        with target_info:
+            t = Type.fromobject(signature)
+            if not t.is_function:
+                raise ValueError("signature must represent a function type")
 
-        if name is None:
-            name = t.name
-        if not name:
-            raise ValueError(
-                f"external function name not specified for signature {signature}"
-            )
+            if name is None:
+                name = t.name
+            if not name:
+                raise ValueError(
+                    f"external function name not specified for signature {signature}"
+                )
 
-        return cls(name, t.tonumba())
+            typ = t
+            t = t.tonumba()
 
-    def __init__(self, name: str, signature: types.FunctionType):
+        return cls(name, t, typ)
+
+    def __init__(self, name: str, signature: types.FunctionType, typ: Type):
         """
         Parameters
         ----------
@@ -37,34 +43,38 @@ class External:
             The name of the external function
         signature : Numba function signature
             A numba function type signature. i.e. (float64, float64) -> int64
+        rbc_type: RBC typesystem Type
+            A type from the RBC typesystem type
         """
         self._signature = signature
+        self.rbc_typ = typ
         self.name = name
         self.register()
 
     def register(self):
         # typing
-        from numba.core.typing.templates import (
-            make_concrete_template,
-            infer_global,
-            infer,
-        )
+        class ExternalTemplate(typing.templates.AbstractTemplate):
+            obj = self
+            key = self.name
 
-        template = make_concrete_template(
-            self.name, key=self.name, signatures=[self.signature]
-        )
-        infer(template)
-        infer_global(self, types.Function(template))
+            def generic(self, args, kws):
+                t = Type.fromobject(self.obj.rbc_typ).tonumba()
 
-        # lowering
-        def codegen(context, builder, sig, args):
-            fndesc = funcdesc.ExternalFunctionDescriptor(
-                self.name, sig.return_type, sig.args
-            )
-            func = context.declare_external_function(builder.module, fndesc)
-            return builder.call(func, args)
+                name = self.key
 
-        extending.lower_builtin(self.name, *self.signature.args)(codegen)
+                # lowering
+                def codegen(context, builder, sig, args):
+                    fndesc = funcdesc.ExternalFunctionDescriptor(
+                        name, sig.return_type, sig.args
+                    )
+                    func = context.declare_external_function(builder.module, fndesc)
+                    return builder.call(func, args)
+
+                extending.lower_builtin(name, *t.args)(codegen)
+                return t
+
+        typing.templates.infer(ExternalTemplate)
+        typing.templates.infer_global(self, types.Function(ExternalTemplate))
 
     def __call__(self, *args, **kwargs):
         """
