@@ -17,7 +17,7 @@ class External:
             The name of the external function
         """
         # Make inner function for the actual work
-        target_info = TargetInfo.host()
+        target_info = TargetInfo.dummy()
         with target_info:
             t = Type.fromobject(signature)
             if not t.is_function:
@@ -30,12 +30,9 @@ class External:
                     f"external function name not specified for signature {signature}"
                 )
 
-            typ = t
-            t = t.tonumba()
+        return cls(name, t)
 
-        return cls(name, t, typ)
-
-    def __init__(self, name: str, signature: types.FunctionType, typ: Type):
+    def __init__(self, name: str, signature: types.FunctionType):
         """
         Parameters
         ----------
@@ -43,11 +40,8 @@ class External:
             The name of the external function
         signature : Numba function signature
             A numba function type signature. i.e. (float64, float64) -> int64
-        rbc_type: RBC typesystem Type
-            A type from the RBC typesystem type
         """
         self._signature = signature
-        self.rbc_typ = typ
         self.name = name
         self.register()
 
@@ -58,7 +52,7 @@ class External:
             key = self.name
 
             def generic(self, args, kws):
-                t = Type.fromobject(self.obj.rbc_typ).tonumba()
+                t = Type.fromobject(self.obj._signature).tonumba()
 
                 name = self.key
 
@@ -82,18 +76,6 @@ class External:
         """
         msg = f"{self.name} is not usable in pure-python"
         raise NotImplementedError(msg)
-
-    @property
-    def return_type(self):
-        return self.signature.return_type
-
-    @property
-    def args(self):
-        return self.signature.args
-
-    @property
-    def signature(self):
-        return self._signature
 
 
 external = External.fromobject

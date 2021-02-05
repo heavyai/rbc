@@ -1,6 +1,7 @@
 import pytest
 from rbc.tests import omnisci_fixture
 from rbc.external import external
+from rbc.typesystem import Type
 from numba import types
 import numpy as np
 import math
@@ -85,9 +86,10 @@ cmath = (
 def define(omnisci):
     def inner(fname, signature):
         cmath_fn = external(signature, name=fname)
-        retty = str(cmath_fn.return_type)
-        argtypes = tuple(map(str, cmath_fn.args))
-        arity = len(cmath_fn.signature.args)
+        t = Type.fromstring(signature)
+        retty = str(t[0])
+        argtypes = tuple(map(str, t[1]))
+        arity = len(argtypes)
 
         # define omnisci callable
         if arity == 1:
