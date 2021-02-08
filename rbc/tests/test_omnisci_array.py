@@ -102,8 +102,8 @@ target triple = "{cpu_target_triple}"
         assert len(a) == sz
 
 
-@pytest.mark.skipif(available_version[:2] < (5, 4),
-                    reason="test requires 5.4 or newer (got %s)" % (
+@pytest.mark.skipif(available_version[:2] < (5, 2),
+                    reason="test requires 5.2 or newer (got %s)" % (
                         available_version,))
 @pytest.mark.parametrize('c_name', ['int8_t i1', 'int16_t i2', 'int32_t i4', 'int64_t i8',
                                     'float f4', 'double f8'])
@@ -112,18 +112,18 @@ def test_ptr(omnisci, c_name, device):
     omnisci.reset()
     if not omnisci.has_cuda and device == 'gpu':
         pytest.skip('test requires CUDA-enabled omniscidb server')
-
-    from rbc.ctools import ccompile, has_ccompiler
     from rbc.external import external
 
-    if not has_ccompiler():
-        pytest.skip('test requires clang compiler')
+    if omnisci.compiler is None:
+        pytest.skip('test requires clang C/C++ compiler')
 
     ctype, cname = c_name.split()
 
     c_code = f'''
 #include <stdint.h>
-
+#ifdef __cplusplus
+extern "C" {{
+#endif
 {ctype} mysum_impl({ctype}* x, int n) {{
     {ctype} r = 0;
     for (int i=0; i < n; i++) {{
@@ -135,8 +135,11 @@ def test_ptr(omnisci, c_name, device):
 {ctype} myval_impl({ctype}* x) {{
     return *x;
 }}
+#ifdef __cplusplus
+}}
+#endif
     '''
-    omnisci.user_defined_llvm_ir[device] = ccompile(c_code)
+    omnisci.user_defined_llvm_ir[device] = omnisci.compiler(c_code)
     mysum_impl = external(f'{ctype} mysum_impl({ctype}*, int32_t)')
     myval_impl = external(f'{ctype} myval_impl({ctype}*)')
 

@@ -1,6 +1,5 @@
 import pytest
 from rbc.tests import omnisci_fixture
-from rbc.ctools import ccompile, has_ccompiler
 from rbc.external import external
 
 
@@ -11,8 +10,8 @@ def omnisci():
 
 
 def test_boston_house_prices(omnisci):
-    if not has_ccompiler():
-        pytest.skip('test requires clang compiler')
+    if omnisci.compiler is None:
+        pytest.skip('test requires CLang C/C++ compiler')
 
     device = 'cpu'
     import numpy as np
@@ -70,9 +69,15 @@ def test_boston_house_prices(omnisci):
     #  float predict(union Entry* data, int pred_margin)
     # but we wrap it using
     model_c += '''
+#ifdef __cplusplus
+extern "C" {
+#endif
     float predict_float(float* data, int pred_margin) {
       return predict((union Entry*)data, pred_margin);
     }
+#ifdef __cplusplus
+}
+#endif
     '''
     predict_float = external('float predict_float(float*, int32)')
     # to make UDF construction easier. Notice that predict_float can
@@ -93,7 +98,7 @@ def test_boston_house_prices(omnisci):
     # Compile C model to LLVM IR. In future, we might want this
     # compilation to happen in the server side as the client might not
     # have clang compiler installed.
-    model_llvmir = ccompile(model_c, include_dirs=[working_dir])
+    model_llvmir = omnisci.compiler(model_c, flags=['-I' + working_dir])
 
     # RBC will link_in the LLVM IR module
     omnisci.user_defined_llvm_ir[device] = model_llvmir

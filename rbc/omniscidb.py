@@ -18,6 +18,7 @@ from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
 from . import typesystem
+from . import ctools
 
 
 def get_literal_return(func, verbose=False):
@@ -1024,3 +1025,12 @@ class RemoteOmnisci(RemoteJIT):
                         ' to remove this warning.')
                     func.__globals__[symbol] = omnisci_backend.__dict__.get(symbol)
         return func
+
+    @property
+    def compiler(self):
+        """Return a CLang compiler instance.
+        """
+        compiler = ctools.Compiler.find(language='C++')
+        if compiler is None:
+            compiler = ctools.Compiler.find(language='C')
+        return compiler
