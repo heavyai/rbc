@@ -103,21 +103,21 @@ jobs:
           mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
           sleep 10
 
-      - name: conda config
+      - name: rbc conda config
         shell: bash -l {0}
-        run: conda config --show  
+        run: mamba run -n rbc conda config --show  
 
-      - name: conda list
+      - name: rbc conda list
         shell: bash -l {0}
         run: |
-          conda list
+          mamba run -n rbc conda list
 
-      - name: Install rbc
+      - name: Develop rbc
         shell: bash -l {0}
         run: |
-          python setup.py develop
+          mamba run -n rbc python setup.py develop
 
-      - name: test rbc
+      - name: Run rbc tests
         shell: bash -l {0}
         run: |
-          pytest -v -r A rbc/ -x
+          mamba run -n rbc pytest -sv -r A rbc/ -x
