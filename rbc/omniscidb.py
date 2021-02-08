@@ -1026,11 +1026,17 @@ class RemoteOmnisci(RemoteJIT):
                     func.__globals__[symbol] = omnisci_backend.__dict__.get(symbol)
         return func
 
+    _compiler = None
+
     @property
     def compiler(self):
-        """Return a CLang compiler instance.
+        """Return a C++/C to LLVM IR compiler instance.
         """
-        compiler = ctools.Compiler.find(language='C++')
-        if compiler is None:
-            compiler = ctools.Compiler.find(language='C')
-        return compiler
+        if self._compiler is None:
+            compiler = ctools.Compiler.get(std='c++14')
+            if compiler is None:  # clang++ not available, try clang..
+                compiler = ctools.Compiler.get(std='c')
+            if self.debug:
+                print(f'compiler={compiler}')
+            self._compiler = compiler
+        return self._compiler

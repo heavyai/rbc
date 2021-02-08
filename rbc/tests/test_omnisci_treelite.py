@@ -1,3 +1,4 @@
+import os
 import pytest
 from rbc.tests import omnisci_fixture
 from rbc.external import external
@@ -9,25 +10,11 @@ def omnisci():
         yield o
 
 
-def test_boston_house_prices(omnisci):
-    if omnisci.compiler is None:
-        pytest.skip('test requires CLang C/C++ compiler')
-
-    device = 'cpu'
-    import numpy as np
-    import tempfile
-    try:
-        import treelite
-    except ImportError as msg:
-        pytest.skip(f'test requires treelite: {msg}')
-    try:
-        import xgboost
-    except ImportError as msg:
-        pytest.skip(f'test requires xgboost: {msg}')
-
+@pytest.fixture(scope='module')
+def boston_house_prices(omnisci):
     # Upload Boston house prices to server, notice that we collect all
     # row values expect the last one (MEDV) to a FLOAT array.
-    import os
+
     csv_file = os.path.join(os.path.dirname(__file__), 'boston_house_prices.csv')
     data0 = []
     medv0 = []
@@ -44,7 +31,25 @@ def test_boston_house_prices(omnisci):
     omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     omnisci.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} (data FLOAT[], medv FLOAT);')
     omnisci.load_table_columnar(table_name, data=data0, medv=medv0)
+
+    yield omnisci
+
+    omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+
+
+def test_boston_house_prices(omnisci, boston_house_prices):
+    if omnisci.compiler is None:
+        pytest.skip('test requires C/C++ to LLVM IR compiler')
+
+    treelite = pytest.importorskip("treelite")
+    xgboost = pytest.importorskip("xgboost")
+
+    device = 'cpu'
+    import numpy as np
+    import tempfile
+
     # Get training data from server:
+    table_name = f'{omnisci.table_name}bhp'
     descr, result = omnisci.sql_execute('SELECT rowid, data, medv FROM '
                                         f'{table_name} ORDER BY rowid LIMIT 50')
     result = list(result)
@@ -108,9 +113,6 @@ extern "C" {
                                         f' {table_name} ORDER BY rowid')
     result = list(result)
     predict_medv = np.array([r[1] for r in result])
-
-    # Clean up
-    omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     # predict on the first 50 elements should be close to training labels
     error = abs(predict_medv[:len(medv)] - medv).max()/len(medv)
