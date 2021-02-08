@@ -80,26 +80,27 @@ jobs:
           mamba-version: "*"
           channels: conda-forge
           environment-file: .conda/environment.yml
-      
+
+      # omniscidb must be run in an environment that is independent of rbc environment
       - name: Install omniscidb
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mamba install omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
-      
+          mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
+
+      - name: omniscidb-env conda list
+        shell: bash -l {0}
+        run: |
+          mamba run -n omniscidb-env conda list
+
       - name: Start Omniscidb
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mkdir data && omnisci_initdb data -f
-          omnisci_server --version
-          omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+          mamba run -n omniscidb-env mkdir data && omnisci_initdb data -f
+          mamba run -n omniscidb-env omnisci_server --version
+          mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
           sleep 10
-
-      - name: Install pytest
-        shell: bash -l {0}
-        run: |
-          pip install pytest
 
       - name: conda config
         shell: bash -l {0}
@@ -119,4 +120,3 @@ jobs:
         shell: bash -l {0}
         run: |
           pytest -v -r A rbc/ -x
-      

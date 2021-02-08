@@ -22,4 +22,5 @@ dependencies:
   - netifaces
   - flake8
   - clang
+  - six
   # - cudatoolkit-dev   # disable temporary
