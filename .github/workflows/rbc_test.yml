@@ -90,6 +90,7 @@ jobs:
 
       - name: omniscidb-env conda list
         shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
         run: |
           mamba run -n omniscidb-env conda list
 
