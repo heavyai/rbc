@@ -34,7 +34,7 @@ def ccompile(src, include_dirs=[]):
     fout.close()
     f.write(src)
     f.close()
-    cmd = f'clang -S -emit-llvm {" -I".join([""] + include_dirs)} {f.name} -o {fout.name}'
+    cmd = f'clang -O0 -S -emit-llvm {" -I".join([""] + include_dirs)} {f.name} -o {fout.name}'
     s = os.system(cmd)
     assert s == 0, cmd
     os.unlink(f.name)
