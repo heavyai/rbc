@@ -225,6 +225,72 @@ def free_omnisci_buffer(typingctx, ret):
 
 
 @extending.intrinsic
+def omnisci_buffer_ptr_get_ptr_(typingctx, data):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data)
+
+    def codegen(context, builder, signature, args):
+        data,  = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        struct = builder.load(builder.gep(rawptr,
+                                          [int32_t(0)]))
+        return builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_get_ptr_(typingctx, data):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data)
+
+    def codegen(context, builder, signature, args):
+        data, = args
+        assert data.opname == 'load'
+        struct = data.operands[0]
+        return builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_ptr_item_get_ptr_(typingctx, data, index):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data, index)
+
+    def codegen(context, builder, signature, args):
+        data, index = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        struct = builder.load(builder.gep(rawptr, [int32_t(0)]))
+        ptr = builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+        return builder.gep(ptr, [index])
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferPointer, 'ptr')
+def omnisci_buffer_get_ptr(x, index=None):
+    if isinstance(x, BufferPointer):
+        if cgutils.is_nonelike(index):
+            def impl(x, index=None):
+                return omnisci_buffer_ptr_get_ptr_(x)
+        else:
+            def impl(x, index=None):
+                return omnisci_buffer_ptr_item_get_ptr_(x, index)
+        return impl
+    if isinstance(x, BufferType):
+        if cgutils.is_nonelike(index):
+            def impl(x, index=None):
+                return omnisci_buffer_get_ptr_(x)
+        else:
+            raise NotImplementedError(f'omnisci_buffer_item_get_ptr_({x}, {index})')
+        return impl
+
+
+@extending.intrinsic
 def omnisci_buffer_ptr_len_(typingctx, data):
     sig = types.int64(data)
 

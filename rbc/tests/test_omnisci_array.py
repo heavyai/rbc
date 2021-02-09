@@ -102,6 +102,70 @@ target triple = "{cpu_target_triple}"
         assert len(a) == sz
 
 
+@pytest.mark.skipif(available_version[:2] < (5, 2),
+                    reason="test requires 5.2 or newer (got %s)" % (
+                        available_version,))
+@pytest.mark.parametrize('c_name', ['int8_t i1', 'int16_t i2', 'int32_t i4', 'int64_t i8',
+                                    'float f4', 'double f8'])
+@pytest.mark.parametrize('device', ['cpu', 'gpu'])
+def test_ptr(omnisci, c_name, device):
+    omnisci.reset()
+    if not omnisci.has_cuda and device == 'gpu':
+        pytest.skip('test requires CUDA-enabled omniscidb server')
+    from rbc.external import external
+
+    if omnisci.compiler is None:
+        pytest.skip('test requires clang C/C++ compiler')
+
+    ctype, cname = c_name.split()
+
+    c_code = f'''
+#include <stdint.h>
+#ifdef __cplusplus
+extern "C" {{
+#endif
+{ctype} mysum_impl({ctype}* x, int n) {{
+    {ctype} r = 0;
+    for (int i=0; i < n; i++) {{
+      r += x[i];
+    }}
+    return r;
+}}
+
+{ctype} myval_impl({ctype}* x) {{
+    return *x;
+}}
+#ifdef __cplusplus
+}}
+#endif
+    '''
+    omnisci.user_defined_llvm_ir[device] = omnisci.compiler(c_code)
+    mysum_impl = external(f'{ctype} mysum_impl({ctype}*, int32_t)')
+    myval_impl = external(f'{ctype} myval_impl({ctype}*)')
+
+    @omnisci(f'{ctype}({ctype}[])', devices=[device])
+    def mysum_ptr(x):
+        return mysum_impl(x.ptr(), len(x))
+
+    @omnisci(f'{ctype}({ctype}[], int32_t)', devices=[device])
+    def myval_ptr(x, i):
+        return myval_impl(x.ptr(i))
+
+    desrc, result = omnisci.sql_execute(
+        f'select {cname}, mysum_ptr({cname}) from {omnisci.table_name}')
+    for a, r in result:
+        if cname == 'i1':
+            assert sum(a) % 256 == r % 256
+        else:
+            assert sum(a) == r
+
+    desrc, result = omnisci.sql_execute(
+        f'select {cname}, myval_ptr({cname}, 0), myval_ptr({cname}, 2) from {omnisci.table_name}')
+    for a, r0, r2 in result:
+        assert a[0] == r0
+        assert a[2] == r2
+
+
 def test_len_i32(omnisci):
     omnisci.reset()
 

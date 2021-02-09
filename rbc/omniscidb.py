@@ -18,6 +18,7 @@ from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
 from . import typesystem
+from . import ctools
 
 
 def get_literal_return(func, verbose=False):
@@ -247,6 +248,9 @@ class RemoteOmnisci(RemoteJIT):
         self._init_thrift_typemap()
         self.has_cuda = None
         self._null_values = dict()
+
+        # An user-defined device-LLVM IR mapping.
+        self.user_defined_llvm_ir = {}
 
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.
@@ -970,6 +974,7 @@ class RemoteOmnisci(RemoteJIT):
                     functions_and_signatures,
                     target_info,
                     pipeline_class=OmnisciCompilerPipeline,
+                    user_defined_llvm_ir=self.user_defined_llvm_ir.get(device),
                     debug=self.debug)
 
                 assert llvm_module.triple == target_info.triple
@@ -1020,3 +1025,18 @@ class RemoteOmnisci(RemoteJIT):
                         ' to remove this warning.')
                     func.__globals__[symbol] = omnisci_backend.__dict__.get(symbol)
         return func
+
+    _compiler = None
+
+    @property
+    def compiler(self):
+        """Return a C++/C to LLVM IR compiler instance.
+        """
+        if self._compiler is None:
+            compiler = ctools.Compiler.get(std='c++14')
+            if compiler is None:  # clang++ not available, try clang..
+                compiler = ctools.Compiler.get(std='c')
+            if self.debug:
+                print(f'compiler={compiler}')
+            self._compiler = compiler
+        return self._compiler

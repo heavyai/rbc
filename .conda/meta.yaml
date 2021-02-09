@@ -37,6 +37,7 @@ requirements:
     - numba
     - six
     - netifaces
+    - clang
 
 about:
   home: https://github.com/xnd-project/rbc
