@@ -1,5 +1,6 @@
 # This code has heavily inspired in the numba.extending.intrisic code
-
+from typing import Dict, List
+from collections import defaultdict
 from numba.core import extending, funcdesc, types, typing
 from rbc.typesystem import Type
 from rbc.targetinfo import TargetInfo
@@ -7,7 +8,7 @@ from rbc.targetinfo import TargetInfo
 
 class External:
     @classmethod
-    def fromobject(cls, signature, name: str = None):
+    def fromobject(cls, *args, name: str = None):
         """
         Parameters
         ----------
@@ -18,21 +19,35 @@ class External:
         """
         # Make inner function for the actual work
         target_info = TargetInfo.dummy()
+        ts = defaultdict(list)
         with target_info:
-            t = Type.fromobject(signature)
-            if not t.is_function:
-                raise ValueError("signature must represent a function type")
+            for signature in args:
+                t = Type.fromobject(signature)
+                if not t.is_function:
+                    raise ValueError("signature must represent a function type")
 
-            if name is None:
-                name = t.name
-            if not name:
-                raise ValueError(
-                    f"external function name not specified for signature {signature}"
-                )
+                if not t.name:
+                    raise ValueError(
+                        f"external function name not specified for signature {signature}"
+                    )
 
-        return cls(name, t)
+                if name is None:
+                    name = t.name
+                if not name:
+                    raise ValueError(
+                        f"external function name not specified for signature {signature}"
+                    )
 
-    def __init__(self, name: str, signature: types.FunctionType):
+                if t.annotation():
+                    device = "CPU" if "CPU" in t.annotation() else "GPU"
+                    ts[device].append(t)
+                else:
+                    ts["CPU"].append(t)
+                    ts["GPU"].append(t)
+
+        return cls(name, ts)
+
+    def __init__(self, name: str, signatures: Dict[str, List[types.FunctionType]]):
         """
         Parameters
         ----------
@@ -41,9 +56,18 @@ class External:
         signature : Numba function signature
             A numba function type signature. i.e. (float64, float64) -> int64
         """
-        self._signature = signature
-        self.name = name
+        self._signatures = signatures
+        self.name = name  # this name refers to the one used as a key to the template
+        # the actual function name we get from the signature
         self.register()
+
+    def match_signature(self, args):
+        device = "CPU" if TargetInfo().is_cpu else "GPU"
+        ts = self._signatures[device]
+        for t in ts:
+            if t.tonumba().args == args:
+                return t
+        raise ValueError(f"No match for signature {args}")
 
     def register(self):
         # typing
@@ -52,20 +76,22 @@ class External:
             key = self.name
 
             def generic(self, args, kws):
-                t = Type.fromobject(self.obj._signature).tonumba()
-
-                name = self.key
+                # get the correct signature and function name for the current device
+                t = self.obj.match_signature(args)
 
                 # lowering
                 def codegen(context, builder, sig, args):
+                    # Need to retrieve the function name again
+                    t = self.obj.match_signature(sig.args)
+                    fn_name = t.name
                     fndesc = funcdesc.ExternalFunctionDescriptor(
-                        name, sig.return_type, sig.args
+                        fn_name, sig.return_type, sig.args
                     )
                     func = context.declare_external_function(builder.module, fndesc)
                     return builder.call(func, args)
 
-                extending.lower_builtin(name, *t.args)(codegen)
-                return t
+                extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
+                return t.tonumba()
 
         typing.templates.infer(ExternalTemplate)
         typing.templates.infer_global(self, types.Function(ExternalTemplate))

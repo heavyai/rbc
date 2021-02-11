@@ -1,7 +1,8 @@
-import math
 import pytest
+import math
 import sys
 import rbc.omnisci_backend as omni  # noqa: F401
+import rbc.omnisci_backend.omnisci_math as omath
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 np = pytest.importorskip('numpy')
@@ -126,15 +127,13 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
         pytest.skip(f'{fn_name}: not available in {math.__name__} module'
                     f' of Python {sys.version.split(None, 1)[0]}')
 
-    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
-                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
-                   'perm']:
+    if fn_name in ['prod', 'comb', 'factorial', 'fsum', 'perm',
+                   'fmod', 'isclose', 'isqrt', 'modf', 'dist']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation! [rbc issue 156]')
 
     if omnisci.version < (5, 5) and omnisci.has_cuda and \
         fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
-                    'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
-                    'trunc', 'dist', 'fmod']:
+                    'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'trunc', 'dist', 'fmod']:
         pytest.skip(f'CUDA target does not support {fn_name} function [rbc issue 156]')
 
     if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['floor']:
@@ -158,12 +157,12 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
 
     if fn_name in ['pi', 'e', 'tau', 'inf', 'nan']:
-        fn = eval(f'lambda x: math.{fn_name}', dict(math=math))
+        fn = eval(f'lambda x: omath.{fn_name}', dict(omath=omath))
     elif arity == 1:
-        fn = eval(f'lambda x: math.{fn_name}(x)', dict(math=math))
+        fn = eval(f'lambda x: omath.{fn_name}(x)', dict(omath=omath))
     elif arity == 2:
-        fn = eval(f'lambda x, y: math.{fn_name}(x, y)',
-                  dict(math=math))
+        fn = eval(f'lambda x, y: omath.{fn_name}(x, y)',
+                  dict(omath=omath))
     else:
         raise NotImplementedError((signature, arity))
 
@@ -410,6 +409,8 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
 
     if fn_name == 'ldexp':
         xs = ', '.join('xi')
+    elif fn_name in ['arccosh', 'arcsinh']:
+        xs = 'z'
     elif kind == 'double':
         assert arity <= 3, arity
         xs = ', '.join('xyz'[:arity])

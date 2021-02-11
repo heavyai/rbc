@@ -164,17 +164,6 @@ class JITRemoteGPUTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
 
     def load_additional_registries(self):
-        # libdevice and math from cuda have precedence over the ones from CPU
-        if get_version('numba') >= (0, 52):
-            from numba.cuda import libdeviceimpl, mathimpl
-            from .omnisci_backend import cuda_npyimpl
-            self.install_registry(libdeviceimpl.registry)
-            self.install_registry(mathimpl.registry)
-            self.install_registry(cuda_npyimpl.registry)
-        else:
-            import warnings
-            warnings.warn("libdevice bindings requires Numba 0.52 or newer,"
-                          f" got Numba v{'.'.join(map(str, get_version('numba')))}")
         super().load_additional_registries()
 
 
