@@ -12,6 +12,7 @@ if os.path.exists('MANIFEST'):
     os.remove('MANIFEST')
 
 CONDA_BUILD = int(os.environ.get('CONDA_BUILD', '0'))
+CONDA_ENV = os.environ.get('CONDA_PREFIX', '') != ''
 
 from setuptools import setup, find_packages  # noqa: E402
 
@@ -32,12 +33,16 @@ def setup_package():
     os.chdir(src_path)
     sys.path.insert(0, src_path)
 
-    if CONDA_BUILD:
-        # conda dependencies are specified in meta.yaml
+    if CONDA_BUILD or CONDA_ENV:
+        # conda dependencies are specified in meta.yaml or conda
+        # enviroment should provide the correct requirements - using
+        # PyPI is unreliable, see below.
         install_requires = []
         setup_requires = []
         tests_require = []
     else:
+        # Get requirements via PyPI. Use at your own risk as more than
+        # once the numba and llvmlite have not matched.
         install_requires = open('requirements.txt', 'r').read().splitlines()
         setup_requires = ['pytest-runner']
         tests_require = ['pytest']

@@ -80,43 +80,45 @@ jobs:
           mamba-version: "*"
           channels: conda-forge
           environment-file: .conda/environment.yml
-      
+
+      # omniscidb must be run in an environment that is independent of rbc environment
       - name: Install omniscidb
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mamba install omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
-      
+          mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
+
+      - name: omniscidb-env conda list
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mamba run -n omniscidb-env conda list
+
       - name: Start Omniscidb
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mkdir data && omnisci_initdb data -f
-          omnisci_server --version
-          omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+          mkdir data
+          mamba run -n omniscidb-env omnisci_initdb data -f
+          mamba run -n omniscidb-env omnisci_server --version
+          mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
           sleep 10
 
-      - name: Install pytest
+      - name: rbc conda config
+        shell: bash -l {0}
+        run: mamba run -n rbc conda config --show  
+
+      - name: rbc conda list
         shell: bash -l {0}
         run: |
-          pip install pytest
+          mamba run -n rbc conda list
 
-      - name: conda config
-        shell: bash -l {0}
-        run: conda config --show  
-
-      - name: conda list
+      - name: Develop rbc
         shell: bash -l {0}
         run: |
-          conda list
+          mamba run -n rbc python setup.py develop
 
-      - name: Install rbc
+      - name: Run rbc tests
         shell: bash -l {0}
         run: |
-          python setup.py develop
-
-      - name: test rbc
-        shell: bash -l {0}
-        run: |
-          pytest -v -r A rbc/ -x
-      
+          mamba run -n rbc pytest -sv -r A rbc/ -x
