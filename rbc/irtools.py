@@ -151,34 +151,6 @@ class JITRemoteCPUContext(cpu.CPUContext):
 
 
 # ---------------------------------------------------------------------------
-# GPU Context classes
-
-
-class JITRemoteGPUTargetContext(cpu.CPUContext):
-
-    @compiler_lock.global_compiler_lock
-    def init(self):
-        target_info = TargetInfo()
-        self.address_size = target_info.bits
-        self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
-
-    def load_additional_registries(self):
-        super().load_additional_registries()
-
-
-class JITRemoteGPUTypingContext(typing.Context):
-
-    def load_additional_registries(self):
-        if get_version('numba') >= (0, 52):
-            from numba.core.typing import npydecl
-            from numba.cuda import cudamath, libdevicedecl
-            self.install_registry(npydecl.registry)
-            self.install_registry(cudamath.registry)
-            self.install_registry(libdevicedecl.registry)
-        super().load_additional_registries()
-
-# ---------------------------------------------------------------------------
 # Code generation methods
 
 
@@ -376,14 +348,8 @@ def compile_to_LLVM(functions_and_signatures,
         target_context = target_desc.target_context
     else:
         # OmnisciDB target
-        if target_info.is_cpu:
-            typing_context = typing.Context()
-            target_context = JITRemoteCPUContext(typing_context)
-        elif target_info.is_gpu:
-            typing_context = JITRemoteGPUTypingContext()
-            target_context = JITRemoteGPUTargetContext(typing_context)
-        else:
-            raise ValueError(f'Unknown target {target_info.name}')
+        typing_context = typing.Context()
+        target_context = JITRemoteCPUContext(typing_context)
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns

@@ -66,42 +66,44 @@ _devices = ("CPU", "GPU")
 _prefixes = ("", "__nv_")
 _types = ("float32", "float64")
 
-# for fname64, fname32, key in unarys:
-#     name = getattr(key, "__name__", str(key))
-#     fnames = (fname32, fname64)
-#     _impl(fnames, _types, _devices, _prefixes, name, arity=1)
+for fname64, fname32, key in unarys:
+    name = getattr(key, "__name__", str(key))
+    fnames = (fname32, fname64)
+    _impl(fnames, _types, _devices, _prefixes, name, arity=1)
 
 
-# for fname64, fname32, key in binarys:
-#     name = getattr(key, "__name__", str(key))
-#     fnames = (fname32, fname64)
-#     _impl(fnames, _types, _devices, _prefixes, name, arity=2)
+for fname64, fname32, key in binarys:
+    name = getattr(key, "__name__", str(key))
+    fnames = (fname32, fname64)
+    _impl(fnames, _types, _devices, _prefixes, name, arity=2)
 
 
-# # manual mapping
-# ldexp = external('double ldexp(double, int32)|CPU',
-#                  'float ldexpf(float, int32)|CPU',
-#                  'double __nv_ldexp(double, int32)|GPU',
-#                  'float __nv_ldexpf(float, int32)|GPU',
-#                  name='ldexp')
+# manual mapping
+ldexp = external(
+    "double ldexp(double, int32)|CPU",
+    "float ldexpf(float, int32)|CPU",
+    "double __nv_ldexp(double, int32)|GPU",
+    "float __nv_ldexpf(float, int32)|GPU",
+    name="ldexp",
+)
 
 
-# isinf = math.isinf
-# isnan = math.isnan
-# isfinite = math.isfinite
+isinf = math.isinf
+isnan = math.isnan
+isfinite = math.isfinite
 
 
-# pi = math.pi
-# e = math.e
-# tau = math.tau
-# inf = math.inf
-# nan = math.nan
+pi = math.pi
+e = math.e
+tau = math.tau
+inf = math.inf
+nan = math.nan
 
 
-# # CPU only
-# gcd = math.gcd
-# degrees = math.degrees
-# radians = math.radians
+# CPU only
+gcd = math.gcd
+degrees = math.degrees
+radians = math.radians
 
 # Missing:
 # 'comb'
