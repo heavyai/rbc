@@ -68,13 +68,26 @@ class External:
                 a.append(t.tostring())
         return ", ".join(a)
 
-    def match_signature(self, args):
+    def match_signature(self, atypes):
+        # Code here is the same found in remotejit.py::Signature::best_match
         device = "CPU" if TargetInfo().is_cpu else "GPU"
-        ts = self._signatures[device]
-        for t in ts:
-            if t.tonumba().args == args:
-                return t
-        raise ValueError(f"No match for signature {args}")
+        available_types = self._signatures[device]
+        ftype = None
+        match_penalty = None
+        atypes = tuple(map(Type.fromobject, atypes))
+        for typ in available_types:
+            penalty = typ.match(atypes)
+            if penalty is not None:
+                if ftype is None or penalty < match_penalty:
+                    ftype = typ
+                    match_penalty = penalty
+        if ftype is None:
+            satypes = ', '.join(map(str, atypes))
+            available = '; '.join(map(str, available_types))
+            raise TypeError(
+                f'found no matching function type to given argument types'
+                f' `{satypes}`. Available function types: {available}')
+        return ftype
 
     def get_codegen(self):
         # lowering
