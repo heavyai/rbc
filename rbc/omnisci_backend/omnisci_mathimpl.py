@@ -10,7 +10,7 @@ booleans += [("isinfd", "isinff", math.isinf)]
 booleans += [("isfinited", "finitef", math.isfinite)]
 
 unarys = []
-unarys += [("ceil", "ceilf", math.ceil)]
+# unarys += [("ceil", "ceilf", math.ceil)]
 unarys += [("floor", "floorf", math.floor)]
 unarys += [("fabs", "fabsf", math.fabs)]
 unarys += [("exp", "expf", math.exp)]

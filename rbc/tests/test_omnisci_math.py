@@ -133,7 +133,7 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
     if omnisci.version < (5, 5) and omnisci.has_cuda and \
         fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
                     'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
-                    'trunc', 'dist', 'fmod']:
+                    'trunc', 'dist', 'fmod', 'ceil']:
         pytest.skip(f'CUDA target does not support {fn_name} function [rbc issue 156]')
 
     if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['floor']:
