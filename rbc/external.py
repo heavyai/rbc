@@ -61,6 +61,13 @@ class External:
         # the actual function name we get from the signature
         self.register()
 
+    def __str__(self):
+        a = []
+        for device in self._signatures:
+            for t in self._signatures[device]:
+                a.append(t.tostring())
+        return ", ".join(a)
+
     def match_signature(self, args):
         device = "CPU" if TargetInfo().is_cpu else "GPU"
         ts = self._signatures[device]
@@ -68,6 +75,20 @@ class External:
             if t.tonumba().args == args:
                 return t
         raise ValueError(f"No match for signature {args}")
+
+    def get_codegen(self):
+        # lowering
+        def codegen(context, builder, sig, args):
+            # Need to retrieve the function name again
+            t = self.match_signature(sig.args)
+            fn_name = t.name
+            fndesc = funcdesc.ExternalFunctionDescriptor(
+                fn_name, sig.return_type, sig.args
+            )
+            func = context.declare_external_function(builder.module, fndesc)
+            return builder.call(func, args)
+
+        return codegen
 
     def register(self):
         # typing
@@ -79,17 +100,7 @@ class External:
                 # get the correct signature and function name for the current device
                 t = self.obj.match_signature(args)
 
-                # lowering
-                def codegen(context, builder, sig, args):
-                    # Need to retrieve the function name again
-                    t = self.obj.match_signature(sig.args)
-                    fn_name = t.name
-                    fndesc = funcdesc.ExternalFunctionDescriptor(
-                        fn_name, sig.return_type, sig.args
-                    )
-                    func = context.declare_external_function(builder.module, fndesc)
-                    return builder.call(func, args)
-
+                codegen = self.obj.get_codegen()
                 extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
                 return t.tonumba()
 

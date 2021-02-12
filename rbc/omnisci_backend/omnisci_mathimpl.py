@@ -1,22 +1,7 @@
 import math
 from rbc.external import external
-
-
-def _register(arguments, name):
-    fn = external(*arguments, name=name)
-    fn.__name__ = name
-    globals()[name] = fn
-    return fn
-
-
-def _impl(fnames, types, devices, prefixes, name, arity=1):
-    arguments = []
-    for fname, typ in zip(fnames, types):
-        retty = typ
-        argtypes = (typ,) * arity
-        for device, prefix in zip(devices, prefixes):
-            arguments.append(f"{retty} {prefix}{fname}({', '.join(argtypes)})|{device}")
-    return _register(arguments, name)
+from numba import extending
+from numba.types import float32, float64, int64, int32
 
 
 booleans = []
@@ -62,48 +47,58 @@ binarys += [("hypot", "hypotf", math.hypot)]
 binarys += [("remainder", "remainderf", math.remainder)]
 
 
-_devices = ("CPU", "GPU")
-_prefixes = ("", "__nv_")
-_types = ("float32", "float64")
+def gen_external(
+    fname, retty, argtypes, devices=("CPU", "GPU"), prefixes=("", "__nv_")
+):
+    arguments = []
+    for device, prefix in zip(devices, prefixes):
+        arguments.append(
+            f"{retty} {prefix}{fname}({', '.join(map(str, argtypes))})|{device}"
+        )
+    return external(*arguments)
+
+
+def impl_unary(fname, key, typ):
+    e = gen_external(fname, typ, (typ,))
+    extending.lower_builtin(key, typ)(e.get_codegen())
+
+
+def impl_binary(fname, key, typ):
+    e = gen_external(fname, typ, (typ, typ))
+    extending.lower_builtin(key, typ, typ)(e.get_codegen())
+
 
 for fname64, fname32, key in unarys:
-    name = getattr(key, "__name__", str(key))
-    fnames = (fname32, fname64)
-    _impl(fnames, _types, _devices, _prefixes, name, arity=1)
+    impl_unary(fname64, key, float64)
+    impl_unary(fname32, key, float32)
+    impl_unary(fname64, key, int64)
 
 
 for fname64, fname32, key in binarys:
-    name = getattr(key, "__name__", str(key))
-    fnames = (fname32, fname64)
-    _impl(fnames, _types, _devices, _prefixes, name, arity=2)
+    impl_binary(fname64, key, float64)
+    impl_binary(fname32, key, float32)
 
 
 # manual mapping
-ldexp = external(
-    "double ldexp(double, int32)|CPU",
-    "float ldexpf(float, int32)|CPU",
-    "double __nv_ldexp(double, int32)|GPU",
-    "float __nv_ldexpf(float, int32)|GPU",
-    name="ldexp",
-)
+def impl_ldexp():
+    ldexp = external(
+        "double ldexp(double, int32)|CPU", "double __nv_ldexp(double, int32)|GPU"
+    )
+
+    ldexpf = external(
+        "float ldexpf(float, int32)|CPU", "float __nv_ldexpf(float, int32)|GPU"
+    )
+
+    extending.lower_builtin(math.ldexp, float64, int32)(ldexp.get_codegen())
+    extending.lower_builtin(math.ldexp, float32, int32)(ldexpf.get_codegen())
 
 
-isinf = math.isinf
-isnan = math.isnan
-isfinite = math.isfinite
+impl_ldexp()
 
-
-pi = math.pi
-e = math.e
-tau = math.tau
-inf = math.inf
-nan = math.nan
-
-
-# CPU only
-gcd = math.gcd
-degrees = math.degrees
-radians = math.radians
+# CPU only:
+# math.gcd
+# math.degrees
+# math.radians
 
 # Missing:
 # 'comb'
@@ -117,4 +112,3 @@ radians = math.radians
 # 'modf'
 # 'perm'
 # 'prod'
-# 'remainder'
