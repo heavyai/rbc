@@ -70,7 +70,7 @@ def get_called_functions(library, funcname=None):
 
 
 # ---------------------------------------------------------------------------
-# CPU Context classes
+
 class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
     """JITRemoteCodeLibrary was introduce to prevent numba from calling functions
     that checks if the module is final. See xnd-project/rbc issue #87.
@@ -91,7 +91,7 @@ class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
         self._codegen._scan_and_fix_unresolved_refs(self._final_module)
 
 
-class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
+class JITRemoteCodegen(codegen.JITCPUCodegen):
     _library_class = JITRemoteCodeLibrary
 
     def _get_host_cpu_name(self):
@@ -134,14 +134,28 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
         return None
 
 
-class JITRemoteCPUContext(cpu.CPUContext):
+class JITRemoteTypingContext(typing.Context):
+    def load_additional_registries(self):
+        from rbc.omnisci_backend import omnisci_mathtyping as mathtyping
+
+        self.install_registry(mathtyping.registry)
+        super().load_additional_registries()
+
+
+class JITRemoteTargetContext(cpu.CPUContext):
 
     @compiler_lock.global_compiler_lock
     def init(self):
         target_info = TargetInfo()
         self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
+        self._internal_codegen = JITRemoteCodegen("numba.exec")
+
+    def load_additional_registries(self):
+        from rbc.omnisci_backend import omnisci_mathimpl as mathimpl
+
+        self.install_registry(mathimpl.registry)
+        super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):
         return None
@@ -158,7 +172,7 @@ class JITRemoteCPUContext(cpu.CPUContext):
 def replace_numba_internals_hack():
     # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
     _internal_codegen_bkp = registry.cpu_target.target_context._internal_codegen
-    registry.cpu_target.target_context._internal_codegen = JITRemoteCPUCodegen("numba.exec")
+    registry.cpu_target.target_context._internal_codegen = JITRemoteCodegen("numba.exec")
     yield
     registry.cpu_target.target_context._internal_codegen = _internal_codegen_bkp
 
@@ -348,8 +362,8 @@ def compile_to_LLVM(functions_and_signatures,
         target_context = target_desc.target_context
     else:
         # OmnisciDB target
-        typing_context = typing.Context()
-        target_context = JITRemoteCPUContext(typing_context)
+        typing_context = JITRemoteTypingContext()
+        target_context = JITRemoteTargetContext(typing_context)
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns

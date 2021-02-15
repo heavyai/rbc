@@ -85,7 +85,7 @@ cmath = (
 
 def define(omnisci):
     def inner(fname, signature):
-        cmath_fn = external(signature, name=fname)
+        cmath_fn = external(signature)
         t = Type.fromstring(signature)
         retty = str(t[0])
         argtypes = tuple(map(str, t[1]))
@@ -213,7 +213,7 @@ def test_valid_signatures(omnisci):
 
 def test_invalid_signature(omnisci):
     with pytest.raises(ValueError) as excinfo:
-        external(types.int64, name="test")
+        external(types.int64)
 
     assert "signature must represent a function type" in str(excinfo)
 
@@ -225,15 +225,15 @@ def test_unnamed_external(omnisci):
     assert "external function name not specified for signature" in str(excinfo)
 
     with pytest.raises(ValueError) as excinfo:
-        external("f64(f64)", name="log2")
+        external("f64(f64)")
 
     assert "external function name not specified for signature" in str(excinfo)
 
 
 def test_replace_declaration(omnisci):
 
-    _ = external("f64 fma(f64)", name="fma")
-    fma = external("f64 fma(f64, f64, f64)", name="fma")
+    _ = external("f64 fma(f64)")
+    fma = external("f64 fma(f64, f64, f64)")
 
     @omnisci("double(double, double, double)")
     def test_fma(a, b, c):
@@ -246,7 +246,7 @@ def test_replace_declaration(omnisci):
 
 def test_require_target_info(omnisci):
 
-    log2 = external("double log2(double)", name="log2")
+    log2 = external("double log2(double)")
 
     @omnisci("double(double)")
     def test_log2(a):

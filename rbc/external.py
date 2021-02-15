@@ -8,7 +8,7 @@ from rbc.targetinfo import TargetInfo
 
 class External:
     @classmethod
-    def fromobject(cls, *args, name: str = None):
+    def fromobject(cls, *args, typing=True, lowering=True):
         """
         Parameters
         ----------
@@ -20,6 +20,7 @@ class External:
         # Make inner function for the actual work
         target_info = TargetInfo.dummy()
         ts = defaultdict(list)
+        name = None
         with target_info:
             for signature in args:
                 t = Type.fromobject(signature)
@@ -45,9 +46,15 @@ class External:
                     ts["CPU"].append(t)
                     ts["GPU"].append(t)
 
-        return cls(name, ts)
+        return cls(name, ts, typing=typing, lowering=lowering)
 
-    def __init__(self, name: str, signatures: Dict[str, List[types.FunctionType]]):
+    def __init__(
+        self,
+        name: str,
+        signatures: Dict[str, List[types.FunctionType]],
+        typing=True,
+        lowering=True,
+    ):
         """
         Parameters
         ----------
@@ -59,7 +66,10 @@ class External:
         self._signatures = signatures
         self.name = name  # this name refers to the one used as a key to the template
         # the actual function name we get from the signature
-        self.register()
+        self.typing = typing
+        self.lowering = lowering
+        if self.typing:
+            self.register()
 
     def __str__(self):
         a = []
@@ -82,11 +92,12 @@ class External:
                     ftype = typ
                     match_penalty = penalty
         if ftype is None:
-            satypes = ', '.join(map(str, atypes))
-            available = '; '.join(map(str, available_types))
+            satypes = ", ".join(map(str, atypes))
+            available = "; ".join(map(str, available_types))
             raise TypeError(
-                f'found no matching function type to given argument types'
-                f' `{satypes}`. Available function types: {available}')
+                f"found no matching function type to given argument types"
+                f" `{satypes}`. Available function types: {available}"
+            )
         return ftype
 
     def get_codegen(self):
@@ -113,8 +124,9 @@ class External:
                 # get the correct signature and function name for the current device
                 t = self.obj.match_signature(args)
 
-                codegen = self.obj.get_codegen()
-                extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
+                if self.obj.lowering:
+                    codegen = self.obj.get_codegen()
+                    extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
                 return t.tonumba()
 
         typing.templates.infer(ExternalTemplate)

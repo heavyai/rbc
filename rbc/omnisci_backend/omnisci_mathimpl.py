@@ -1,7 +1,10 @@
 import math
 from rbc.external import external
-from numba import extending
-from numba.types import float32, float64, int64, int32
+from numba.core import imputils, utils
+from numba.types import float32, float64, int32
+
+registry = imputils.Registry()
+lower = registry.lower
 
 
 booleans = []
@@ -44,7 +47,8 @@ binarys += [("atan2", "atan2f", math.atan2)]
 binarys += [("pow", "powf", math.pow)]
 binarys += [("fmod", "fmodf", math.fmod)]
 binarys += [("hypot", "hypotf", math.hypot)]
-binarys += [("remainder", "remainderf", math.remainder)]
+if utils.PYVERSION >= (3, 7):
+    binarys += [("remainder", "remainderf", math.remainder)]
 
 
 def gen_external(
@@ -55,23 +59,22 @@ def gen_external(
         arguments.append(
             f"{retty} {prefix}{fname}({', '.join(map(str, argtypes))})|{device}"
         )
-    return external(*arguments)
+    return external(*arguments, typing=False, lowering=False)
 
 
 def impl_unary(fname, key, typ):
     e = gen_external(fname, typ, (typ,))
-    extending.lower_builtin(key, typ)(e.get_codegen())
+    lower(key, typ)(e.get_codegen())
 
 
 def impl_binary(fname, key, typ):
     e = gen_external(fname, typ, (typ, typ))
-    extending.lower_builtin(key, typ, typ)(e.get_codegen())
+    lower(key, typ, typ)(e.get_codegen())
 
 
 for fname64, fname32, key in unarys:
     impl_unary(fname64, key, float64)
     impl_unary(fname32, key, float32)
-    impl_unary(fname64, key, int64)
 
 
 for fname64, fname32, key in binarys:
@@ -82,15 +85,19 @@ for fname64, fname32, key in binarys:
 # manual mapping
 def impl_ldexp():
     ldexp = external(
-        "double ldexp(double, int32)|CPU", "double __nv_ldexp(double, int32)|GPU"
+        "double ldexp(double, int32)|CPU",
+        "double __nv_ldexp(double, int32)|GPU",
+        typing=False, lowering=False,
     )
 
     ldexpf = external(
-        "float ldexpf(float, int32)|CPU", "float __nv_ldexpf(float, int32)|GPU"
+        "float ldexpf(float, int32)|CPU",
+        "float __nv_ldexpf(float, int32)|GPU",
+        typing=False, lowering=False,
     )
 
-    extending.lower_builtin(math.ldexp, float64, int32)(ldexp.get_codegen())
-    extending.lower_builtin(math.ldexp, float32, int32)(ldexpf.get_codegen())
+    lower(math.ldexp, float64, int32)(ldexp.get_codegen())
+    lower(math.ldexp, float32, int32)(ldexpf.get_codegen())
 
 
 impl_ldexp()
