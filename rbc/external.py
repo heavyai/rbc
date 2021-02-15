@@ -16,6 +16,11 @@ class External:
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
         name : str
             The name of the external function
+        typing : bool
+            Indicates if External should do typing or not. Default is True
+        lowering: bool
+            Indicates if External should do lowering or not. Default is True. Except for
+            very specific cases, typing and lowering should be True
         """
         # Make inner function for the actual work
         target_info = TargetInfo.dummy()
