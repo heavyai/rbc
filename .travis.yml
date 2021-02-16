@@ -7,10 +7,7 @@ services: docker
 
 jobs:
   include:
-    - name: Conda omniscidb
-      env: OMNISCIDB_FROM="conda"
     - name: Docker omniscidb
-      env: OMNISCIDB_FROM="docker"
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install -y git wget ; fi
@@ -18,10 +15,7 @@ before_install:
 install:
   - export MINICONDA=$HOME/miniconda
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then wget https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe ; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then sleep 10 ; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then bash ./miniconda.sh -b -p $MINICONDA ; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then ./Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /RegisterPython=0 /D=$MINICONDA ; fi
   - hash -r
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then source $MINICONDA/etc/profile.d/conda.sh ;fi
   - conda config --set always_yes yes --set changeps1 no
@@ -34,23 +28,16 @@ install:
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
-  - pip install flake8
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then mamba create --quiet --name omnisci-ci omniscidb ; fi
-  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker pull omnisci/core-os-cpu ; fi
+  - docker pull omnisci/core-os-cpu
 
 before_script:
   - python setup.py develop
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then source start_omniscidb_bg.sh ; fi
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then sleep 10 ; fi
-  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker run -d --name omnisci -p 6274:6274 -v $(pwd)/.omnisci/:/omnisci-storage omnisci/core-os-cpu ; fi
-  - if [ "$OMNISCIDB_FROM" = "docker" ]; then sleep 30; fi
+  - docker run -d --name omnisci -p 6274:6274 -v $(pwd)/.omnisci/:/omnisci-storage omnisci/core-os-cpu
+  - sleep 30
   - conda activate rbc-ci
 
 script:
-  - flake8 .
   - pytest -vs -r A rbc/ -x
 
 after_script:
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then pkill -f omnisci_server ; fi
-  - if [ "$OMNISCIDB_FROM" = "conda" ]; then cat omniscidb-output.txt ; fi
-  - if [ "$OMNISCIDB_FROM" = "docker" ]; then docker logs omnisci ; fi
+  - docker logs omnisci
