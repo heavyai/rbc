@@ -52,11 +52,10 @@ jobs:
         shell: bash -l {0}
         run: |
           # force docker-compose installation
-          conda install -y docker-compose
+          mamba create -n docker docker-compose -c conda-forge
           # run docker services
           docker-compose build
           docker-compose up -d
-          sleep 5
 
       - name: rbc conda config
         shell: bash -l {0}
