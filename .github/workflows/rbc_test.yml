@@ -35,20 +35,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8]
         omniscidb-version: [5.2.2, 5.4.1, 5.5.0]
+        omniscidb-from: [conda]
         include:
-          - os: windows-latest
-            python-version: 3.6
-            omniscidb-version: None
           - os: windows-latest
             python-version: 3.7
             omniscidb-version: None
           - os: windows-latest
             python-version: 3.8
-            omniscidb-version: None
-          - os: macos-latest
-            python-version: 3.6
             omniscidb-version: None
           - os: macos-latest
             python-version: 3.7
@@ -59,10 +54,10 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.8
             omniscidb-version: None
-            docker: True
+            omniscidb-from: docker
 
           
-    needs: lint
+    # needs: lint
     
     steps:
       - name: Checkout code
@@ -83,14 +78,14 @@ jobs:
       # omniscidb must be run in an environment that is independent of rbc environment
       - name: Install omniscidb
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
       
       # omniscidb docker
       - name: Build the docker image
         shell: bash -l {0}
-        if: matrix.docker == 'True'
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
         run: |
           # force docker-compose installation
           mamba create -n docker docker-compose -c conda-forge
@@ -100,13 +95,13 @@ jobs:
 
       - name: omniscidb-env conda list
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest' && matrix.docker != 'True'
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           mamba run -n omniscidb-env conda list
 
       - name: Start Omniscidb
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest' && matrix.docker != 'True'
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           mkdir data
           mamba run -n omniscidb-env omnisci_initdb data -f
