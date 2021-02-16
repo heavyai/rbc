@@ -11,7 +11,24 @@ on:
       - master
 
 jobs:
-  lint:
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v2
+
+  #     - name: Install flake8
+  #       run: |
+  #         pip install flake8
+      
+  #     - name: Lint:flake8
+  #       run: |
+  #         flake8 .
+  
+  container:
     runs-on: ubuntu-latest
     container: 
       image: omnisci/core-os-cpu
@@ -19,20 +36,42 @@ jobs:
         - 6274
       volumes:
         - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-
-      - name: Install flake8
-        run: |
-          pip install flake8
       
-      - name: Lint:flake8
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+        
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.8
+          mamba-version: "*"
+          channels: conda-forge
+          environment-file: .conda/environment.yml
+
+      - name: rbc conda config
+        shell: bash -l {0}
+        run: mamba run -n rbc conda config --show  
+
+      - name: rbc conda list
+        shell: bash -l {0}
         run: |
-          flake8 .
+          mamba run -n rbc conda list
+
+      - name: Develop rbc
+        shell: bash -l {0}
+        run: |
+          mamba run -n rbc python setup.py develop
+
+      - name: Run rbc tests
+        shell: bash -l {0}
+        run: |
+          mamba run -n rbc pytest -sv -r A rbc/ -x
+
 
   # build:
   #   name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}
