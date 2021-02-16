@@ -5,6 +5,9 @@ services:
     image: omnisci/core-os-cpu:v5.5.0
     hostname: omniscidb
     ports:
+      - 16273:6273
       - 16274:6274
+      - 16278:6278
+      - 16279:62794
     volumes:
       - ./.omnisci/omnisci.conf:/omnisci-storage/omnisci.conf
