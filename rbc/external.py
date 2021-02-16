@@ -1,5 +1,5 @@
 # This code has heavily inspired in the numba.extending.intrisic code
-from typing import Dict, List
+from typing import Dict, List, Union
 from collections import defaultdict
 from numba.core import extending, funcdesc, types, typing
 from rbc.typesystem import Type
@@ -51,7 +51,7 @@ class External:
     def __init__(
         self,
         key: str,
-        signatures: Dict[str, List[str, types.FunctionType, Type]],
+        signatures: Dict[str, List[Union[str, types.FunctionType, Type]]],
         typing=True,
         lowering=True,
     ):
