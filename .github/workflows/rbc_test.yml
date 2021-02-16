@@ -56,6 +56,7 @@ jobs:
           # run docker services
           mamba run -n docker docker-compose build
           mamba run -n docker docker-compose up -d
+          sleep 15
 
       - name: rbc conda config
         shell: bash -l {0}
