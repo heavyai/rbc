@@ -53,11 +53,11 @@ jobs:
             omniscidb-version: None
           - os: ubuntu-latest
             python-version: 3.8
-            omniscidb-version: None
+            omniscidb-version: 5.5.0
             omniscidb-from: docker
 
           
-    # needs: lint
+    needs: lint
     
     steps:
       - name: Checkout code
@@ -76,14 +76,14 @@ jobs:
           environment-file: .conda/environment.yml
 
       # omniscidb must be run in an environment that is independent of rbc environment
-      - name: Install omniscidb
+      - name: Install omniscidb [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
       
       # omniscidb docker
-      - name: Build the docker image
+      - name: Build the docker image [docker]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
         run: |
@@ -92,14 +92,15 @@ jobs:
           # run docker services
           mamba run -n docker docker-compose build
           mamba run -n docker docker-compose up -d
+          sleep 20
 
-      - name: omniscidb-env conda list
+      - name: omniscidb-env conda list [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           mamba run -n omniscidb-env conda list
 
-      - name: Start Omniscidb
+      - name: Start Omniscidb [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
