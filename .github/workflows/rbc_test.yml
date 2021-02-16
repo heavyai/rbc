@@ -106,7 +106,7 @@ jobs:
 
       - name: Start Omniscidb
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.docker != 'False'
         run: |
           mkdir data
           mamba run -n omniscidb-env omnisci_initdb data -f
