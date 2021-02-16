@@ -41,20 +41,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8]
         omniscidb-version: [5.2.2, 5.4.1, 5.5.0]
         include:
-          - os: windows-latest
-            python-version: 3.6
-            omniscidb-version: None
           - os: windows-latest
             python-version: 3.7
             omniscidb-version: None
           - os: windows-latest
             python-version: 3.8
-            omniscidb-version: None
-          - os: macos-latest
-            python-version: 3.6
             omniscidb-version: None
           - os: macos-latest
             python-version: 3.7

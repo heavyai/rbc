@@ -14,8 +14,6 @@ class External:
         ----------
         signature : object (str, ctypes function, python callable, numba function)
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
-        name : str
-            The name of the external function
         typing : bool
             Indicates if External should do typing or not. Default is True
         lowering: bool
@@ -25,7 +23,7 @@ class External:
         # Make inner function for the actual work
         target_info = TargetInfo.dummy()
         ts = defaultdict(list)
-        name = None
+        key = None
         with target_info:
             for signature in args:
                 t = Type.fromobject(signature)
@@ -37,40 +35,42 @@ class External:
                         f"external function name not specified for signature {signature}"
                     )
 
-                if name is None:
-                    name = t.name
-                if not name:
+                if key is None:
+                    key = t.name
+                if not key:
                     raise ValueError(
                         f"external function name not specified for signature {signature}"
                     )
 
-                if t.annotation():
-                    device = "CPU" if "CPU" in t.annotation() else "GPU"
-                    ts[device].append(t)
-                else:
-                    ts["CPU"].append(t)
-                    ts["GPU"].append(t)
+                for device in [
+                    a for a in t.annotation() or [] if a in ["CPU", "GPU"]
+                ] or ["CPU", "GPU"]:
+                    ts[device].append(signature)
 
-        return cls(name, ts, typing=typing, lowering=lowering)
+        return cls(key, ts, typing=typing, lowering=lowering)
 
     def __init__(
         self,
-        name: str,
-        signatures: Dict[str, List[types.FunctionType]],
+        key: str,
+        signatures: Dict[str, List[str]],
         typing=True,
         lowering=True,
     ):
         """
         Parameters
         ----------
-        name : str
-            The name of the external function
-        signature : Numba function signature
-            A numba function type signature. i.e. (float64, float64) -> int64
+        key : str
+            The key of the external function for typing
+        signatures : List of function signatures
+            A list of function type signature. i.e. 'int64 fn(int64, float64)'
+        typing : bool
+            Indicates if External should do typing or not. Default is True
+        lowering: bool
+            Indicates if External should do lowering or not. Default is True. Except for
+            very specific cases, typing and lowering should be True
         """
         self._signatures = signatures
-        self.name = name  # this name refers to the one used as a key to the template
-        # the actual function name we get from the signature
+        self.key = key
         self.typing = typing
         self.lowering = lowering
         if self.typing:
@@ -80,16 +80,15 @@ class External:
         a = []
         for device in self._signatures:
             for t in self._signatures[device]:
-                a.append(t.tostring())
+                a.append(str(t))
         return ", ".join(a)
 
     def match_signature(self, atypes):
         # Code here is the same found in remotejit.py::Signature::best_match
         device = "CPU" if TargetInfo().is_cpu else "GPU"
-        available_types = self._signatures[device]
+        available_types = tuple(map(Type.fromobject, self._signatures[device]))
         ftype = None
         match_penalty = None
-        atypes = tuple(map(Type.fromobject, atypes))
         for typ in available_types:
             penalty = typ.match(atypes)
             if penalty is not None:
@@ -109,7 +108,8 @@ class External:
         # lowering
         def codegen(context, builder, sig, args):
             # Need to retrieve the function name again
-            t = self.match_signature(sig.args)
+            atypes = tuple(map(Type.fromobject, sig.args))
+            t = self.match_signature(atypes)
             fn_name = t.name
             fndesc = funcdesc.ExternalFunctionDescriptor(
                 fn_name, sig.return_type, sig.args
@@ -123,11 +123,12 @@ class External:
         # typing
         class ExternalTemplate(typing.templates.AbstractTemplate):
             obj = self
-            key = self.name
+            key = self.key
 
             def generic(self, args, kws):
                 # get the correct signature and function name for the current device
-                t = self.obj.match_signature(args)
+                atypes = tuple(map(Type.fromobject, args))
+                t = self.obj.match_signature(atypes)
 
                 if self.obj.lowering:
                     codegen = self.obj.get_codegen()
