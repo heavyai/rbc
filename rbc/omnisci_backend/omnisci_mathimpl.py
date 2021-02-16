@@ -47,8 +47,7 @@ binarys += [("atan2", "atan2f", math.atan2)]
 binarys += [("pow", "powf", math.pow)]
 binarys += [("fmod", "fmodf", math.fmod)]
 binarys += [("hypot", "hypotf", math.hypot)]
-if utils.PYVERSION >= (3, 7):
-    binarys += [("remainder", "remainderf", math.remainder)]
+binarys += [("remainder", "remainderf", math.remainder)]
 
 
 def gen_external(
