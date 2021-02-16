@@ -60,7 +60,6 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     table_name = os.path.splitext(os.path.basename(filename))[0]
 
     config = rbc_omnisci.get_client_config(debug=debug)
-    print(config)
     m = rbc_omnisci.RemoteOmnisci(**config)
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
