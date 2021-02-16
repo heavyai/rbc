@@ -1,6 +1,6 @@
 import math
 from rbc.external import external
-from numba.core import imputils, utils
+from numba.core import imputils
 from numba.types import float32, float64, int32
 
 registry = imputils.Registry()
@@ -13,8 +13,8 @@ booleans += [("isinfd", "isinff", math.isinf)]
 booleans += [("isfinited", "finitef", math.isfinite)]
 
 unarys = []
-# unarys += [("ceil", "ceilf", math.ceil)]
-# unarys += [("floor", "floorf", math.floor)]
+unarys += [("ceil", "ceilf", math.ceil)]
+unarys += [("floor", "floorf", math.floor)]
 unarys += [("fabs", "fabsf", math.fabs)]
 unarys += [("exp", "expf", math.exp)]
 unarys += [("expm1", "expm1f", math.expm1)]
@@ -39,7 +39,7 @@ unarys += [("atan", "atanf", math.atan)]
 unarys += [("atanh", "atanhf", math.atanh)]
 unarys += [("tan", "tanf", math.tan)]
 unarys += [("tanh", "tanhf", math.tanh)]
-# unarys += [("trunc", "truncf", math.trunc)]
+unarys += [("trunc", "truncf", math.trunc)]
 
 binarys = []
 binarys += [("copysign", "copysignf", math.copysign)]
