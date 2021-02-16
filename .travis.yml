@@ -5,6 +5,12 @@ language: bash
 
 services: docker
 
+omniscidb:
+- latest
+- v5.4.1
+- v5.3.2
+- v5.2.2
+
 jobs:
   include:
     - name: Docker omniscidb
@@ -28,7 +34,7 @@ install:
   - export PREFIX=$CONDA_PREFIX
   - conda list
   - pip install thriftpy2
-  - docker pull omnisci/core-os-cpu
+  - docker pull omnisci/core-os-cpu:$omniscidb
 
 before_script:
   - python setup.py develop

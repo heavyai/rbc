@@ -11,43 +11,98 @@ on:
       - master
 
 jobs:
-  # lint:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v2
-
-  #     - name: Install flake8
-  #       run: |
-  #         pip install flake8
-      
-  #     - name: Lint:flake8
-  #       run: |
-  #         flake8 .
-  
-  container:
+  lint:
     runs-on: ubuntu-latest
-    container: 
-      image: omnisci/core-os-cpu
-      ports:
-        - 6274
-      volumes:
-        - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
+    # container: 
+    #   image: omnisci/core-os-cpu
+    #   ports:
+    #     - 6274
+    #   volumes:
+    #     - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+
+      - name: Install flake8
+        run: |
+          pip install flake8
       
+      - name: Lint:flake8
+        run: |
+          flake8 .
+
+  build:
+    name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.6, 3.7, 3.8]
+        omniscidb-version: [5.2.2, 5.4.1, 5.5.0]
+        include:
+          - os: windows-latest
+            python-version: 3.6
+            omniscidb-version: None
+          - os: windows-latest
+            python-version: 3.7
+            omniscidb-version: None
+          - os: windows-latest
+            python-version: 3.8
+            omniscidb-version: None
+          - os: macos-latest
+            python-version: 3.6
+            omniscidb-version: None
+          - os: macos-latest
+            python-version: 3.7
+            omniscidb-version: None
+          - os: macos-latest
+            python-version: 3.8
+            omniscidb-version: None
+          
+    needs: lint
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
       
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+        
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.8
-          miniconda-version: "latest"
           mamba-version: "*"
           channels: conda-forge
           environment-file: .conda/environment.yml
+
+      # omniscidb must be run in an environment that is independent of rbc environment
+      - name: Install omniscidb
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
+
+      - name: omniscidb-env conda list
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mamba run -n omniscidb-env conda list
+
+      - name: Start Omniscidb
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir data
+          mamba run -n omniscidb-env omnisci_initdb data -f
+          mamba run -n omniscidb-env omnisci_server --version
+          mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+          sleep 10
 
       - name: rbc conda config
         shell: bash -l {0}
@@ -67,93 +122,3 @@ jobs:
         shell: bash -l {0}
         run: |
           mamba run -n rbc pytest -sv -r A rbc/ -x
-
-
-  # build:
-  #   name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-latest]
-  #       python-version: [3.6, 3.7, 3.8]
-  #       omniscidb-version: [5.2.2, 5.4.1, 5.5.0]
-  #       include:
-  #         - os: windows-latest
-  #           python-version: 3.6
-  #           omniscidb-version: None
-  #         - os: windows-latest
-  #           python-version: 3.7
-  #           omniscidb-version: None
-  #         - os: windows-latest
-  #           python-version: 3.8
-  #           omniscidb-version: None
-  #         - os: macos-latest
-  #           python-version: 3.6
-  #           omniscidb-version: None
-  #         - os: macos-latest
-  #           python-version: 3.7
-  #           omniscidb-version: None
-  #         - os: macos-latest
-  #           python-version: 3.8
-  #           omniscidb-version: None
-          
-  #   needs: lint
-    
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-      
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-        
-  #     - uses: conda-incubator/setup-miniconda@v2
-  #       with:
-  #         python-version: 3.8
-  #         mamba-version: "*"
-  #         channels: conda-forge
-  #         environment-file: .conda/environment.yml
-
-  #     # omniscidb must be run in an environment that is independent of rbc environment
-  #     - name: Install omniscidb
-  #       shell: bash -l {0}
-  #       if: matrix.os == 'ubuntu-latest'
-  #       run: |
-  #         mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
-
-  #     - name: omniscidb-env conda list
-  #       shell: bash -l {0}
-  #       if: matrix.os == 'ubuntu-latest'
-  #       run: |
-  #         mamba run -n omniscidb-env conda list
-
-  #     - name: Start Omniscidb
-  #       shell: bash -l {0}
-  #       if: matrix.os == 'ubuntu-latest'
-  #       run: |
-  #         mkdir data
-  #         mamba run -n omniscidb-env omnisci_initdb data -f
-  #         mamba run -n omniscidb-env omnisci_server --version
-  #         mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
-  #         sleep 10
-
-  #     - name: rbc conda config
-  #       shell: bash -l {0}
-  #       run: mamba run -n rbc conda config --show  
-
-  #     - name: rbc conda list
-  #       shell: bash -l {0}
-  #       run: |
-  #         mamba run -n rbc conda list
-
-  #     - name: Develop rbc
-  #       shell: bash -l {0}
-  #       run: |
-  #         mamba run -n rbc python setup.py develop
-
-  #     - name: Run rbc tests
-  #       shell: bash -l {0}
-  #       run: |
-  #         mamba run -n rbc pytest -sv -r A rbc/ -x
