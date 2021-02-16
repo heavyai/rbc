@@ -54,8 +54,8 @@ jobs:
           # force docker-compose installation
           mamba create -n docker docker-compose -c conda-forge
           # run docker services
-          docker-compose build
-          docker-compose up -d
+          mamba run -n docker docker-compose build
+          mamba run -n docker docker-compose up -d
 
       - name: rbc conda config
         shell: bash -l {0}
