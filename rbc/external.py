@@ -51,7 +51,7 @@ class External:
     def __init__(
         self,
         key: str,
-        signatures: Dict[str, List[str]],
+        signatures: Dict[str, List[str, types.FunctionType, Type]],
         typing=True,
         lowering=True,
     ):
