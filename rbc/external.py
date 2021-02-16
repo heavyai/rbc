@@ -21,31 +21,29 @@ class External:
             very specific cases, typing and lowering should be True
         """
         # Make inner function for the actual work
-        target_info = TargetInfo.dummy()
         ts = defaultdict(list)
         key = None
-        with target_info:
-            for signature in args:
-                t = Type.fromobject(signature)
-                if not t.is_function:
-                    raise ValueError("signature must represent a function type")
+        for signature in args:
+            t = Type.fromobject(signature)
+            if not t.is_function:
+                raise ValueError("signature must represent a function type")
 
-                if not t.name:
-                    raise ValueError(
-                        f"external function name not specified for signature {signature}"
-                    )
+            if not t.name:
+                raise ValueError(
+                    f"external function name not specified for signature {signature}"
+                )
 
-                if key is None:
-                    key = t.name
-                if not key:
-                    raise ValueError(
-                        f"external function name not specified for signature {signature}"
-                    )
+            if key is None:
+                key = t.name
+            if not key:
+                raise ValueError(
+                    f"external function name not specified for signature {signature}"
+                )
 
-                for device in [
-                    a for a in t.annotation() or [] if a in ["CPU", "GPU"]
-                ] or ["CPU", "GPU"]:
-                    ts[device].append(signature)
+            for device in [
+                a for a in t.annotation() or [] if a in ["CPU", "GPU"]
+            ] or ["CPU", "GPU"]:
+                ts[device].append(signature)
 
         return cls(key, ts, typing=typing, lowering=lowering)
 

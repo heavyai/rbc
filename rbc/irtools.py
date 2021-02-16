@@ -136,9 +136,9 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        from rbc.omnisci_backend import omnisci_mathtyping as mathtyping
+        from rbc.externals import math
 
-        self.install_registry(mathtyping.registry)
+        self.install_registry(math.typing_registry)
         super().load_additional_registries()
 
 
@@ -152,9 +152,9 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        from rbc.omnisci_backend import omnisci_mathimpl as mathimpl
+        from rbc.externals import math
 
-        self.install_registry(mathimpl.registry)
+        self.install_registry(math.lowering_registry)
         super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):

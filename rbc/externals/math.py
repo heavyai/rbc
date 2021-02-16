@@ -1,10 +1,49 @@
 import math
 from rbc.external import external
 from numba.core import imputils
-from numba.types import float32, float64, int32
+from numba.core.typing.templates import ConcreteTemplate, signature, Registry
+from numba.types import float32, float64, int32, int64, uint64, intp
 
-registry = imputils.Registry()
-lower = registry.lower
+
+# Typing
+typing_registry = Registry()
+infer_global = typing_registry.register_global
+
+# Adding missing cases in Numba
+@infer_global(math.log2)  # noqa: E302
+class Math_unary(ConcreteTemplate):
+    cases = [
+        signature(float64, int64),
+        signature(float64, uint64),
+        signature(float32, float32),
+        signature(float64, float64),
+    ]
+
+
+@infer_global(math.remainder)
+class Math_remainder(ConcreteTemplate):
+    cases = [
+        signature(float32, float32, float32),
+        signature(float64, float64, float64),
+    ]
+
+
+@infer_global(math.floor)
+@infer_global(math.trunc)
+@infer_global(math.ceil)
+class Math_converter(ConcreteTemplate):
+    cases = [
+        signature(intp, intp),
+        signature(int64, int64),
+        signature(uint64, uint64),
+        signature(float32, float32),
+        signature(float64, float64),
+    ]
+
+
+# Lowering
+lowering_registry = imputils.Registry()
+lower = lowering_registry.lower
 
 
 booleans = []
@@ -86,13 +125,15 @@ def impl_ldexp():
     ldexp = external(
         "double ldexp(double, int32)|CPU",
         "double __nv_ldexp(double, int32)|GPU",
-        typing=False, lowering=False,
+        typing=False,
+        lowering=False,
     )
 
     ldexpf = external(
         "float ldexpf(float, int32)|CPU",
         "float __nv_ldexpf(float, int32)|GPU",
-        typing=False, lowering=False,
+        typing=False,
+        lowering=False,
     )
 
     lower(math.ldexp, float64, int32)(ldexp.get_codegen())
