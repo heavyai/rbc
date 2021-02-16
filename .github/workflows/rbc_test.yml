@@ -30,12 +30,12 @@ jobs:
   
   container:
     runs-on: ubuntu-latest
-    container: 
-      image: omnisci/core-os-cpu
-      ports:
-        - 6274
-      volumes:
-        - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
+    # container: 
+    #   image: omnisci/core-os-cpu
+    #   ports:
+    #     - 6274
+    #   volumes:
+    #     - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
       
     steps:
       - name: Checkout code
