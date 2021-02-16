@@ -27,9 +27,9 @@ jobs:
       - name: Lint:flake8
         run: |
           flake8 .
-  
+
   build:
-    name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}
+    name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}-${{ matrix.omniscidb-from }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -42,15 +42,19 @@ jobs:
           - os: windows-latest
             python-version: 3.7
             omniscidb-version: None
+            omniscidb-from: None
           - os: windows-latest
             python-version: 3.8
             omniscidb-version: None
+            omniscidb-from: None
           - os: macos-latest
             python-version: 3.7
             omniscidb-version: None
+            omniscidb-from: None
           - os: macos-latest
             python-version: 3.8
             omniscidb-version: None
+            omniscidb-from: None
           - os: ubuntu-latest
             python-version: 3.8
             omniscidb-version: 5.5.0
