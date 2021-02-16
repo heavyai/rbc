@@ -100,13 +100,13 @@ jobs:
 
       - name: omniscidb-env conda list
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.docker != 'True'
         run: |
           mamba run -n omniscidb-env conda list
 
       - name: Start Omniscidb
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest' && matrix.docker != 'False'
+        if: matrix.os == 'ubuntu-latest' && matrix.docker != 'True'
         run: |
           mkdir data
           mamba run -n omniscidb-env omnisci_initdb data -f
