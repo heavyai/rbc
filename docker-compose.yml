@@ -3,7 +3,7 @@ services:
 
   omniscidb:
     image: omnisci/core-os-cpu:v5.5.0
-    hostname: omniscidb
+    # hostname: omniscidb
     ports:
       - 16273:6273
       - 16274:6274
