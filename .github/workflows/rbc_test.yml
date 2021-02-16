@@ -30,12 +30,12 @@ jobs:
   
   container:
     runs-on: ubuntu-latest
-    # container: 
-    #   image: omnisci/core-os-cpu
-    #   ports:
-    #     - 6274
-    #   volumes:
-    #     - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
+    container: 
+      image: omnisci/core-os-cpu
+      ports:
+        - 6274
+      volumes:
+        - /home/runner/work/rbc/rbc/.omnisci/:/omnisci-storage
       
     steps:
       - name: Checkout code
@@ -44,6 +44,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.8
+          miniconda-version: "latest"
           mamba-version: "*"
           channels: conda-forge
           environment-file: .conda/environment.yml
