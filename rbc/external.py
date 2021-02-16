@@ -40,9 +40,10 @@ class External:
                     f"external function name not specified for signature {signature}"
                 )
 
-            for device in [
-                a for a in t.annotation() or [] if a in ["CPU", "GPU"]
-            ] or ["CPU", "GPU"]:
+            for device in [a for a in t.annotation() or [] if a in ["CPU", "GPU"]] or [
+                "CPU",
+                "GPU",
+            ]:
                 ts[device].append(signature)
 
         return cls(key, ts, typing=typing, lowering=lowering)
@@ -98,7 +99,7 @@ class External:
             available = "; ".join(map(str, available_types))
             raise TypeError(
                 f"found no matching function type to given argument types"
-                f" `{satypes}`. Available function types: {available}"
+                f" `{satypes}` and device `{device}`. Available function types: {available}"
             )
         return ftype
 
