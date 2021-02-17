@@ -70,7 +70,7 @@ def get_called_functions(library, funcname=None):
 
 
 # ---------------------------------------------------------------------------
-# CPU Context classes
+
 class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
     """JITRemoteCodeLibrary was introduce to prevent numba from calling functions
     that checks if the module is final. See xnd-project/rbc issue #87.
@@ -91,7 +91,7 @@ class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
         self._codegen._scan_and_fix_unresolved_refs(self._final_module)
 
 
-class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
+class JITRemoteCodegen(codegen.JITCPUCodegen):
     _library_class = JITRemoteCodeLibrary
 
     def _get_host_cpu_name(self):
@@ -134,14 +134,28 @@ class JITRemoteCPUCodegen(codegen.JITCPUCodegen):
         return None
 
 
-class JITRemoteCPUContext(cpu.CPUContext):
+class JITRemoteTypingContext(typing.Context):
+    def load_additional_registries(self):
+        from rbc.externals import math
+
+        self.install_registry(math.typing_registry)
+        super().load_additional_registries()
+
+
+class JITRemoteTargetContext(cpu.CPUContext):
 
     @compiler_lock.global_compiler_lock
     def init(self):
         target_info = TargetInfo()
         self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
+        self._internal_codegen = JITRemoteCodegen("numba.exec")
+
+    def load_additional_registries(self):
+        from rbc.externals import math
+
+        self.install_registry(math.lowering_registry)
+        super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):
         return None
@@ -151,45 +165,6 @@ class JITRemoteCPUContext(cpu.CPUContext):
 
 
 # ---------------------------------------------------------------------------
-# GPU Context classes
-
-
-class JITRemoteGPUTargetContext(cpu.CPUContext):
-
-    @compiler_lock.global_compiler_lock
-    def init(self):
-        target_info = TargetInfo()
-        self.address_size = target_info.bits
-        self.is32bit = (self.address_size == 32)
-        self._internal_codegen = JITRemoteCPUCodegen("numba.exec")
-
-    def load_additional_registries(self):
-        # libdevice and math from cuda have precedence over the ones from CPU
-        if get_version('numba') >= (0, 52):
-            from numba.cuda import libdeviceimpl, mathimpl
-            from .omnisci_backend import cuda_npyimpl
-            self.install_registry(libdeviceimpl.registry)
-            self.install_registry(mathimpl.registry)
-            self.install_registry(cuda_npyimpl.registry)
-        else:
-            import warnings
-            warnings.warn("libdevice bindings requires Numba 0.52 or newer,"
-                          f" got Numba v{'.'.join(map(str, get_version('numba')))}")
-        super().load_additional_registries()
-
-
-class JITRemoteGPUTypingContext(typing.Context):
-
-    def load_additional_registries(self):
-        if get_version('numba') >= (0, 52):
-            from numba.core.typing import npydecl
-            from numba.cuda import cudamath, libdevicedecl
-            self.install_registry(npydecl.registry)
-            self.install_registry(cudamath.registry)
-            self.install_registry(libdevicedecl.registry)
-        super().load_additional_registries()
-
-# ---------------------------------------------------------------------------
 # Code generation methods
 
 
@@ -197,7 +172,7 @@ class JITRemoteGPUTypingContext(typing.Context):
 def replace_numba_internals_hack():
     # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
     _internal_codegen_bkp = registry.cpu_target.target_context._internal_codegen
-    registry.cpu_target.target_context._internal_codegen = JITRemoteCPUCodegen("numba.exec")
+    registry.cpu_target.target_context._internal_codegen = JITRemoteCodegen("numba.exec")
     yield
     registry.cpu_target.target_context._internal_codegen = _internal_codegen_bkp
 
@@ -387,14 +362,8 @@ def compile_to_LLVM(functions_and_signatures,
         target_context = target_desc.target_context
     else:
         # OmnisciDB target
-        if target_info.is_cpu:
-            typing_context = typing.Context()
-            target_context = JITRemoteCPUContext(typing_context)
-        elif target_info.is_gpu:
-            typing_context = JITRemoteGPUTypingContext()
-            target_context = JITRemoteGPUTargetContext(typing_context)
-        else:
-            raise ValueError(f'Unknown target {target_info.name}')
+        typing_context = JITRemoteTypingContext()
+        target_context = JITRemoteTargetContext(typing_context)
 
         # Bring over Array overloads (a hack):
         target_context._defns = target_desc.target_context._defns

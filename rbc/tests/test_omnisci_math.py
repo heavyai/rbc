@@ -126,20 +126,15 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
         pytest.skip(f'{fn_name}: not available in {math.__name__} module'
                     f' of Python {sys.version.split(None, 1)[0]}')
 
-    if fn_name in ['prod', 'remainder', 'log2', 'comb', 'factorial', 'fsum',
-                   'fmod', 'isclose', 'isqrt', 'ldexp', 'modf', 'dist',
-                   'perm']:
+    if fn_name in ['prod', 'comb', 'factorial', 'fsum',
+                   'fmod', 'isclose', 'isqrt', 'modf', 'dist', 'perm']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation! [rbc issue 156]')
 
     if omnisci.version < (5, 5) and omnisci.has_cuda and \
         fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
-                    'isqrt', 'ldexp', 'modf', 'perm', 'prod', 'remainder', 'log2',
-                    'trunc', 'dist', 'fmod']:
+                    'isqrt', 'ldexp', 'modf', 'perm', 'prod',
+                    'dist', 'fmod']:
         pytest.skip(f'CUDA target does not support {fn_name} function [rbc issue 156]')
-
-    if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['floor']:
-        pytest.skip(f'{fn_name} compilation crashes due to typing differences with CPU target'
-                    ' [rbc issue 203]')
 
     if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
         pytest.skip(f'{fn_name} crashes with CUDA-enabled server [rbc issue 156/158]')
@@ -410,6 +405,8 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
 
     if fn_name == 'ldexp':
         xs = ', '.join('xi')
+    elif fn_name in ['arccosh', 'arcsinh']:
+        xs = 'z'
     elif kind == 'double':
         assert arity <= 3, arity
         xs = ', '.join('xyz'[:arity])

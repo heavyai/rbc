@@ -17,75 +17,75 @@ def omnisci():
 
 cmath = (
     # Trigonometric
-    ("cos", "float64(float64)"),
-    ("sin", "float64(float64)"),
-    ("tan", "float64(float64)"),
-    ("acos", "float64(float64)"),
-    ("asin", "float64(float64)"),
-    ("atan", "float64(float64)"),
-    ("atan2", "float64(float64, float64)"),
+    ("cos", "float64 cos(float64)|CPU"),
+    ("sin", "float64 sin(float64)|CPU"),
+    ("tan", "float64 tan(float64)|CPU"),
+    ("acos", "float64 acos(float64)|CPU"),
+    ("asin", "float64 asin(float64)|CPU"),
+    ("atan", "float64 atan(float64)|CPU"),
+    ("atan2", "float64 atan2(float64, float64)|CPU"),
     # Hyperbolic
-    ("cosh", "float64(float64)"),
-    ("sinh", "float64(float64)"),
-    ("tanh", "float64(float64)"),
-    ("acosh", "float64(float64)"),
-    ("asinh", "float64(float64)"),
-    ("atanh", "float64(float64)"),
+    ("cosh", "float64 cosh(float64)|CPU"),
+    ("sinh", "float64 sinh(float64)|CPU"),
+    ("tanh", "float64 tanh(float64)|CPU"),
+    ("acosh", "float64 acosh(float64)|CPU"),
+    ("asinh", "float64 asinh(float64)|CPU"),
+    ("atanh", "float64 atanh(float64)|CPU"),
     # Exponential and logarithmic functions
-    ("exp", "float64(float64)"),
-    ("frexp", "float64(float64)"),
-    ("ldexp", "float64(float64, int64)"),
-    ("log", "float64(float64)"),
-    ("log10", "float64(float64)"),
-    ("modf", "float64(float64)"),
-    ("exp2", "float64(float64)"),
-    ("expm1", "float64(float64)"),
-    ("ilogb", "float64(float64)"),
-    ("log1p", "float64(float64)"),
-    ("log2", "float64(float64)"),
-    ("logb", "float64(float64)"),
+    ("exp", "float64 exp(float64)|CPU"),
+    ("frexp", "float64 frexp(float64)|CPU"),
+    ("ldexp", "float64 ldexp(float64, int64)|CPU"),
+    ("log", "float64 log(float64)|CPU"),
+    ("log10", "float64 log10(float64)|CPU"),
+    ("modf", "float64 modf(float64)|CPU"),
+    ("exp2", "float64 exp2(float64)|CPU"),
+    ("expm1", "float64 expm1(float64)|CPU"),
+    ("ilogb", "float64 ilogb(float64)|CPU"),
+    ("log1p", "float64 log1p(float64)|CPU"),
+    ("log2", "float64 log2(float64)|CPU"),
+    ("logb", "float64 logb(float64)|CPU"),
     # power functions
-    ("pow", "float64(float64, float64)"),
-    ("sqrt", "float64(float64)"),
-    ("cbrt", "float64(float64)"),
-    ("hypot", "float64(float64, float64)"),
+    ("pow", "float64 pow(float64, float64)|CPU"),
+    ("sqrt", "float64 sqrt(float64)|CPU"),
+    ("cbrt", "float64 cbrt(float64)|CPU"),
+    ("hypot", "float64 hypot(float64, float64)|CPU"),
     # error and gamma functions
-    ("erf", "float64(float64)"),
-    ("erfc", "float64(float64)"),
-    ("tgamma", "float64(float64)"),
-    ("lgamma", "float64(float64)"),
+    ("erf", "float64 erf(float64)|CPU"),
+    ("erfc", "float64 erfc(float64)|CPU"),
+    ("tgamma", "float64 tgamma(float64)|CPU"),
+    ("lgamma", "float64 lgamma(float64)|CPU"),
     # Rounding
-    ("ceil", "float64(float64)"),
-    ("floor", "float64(float64)"),
-    ("fmod", "float64(float64, float64)"),
-    ("trunc", "float64(float64)"),
-    ("round", "float64(float64)"),
-    ("lround", "int64(float64)"),
-    ("llround", "int64(float64)"),
-    ("rint", "float64(float64)"),
-    ("lrint", "int64(float64)"),
-    ("llrint", "int64(float64)"),
-    ("nearbyint", "float64(float64)"),
-    ("remainder", "float64(float64, float64)"),
+    ("ceil", "float64 ceil(float64)|CPU"),
+    ("floor", "float64 floor(float64)|CPU"),
+    ("fmod", "float64 fmod(float64, float64)|CPU"),
+    ("trunc", "float64 trunc(float64)|CPU"),
+    ("round", "float64 round(float64)|CPU"),
+    ("lround", "int64 lround(float64)|CPU"),
+    ("llround", "int64 llround(float64)|CPU"),
+    ("rint", "float64 rint(float64)|CPU"),
+    ("lrint", "int64 lrint(float64)|CPU"),
+    ("llrint", "int64 llrint(float64)|CPU"),
+    ("nearbyint", "float64 nearbyint(float64)|CPU"),
+    ("remainder", "float64 remainder(float64, float64)|CPU"),
     # Floating-point manipulation
-    ("copysign", "float64(float64, float64)"),
-    ("nan", "float64(float64)"),
-    ("nextafter", "float64(float64, float64)"),
-    ("nexttoward", "float64(float64, float64)"),
+    ("copysign", "float64 copysign(float64, float64)|CPU"),
+    ("nan", "float64 nan(float64)|CPU"),
+    ("nextafter", "float64 nextafter(float64, float64)|CPU"),
+    ("nexttoward", "float64 nexttoward(float64, float64)|CPU"),
     # Minimum, maximum, difference functions
-    ("fdim", "float64(float64, float64)"),
-    ("fmax", "float64(float64, float64)"),
-    ("fmin", "float64(float64, float64)"),
+    ("fdim", "float64 fdim(float64, float64)|CPU"),
+    ("fmax", "float64 fmax(float64, float64)|CPU"),
+    ("fmin", "float64 fmin(float64, float64)|CPU"),
     # Other functions
-    ("fabs", "float64(float64)"),
-    ("abs", "int64(int64)"),
-    ("fma", "float64(float64, float64, float64)"),
+    ("fabs", "float64 fabs(float64)|CPU"),
+    ("abs", "int64 abs(int64)|CPU"),
+    ("fma", "float64 fma(float64, float64, float64)|CPU"),
 )
 
 
 def define(omnisci):
     def inner(fname, signature):
-        cmath_fn = external(signature, name=fname)
+        cmath_fn = external(signature)
         t = Type.fromstring(signature)
         retty = str(t[0])
         argtypes = tuple(map(str, t[1]))
@@ -108,7 +108,7 @@ def define(omnisci):
                 return cmath_fn(a, b, c)
 
         fn.__name__ = f"{omnisci.table_name}_{fname}"
-        fn = omnisci(f"{retty}({', '.join(argtypes)})")(fn)
+        fn = omnisci(f"{retty}({', '.join(argtypes)})", devices=["cpu"])(fn)
 
     for _fname, signature in cmath:
         inner(_fname, signature)
@@ -208,13 +208,13 @@ def test_external_cmath(omnisci, fname, sig):
 
 
 def test_valid_signatures(omnisci):
-    assert external("f64 log2(f64)").name == "log2"
-    assert external("f64(f64)", name="log2").name == "log2"
+    external("f64 log2(f64)")
+    assert True
 
 
 def test_invalid_signature(omnisci):
     with pytest.raises(ValueError) as excinfo:
-        external(types.int64, name="test")
+        external(types.int64)
 
     assert "signature must represent a function type" in str(excinfo)
 
@@ -225,13 +225,18 @@ def test_unnamed_external(omnisci):
 
     assert "external function name not specified for signature" in str(excinfo)
 
+    with pytest.raises(ValueError) as excinfo:
+        external("f64(f64)")
+
+    assert "external function name not specified for signature" in str(excinfo)
+
 
 def test_replace_declaration(omnisci):
 
-    _ = external("f64(f64)", name="fma")
-    fma = external("f64(f64, f64, f64)", name="fma")
+    _ = external("f64 fma(f64)|CPU")
+    fma = external("f64 fma(f64, f64, f64)|CPU")
 
-    @omnisci("double(double, double, double)")
+    @omnisci("double(double, double, double)", devices=["cpu"])
     def test_fma(a, b, c):
         return fma(a, b, c)
 
@@ -242,9 +247,9 @@ def test_replace_declaration(omnisci):
 
 def test_require_target_info(omnisci):
 
-    log2 = external("double log2(double)", name="log2")
+    log2 = external("double log2(double)|CPU")
 
-    @omnisci("double(double)")
+    @omnisci("double(double)", devices=["cpu"])
     def test_log2(a):
         return log2(a)
 
