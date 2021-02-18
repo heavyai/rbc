@@ -16,39 +16,9 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version, get_version
+from .utils import parse_version
 from . import ctools
 from . import typesystem
-if get_version('numba') >= (0, 49):
-    from numba.core import extending
-else:
-    from numba import extending
-
-
-def IS_CPU():
-    pass
-
-
-@extending.overload(IS_CPU, inline="always")
-def is_cpu_impl():
-    target_info = TargetInfo()
-    if target_info.is_cpu:
-        return lambda: True
-    else:
-        return lambda: False
-
-
-def IS_GPU():
-    pass
-
-
-@extending.overload(IS_GPU, inline="always")
-def is_gpu_impl():
-    target_info = TargetInfo()
-    if target_info.is_gpu:
-        return lambda: True
-    else:
-        return lambda: False
 
 
 def get_literal_return(func, verbose=False):

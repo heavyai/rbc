@@ -524,3 +524,29 @@ def printf(typingctx, format_type, *args):
 
     else:
         raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')
+
+
+def IS_CPU():
+    pass
+
+
+@extending.overload(IS_CPU, inline="always")
+def is_cpu_impl():
+    target_info = TargetInfo()
+    if target_info.is_cpu:
+        return lambda: True
+    else:
+        return lambda: False
+
+
+def IS_GPU():
+    pass
+
+
+@extending.overload(IS_GPU, inline="always")
+def is_gpu_impl():
+    target_info = TargetInfo()
+    if target_info.is_gpu:
+        return lambda: True
+    else:
+        return lambda: False
