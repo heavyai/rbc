@@ -1,5 +1,5 @@
 from collections import namedtuple
-from rbc.external import external
+from rbc.external import declare
 from rbc.typesystem import Type
 from numba.core import imputils, typing
 
@@ -15,191 +15,201 @@ lower = lowering_registry.lower
 
 cmath = {
     # Trigonometric
-    "cos": ("float64", [arg(name="x", ty="float64")]),
-    "cosf": ("float32", [arg(name="x", ty="float32")]),
-    "sin": ("float64", [arg(name="x", ty="float64")]),
-    "sinf": ("float32", [arg(name="x", ty="float32")]),
-    "tan": ("float64", [arg(name="x", ty="float64")]),
-    "tanf": ("float32", [arg(name="x", ty="float32")]),
-    "acos": ("float64", [arg(name="x", ty="float64")]),
-    "acosf": ("float32", [arg(name="x", ty="float32")]),
-    "asin": ("float64", [arg(name="x", ty="float64")]),
-    "asinf": ("float32", [arg(name="x", ty="float32")]),
-    "atan": ("float64", [arg(name="x", ty="float64")]),
-    "atanf": ("float32", [arg(name="x", ty="float32")]),
-    "atan2": ("float64", [arg(name="y", ty="float64"), arg(name="x", ty="float64")]),
-    "atan2f": ("float32", [arg(name="y", ty="float32"), arg(name="x", ty="float32")]),
+    "cos": ("double", [arg(name="x", ty="double")]),
+    "cosf": ("float", [arg(name="x", ty="float")]),
+    "sin": ("double", [arg(name="x", ty="double")]),
+    "sinf": ("float", [arg(name="x", ty="float")]),
+    "tan": ("double", [arg(name="x", ty="double")]),
+    "tanf": ("float", [arg(name="x", ty="float")]),
+    "acos": ("double", [arg(name="x", ty="double")]),
+    "acosf": ("float", [arg(name="x", ty="float")]),
+    "asin": ("double", [arg(name="x", ty="double")]),
+    "asinf": ("float", [arg(name="x", ty="float")]),
+    "atan": ("double", [arg(name="x", ty="double")]),
+    "atanf": ("float", [arg(name="x", ty="float")]),
+    "atan2": ("double", [arg(name="y", ty="double"), arg(name="x", ty="double")]),
+    "atan2f": ("float", [arg(name="y", ty="float"), arg(name="x", ty="float")]),
     # Hyperbolic
-    "cosh": ("float64", [arg(name="x", ty="float64")]),
-    "coshf": ("float32", [arg(name="x", ty="float32")]),
-    "sinh": ("float64", [arg(name="x", ty="float64")]),
-    "sinhf": ("float32", [arg(name="x", ty="float32")]),
-    "tanh": ("float64", [arg(name="x", ty="float64")]),
-    "tanhf": ("float32", [arg(name="x", ty="float32")]),
-    "acosh": ("float64", [arg(name="x", ty="float64")]),
-    "acoshf": ("float32", [arg(name="x", ty="float32")]),
-    "asinh": ("float64", [arg(name="x", ty="float64")]),
-    "asinhf": ("float32", [arg(name="x", ty="float32")]),
-    "atanh": ("float64", [arg(name="x", ty="float64")]),
-    "atanhf": ("float32", [arg(name="x", ty="float32")]),
+    "cosh": ("double", [arg(name="x", ty="double")]),
+    "coshf": ("float", [arg(name="x", ty="float")]),
+    "sinh": ("double", [arg(name="x", ty="double")]),
+    "sinhf": ("float", [arg(name="x", ty="float")]),
+    "tanh": ("double", [arg(name="x", ty="double")]),
+    "tanhf": ("float", [arg(name="x", ty="float")]),
+    "acosh": ("double", [arg(name="x", ty="double")]),
+    "acoshf": ("float", [arg(name="x", ty="float")]),
+    "asinh": ("double", [arg(name="x", ty="double")]),
+    "asinhf": ("float", [arg(name="x", ty="float")]),
+    "atanh": ("double", [arg(name="x", ty="double")]),
+    "atanhf": ("float", [arg(name="x", ty="float")]),
     # Exponential and logarithmic functions
-    "exp": ("float64", [arg(name="x", ty="float64")]),
-    "expf": ("float32", [arg(name="x", ty="float32")]),
-    "frexp": ("float64", [arg(name="x", ty="float64")]),
-    "frexpf": ("float32", [arg(name="x", ty="float32")]),
-    "ldexp": ("float64", [arg(name="x", ty="float64"), arg(name="exp", ty="int32")]),
-    "ldexpf": ("float32", [arg(name="x", ty="float32"), arg(name="exp", ty="int32")]),
-    "log": ("float64", [arg(name="x", ty="float64")]),
-    "logf": ("float32", [arg(name="x", ty="float32")]),
-    "log10": ("float64", [arg(name="x", ty="float64")]),
-    "log10f": ("float32", [arg(name="x", ty="float32")]),
-    "modf": ("float64", [arg(name="x", ty="float64")]),
-    "modff": ("float32", [arg(name="x", ty="float32")]),
-    "exp2": ("float64", [arg(name="x", ty="float64")]),
-    "exp2f": ("float32", [arg(name="x", ty="float32")]),
-    "expm1": ("float64", [arg(name="x", ty="float64")]),
-    "expm1f": ("float32", [arg(name="x", ty="float32")]),
-    "ilogb": ("float64", [arg(name="x", ty="float64")]),
-    "ilogbf": ("float32", [arg(name="x", ty="float32")]),
-    "log1p": ("float64", [arg(name="x", ty="float64")]),
-    "log1pf": ("float32", [arg(name="x", ty="float32")]),
-    "log2": ("float64", [arg(name="x", ty="float64")]),
-    "log2f": ("float32", [arg(name="x", ty="float32")]),
-    "logb": ("float64", [arg(name="x", ty="float64")]),
-    "logbf": ("float32", [arg(name="x", ty="float32")]),
+    "exp": ("double", [arg(name="x", ty="double")]),
+    "expf": ("float", [arg(name="x", ty="float")]),
+    "frexp": ("double", [arg(name="x", ty="double")]),
+    "frexpf": ("float", [arg(name="x", ty="float")]),
+    "ldexp": ("double", [arg(name="x", ty="double"), arg(name="exp", ty="int")]),
+    "ldexpf": ("float", [arg(name="x", ty="float"), arg(name="exp", ty="int")]),
+    "log": ("double", [arg(name="x", ty="double")]),
+    "logf": ("float", [arg(name="x", ty="float")]),
+    "log10": ("double", [arg(name="x", ty="double")]),
+    "log10f": ("float", [arg(name="x", ty="float")]),
+    "modf": ("double", [arg(name="x", ty="double")]),
+    "modff": ("float", [arg(name="x", ty="float")]),
+    "exp2": ("double", [arg(name="x", ty="double")]),
+    "exp2f": ("float", [arg(name="x", ty="float")]),
+    "expm1": ("double", [arg(name="x", ty="double")]),
+    "expm1f": ("float", [arg(name="x", ty="float")]),
+    "ilogb": ("double", [arg(name="x", ty="double")]),
+    "ilogbf": ("float", [arg(name="x", ty="float")]),
+    "log1p": ("double", [arg(name="x", ty="double")]),
+    "log1pf": ("float", [arg(name="x", ty="float")]),
+    "log2": ("double", [arg(name="x", ty="double")]),
+    "log2f": ("float", [arg(name="x", ty="float")]),
+    "logb": ("double", [arg(name="x", ty="double")]),
+    "logbf": ("float", [arg(name="x", ty="float")]),
     # power functions
     "pow": (
-        "float64",
-        [arg(name="base", ty="float64"), arg(name="exponent", ty="float64")],
+        "double",
+        [arg(name="base", ty="double"), arg(name="exponent", ty="double")],
     ),
     "powf": (
-        "float32",
-        [arg(name="base", ty="float32"), arg(name="exponent", ty="float32")],
+        "float",
+        [arg(name="base", ty="float"), arg(name="exponent", ty="float")],
     ),
-    "sqrt": ("float64", [arg(name="x", ty="float64")]),
-    "sqrtf": ("float32", [arg(name="x", ty="float32")]),
-    "cbrt": ("float64", [arg(name="x", ty="float64")]),
-    "cbrtf": ("float32", [arg(name="x", ty="float32")]),
-    "hypot": ("float64", [arg(name="x", ty="float64"), arg(name="y", ty="float64")]),
-    "hypotf": ("float32", [arg(name="x", ty="float32"), arg(name="y", ty="float32")]),
+    "sqrt": ("double", [arg(name="x", ty="double")]),
+    "sqrtf": ("float", [arg(name="x", ty="float")]),
+    "cbrt": ("double", [arg(name="x", ty="double")]),
+    "cbrtf": ("float", [arg(name="x", ty="float")]),
+    "hypot": ("double", [arg(name="x", ty="double"), arg(name="y", ty="double")]),
+    "hypotf": ("float", [arg(name="x", ty="float"), arg(name="y", ty="float")]),
     # error and gamma functions
-    "erf": ("float64", [arg(name="x", ty="float64")]),
-    "erff": ("float32", [arg(name="x", ty="float32")]),
-    "erfc": ("float64", [arg(name="x", ty="float64")]),
-    "erfcf": ("float32", [arg(name="x", ty="float32")]),
-    "tgamma": ("float64", [arg(name="x", ty="float64")]),
-    "tgammaf": ("float32", [arg(name="x", ty="float32")]),
-    "lgamma": ("float64", [arg(name="x", ty="float64")]),
-    "lgammaf": ("float32", [arg(name="x", ty="float32")]),
+    "erf": ("double", [arg(name="x", ty="double")]),
+    "erff": ("float", [arg(name="x", ty="float")]),
+    "erfc": ("double", [arg(name="x", ty="double")]),
+    "erfcf": ("float", [arg(name="x", ty="float")]),
+    "tgamma": ("double", [arg(name="x", ty="double")]),
+    "tgammaf": ("float", [arg(name="x", ty="float")]),
+    "lgamma": ("double", [arg(name="x", ty="double")]),
+    "lgammaf": ("float", [arg(name="x", ty="float")]),
     # Rounding
-    "ceil": ("float64", [arg(name="x", ty="float64")]),
-    "ceilf": ("float32", [arg(name="x", ty="float32")]),
-    "floor": ("float64", [arg(name="x", ty="float64")]),
-    "floorf": ("float32", [arg(name="x", ty="float32")]),
+    "ceil": ("double", [arg(name="x", ty="double")]),
+    "ceilf": ("float", [arg(name="x", ty="float")]),
+    "floor": ("double", [arg(name="x", ty="double")]),
+    "floorf": ("float", [arg(name="x", ty="float")]),
     "fmod": (
-        "float64",
-        [arg(name="numer", ty="float64"), arg(name="denom", ty="float64")],
+        "double",
+        [arg(name="numer", ty="double"), arg(name="denom", ty="double")],
     ),
     "fmodf": (
-        "float32",
-        [arg(name="numer", ty="float32"), arg(name="denom", ty="float32")],
+        "float",
+        [arg(name="numer", ty="float"), arg(name="denom", ty="float")],
     ),
-    "trunc": ("float64", [arg(name="x", ty="float64")]),
-    "truncf": ("float32", [arg(name="x", ty="float32")]),
-    "round": ("float64", [arg(name="x", ty="float64")]),
-    "roundf": ("float32", [arg(name="x", ty="float32")]),
-    "lround": ("int32", [arg(name="x", ty="float64")]),
-    "lroundf": ("int32", [arg(name="x", ty="float32")]),
-    "llround": ("int64", [arg(name="x", ty="float64")]),
-    "llroundf": ("int64", [arg(name="x", ty="float32")]),
-    "rint": ("float64", [arg(name="x", ty="float64")]),
-    "rintf": ("float32", [arg(name="x", ty="float32")]),
-    "lrint": ("int32", [arg(name="x", ty="float64")]),
-    "lrintf": ("int32", [arg(name="x", ty="float32")]),
-    "llrint": ("int64", [arg(name="x", ty="float64")]),
-    "llrintf": ("int64", [arg(name="x", ty="float32")]),
-    "nearbyint": ("float64", [arg(name="x", ty="float64")]),
-    "nearbyintf": ("float32", [arg(name="x", ty="float32")]),
+    "trunc": ("double", [arg(name="x", ty="double")]),
+    "truncf": ("float", [arg(name="x", ty="float")]),
+    "round": ("double", [arg(name="x", ty="double")]),
+    "roundf": ("float", [arg(name="x", ty="float")]),
+    "lround": ("long int", [arg(name="x", ty="double")]),
+    "lroundf": ("long int", [arg(name="x", ty="float")]),
+    "llround": ("long long int", [arg(name="x", ty="double")]),
+    "llroundf": ("long long int", [arg(name="x", ty="float")]),
+    "rint": ("double", [arg(name="x", ty="double")]),
+    "rintf": ("float", [arg(name="x", ty="float")]),
+    "lrint": ("long int", [arg(name="x", ty="double")]),
+    "lrintf": ("long int", [arg(name="x", ty="float")]),
+    "llrint": ("long long int", [arg(name="x", ty="double")]),
+    "llrintf": ("long long int", [arg(name="x", ty="float")]),
+    "nearbyint": ("double", [arg(name="x", ty="double")]),
+    "nearbyintf": ("float", [arg(name="x", ty="float")]),
     "remainder": (
-        "float64",
-        [arg(name="numer", ty="float64"), arg(name="denom", ty="float64")],
+        "double",
+        [arg(name="numer", ty="double"), arg(name="denom", ty="double")],
     ),
     "remainderf": (
-        "float32",
-        [arg(name="numer", ty="float32"), arg(name="denom", ty="float32")],
+        "float",
+        [arg(name="numer", ty="float"), arg(name="denom", ty="float")],
     ),
     # Floating-point manipulation
     "copysign": (
-        "float64",
-        [arg(name="x", ty="float64"), arg(name="y", ty="float64")],
+        "double",
+        [arg(name="x", ty="double"), arg(name="y", ty="double")],
     ),
     "copysignf": (
-        "float32",
-        [arg(name="x", ty="float32"), arg(name="y", ty="float32")],
+        "float",
+        [arg(name="x", ty="float"), arg(name="y", ty="float")],
     ),
-    "nan": ("float64", [arg(name="x", ty="float64")]),
+    "nan": ("double", [arg(name="x", ty="double")]),
     "nextafter": (
-        "float64",
-        [arg(name="x", ty="float64"), arg(name="y", ty="float64")],
+        "double",
+        [arg(name="x", ty="double"), arg(name="y", ty="double")],
     ),
     "nextafterf": (
-        "float32",
-        [arg(name="x", ty="float32"), arg(name="y", ty="float32")],
+        "float",
+        [arg(name="x", ty="float"), arg(name="y", ty="float")],
     ),
     "nexttoward": (
-        "float64",
-        [arg(name="x", ty="float64"), arg(name="y", ty="float64")],
+        "double",
+        [arg(name="x", ty="double"), arg(name="y", ty="double")],
     ),
     "nexttowardf": (
-        "float32",
-        [arg(name="x", ty="float32"), arg(name="y", ty="float32")],
+        "float",
+        [arg(name="x", ty="float"), arg(name="y", ty="float")],
     ),
     # Minimum, maximum, difference functions
-    "fdim": ("float64", [arg(name="x", ty="float64"), arg(name="y", ty="float64")]),
-    "fdimf": ("float32", [arg(name="x", ty="float32"), arg(name="y", ty="float32")]),
-    "fmax": ("float64", [arg(name="x", ty="float64"), arg(name="y", ty="float64")]),
-    "fmaxf": ("float32", [arg(name="x", ty="float32"), arg(name="y", ty="float32")]),
-    "fmin": ("float64", [arg(name="x", ty="float64"), arg(name="y", ty="float64")]),
-    "fminf": ("float32", [arg(name="x", ty="float32"), arg(name="y", ty="float32")]),
+    "fdim": ("double", [arg(name="x", ty="double"), arg(name="y", ty="double")]),
+    "fdimf": ("float", [arg(name="x", ty="float"), arg(name="y", ty="float")]),
+    "fmax": ("double", [arg(name="x", ty="double"), arg(name="y", ty="double")]),
+    "fmaxf": ("float", [arg(name="x", ty="float"), arg(name="y", ty="float")]),
+    "fmin": ("double", [arg(name="x", ty="double"), arg(name="y", ty="double")]),
+    "fminf": ("float", [arg(name="x", ty="float"), arg(name="y", ty="float")]),
     # Other functions
-    "fabs": ("float64", [arg(name="x", ty="float64")]),
-    "fabsf": ("float32", [arg(name="x", ty="float32")]),
-    "abs": ("int64", [arg(name="x", ty="float64")]),
+    "fabs": ("double", [arg(name="x", ty="double")]),
+    "fabsf": ("float", [arg(name="x", ty="float")]),
+    "abs": ("long long", [arg(name="x", ty="double")]),
+    "absf": ("long", [arg(name="x", ty="float")]),
     "fma": (
-        "float64",
+        "double",
         [
-            arg(name="x", ty="float64"),
-            arg(name="y", ty="float64"),
-            arg(name="z", ty="float64"),
+            arg(name="x", ty="double"),
+            arg(name="y", ty="double"),
+            arg(name="z", ty="double"),
         ],
     ),
     "fmaf": (
-        "float32",
+        "float",
         [
-            arg(name="x", ty="float32"),
-            arg(name="y", ty="float32"),
-            arg(name="z", ty="float32"),
+            arg(name="x", ty="float"),
+            arg(name="y", ty="float"),
+            arg(name="z", ty="float"),
         ],
     ),
 }
 
-for fname, (retty, args) in cmath.items():
-    argtys = tuple(map(lambda x: x.ty, args))
-    t = Type.fromstring(f"{retty} {fname}({', '.join(argtys)})")
+
+def register(fname, retty, argtys):
 
     # expose
     s = f"def {fname}(*args): pass"
     exec(s, globals())
-    key = globals()[fname]
+    _key = globals()[fname]
 
     # typing
-    class CmathTemplate(typing.templates.ConcreteTemplate):
-        cases = [t.tonumba()]
+    @infer_global(_key)
+    class CMathTemplate(typing.templates.AbstractTemplate):
+        key = _key
 
-    infer_global(key)(CmathTemplate)
+        def generic(self, args, kws):
+            # get the correct signature and function name for the current device
+            atypes = tuple(map(Type.fromobject, args))
+            e = declare(f"{retty} {fname}({', '.join(argtys)})|CPU")
 
-    # lowering
-    e = external(
-        f"{retty} {fname}({', '.join(argtys)})|CPU", typing=False, lowering=False
-    )
-    lower(key, *t.tonumba().args)(e.get_codegen())
+            t = e.match_signature(atypes)
+
+            codegen = e.get_codegen()
+            lower(_key, *t.tonumba().args)(codegen)
+
+            return t.tonumba()
+
+
+for fname, (retty, args) in cmath.items():
+    argtys = tuple(map(lambda x: x.ty, args))
+    register(fname, retty, argtys)

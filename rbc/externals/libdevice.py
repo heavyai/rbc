@@ -1,4 +1,4 @@
-from rbc.external import external
+from rbc.external import declare
 from rbc.typesystem import Type
 from numba.core import imputils, typing
 from numba.cuda import libdevicefuncs
@@ -12,24 +12,31 @@ lowering_registry = imputils.Registry()
 lower = lowering_registry.lower
 
 
-for fname, (retty, args) in libdevicefuncs.functions.items():
-    argtys = tuple(map(lambda x: f"{x.ty}*" if x.is_ptr else f"{x.ty}", args))
-    t = Type.fromstring(f"{retty} {fname}({', '.join(argtys)})")
+def register(fname, retty, argtys):
 
     # expose
     s = f"def {fname}(*args): pass"
     exec(s, globals())
-    key = globals()[fname]
+    _key = globals()[fname]
 
     # typing
-    class CmathTemplate(typing.templates.ConcreteTemplate):
-        cases = [t.tonumba()]
+    @infer_global(_key)
+    class LibDeviceTemplate(typing.templates.AbstractTemplate):
+        key = _key
 
-    infer_global(key)(CmathTemplate)
+        def generic(self, args, kws):
+            # get the correct signature and function name for the current device
+            atypes = tuple(map(Type.fromobject, args))
+            e = declare(f"{retty} {fname}({', '.join(argtys)})|GPU")
 
-    # lowering
-    e = external(
-        f"{retty} {fname}({', '.join(argtys)})|GPU", typing=False, lowering=False
-    )
-    print(e)
-    lower(key, *t.tonumba().args)(e.get_codegen())
+            t = e.match_signature(atypes)
+
+            codegen = e.get_codegen()
+            lower(_key, *t.tonumba().args)(codegen)
+
+            return t.tonumba()
+
+
+for fname, (retty, args) in libdevicefuncs.functions.items():
+    argtys = tuple(map(lambda x: f"{x.ty}*" if x.is_ptr else f"{x.ty}", args))
+    register(fname, retty, argtys)

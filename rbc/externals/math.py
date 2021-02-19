@@ -1,5 +1,5 @@
 import math
-from rbc.external import external
+from rbc.external import declare
 from numba.core import imputils
 from numba.core.typing.templates import ConcreteTemplate, signature, Registry
 from numba.types import float32, float64, int32, int64, uint64, intp
@@ -97,7 +97,7 @@ def gen_external(
         arguments.append(
             f"{retty} {prefix}{fname}({', '.join(map(str, argtypes))})|{device}"
         )
-    return external(*arguments, typing=False, lowering=False)
+    return declare(*arguments)
 
 
 def impl_unary(fname, key, typ):
@@ -122,18 +122,14 @@ for fname64, fname32, key in binarys:
 
 # manual mapping
 def impl_ldexp():
-    ldexp = external(
+    ldexp = declare(
         "double ldexp(double, int32)|CPU",
         "double __nv_ldexp(double, int32)|GPU",
-        typing=False,
-        lowering=False,
     )
 
-    ldexpf = external(
+    ldexpf = declare(
         "float ldexpf(float, int32)|CPU",
         "float __nv_ldexpf(float, int32)|GPU",
-        typing=False,
-        lowering=False,
     )
 
     lower(math.ldexp, float64, int32)(ldexp.get_codegen())

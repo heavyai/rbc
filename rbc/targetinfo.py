@@ -399,6 +399,10 @@ class TargetInfo(object):
         if isinstance(t, str):
             if t == 'int':
                 return 4  # this is a guess
+            if t == 'long':
+                return 4  # at least 4 bytes. The server should send this information
+            if t == 'longlong':
+                return 8  # at least 8 bytes.      "
             if t == 'size_t':
                 return self.bits // 8
         if isinstance(t, type) and issubclass(t, ctypes._SimpleCData):

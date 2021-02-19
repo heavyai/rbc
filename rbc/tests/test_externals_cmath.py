@@ -197,10 +197,10 @@ def test_external_cmath(omnisci, fname, sig):
             "fmin",
         ]:
             a, b, r = values
-            assert np.isclose(r, fn(a, b))
+            assert np.isclose(r, fn(a, b)), fname
         elif fname == "fma":
             a, b, c, r = values
-            assert np.isclose(r, a * b + c)
+            assert np.isclose(r, a * b + c), fname
         else:
             a, r = values
-            assert np.isclose(r, fn(a))
+            assert np.isclose(r, fn(a)), fname
