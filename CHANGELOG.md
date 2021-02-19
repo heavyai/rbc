@@ -25,7 +25,7 @@
 #### Internal Changes
 * Replace Travis CI by github actions ([gh-279](https://github.com/xnd-project/rbc/pull/279))
 * Move `IS_GPU` and `IS_CPU` to `irtools.py` ([gh-281](https://github.com/xnd-project/rbc/pull/281))
-
+* Add changelog to RBC ([gh-287](https://github.com/xnd-project/rbc/pull/287))
 
 ------
 
