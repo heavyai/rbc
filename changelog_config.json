@@ -1,7 +1,7 @@
 {
     "categories": [
         {
-            "title": "## 🐞 Deprecations",
+            "title": "## ❗ Deprecations",
             "labels": [
                 "deprecation"
             ]
@@ -25,9 +25,9 @@
             ]
         },
         {
-            "title": "## ⚙️ Internal Changes",
+            "title": "## ⚙️ OmniSciDB",
             "labels": [
-                "internal"
+                "omniscidb"
             ]
         }
     ],
