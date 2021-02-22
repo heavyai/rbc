@@ -21,13 +21,14 @@
         {
             "title": "## 📘 Documentation",
             "labels": [
-                "documentation"
+                "documentation",
+                "notebook"
             ]
         },
         {
-            "title": "## ⚙️ OmniSciDB",
+            "title": "## ⚙️ Tests",
             "labels": [
-                "omniscidb"
+                "tests"
             ]
         }
     ],
