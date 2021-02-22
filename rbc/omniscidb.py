@@ -740,6 +740,15 @@ class RemoteOmnisci(RemoteJIT):
         if messages:
             warnings.warn('\n  '.join([''] + messages))
 
+        type_sizeof = device_params.get('type_sizeof')
+        type_sizeof_dict = dict()
+        if type_sizeof is not None:
+            for type_size in type_sizeof.split(';'):
+                if not type_size:
+                    continue
+                dtype, size = type_size.split(':')
+                type_sizeof_dict[dtype] = int(size)
+
         null_values = device_params.get('null_values')
         null_values_asint = dict()
         null_values_astype = dict()
@@ -788,6 +797,9 @@ class RemoteOmnisci(RemoteJIT):
             llvm_version = device_params.get('llvm_version')
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
+
+            if type_sizeof_dict is not None:
+                target_info.type_sizeof.update(type_sizeof_dict)
 
             target_info.set('null_values', null_values_asint)
         return targets

@@ -116,10 +116,17 @@ math_functions = [
 ]
 
 
+devices = ('cpu', 'gpu')
+
+
+@pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
-                         ids=[item[0] for item in math_functions])
-def test_math_function(omnisci, nb_version, fn_name, signature):
+                         ids=["math." + item[0] for item in math_functions])
+def test_math_function(omnisci, device, nb_version, fn_name, signature):
     omnisci.reset()
+
+    if not omnisci.has_cuda and device == 'gpu':
+        pytest.skip('test requires CUDA-enabled omniscidb server')
 
     math_func = getattr(math, fn_name, None)
     if math_func is None:
@@ -170,7 +177,7 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
 
     fn.__name__ = fprefix + fn.__name__
 
-    omnisci(signature)(fn)
+    omnisci(signature, devices=[device])(fn)
 
     omnisci.register()
 
@@ -324,10 +331,17 @@ if np is not None:
                 print(f'TODO: ADD {n} TEST TO {__file__}')
 
 
+@pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
-                         ids=[item[0] for item in numpy_functions])
-def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
+                         ids=["np." + item[0] for item in numpy_functions])
+def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func):
     omnisci.reset()
+
+    if device == 'gpu':
+        pytest.skip('Missing libdevice bindings for numpy functions')
+
+    if not omnisci.has_cuda and device == 'gpu':
+        pytest.skip('Test requires CUDA-enabled omniscidb server')
 
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')
@@ -399,7 +413,7 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    omnisci(signature)(fn)
+    omnisci(signature, devices=[device])(fn)
 
     omnisci.register()
 
