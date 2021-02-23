@@ -1,19 +1,16 @@
-import math
 import numpy as np
 from llvmlite import ir
 from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.cpython import mathimpl
+from rbc.externals import libdevice, cmath
+from rbc.targetinfo import TargetInfo
+
+if get_version("numba") >= (0, 49):
+    from numba.cpython import numbers
     from numba.np import ufunc_db, npyfuncs
     from numba.core import types
 else:
-    from numba.targets import mathimpl, ufunc_db, npyfuncs
+    from numba.targets import ufunc_db, npyfuncs, numbers
     from numba import types
-
-# tell numba to wire np.exp2 to libm exp2.
-mathimpl.unary_math_extern(np.exp2, "exp2f", "exp2")
-mathimpl.unary_math_extern(np.log2, "log2f", "log2")
-mathimpl.unary_math_extern(math.gamma, "tgammaf", "tgamma")
 
 
 def np_logaddexp_impl(context, builder, sig, args):
@@ -37,7 +34,6 @@ def np_logaddexp_impl(context, builder, sig, args):
 
 
 def np_logaddexp2_impl(context, builder, sig, args):
-
     def impl(x, y):
         if x == y:
             return x + 1
@@ -70,56 +66,302 @@ def np_ldexp_impl(context, builder, sig, args):
     assert len(sig.args) == 2
 
     dispatch_table = {
-        types.float32: 'ldexpf',
-        types.float64: 'ldexp',
+        types.float32: "ldexpf",
+        types.float64: "ldexp",
     }
 
-    return npyfuncs._dispatch_func_by_name_type(context, builder, sig, args,
-                                                dispatch_table, 'ldexp')
+    return npyfuncs._dispatch_func_by_name_type(
+        context, builder, sig, args, dispatch_table, "ldexp"
+    )
 
 
 def np_real_nextafter_impl(context, builder, sig, args):
     npyfuncs._check_arity_and_homogeneity(sig, args, 2)
 
     dispatch_table = {
-        types.float32: 'nextafterf',
-        types.float64: 'nextafter',
+        types.float32: "nextafterf",
+        types.float64: "nextafter",
     }
 
-    return npyfuncs._dispatch_func_by_name_type(context, builder, sig, args,
-                                                dispatch_table, 'nextafter')
+    return npyfuncs._dispatch_func_by_name_type(
+        context, builder, sig, args, dispatch_table, "nextafter"
+    )
+
+
+def dispatch_codegen(cpu, gpu):
+    def inner(context, builder, sig, args):
+        impl = cpu if TargetInfo().is_cpu else gpu.get_codegen()
+        return impl(context, builder, sig, args)
+
+    return inner
 
 
 ufunc_db._lazy_init_db()
 
+# signbit
+ufunc_db._ufunc_db[np.signbit] = {
+    "f->?": np_signbit_impl,
+    "d->?": np_signbit_impl,
+}
+
 # logaddexp
 ufunc_db._ufunc_db[np.logaddexp] = {
-    'ff->f': np_logaddexp_impl,
-    'dd->d': np_logaddexp_impl,
+    "ff->f": np_logaddexp_impl,
+    "dd->d": np_logaddexp_impl,
 }
 
 # logaddexp2
 ufunc_db._ufunc_db[np.logaddexp2] = {
-    'ff->f': np_logaddexp2_impl,
-    'dd->d': np_logaddexp2_impl,
-}
-
-# signbit
-ufunc_db._ufunc_db[np.signbit] = {
-    'f->?': np_signbit_impl,
-    'd->?': np_signbit_impl,
-}
-
-# ldexp
-ufunc_db._ufunc_db[np.ldexp] = {
-    'fi->f': np_ldexp_impl,
-    'fl->f': np_ldexp_impl,
-    'di->d': np_ldexp_impl,
-    'dl->d': np_ldexp_impl,
+    "ff->f": np_logaddexp2_impl,
+    "dd->d": np_logaddexp2_impl,
 }
 
 # nextafter
 ufunc_db._ufunc_db[np.nextafter] = {
-    'ff->f': np_real_nextafter_impl,
-    'dd->d': np_real_nextafter_impl,
+    "ff->f": dispatch_codegen(np_real_nextafter_impl, libdevice.__nv_nextafterf),
+    "dd->d": dispatch_codegen(np_real_nextafter_impl, libdevice.__nv_nextafter),
 }
+
+# fabs
+ufunc_db._ufunc_db[np.fabs].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_fabs_impl, libdevice.__nv_fabsf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_fabs_impl, libdevice.__nv_fabs),
+    }
+)
+
+# arcsin
+ufunc_db._ufunc_db[np.arcsin].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_asin_impl, libdevice.__nv_asinf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_asin_impl, libdevice.__nv_asin),
+    }
+)
+
+# arccos
+ufunc_db._ufunc_db[np.arccos].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_acos_impl, libdevice.__nv_acosf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_acos_impl, libdevice.__nv_acos),
+    }
+)
+
+# arctan
+ufunc_db._ufunc_db[np.arctan].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_atan_impl, libdevice.__nv_atanf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_atan_impl, libdevice.__nv_atan),
+    }
+)
+
+# arctan2
+ufunc_db._ufunc_db[np.arctan2].update(
+    {
+        "ff->f": dispatch_codegen(npyfuncs.np_real_atan2_impl, libdevice.__nv_atan2f),
+        "dd->d": dispatch_codegen(npyfuncs.np_real_atan2_impl, libdevice.__nv_atan2),
+    }
+)
+
+# hypot
+ufunc_db._ufunc_db[np.hypot].update(
+    {
+        "ff->f": dispatch_codegen(npyfuncs.np_real_hypot_impl, libdevice.__nv_hypotf),
+        "dd->d": dispatch_codegen(npyfuncs.np_real_hypot_impl, libdevice.__nv_hypot),
+    }
+)
+
+# sinh
+ufunc_db._ufunc_db[np.sinh].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_sinh_impl, libdevice.__nv_sinhf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_sinh_impl, libdevice.__nv_sinh),
+    }
+)
+
+# cosh
+ufunc_db._ufunc_db[np.cosh].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_cosh_impl, libdevice.__nv_coshf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_cosh_impl, libdevice.__nv_cosh),
+    }
+)
+
+# tanh
+ufunc_db._ufunc_db[np.tanh].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_tanh_impl, libdevice.__nv_tanhf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_tanh_impl, libdevice.__nv_tanh),
+    }
+)
+
+# arcsinh
+ufunc_db._ufunc_db[np.arcsinh].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_asinh_impl, libdevice.__nv_asinhf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_asinh_impl, libdevice.__nv_asinh),
+    }
+)
+
+# arccosh
+ufunc_db._ufunc_db[np.arccosh].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_acosh_impl, libdevice.__nv_acoshf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_acosh_impl, libdevice.__nv_acosh),
+    }
+)
+
+# arctanh
+ufunc_db._ufunc_db[np.arctanh].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_atanh_impl, libdevice.__nv_atanhf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_atanh_impl, libdevice.__nv_atanh),
+    }
+)
+
+# exp
+ufunc_db._ufunc_db[np.exp].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_exp_impl, libdevice.__nv_expf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_exp_impl, libdevice.__nv_exp),
+    }
+)
+
+# exmp1
+ufunc_db._ufunc_db[np.expm1].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_expm1_impl, libdevice.__nv_expm1f),
+        "d->d": dispatch_codegen(npyfuncs.np_real_expm1_impl, libdevice.__nv_expm1),
+    }
+)
+
+# exp2
+ufunc_db._ufunc_db[np.exp2].update(
+    {
+        "f->f": dispatch_codegen(cmath.exp2.get_codegen(), libdevice.__nv_exp2f),
+        "d->d": dispatch_codegen(cmath.exp2.get_codegen(), libdevice.__nv_exp2),
+    }
+)
+
+# log
+ufunc_db._ufunc_db[np.log].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_log_impl, libdevice.__nv_logf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_log_impl, libdevice.__nv_log),
+    }
+)
+
+# log10
+ufunc_db._ufunc_db[np.log10].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_log10_impl, libdevice.__nv_log10f),
+        "d->d": dispatch_codegen(npyfuncs.np_real_log10_impl, libdevice.__nv_log10),
+    }
+)
+
+# log2
+ufunc_db._ufunc_db[np.log2].update(
+    {
+        "f->f": dispatch_codegen(cmath.log2.get_codegen(), libdevice.__nv_log2f),
+        "d->d": dispatch_codegen(cmath.log2.get_codegen(), libdevice.__nv_log2),
+    }
+)
+
+# log1p
+ufunc_db._ufunc_db[np.log1p].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_log1p_impl, libdevice.__nv_log1pf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_log1p_impl, libdevice.__nv_log1p),
+    }
+)
+
+# ldexp
+ufunc_db._ufunc_db[np.ldexp] = {
+    "fi->f": dispatch_codegen(np_ldexp_impl, libdevice.__nv_ldexpf),
+    "fl->f": dispatch_codegen(np_ldexp_impl, libdevice.__nv_ldexpf),
+    "di->d": dispatch_codegen(np_ldexp_impl, libdevice.__nv_ldexp),
+    "dl->d": dispatch_codegen(np_ldexp_impl, libdevice.__nv_ldexp),
+}
+
+# floor
+ufunc_db._ufunc_db[np.floor].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_floor_impl, libdevice.__nv_floorf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_floor_impl, libdevice.__nv_floor),
+    }
+)
+
+# ceil
+ufunc_db._ufunc_db[np.ceil].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_ceil_impl, libdevice.__nv_ceilf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_ceil_impl, libdevice.__nv_ceil),
+    }
+)
+
+# trunc
+ufunc_db._ufunc_db[np.trunc].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_trunc_impl, libdevice.__nv_truncf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_trunc_impl, libdevice.__nv_trunc),
+    }
+)
+
+# rint
+ufunc_db._ufunc_db[np.rint].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_rint_impl, libdevice.__nv_rintf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_rint_impl, libdevice.__nv_rint),
+    }
+)
+
+# copysign
+ufunc_db._ufunc_db[np.copysign].update(
+    {
+        "ff->f": dispatch_codegen(
+            npyfuncs.np_real_copysign_impl, libdevice.__nv_copysignf
+        ),
+        "dd->d": dispatch_codegen(
+            npyfuncs.np_real_copysign_impl, libdevice.__nv_copysign
+        ),
+    }
+)
+
+# power
+ufunc_db._ufunc_db[np.power].update(
+    {
+        "ff->f": dispatch_codegen(numbers.real_power_impl, libdevice.__nv_powf),
+        "dd->d": dispatch_codegen(numbers.real_power_impl, libdevice.__nv_pow),
+    }
+)
+
+# sqrt
+ufunc_db._ufunc_db[np.sqrt].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_sqrt_impl, libdevice.__nv_sqrtf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_sqrt_impl, libdevice.__nv_sqrt),
+    }
+)
+
+# sin
+ufunc_db._ufunc_db[np.sin].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_sin_impl, libdevice.__nv_sinf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_sin_impl, libdevice.__nv_sin),
+    }
+)
+
+# cos
+ufunc_db._ufunc_db[np.cos].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_cos_impl, libdevice.__nv_cosf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_cos_impl, libdevice.__nv_cos),
+    }
+)
+
+# tan
+ufunc_db._ufunc_db[np.tan].update(
+    {
+        "f->f": dispatch_codegen(npyfuncs.np_real_tan_impl, libdevice.__nv_tanf),
+        "d->d": dispatch_codegen(npyfuncs.np_real_tan_impl, libdevice.__nv_tan),
+    }
+)

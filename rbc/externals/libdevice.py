@@ -40,3 +40,4 @@ def register(fname, retty, argtys):
 for fname, (retty, args) in libdevicefuncs.functions.items():
     argtys = tuple(map(lambda x: f"{x.ty}*" if x.is_ptr else f"{x.ty}", args))
     register(fname, retty, argtys)
+    exec(f"{fname} = declare('{retty} {fname}({', '.join(argtys)})|GPU')", globals())
