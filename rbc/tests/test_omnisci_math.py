@@ -119,6 +119,7 @@ math_functions = [
 devices = ('cpu', 'gpu')
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=["math." + item[0] for item in math_functions])
@@ -155,6 +156,13 @@ def test_math_function(omnisci, device, nb_version, fn_name, signature):
                        'atan', 'atan2']:
             pytest.skip(f'{fn_name} requires numba version 0.52, currently using'
                         f' {".".join(map(str, nb_version))}')
+
+    if omnisci.has_cuda and device == 'gpu' and fn_name in ['pow']:
+        pytest.skip(f'OmnisciServerError: Function {fn_name}(DOUBLE, DOUBLE) not supported')
+
+    if omnisci.has_cuda and device == 'gpu' and fn_name in ['cos', 'sin', 'tan',
+                                                            'gamma', 'lgamma']:
+        pytest.skip(f'OmnisciServerError: Function {fn_name}(DOUBLE) not supported')
 
     arity = signature.count(',') + 1
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
@@ -331,6 +339,7 @@ if np is not None:
                 print(f'TODO: ADD {n} TEST TO {__file__}')
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
                          ids=["np." + item[0] for item in numpy_functions])
