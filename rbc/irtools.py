@@ -10,18 +10,19 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .utils import get_version
 from .errors import UnsupportedError
+from .typesystem import Type
 from . import libfuncs
 
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
-        extending
+        extending, typeconv
     from numba.core import types as nb_types
     from numba.core import errors as nb_errors
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
-        sigutils, cgutils, extending
+        sigutils, cgutils, extending, typeconv
     from numba import types as nb_types
     from numba import errors as nb_errors
 
@@ -354,7 +355,6 @@ def compile_to_LLVM(functions_and_signatures,
 
     """
     target_desc = registry.cpu_target
-
     if target_info is None:
         # RemoteJIT
         target_info = TargetInfo.host()
@@ -550,3 +550,46 @@ def is_gpu_impl():
         return lambda: True
     else:
         return lambda: False
+
+
+# Assuming maximum pointer level 2, although ANSI C requires 12 as a
+# maximum supported level.
+
+scalar_types = [getattr(nb_types, typename) for typename in
+                ['int64', 'int32', 'int16', 'int8', 'float32', 'float64', 'boolean']]
+pointer_value_types = [nb_types.intp, nb_types.voidptr]
+pointer_types = [nb_types.CPointer(s) for s in scalar_types] + pointer_value_types
+double_pointer_types = [nb_types.CPointer(s) for s in pointer_types] + pointer_value_types
+
+# TODO: use rbc specific type manager to not mess with numba defaults
+for p1 in pointer_types:
+    for p2 in pointer_types:
+        if p1 == p2:
+            continue
+        typeconv.rules.default_type_manager.set_compatible(
+            p1, p2, typeconv.Conversion.safe)
+    for p2 in double_pointer_types:
+        if p1 == p2:
+            continue
+        typeconv.rules.default_type_manager.set_compatible(
+            p1, p2, typeconv.Conversion.safe)
+        typeconv.rules.default_type_manager.set_compatible(
+            p2, p1, typeconv.Conversion.safe)
+
+
+@extending.lower_cast(nb_types.intp, nb_types.CPointer)
+def impl_intp_to_T_star(context, builder, fromty, toty, value):
+    return builder.inttoptr(value, Type.fromnumba(toty).tollvmir())
+
+
+@extending.lower_cast(nb_types.CPointer, nb_types.intp)
+@extending.lower_cast(nb_types.RawPointer, nb_types.intp)
+def impl_T_star_to_intp(context, builder, fromty, toty, value):
+    return builder.ptrtoint(value, ir.IntType(toty.bitwidth))
+
+
+@extending.lower_cast(nb_types.CPointer, nb_types.CPointer)
+@extending.lower_cast(nb_types.CPointer, nb_types.RawPointer)
+@extending.lower_cast(nb_types.RawPointer, nb_types.CPointer)
+def impl_T_star_to_T_star(context, builder, fromty, toty, value):
+    return builder.bitcast(value, Type.fromnumba(toty).tollvmir())
