@@ -286,9 +286,9 @@ numpy_functions = [
     ('ldexp', 'double(double, int)', np.ldexp),
     ('frexp0', 'double(double)', lambda x: np.frexp(x)[0]),
     # Rounding functions:
-    # ('around', 'double(double)', lambda x: np.around(x)),
-    # ('round2',  # round and round_ are not good names
-    #  'double(double)', lambda x: np.round_(x)),  # force arity to 1
+    ('around', 'double(double)', lambda x: np.around(x)),
+    ('round2',  # round and round_ are not good names
+     'double(double)', lambda x: np.round_(x)),  # force arity to 1
     ('floor', 'double(double)', np.floor),
     ('ceil', 'double(double)', np.ceil),
     ('trunc', 'double(double)', np.trunc),
@@ -370,11 +370,11 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
         # give lambda function a name
         fn.__name__ = fn_name
 
-    if available_version[:2] < (5, 4) and fn_name in \
+    if omnisci.version[:2] < (5, 4) and fn_name in \
             ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
         pytest.skip(
             f"using boolean arguments requires omniscidb v 5.4 or newer"
-            f" (got {available_version}) [issue 108]")
+            f" (got {omnisci.version}) [issue 108]")
 
     if fn_name in ['positive', 'divmod0', 'frexp0']:
         try:
@@ -419,7 +419,7 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    if device == 'gpu' and fn_name in ['floor_divide']:
+    if device == 'gpu' and fn_name in ['floor_divide', 'around', 'round2', 'round_']:
         pytest.skip(f'Missing libdevice bindigs for {fn_name}')
 
     omnisci(signature, devices=[device])(fn)
