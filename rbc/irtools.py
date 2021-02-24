@@ -136,9 +136,10 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        from rbc.externals import math, cmath, libdevice
+        from rbc.externals import cmath, libdevice
+        from rbc.omnisci_backend import mathimpl
 
-        self.install_registry(math.typing_registry)
+        self.install_registry(mathimpl.typing_registry)
         self.install_registry(cmath.typing_registry)
         self.install_registry(libdevice.typing_registry)
         super().load_additional_registries()
@@ -154,9 +155,10 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        from rbc.externals import math, cmath, libdevice
+        from rbc.externals import cmath, libdevice
+        from rbc.omnisci_backend import mathimpl
 
-        self.install_registry(math.lowering_registry)
+        self.install_registry(mathimpl.lowering_registry)
         self.install_registry(cmath.lowering_registry)
         self.install_registry(libdevice.lowering_registry)
         super().load_additional_registries()
