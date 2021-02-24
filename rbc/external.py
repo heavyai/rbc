@@ -9,6 +9,12 @@ from rbc.targetinfo import TargetInfo
 class External:
     @classmethod
     def declare(cls, *args):
+        """
+        Parameters
+        ----------
+        signature : object (str, ctypes function, python callable, numba function)
+            Any object convertible to a Numba function via Type.fromobject(...).tonumba()
+        """
         return cls.external(*args, register=False)
 
     @classmethod
