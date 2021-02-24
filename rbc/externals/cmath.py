@@ -213,4 +213,3 @@ def register(fname, retty, argtys):
 for fname, (retty, args) in cmath.items():
     argtys = tuple(map(lambda x: x.ty, args))
     register(fname, retty, argtys)
-    exec(f"{fname} = declare('{retty} {fname}({', '.join(argtys)})|CPU')", globals())
