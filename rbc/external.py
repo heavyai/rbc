@@ -8,24 +8,12 @@ from rbc.targetinfo import TargetInfo
 
 class External:
     @classmethod
-    def declare(cls, *args):
+    def external(cls, *args):
         """
         Parameters
         ----------
         signature : object (str, ctypes function, python callable, numba function)
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
-        """
-        return cls.external(*args, register=False)
-
-    @classmethod
-    def external(cls, *args, register=True):
-        """
-        Parameters
-        ----------
-        signature : object (str, ctypes function, python callable, numba function)
-            Any object convertible to a Numba function via Type.fromobject(...).tonumba()
-        register : bool
-            Indicates if External should do typing/lowering or not. Default is True
         """
         try:
             targetinfo = TargetInfo()
@@ -67,8 +55,7 @@ class External:
                     ts[device].append(signature)
 
         obj = cls(key, ts)
-        if register:
-            obj.register()
+        obj.register()
         return obj
 
     def __init__(
@@ -158,4 +145,3 @@ class External:
 
 
 external = External.external
-declare = External.declare

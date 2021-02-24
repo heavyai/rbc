@@ -1,5 +1,5 @@
 from collections import namedtuple
-from rbc.external import declare
+from rbc.externals import utils
 from rbc.typesystem import Type
 from numba.core import imputils, typing
 
@@ -199,12 +199,8 @@ def register(fname, retty, argtys):
 
         def generic(self, args, kws):
             # get the correct signature and function name for the current device
-            atypes = tuple(map(Type.fromobject, args))
-            e = declare(f"{retty} {fname}({', '.join(argtys)})|CPU")
-
-            t = e.match_signature(atypes)
-
-            codegen = e.get_codegen()
+            t = Type.fromstring(f"{retty} {fname}({', '.join(argtys)})")
+            codegen = utils.gen_codegen(fname)
             lower(_key, *t.tonumba().args)(codegen)
 
             return t.tonumba()
