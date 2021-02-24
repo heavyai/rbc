@@ -89,7 +89,6 @@ def np_real_nextafter_impl(context, builder, sig, args):
 
 def call_external(fn_name):
     def codegen(context, builder, sig, args):
-        # Need to retrieve the function name again
         fndesc = funcdesc.ExternalFunctionDescriptor(fn_name, sig.return_type, sig.args)
         func = context.declare_external_function(builder.module, fndesc)
         return builder.call(func, args)
