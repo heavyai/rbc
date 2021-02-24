@@ -32,7 +32,7 @@ def omnisci():
     for _i in range(1, 6):
         a = str((_i % 3) == 0).lower()
         b = str((_i % 2) == 0).lower()
-        x = 0.1 + _i/10.0
+        x = 0.123 + _i/10.0
         y = _i/6.0
         z = _i + 1.23
         i = _i
@@ -286,9 +286,9 @@ numpy_functions = [
     ('ldexp', 'double(double, int)', np.ldexp),
     ('frexp0', 'double(double)', lambda x: np.frexp(x)[0]),
     # Rounding functions:
-    ('around', 'double(double)', lambda x: np.around(x)),
-    ('round2',  # round and round_ are not good names
-     'double(double)', lambda x: np.round_(x)),  # force arity to 1
+    # ('around', 'double(double)', lambda x: np.around(x)),
+    # ('round2',  # round and round_ are not good names
+    #  'double(double)', lambda x: np.round_(x)),  # force arity to 1
     ('floor', 'double(double)', np.floor),
     ('ceil', 'double(double)', np.ceil),
     ('trunc', 'double(double)', np.trunc),
@@ -345,9 +345,6 @@ if np is not None:
                          ids=["np." + item[0] for item in numpy_functions])
 def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func):
     omnisci.reset()
-
-    if device == 'gpu':
-        pytest.skip('Missing libdevice bindings for numpy functions')
 
     if not omnisci.has_cuda and device == 'gpu':
         pytest.skip('Test requires CUDA-enabled omniscidb server')
@@ -422,6 +419,9 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
+    if device == 'gpu' and fn_name in ['floor_divide']:
+        pytest.skip(f'Missing libdevice bindigs for {fn_name}')
+
     omnisci(signature, devices=[device])(fn)
 
     omnisci.register()
@@ -448,6 +448,6 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
         result = args[-1]
         expected = np_func(*args[:-1])
         if np.isnan(expected):
-            assert np.isnan(result)
+            assert np.isnan(result), fn_name
         else:
-            assert(np.isclose(expected, result))
+            assert(np.isclose(expected, result)), fn_name
