@@ -128,7 +128,7 @@ class External:
                 # get the correct signature and function name for the current device
                 atypes = tuple(map(Type.fromobject, args))
                 t = self.obj.match_signature(atypes)
-
+                TargetInfo().add_external(t.name)
                 if self.obj.lowering:
                     codegen = self.obj.get_codegen()
                     extending.lower_builtin(self.key, *t.tonumba().args)(codegen)

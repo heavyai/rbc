@@ -83,6 +83,10 @@ class TargetInfo(object):
         self.info = {}
         self.type_sizeof = {}
         self._supported_libraries = set()  # libfuncs.Library instances
+        self._userdefined_externals = set()
+
+    def add_external(self, *names):
+        self._userdefined_externals.update(names)
 
     def add_library(self, lib):
         if isinstance(lib, str):
@@ -96,6 +100,8 @@ class TargetInfo(object):
     def supports(self, name):
         """Return True if the target system defines symbol name.
         """
+        if name in self._userdefined_externals:
+            return True
         for lib in self._supported_libraries:
             if name in lib:
                 return True
