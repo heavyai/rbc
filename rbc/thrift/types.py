@@ -9,6 +9,8 @@ dispatchermethod.
 # Author: Pearu Peterson
 # Created: February 2019
 
+import ctypes
+import _ctypes
 import pickle
 import numpy as np
 
@@ -35,6 +37,71 @@ def toobject(thrift, tobj, cls=None):
     return tobj
 
 
+class PointerData(tuple):
+    """Holds pointer data for pickling.
+
+    PointerData is a 4-tuple containing:
+    - pointer value as int
+    - value type as ctypes type
+    - pointer level as int
+    - sizeof value type (for integrity check)
+    """
+
+    @classmethod
+    def fromctypes(cls, ptr):
+        if isinstance(ptr, _ctypes._Pointer):
+            level = 1   # ANSI C requires support for 12 levels as a maximum
+            t = ptr._type_
+            while issubclass(t, ctypes._Pointer):
+                level += 1
+                t = t._type_
+            if t == ctypes.c_void_p:
+                level += 1
+            value = ctypes.cast(ptr, ctypes.c_void_p).value
+            return cls((value,
+                        t,
+                        level,
+                        ctypes.sizeof(t)))
+        if isinstance(ptr, ctypes.c_void_p):
+            t = type(ptr)
+            return cls((ptr.value,
+                        t,
+                        1,
+                        ctypes.sizeof(t)))
+        raise NotImplementedError(repr((type(ptr), ptr)))
+
+    def toctypes(self):
+        value, dtype, level, sizeof_dtype = self
+        assert ctypes.sizeof(dtype) == sizeof_dtype, (
+            dtype, ctypes.sizeof(dtype), sizeof_dtype)  # TODO: mismatch of type sizes!
+        if dtype == ctypes.c_void_p:
+            t = dtype
+        else:
+            t = ctypes.POINTER(dtype)
+        for i in range(1, level):
+            t = ctypes.POINTER(t)
+        ptr = ctypes.c_void_p(value)
+        if t != ctypes.c_void_p:
+            ptr = ctypes.cast(ptr, t)
+        return ptr
+
+
+def _prepickle_dumps(data):
+    if isinstance(data, (_ctypes._Pointer, ctypes.c_void_p)):
+        return PointerData.fromctypes(data)
+    if isinstance(data, tuple):
+        return tuple(map(_prepickle_dumps, data))
+    return data
+
+
+def _postpickle_loads(data):
+    if isinstance(data, PointerData):
+        return data.toctypes()
+    if isinstance(data, tuple):
+        return tuple(map(_postpickle_loads, data))
+    return data
+
+
 class Data(object):
     """Represents any data that interpretation is defined by info and kind
     attributes.
@@ -51,8 +118,7 @@ class Data(object):
             r.kind = thrift.DataKind.DATA_RAW
             r.info = ''
         else:
-            # protocol = pickle.DEFAULT_PROTOCOL if info is None else int(info)
-            r.data = pickle.dumps(data)
+            r.data = pickle.dumps(_prepickle_dumps(data))
             r.kind = thrift.DataKind.DATA_PICKLED
             r.info = str(info).encode()
         return r
@@ -68,8 +134,7 @@ class Data(object):
         if kind == thrift.DataKind.DATA_RAW:
             return obj.data
         if kind == thrift.DataKind.DATA_PICKLED:
-            # protocol = int(obj.info)  # pickle.loads detects protocol itself
-            return pickle.loads(obj.data)
+            return _postpickle_loads(pickle.loads(obj.data))
         raise NotImplementedError(repr(kind))
 
 
