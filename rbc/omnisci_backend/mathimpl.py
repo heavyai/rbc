@@ -1,5 +1,5 @@
 import math
-from rbc.external import declare
+from rbc.externals import utils
 from numba.core import imputils
 from numba.core.typing.templates import ConcreteTemplate, signature, Registry
 from numba.types import float32, float64, int32, int64, uint64, intp
@@ -89,25 +89,16 @@ binarys += [("hypot", "hypotf", math.hypot)]
 binarys += [("remainder", "remainderf", math.remainder)]
 
 
-def gen_external(
-    fname, retty, argtypes, devices=("CPU", "GPU"), prefixes=("", "__nv_")
-):
-    arguments = []
-    for device, prefix in zip(devices, prefixes):
-        arguments.append(
-            f"{retty} {prefix}{fname}({', '.join(map(str, argtypes))})|{device}"
-        )
-    return declare(*arguments)
-
-
 def impl_unary(fname, key, typ):
-    e = gen_external(fname, typ, (typ,))
-    lower(key, typ)(e.get_codegen())
+    cpu = utils.gen_codegen(fname)
+    gpu = utils.gen_codegen(f"__nv_{fname}")
+    lower(key, typ)(utils.dispatch_codegen(cpu, gpu))
 
 
 def impl_binary(fname, key, typ):
-    e = gen_external(fname, typ, (typ, typ))
-    lower(key, typ, typ)(e.get_codegen())
+    cpu = utils.gen_codegen(fname)
+    gpu = utils.gen_codegen(f"__nv_{fname}")
+    lower(key, typ, typ)(utils.dispatch_codegen(cpu, gpu))
 
 
 for fname64, fname32, key in unarys:
@@ -122,18 +113,14 @@ for fname64, fname32, key in binarys:
 
 # manual mapping
 def impl_ldexp():
-    ldexp = declare(
-        "double ldexp(double, int32)|CPU",
-        "double __nv_ldexp(double, int32)|GPU",
-    )
+    ldexp_cpu = utils.gen_codegen('ldexp')
+    ldexp_gpu = utils.gen_codegen('__nv_ldexp')
 
-    ldexpf = declare(
-        "float ldexpf(float, int32)|CPU",
-        "float __nv_ldexpf(float, int32)|GPU",
-    )
+    ldexpf_cpu = utils.gen_codegen('ldexpf')
+    ldexpf_gpu = utils.gen_codegen('__nv_ldexpf')
 
-    lower(math.ldexp, float64, int32)(ldexp.get_codegen())
-    lower(math.ldexp, float32, int32)(ldexpf.get_codegen())
+    lower(math.ldexp, float64, int32)(utils.dispatch_codegen(ldexp_cpu, ldexp_gpu))
+    lower(math.ldexp, float32, int32)(utils.dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
 
 
 impl_ldexp()
