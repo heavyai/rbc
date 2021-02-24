@@ -6,16 +6,20 @@
 
 import re
 import ctypes
+import _ctypes
 import inspect
+from llvmlite import ir
+
 from .utils import get_version
 from .targetinfo import TargetInfo
+
 try:
     import numba as nb
     if get_version('numba') >= (0, 49):
-        from numba.core import typing, datamodel, extending
+        from numba.core import typing, datamodel, extending, typeconv
         from numba.core.imputils import lower_cast
     else:
-        from numba import typing, datamodel, extending
+        from numba import typing, datamodel, extending, typeconv
         from numba.targets.imputils import lower_cast
     nb_NA_message = None
 except ImportError as msg:
@@ -81,6 +85,7 @@ def _commasplit(s):
     raise TypeParseError('failed to comma-split `%s`' % s)
 
 
+_booln_match = re.compile(r'\A(boolean|bool|b)(1|8)\Z').match
 _charn_match = re.compile(r'\A(char)(32|16|8)(_t|)\Z').match
 _intn_match = re.compile(r'\A(signed\s*int|int|i)(\d+)(_t|)\Z').match
 _uintn_match = re.compile(r'\A(unsigned\s*int|uint|u)(\d+)(_t|)\Z').match
@@ -88,7 +93,7 @@ _floatn_match = re.compile(r'\A(float|f)(16|32|64|128|256)(_t|)\Z').match
 _complexn_match = re.compile(
     r'\A(complex|c)(16|32|64|128|256|512)(_t|)\Z').match
 
-_bool_match = re.compile(r'\A(boolean\d?|bool|_Bool|b)\Z').match
+_bool_match = re.compile(r'\A(boolean|bool|_Bool|b)\Z').match
 _string_match = re.compile(r'\A(string|str)\Z').match
 
 _char_match = re.compile(r'\A(char)\Z').match
@@ -203,6 +208,7 @@ for _k, _m, _lst in [
 if nb is not None:
     _numba_imap = {nb.void: 'void', nb.boolean: 'bool'}
     _numba_char_map = {}
+    _numba_bool_map = {}
     _numba_int_map = {}
     _numba_uint_map = {}
     _numba_float_map = {}
@@ -266,6 +272,9 @@ class MetaType(type):
     custom_types = dict()
     aliases = dict()
 
+    # ctypes generated types need to be cached to be usable
+    ctypes_types = dict()
+
     def __new__(cls, name, bases, dct):
         cls = super().__new__(cls, name, bases, dct)
         if name != 'Type':
@@ -318,6 +327,8 @@ class Type(tuple, metaclass=MetaType):
 
       no type:                    void, none
       bool:                       bool, boolean, _Bool, b
+      1-bit bool:                 bool1, boolean1, b1
+      8-bit bool:                 bool8, boolean8, b8
       8-bit char:                 char8, char
       16-bit char:                char16
       32-bit char:                char32, wchar
@@ -384,7 +395,7 @@ class Type(tuple, metaclass=MetaType):
                 raise ValueError('cannot create named function type from `%s`' % (args,))
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
-        return obj
+        return obj.postprocess_type()
 
     @classmethod
     def preprocess_args(cls, args):
@@ -394,6 +405,11 @@ class Type(tuple, metaclass=MetaType):
         for processing its parameters.
         """
         return args
+
+    def postprocess_type(self):
+        """Postprocess Type construction. Must return Type instance.
+        """
+        return self
 
     def annotation(self, **annotations):
         """Set and get annotations.
@@ -475,7 +491,7 @@ class Type(tuple, metaclass=MetaType):
 
     @property
     def is_bool(self):
-        return self.is_atomic and self[0] == 'bool'
+        return self.is_atomic and self[0].startswith('bool')
 
     @property
     def is_char(self):
@@ -765,9 +781,11 @@ class Type(tuple, metaclass=MetaType):
             return _numba_complex_map.get(int(self[0][7:]))
         if self.is_bool:
             if bool_is_int8 is None:
-                return nb.boolean
+                return _numba_bool_map.get(self.bits, nb.boolean)
             return boolean8 if bool_is_int8 else boolean1
         if self.is_pointer:
+            if self[0].is_void:
+                return nb.types.voidptr
             return nb.types.CPointer(
                 self[0].tonumba(bool_is_int8=bool_is_int8))
         if self.is_struct:
@@ -781,8 +799,8 @@ class Type(tuple, metaclass=MetaType):
                                 member.tonumba(bool_is_int8=bool_is_int8)))
             base = self._params.get('numba.Type')
             if base is not None:
-                return make_numba_struct(struct_name, members, base=base)
-            return make_numba_struct(struct_name, members)
+                return make_numba_struct(struct_name, members, base=base, origin=self)
+            return make_numba_struct(struct_name, members, origin=self)
         if self.is_function:
             rtype = self[0].tonumba(bool_is_int8=bool_is_int8)
             atypes = [t.tonumba(bool_is_int8=bool_is_int8)
@@ -825,19 +843,50 @@ class Type(tuple, metaclass=MetaType):
                                    int(self[0][0][4:])).__name__ + '_p')
             return ctypes.POINTER(self[0].toctypes())
         if self.is_struct:
-            fields = [('f%s' % i, t.toctypes()) for i, t in enumerate(self)]
-            return type('struct%s' % (id(self)),
-                        (ctypes.Structure, ),
-                        dict(_fields_=fields))
+            ctypes_type_name = 'rbc_typesystem_struct_%s' % (self.mangle())
+            typ = type(self).ctypes_types.get(ctypes_type_name)
+            if typ is None:
+                fields = [((t.name if t.name else 'f%s' % i), t.toctypes())
+                          for i, t in enumerate(self)]
+                typ = type(ctypes_type_name,
+                           (ctypes.Structure, ),
+                           dict(_fields_=fields))
+                type(self).ctypes_types[ctypes_type_name] = typ
+            return typ
         if self.is_function:
-            rtype = self[0].toctypes()
-            atypes = [t.toctypes() for t in self[1] if not t.is_void]
-            return ctypes.CFUNCTYPE(rtype, *atypes)
+            ctypes_type_name = 'rbc_typesystem_function_%s' % (self.mangle())
+            typ = type(self).ctypes_types.get(ctypes_type_name)
+            if typ is None:
+                rtype = self[0].toctypes()
+                atypes = [t.toctypes() for t in self[1] if not t.is_void]
+                typ = ctypes.CFUNCTYPE(rtype, *atypes)
+                type(self).ctypes_types[ctypes_type_name] = typ
+            return typ
         if self.is_string:
             return ctypes.c_wchar_p
         if self.is_custom:
-            raise NotImplementedError(f'{type(self).__name__}.toctypes()')
+            raise NotImplementedError(f'{type(self).__name__}.toctypes()|{self=}')
         raise NotImplementedError(repr((self, self.is_string)))
+
+    def tollvmir(self, bool_is_int8=None):
+        if self.is_int:
+            return ir.IntType(self.bits)
+        if self.is_float:
+            return {32: ir.FloatType, 64: ir.DoubleType}[self.bits]()
+        if self.is_bool:
+            if bool_is_int8:
+                return ir.IntType(8)
+            return ir.IntType(self.bits)
+        if self.is_pointer:
+            if self[0].is_void:
+                # mapping void* to int8*
+                return ir.IntType(8).as_pointer()
+            return self[0].tollvmir(bool_is_int8=bool_is_int8).as_pointer()
+        if self.is_void:
+            # Used only as the return type of a function without a return value.
+            # TODO: ensure that void is used only as function return type or a pointer dtype.
+            return ir.VoidType()
+        raise NotImplementedError(f'{type(self).__name__}.tollvmir()|{self=}')
 
     @classmethod
     def _fromstring(cls, s):
@@ -885,8 +934,8 @@ class Type(tuple, metaclass=MetaType):
         if s.endswith('>') and not s.startswith('<'):  # custom
             i = s.index('<')
             name = s[:i]
-            params = tuple(map(cls._fromstring,
-                               _commasplit(s[i+1:-1].strip())))
+            params = _commasplit(s[i+1:-1].strip())
+            params = tuple(map(cls._fromstring, params)) if params else ()
             name = cls.aliases.get(name, name)
             if name in cls.custom_types:
                 cls = cls.custom_types[name]
@@ -916,6 +965,8 @@ class Type(tuple, metaclass=MetaType):
                 t._params['name'] = name
                 return t
         # atomic
+        if s in cls.custom_types:
+            return cls.custom_types[s](())
         return cls(s)
 
     @classmethod
@@ -964,6 +1015,9 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(t, nb.types.Boolean):
             # boolean1 and boolean8 map both to bool
             return cls.fromstring('bool')
+        if isinstance(t, nb.types.misc.RawPointer):
+            if t == nb.types.voidptr:
+                return cls(cls(), '*')
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -1031,8 +1085,13 @@ class Type(tuple, metaclass=MetaType):
             n = mapping.get(type(obj))
             if n is not None:
                 return cls.fromstring(n)
-        raise NotImplementedError('%s.fromvalue(%r)'
-                                  % (cls.__name__, obj))
+        if isinstance(obj, _ctypes._Pointer):
+            return cls.fromctypes(obj._type_).pointer()
+        if isinstance(obj, ctypes.c_void_p):
+            return cls(cls(), '*')
+        # return cls.fromstring(type(obj).__name__)
+        raise NotImplementedError('%s.fromvalue(%r|%s)'
+                                  % (cls.__name__, obj, type(obj)))
 
     @classmethod
     def fromobject(cls, obj):
@@ -1075,13 +1134,11 @@ class Type(tuple, metaclass=MetaType):
             a = type(self).aliases.get(s)
             if a is not None:
                 return Type.fromobject(a)._normalize()
-            m = _bool_match(s)
-            if m is not None:
-                return Type('bool', **params)
             m = _string_match(s)
             if m is not None:
                 return Type('string', **params)
             for match, ntype in [
+                    (_booln_match, 'bool'),
                     (_charn_match, 'char'),
                     (_intn_match, 'int'),
                     (_uintn_match, 'uint'),
@@ -1094,8 +1151,11 @@ class Type(tuple, metaclass=MetaType):
                     return Type(ntype + bits, **params)
             if s.endswith('[]'):
                 return Type.fromstring(f'Array<{s[:-2]}>')._normalize()
+            m = _bool_match(s)
+            if m is not None:
+                return Type('bool', **params)
             if _char_match(s):
-                return Type('char8', **params)   # IEC 9899 defines sizeof(char)==1
+                return Type('char8', **params)    # IEC 9899 defines sizeof(char)==1
             if _float_match(s):
                 return Type('float32', **params)  # IEC 60559 defines sizeof(float)==4
             if _double_match(s):
@@ -1210,7 +1270,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_void:
             return 0
         if self.is_bool:
-            return 1
+            return int(self[0][4:] or 1)
         if self.is_int:
             return int(self[0][3:])
         if self.is_uint or self.is_char:
@@ -1221,6 +1281,8 @@ class Type(tuple, metaclass=MetaType):
             return int(self[0][7:])
         if self.is_struct:
             return sum([m.bits for m in self])
+        if self.is_pointer:
+            return 64  # TODO: check that pointer type bitwidth is 64
         return NotImplemented
 
     def match(self, other):
@@ -1248,6 +1310,8 @@ class Type(tuple, metaclass=MetaType):
             elif other.is_pointer:
                 if not self.is_pointer:
                     return
+                if self[0].is_void or other[0].is_void:
+                    return 0
                 penalty = self[0].match(other)
                 if penalty is None:
                     if self[0].is_void:
@@ -1279,8 +1343,9 @@ class Type(tuple, metaclass=MetaType):
                         return
                     penalty = penalty + p
                 return penalty
-            if (
+            elif (
                     (other.is_int and self.is_int)
+                    or (other.is_bool and self.is_bool)
                     or (other.is_float and self.is_float)
                     or (other.is_uint and self.is_uint)
                     or (other.is_char and self.is_char)
@@ -1288,13 +1353,38 @@ class Type(tuple, metaclass=MetaType):
                 if self.bits >= other.bits:
                     return 0
                 return other.bits - self.bits
-            if self.is_complex and (other.is_float
-                                    or other.is_int or other.is_uint):
+            elif (
+                    (other.is_int and self.is_uint)
+                    or (other.is_uint and self.is_int)):
+                if self.bits >= other.bits:
+                    return 10
+                return 10 + other.bits - self.bits
+            elif self.is_complex and (other.is_float
+                                      or other.is_int or other.is_uint):
                 return 1000
-            if self.is_float and (other.is_int or other.is_uint):
+            elif self.is_float and (other.is_int or other.is_uint):
                 return 1000
+            elif (self.is_float or self.is_complex) and other.is_bool:
+                return
+            elif (self.is_int or self.is_uint) and other.is_bool:
+                if self.bits >= other.bits:
+                    return 0
+                return other.bits - self.bits
+            elif self.is_bool and (other.is_int or other.is_uint):
+                if self.bits >= other.bits:
+                    return 0
+                return other.bits - self.bits
+            elif ((self.is_int or self.is_uint or self.is_bool)
+                  and (other.is_float or other.is_complex)):
+                return
+            elif self.is_float and other.is_complex:
+                return
+            elif self.is_pointer and (other.is_int or other.is_uint):
+                if self.bits == other.bits:
+                    return 1
+                return
             # TODO: lots of
-            return None
+            # return None
             raise NotImplementedError(repr((self, other)))
         elif isinstance(other, tuple):
             if not self.is_function:
@@ -1464,7 +1554,11 @@ def _demangle(s):
             name = block[0]
             assert name.is_atomic, name
             name = name[0]
-            atypes, rest = _demangle('_' + rest)
+            if rest and rest[0] == 'R':
+                atypes = ()
+                rest = rest[1:]
+            else:
+                atypes, rest = _demangle('_' + rest)
             if name in Type.custom_types:
                 typ = Type.custom_types[name](atypes)
             else:
@@ -1532,8 +1626,26 @@ if nb is not None:
         [val] = args
         return builder.icmp_signed('!=', val, val.type(0))
 
+    _numba_bool_map[1] = boolean1
+    _numba_bool_map[8] = boolean8
+    _numba_imap[boolean1] = 'bool1'
+    _numba_imap[boolean8] = 'bool8'
 
-def make_numba_struct(name, members, base=nb.types.Type, _cache={}):
+    boolean8ptr = nb.types.CPointer(boolean8)
+    boolean8ptr2 = nb.types.CPointer(boolean8ptr)
+
+    _pointer_types = [boolean8ptr, boolean8ptr2, nb.types.intp, nb.types.voidptr]
+    for _i, _p1 in enumerate(_pointer_types[:2]):
+        for _j, _p2 in enumerate(_pointer_types):
+            if _p1 == _p2 or _i > _j:
+                continue
+            typeconv.rules.default_type_manager.set_compatible(
+                _p1, _p2, typeconv.Conversion.safe)
+            typeconv.rules.default_type_manager.set_compatible(
+                _p2, _p1, typeconv.Conversion.safe)
+
+
+def make_numba_struct(name, members, base=nb.types.Type, origin=None, _cache={}):
     """Create numba struct type instance.
     """
     t = _cache.get(name)
@@ -1547,7 +1659,7 @@ def make_numba_struct(name, members, base=nb.types.Type, _cache={}):
                             (datamodel.StructModel,),
                             dict(__init__=model__init__))
         struct_type = type(name+'Type', (base,),
-                           dict(members=[t for n, t in members]))
+                           dict(members=[t for n, t in members], origin=origin))
         datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
     return t

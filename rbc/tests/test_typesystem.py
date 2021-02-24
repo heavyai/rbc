@@ -23,6 +23,10 @@ from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
 
+if nb is not None:
+    from rbc.typesystem import boolean1, boolean8
+
+
 def test_dummy():
     with pytest.raises(
             RuntimeError,
@@ -245,6 +249,10 @@ def test_normalize(target_info):
     assert tostr('bool') == 'bool'
     assert tostr('b') == 'bool'
     assert tostr('_Bool') == 'bool'
+    assert tostr('bool1') == 'bool1'
+    assert tostr('boolean1') == 'bool1'
+    assert tostr('bool8') == 'bool8'
+    assert tostr('boolean8') == 'bool8'
 
     assert tostr('str') == 'string'
     assert tostr('string') == 'string'
@@ -359,7 +367,9 @@ def test_tonumba(target_info):
         return Type.fromstring(a).tonumba()
 
     assert tonumba('void') == nb.void
-    assert tonumba('bool') == nb.boolean
+    assert tonumba('bool') == boolean1
+    assert tonumba('bool1') == boolean1
+    assert tonumba('bool8') == boolean8
     assert tonumba('int8') == nb.int8
     assert tonumba('int16') == nb.int16
     assert tonumba('int32') == nb.int32
