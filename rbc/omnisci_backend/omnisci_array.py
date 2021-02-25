@@ -32,9 +32,6 @@ class OmnisciArrayType(OmnisciBufferType):
         return ('bool is_null',)
 
 
-typesystem.Type.alias(Array='OmnisciArrayType')
-
-
 ArrayPointer = BufferPointer
 
 

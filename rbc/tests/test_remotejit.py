@@ -322,169 +322,170 @@ scalar_pointer_types = ['int64', 'int32', 'int16', 'int8', 'float32', 'float64',
 @pytest.mark.parametrize("T", scalar_pointer_types)
 @pytest.mark.parametrize("V", scalar_pointer_types)
 def test_scalar_pointer_conversion(rjit, T, V):
-    Type.alias(T=T, V=V, intp='int64')
+    with Type.alias(T=T, V=V, intp='int64'):
 
-    # pointer-intp conversion
+        # pointer-intp conversion
 
-    @rjit('T*(intp a)')
-    def i2p(a):
-        return a
+        @rjit('T*(intp a)')
+        def i2p(a):
+            return a
 
-    @rjit('V*(intp a)')
-    def i2r(a):
-        return a
+        @rjit('V*(intp a)')
+        def i2r(a):
+            return a
 
-    @rjit('intp(T* a)')
-    def p2i(a):
-        return a
+        @rjit('intp(T* a)')
+        def p2i(a):
+            return a
 
-    @rjit('intp(V* a)')
-    def r2i(a):
-        return a
+        @rjit('intp(V* a)')
+        def r2i(a):
+            return a
 
-    @rjit('T*(T* a)')
-    def p2p(a):
-        return a
+        @rjit('T*(T* a)')
+        def p2p(a):
+            return a
 
-    @rjit('T*(V* a)')
-    def p2r(a):
-        return a
+        @rjit('T*(V* a)')
+        def p2r(a):
+            return a
 
-    @rjit('V*(T* a)')
-    def r2p(a):
-        return a
+        @rjit('V*(T* a)')
+        def r2p(a):
+            return a
 
-    # pointer artithmetics
+        # pointer artithmetics
 
-    @rjit('T*(T* a, intp i)')
-    def padd(a, i):
-        return a + i
+        @rjit('T*(T* a, intp i)')
+        def padd(a, i):
+            return a + i
 
-    @rjit('T*(T* a)')
-    def pincr(a):
-        return a + 1
+        @rjit('T*(T* a)')
+        def pincr(a):
+            return a + 1
 
-    if T == V:
-        i = 79
-        p = i2p(i)
-        assert not isinstance(p, int), (type(p), p)
-        assert ctypes.cast(p, ctypes.c_void_p).value == i
-        i2 = p2i(p)
-        assert i2 == i
-        p2 = p2p(p)
-        assert ctypes.cast(p2, ctypes.c_void_p).value == ctypes.cast(p, ctypes.c_void_p).value
-        assert p2i(padd(p, 2)) == i + 2
-        assert p2i(pincr(p)) == i + 1
+        if T == V:
+            i = 79
+            p = i2p(i)
+            assert not isinstance(p, int), (type(p), p)
+            assert ctypes.cast(p, ctypes.c_void_p).value == i
+            i2 = p2i(p)
+            assert i2 == i
+            p2 = p2p(p)
+            assert ctypes.cast(p2, ctypes.c_void_p).value == ctypes.cast(p, ctypes.c_void_p).value
+            assert p2i(padd(p, 2)) == i + 2
+            assert p2i(pincr(p)) == i + 1
 
-    if 'void' in [T, V]:
-        i = 85
-        r = i2r(i)
-        assert not isinstance(r, int), (type(r), r)
+        if 'void' in [T, V]:
+            i = 85
+            r = i2r(i)
+            assert not isinstance(r, int), (type(r), r)
 
-        assert ctypes.cast(r, ctypes.c_void_p).value == i
-        p2 = r2p(r)
-        assert p2i(p2) == i
-        assert p2i(p2r(i2p(i))) == i
+            assert ctypes.cast(r, ctypes.c_void_p).value == i
+            p2 = r2p(r)
+            assert p2i(p2) == i
+            assert p2i(p2r(i2p(i))) == i
 
-    # double pointer-intp conversion
+        # double pointer-intp conversion
 
-    @rjit('T**(intp a)')
-    def i2pp(a):
-        return a
+        @rjit('T**(intp a)')
+        def i2pp(a):
+            return a
 
-    @rjit('V**(intp a)')
-    def i2rr(a):
-        return a
+        @rjit('V**(intp a)')
+        def i2rr(a):
+            return a
 
-    @rjit('intp(T** a)')
-    def pp2i(a):
-        return a
+        @rjit('intp(T** a)')
+        def pp2i(a):
+            return a
 
-    @rjit('intp(V** a)')
-    def rr2i(a):
-        return a
+        @rjit('intp(V** a)')
+        def rr2i(a):
+            return a
 
-    @rjit('T**(T** a)')
-    def pp2pp(a):
-        return a
+        @rjit('T**(T** a)')
+        def pp2pp(a):
+            return a
 
-    @rjit('T**(T** a, intp i)')
-    def ppadd(a, i):
-        return a + i
+        @rjit('T**(T** a, intp i)')
+        def ppadd(a, i):
+            return a + i
 
-    @rjit('T**(T** a)')
-    def ppincr(a):
-        return a + 1
+        @rjit('T**(T** a)')
+        def ppincr(a):
+            return a + 1
 
-    if T == V:
-        i = 89
-        pp = i2pp(i)
-        assert ctypes.cast(pp, ctypes.c_void_p).value == i
-        i2 = pp2i(pp)
-        assert i2 == i
-        pp2 = pp2pp(pp)
-        assert ctypes.cast(pp2, ctypes.c_void_p).value == ctypes.cast(pp, ctypes.c_void_p).value
-        assert pp2i(ppadd(pp, 2)) == i + 2
-        assert pp2i(ppincr(pp)) == i + 1
+        if T == V:
+            i = 89
+            pp = i2pp(i)
+            assert ctypes.cast(pp, ctypes.c_void_p).value == i
+            i2 = pp2i(pp)
+            assert i2 == i
+            pp2 = pp2pp(pp)
+            assert ctypes.cast(pp2, ctypes.c_void_p).value == ctypes.cast(
+                pp, ctypes.c_void_p).value
+            assert pp2i(ppadd(pp, 2)) == i + 2
+            assert pp2i(ppincr(pp)) == i + 1
 
-    # double pointer-pointer conversion
+        # double pointer-pointer conversion
 
-    @rjit('T**(T* a)')
-    def p2pp(a):
-        return a
+        @rjit('T**(T* a)')
+        def p2pp(a):
+            return a
 
-    @rjit('T*(T** a)')
-    def pp2p(a):
-        return a
+        @rjit('T*(T** a)')
+        def pp2p(a):
+            return a
 
-    # mixed pointer conversion requires void*
+        # mixed pointer conversion requires void*
 
-    @rjit('T**(V* a)')
-    def r2pp(a):
-        return a
+        @rjit('T**(V* a)')
+        def r2pp(a):
+            return a
 
-    @rjit('V*(T** a)')
-    def pp2r(a):
-        return a
+        @rjit('V*(T** a)')
+        def pp2r(a):
+            return a
 
-    if T == V:
-        i = 99
-        p = i2p(i)
-        pp = p2pp(p)
-        assert pp2i(pp) == i
-        assert p2i(pp2p(pp)) == i
+        if T == V:
+            i = 99
+            p = i2p(i)
+            pp = p2pp(p)
+            assert pp2i(pp) == i
+            assert p2i(pp2p(pp)) == i
 
-    if V == 'void':
-        i = 105
-        assert r2i(pp2r(i2pp(i))) == i
-        assert pp2i(r2pp(i2r(i))) == i
+        if V == 'void':
+            i = 105
+            assert r2i(pp2r(i2pp(i))) == i
+            assert pp2i(r2pp(i2r(i))) == i
 
 
 @pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 def test_scalar_pointer_access_local(ljit, T):
-    Type.alias(T=T)
 
-    arr = np.array([1, 2, 3, 4], dtype=T)
-    arr2 = np.array([11, 12, 13, 14], dtype=T)
+    with Type.alias(T=T):
+        arr = np.array([1, 2, 3, 4], dtype=T)
+        arr2 = np.array([11, 12, 13, 14], dtype=T)
 
-    ptr = ctypes.c_void_p(arr.__array_interface__['data'][0])
+        ptr = ctypes.c_void_p(arr.__array_interface__['data'][0])
 
-    @ljit('T(T* x, int i)')
-    def pitem(x, i):
-        return x[i]
+        @ljit('T(T* x, int i)')
+        def pitem(x, i):
+            return x[i]
 
-    @ljit('void(T* x, int i, T)')
-    def sitem(x, i, v):
-        x[i] = v
+        @ljit('void(T* x, int i, T)')
+        def sitem(x, i, v):
+            x[i] = v
 
-    for i in range(len(arr)):
-        v = pitem(ptr, i)
-        assert v == arr[i]
+        for i in range(len(arr)):
+            v = pitem(ptr, i)
+            assert v == arr[i]
 
-    for i in range(len(arr)):
-        sitem(ptr, i, arr2[i])
+        for i in range(len(arr)):
+            sitem(ptr, i, arr2[i])
 
-    assert (arr == arr2).all()
+        assert (arr == arr2).all()
 
 
 memory_managers = dict(
@@ -504,41 +505,41 @@ memory_managers = dict(
 def test_scalar_pointer_access_remote(rjit, memman, T):
     calloc_prototype, free_prototype = memory_managers[memman]
 
-    Type.alias(T=T)
+    with Type.alias(T=T):
 
-    arr = np.array([1, 2, 3, 4], dtype=T)
-    arr2 = np.array([11, 12, 13, 14], dtype=T)
+        arr = np.array([1, 2, 3, 4], dtype=T)
+        arr2 = np.array([11, 12, 13, 14], dtype=T)
 
-    with TargetInfo.host():  # TODO: can we eliminate this?
-        calloc = external(calloc_prototype)
-        free = external(free_prototype)
+        with TargetInfo.host():  # TODO: can we eliminate this?
+            calloc = external(calloc_prototype)
+            free = external(free_prototype)
 
-    @rjit(calloc_prototype)
-    def rcalloc(nmemb, size):
-        return calloc(nmemb, size)
+        @rjit(calloc_prototype)
+        def rcalloc(nmemb, size):
+            return calloc(nmemb, size)
 
-    @rjit(free_prototype)
-    def rfree(ptr):
-        return free(ptr)
+        @rjit(free_prototype)
+        def rfree(ptr):
+            return free(ptr)
 
-    @rjit('T(T* x, int i)')
-    def pitem(x, i):
-        return x[i]
+        @rjit('T(T* x, int i)')
+        def pitem(x, i):
+            return x[i]
 
-    @rjit('void(T* x, int i, T)')
-    def sitem(x, i, v):
-        x[i] = v
+        @rjit('void(T* x, int i, T)')
+        def sitem(x, i, v):
+            x[i] = v
 
-    ptr = rcalloc(arr.itemsize, len(arr))
+        ptr = rcalloc(arr.itemsize, len(arr))
 
-    assert ptr.value
+        assert ptr.value
 
-    for i in range(len(arr)):
-        sitem(ptr, i, arr[i])
+        for i in range(len(arr)):
+            sitem(ptr, i, arr[i])
 
-    for i in range(len(arr2)):
-        arr2[i] = pitem(ptr, i)
+        for i in range(len(arr2)):
+            arr2[i] = pitem(ptr, i)
 
-    rfree(ptr)
+        rfree(ptr)
 
-    assert (arr == arr2).all()
+        assert (arr == arr2).all()

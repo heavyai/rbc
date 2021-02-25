@@ -131,12 +131,3 @@ class OmnisciCursorType(typesystem.Type):
     @property
     def as_consumed_args(self):
         return self[0]
-
-
-typesystem.Type.alias(
-    Cursor='OmnisciCursorType',
-    Column='OmnisciColumnType',
-    OutputColumn='OmnisciOutputColumnType',
-    RowMultiplier='int32|sizer=RowMultiplier',
-    ConstantParameter='int32|sizer=ConstantParameter',
-    Constant='int32|sizer=Constant')

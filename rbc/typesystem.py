@@ -9,6 +9,7 @@ import ctypes
 import _ctypes
 import inspect
 from llvmlite import ir
+import warnings
 
 from .utils import get_version
 from .targetinfo import TargetInfo
@@ -32,6 +33,33 @@ try:
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)
+
+
+class TypeAliasesManager:
+    """Manages context specific aliases.
+
+    Usage:
+
+      with Type.aliases(A='Array', bool='bool8', ...):
+          # Type.fromstring('A a') will be replaced with Type.fromstring('Array a')
+
+    """
+
+    def __init__(self, **aliases):
+        self.aliases = aliases
+
+    def __enter__(self):
+        self.old_aliases = Type.aliases.copy()
+        new_aliases = self.old_aliases.copy()
+        new_aliases.update(self.aliases)
+        Type.aliases.clear()
+        Type.aliases.update(new_aliases)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        Type.aliases.clear()
+        Type.aliases.update(self.old_aliases)
+        if exc_type is None:
+            return True
 
 
 class TypeParseError(Exception):
@@ -283,15 +311,16 @@ class MetaType(type):
 
     def alias(cls, **aliases):
         """
-        Define type aliases. For instance, defining
+        Define type aliases context. For instance,
 
-          Type.alias(myint='int64')
+          with Type.alias(myint='int64'):
+              ...
 
-        will ensure that
+        will ensure under the with block we have
 
           Type.fromstring('myint') == Type.fromstring('int64')
         """
-        cls.aliases.update(aliases)
+        return TypeAliasesManager(**aliases)
 
 
 class Type(tuple, metaclass=MetaType):
@@ -450,6 +479,21 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     raise NotImplementedError('inherit_annotations: %s'
                                               % ((a, type(a)),))
+
+    def update_params(self, other):
+        """In-place update of parameters from other and return self.
+        """
+        for k, v in other._params.items():
+            if k == 'annotation':
+                self.annotation().update(v)
+            else:
+                orig_v = self._params.get(k)
+                if orig_v is not None and orig_v != v:
+                    warnings.warn(
+                        f'{type(self).__name__}.update_params: overwriting '
+                        f'existing parameter {k} with {v} (original value is {orig_v})')
+                self._params[k] = v
+        return self
 
     def set_mangling(self, mangling):
         """Set mangling string of the type.
@@ -1133,7 +1177,7 @@ class Type(tuple, metaclass=MetaType):
             s = self[0]
             a = type(self).aliases.get(s)
             if a is not None:
-                return Type.fromobject(a)._normalize()
+                return Type.fromobject(a).update_params(self)._normalize()
             m = _string_match(s)
             if m is not None:
                 return Type('string', **params)
@@ -1488,10 +1532,10 @@ class Type(tuple, metaclass=MetaType):
                         cls = cname
                         cname = cls.__name__
                     if cls is Type:
-                        yield from cls((cname,) + params,
-                                       **self._params).apply_templates(templates)
+                        typ = cls((cname,) + params)
                     else:
-                        yield from cls(params, **self._params).apply_templates(templates)
+                        typ = cls(params)
+                    yield from typ.update_params(self).apply_templates(templates)
                 return
             for i, t in enumerate(params):
                 if not isinstance(t, Type):
