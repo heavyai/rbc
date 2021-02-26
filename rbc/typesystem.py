@@ -35,18 +35,19 @@ except ImportError as msg:
     np_NA_message = str(msg)
 
 
-class TypeAliasesManager:
+class TypeSystemManager:
     """Manages context specific aliases.
 
     Usage:
 
-      with Type.aliases(A='Array', bool='bool8', ...):
+      with Type.alias(A='Array', bool='bool8', ...):
           # Type.fromstring('A a') will be replaced with Type.fromstring('Array a')
 
     """
 
-    def __init__(self, **aliases):
+    def alias(self, aliases):
         self.aliases = aliases
+        return self
 
     def __enter__(self):
         self.old_aliases = Type.aliases.copy()
@@ -273,7 +274,7 @@ _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
-_mangling_suffices = '_V'
+_mangling_suffices = '_VW'
 _mangling_prefixes = 'PKaAMrR'
 _mangling_map = dict(
     void='v', bool='b',
@@ -320,7 +321,7 @@ class MetaType(type):
 
           Type.fromstring('myint') == Type.fromstring('int64')
         """
-        return TypeAliasesManager(**aliases)
+        return TypeSystemManager().alias(aliases)
 
 
 class Type(tuple, metaclass=MetaType):
@@ -697,6 +698,16 @@ class Type(tuple, metaclass=MetaType):
         the name value will be None.
         """
         return self._params.get('name')
+
+    def get_field_position(self, name):
+        """Return the index of a structure member with name.
+
+        Returns None when no match with member names is found.
+        """
+        assert self.is_struct
+        for i, m in enumerate(self):
+            if m.name == name:
+                return i
 
     def __str__(self):
         if self._is_ok:
@@ -1133,6 +1144,8 @@ class Type(tuple, metaclass=MetaType):
             return cls.fromctypes(obj._type_).pointer()
         if isinstance(obj, ctypes.c_void_p):
             return cls(cls(), '*')
+        if hasattr(obj, '__typesystem_type__'):
+            return cls.fromobject(obj.__typesystem_type__)
         # return cls.fromstring(type(obj).__name__)
         raise NotImplementedError('%s.fromvalue(%r|%s)'
                                   % (cls.__name__, obj, type(obj)))
@@ -1267,21 +1280,22 @@ class Type(tuple, metaclass=MetaType):
         Mangled type string is a string representation of the type
         that can be used for extending the function name.
         """
-
+        name_suffix = ''
+        name = self.name
+        if name:
+            name_suffix = 'W' + str(len(name)) + 'W' + name
         if self.is_void:
+            assert name_suffix == '', name_suffix
             return 'v'
         if self.is_pointer:
-            return '_' + self[0].mangle() + 'P'
+            return '_' + self[0].mangle() + 'P' + name_suffix
         if self.is_struct:
             return '_' + ''.join(m.mangle()
-                                 for m in self) + 'K'
+                                 for m in self) + 'K' + name_suffix
         if self.is_function:
             r = self[0].mangle()
             a = ''.join([a.mangle() for a in self[1]])
-
-            name = self._params['name']
-            n = 'V' + str(len(name)) + 'V' + name
-            return '_' + r + 'a' + a + 'A' + n
+            return '_' + r + 'a' + a + 'A' + name_suffix
         if self.is_custom:
             params = self[0]
             if type(self) is Type:
@@ -1293,13 +1307,13 @@ class Type(tuple, metaclass=MetaType):
             n = name if n is None else n
             r = 'V' + str(len(n)) + 'V' + n
             a = ''.join([a.mangle() for a in params])
-            return '_' + r + 'r' + a + 'R'
+            return '_' + r + 'r' + a + 'R' + name_suffix
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
-                return n
+                return n + name_suffix
             n = self[0]
-            return 'V' + str(len(n)) + 'V' + n
+            return 'V' + str(len(n)) + 'V' + n + name_suffix
         raise NotImplementedError(repr(self))
 
     @classmethod
@@ -1556,6 +1570,16 @@ class Type(tuple, metaclass=MetaType):
             raise NotImplementedError(f'apply_templates: {self} {templates}')
 
 
+def _demangle_name(s, suffix='W'):
+    if s and s[0] == suffix:
+        i = s.find(suffix, 1)
+        assert i != -1, repr(s)
+        ln = int(s[1:i])
+        rest = s[i+ln+1:]
+        return s[i+1:i+ln+1], rest
+    return None, s
+
+
 def _demangle(s):
     """Helper function to demangle the string of mangled Type.
 
@@ -1566,11 +1590,8 @@ def _demangle(s):
     if not s:
         return (Type(),), ''
     if s[0] == 'V':
-        i = s.find('V', 1)
-        assert i != -1, repr(s)
-        ln = int(s[1:i])
-        rest = s[i+ln+1:]
-        typ = Type(s[i+1:i+ln+1])
+        name, rest = _demangle_name(s, suffix='V')
+        typ = Type(name)
     elif s[0] == '_':
         block, rest = _demangle(s[1:])
         kind, rest = rest[0], rest[1:]
@@ -1584,13 +1605,7 @@ def _demangle(s):
             assert len(block) == 1, repr(block)
             rtype = block[0]
             atypes, rest = _demangle('_' + rest)
-            assert rest[0] == 'V'
-            i = rest.find('V', 1)
-            assert i != -1, repr(rest)
-            ln = int(rest[1:i])
-            name = rest[i+1:i+ln+1]
-            rest = rest[i+ln+1:]
-            typ = Type(rtype, atypes, name=name)
+            typ = Type(rtype, atypes, name='')
         elif kind in 'AR':
             return block, rest
         elif kind == 'r':  # custom
@@ -1616,6 +1631,9 @@ def _demangle(s):
             typ = Type()
         else:
             typ = Type(t)
+    vname, rest = _demangle_name(rest)
+    if vname is not None:
+        typ._params['name'] = vname
     result = [typ]
     if rest and rest[0] not in _mangling_prefixes:
         r, rest = _demangle(rest)
@@ -1689,11 +1707,14 @@ if nb is not None:
                 _p2, _p1, typeconv.Conversion.safe)
 
 
-def make_numba_struct(name, members, base=nb.types.Type, origin=None, _cache={}):
+def make_numba_struct(name, members, base=None, origin=None, _cache={}):
     """Create numba struct type instance.
     """
     t = _cache.get(name)
     if t is None:
+        if base is None:
+            from rbc.structure_type import StructureNumbaType
+            base = Type.aliases.get('StructureNumbaType', StructureNumbaType)
         assert issubclass(base, nb.types.Type)
 
         def model__init__(self, dmm, fe_type):
@@ -1706,6 +1727,7 @@ def make_numba_struct(name, members, base=nb.types.Type, origin=None, _cache={})
                            dict(members=[t for n, t in members], origin=origin))
         datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
+
     return t
 
 

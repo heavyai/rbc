@@ -748,7 +748,10 @@ class DispatcherRJIT(Dispatcher):
             if typ.is_custom:
                 typ = typ.get_struct_type()
             if typ.is_struct:
-                member_values = [getattr(value, t.name) for t in typ]
+                if isinstance(value, tuple):
+                    member_values = [t.toctypes()(value[i]) for i, t in enumerate(typ)]
+                else:
+                    member_values = [t.toctypes()(getattr(value, t.name)) for t in typ]
                 ctypes_arguments.append(typ.toctypes()(*member_values))
             elif typ.is_pointer:
                 if isinstance(value, ctypes.c_void_p):

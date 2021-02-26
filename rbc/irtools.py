@@ -11,7 +11,7 @@ from .targetinfo import TargetInfo
 from .utils import get_version
 from .errors import UnsupportedError
 from .typesystem import Type
-from . import libfuncs
+from . import libfuncs, structure_type
 
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
@@ -138,8 +138,8 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
         from rbc.externals import math
-
         self.install_registry(math.typing_registry)
+        self.install_registry(structure_type.typing_registry)
         super().load_additional_registries()
 
 
@@ -154,8 +154,8 @@ class JITRemoteTargetContext(cpu.CPUContext):
 
     def load_additional_registries(self):
         from rbc.externals import math
-
         self.install_registry(math.lowering_registry)
+        self.install_registry(structure_type.lowering_registry)
         super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):
@@ -355,7 +355,7 @@ def compile_to_LLVM(functions_and_signatures,
 
     """
     target_desc = registry.cpu_target
-    if target_info is None:
+    if target_info is None and 0:
         # RemoteJIT
         target_info = TargetInfo.host()
         typing_context = target_desc.typing_context

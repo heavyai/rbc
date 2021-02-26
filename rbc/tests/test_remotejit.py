@@ -7,6 +7,7 @@ from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
 from rbc.external import external
 from rbc.targetinfo import TargetInfo
+import numba.types as nb_types
 
 win32 = sys.platform == 'win32'
 
@@ -543,3 +544,73 @@ def test_scalar_pointer_access_remote(rjit, memman, T):
         rfree(ptr)
 
         assert (arr == arr2).all()
+
+
+@pytest.mark.parametrize("location", ['local', 'remote'])
+@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'][:2])
+def test_struct_input(ljit, rjit, location, T):
+    jit = rjit if location == 'remote' else ljit
+
+    S = '{T x, T y}'
+
+    with Type.alias(T=T, S=S):
+
+        class MetaMyStructType(type):
+
+            @property
+            def __typesystem_type__(cls):
+                # Python type dependent type
+                return Type.fromstring(S) | type(cls).__name__
+
+        class MyStruct(tuple, metaclass=MetaMyStructType):
+
+            @property
+            def __typesystem_type__(self):
+                # Python instance dependent Type
+                return Type.fromstring(S) | type(self).__name__
+
+            @classmethod
+            def fromobject(cls, obj):
+                return cls([getattr(obj, m.name) for m in cls.__typesystem_type__])
+
+            def __getattr__(self, name):
+                typ = self.__typesystem_type__
+                index = typ.get_field_position(name)
+                return self[index]
+
+        x, y = 1, 2
+        s = MyStruct((x, y))
+
+        assert type(s).__typesystem_type__ == s.__typesystem_type__
+        assert type(s).__typesystem_type__.annotation() != s.__typesystem_type__.annotation()
+
+        @jit('T get_x(S)')
+        def get_x(s):
+            return s.x
+
+        from rbc.irtools import printf
+
+        @jit('int64 get_y(S)')
+        def get_y(s):
+            printf("s.x,y=%d, %d\n", s.x, s.y)
+            return nb_types.int64(s.y)
+
+        @jit('S set_x(S, T)')
+        def set_x(s, v):
+            s.x = v
+            return s
+
+        @jit('S set_y(S, T)')
+        def set_y(s, v):
+            s.y = v
+            return s
+
+        print(get_y)
+
+        assert get_x(s) == x
+        assert get_y(s) == y
+
+        assert MyStruct.fromobject(set_x(s, 3)) == MyStruct((3, y))
+        assert MyStruct.fromobject(set_y(s, 4)) == MyStruct((x, 4))
+
+    print(T, type(T))

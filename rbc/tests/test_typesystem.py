@@ -548,6 +548,30 @@ def test_mangling(target_info):
     check('()')
 
 
+def test_name_mangling(target_info):
+    def check(s):
+        t1 = Type.fromstring(s)
+        m = t1.mangle()
+        try:
+            t2 = Type.demangle(m)
+        except Exception:
+            print('subject: s=`%s`, t1=`%s`, m=`%s`' % (s, t1, m))
+            raise
+        assert t1 == t2, repr((t1, m, t2))
+        assert t1.name == t2.name, repr((t1, m, t2))
+
+    for t in ['int8', 'myint']:
+        check(f'{t} i')
+        check(f'{t} foo()')
+        check(f'foo({t} i)')
+        check(f'foo({t} i, float f)')
+        check(f'{t} ()')
+        check(f'{t}* i')
+        check(f'{{{t} i}}')
+        check(f'{{{t} i, float f}}')
+        check(f'{{{t} i, float f}} s')
+
+
 def test_unspecified(target_info):
     assert str(Type.fromstring('unknown(_0,_1)')) == 'unknown(_0, _1)'
 
