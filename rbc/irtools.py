@@ -134,101 +134,8 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
         return None
 
 
-class JITRemoteCallConv(callconv.BaseCallConv):
-    def get_function_type(self, restype, argtypes):
-        """
-        Get the implemented Function type for *restype* and *argtypes*.
-        """
-        arginfo = self._get_arg_packer(argtypes)
-        argtypes = list(arginfo.argument_types)
-        resptr = self.get_return_type(restype)
-        fnty = ir.FunctionType(callconv.errcode_t, [resptr] + argtypes)
-        return fnty
-
-    def get_return_type(self, ty):
-        """
-        Get the actual type of the return argument for Numba type *ty*.
-        """
-        restype = self.context.data_model_manager[ty].get_return_type()
-        # return restype
-        return restype.as_pointer()
-
-    def decorate_function(self, fn, args, fe_argtypes, noalias=False):
-        """
-        Set names and attributes of function arguments.
-        """
-        assert not noalias
-        arginfo = self._get_arg_packer(fe_argtypes)
-        arginfo.assign_names(self.get_arguments(fn),
-                             ['arg.' + a for a in args])
-        fn.args[0].name = ".ret"
-        fn.return_value.name = ".errcode"
-        return fn
-
-    def get_arguments(self, func):
-        """
-        Get the Python-level arguments of LLVM *func*.
-        """
-        return func.args[1:]
-
-    def return_value(self, builder, retval):
-        retptr = builder.function.args[0]
-        assert retval.type == retptr.type.pointee, \
-            (str(retval.type), str(retptr.type.pointee))
-        builder.store(retval, retptr)
-        self._return_errcode_raw(builder, callconv.RETCODE_OK)
-
-    def _return_errcode_raw(self, builder, code, mark_exc=False):
-        if isinstance(code, int):
-            code = callconv._const_int(code)
-        builder.ret(code)
-
-    def call_function(self, builder, callee, resty, argtys, args):
-        """
-        Call the Numba-compiled *callee*.
-        """
-        retty = callee.args[0].type.pointee
-        retvaltmp = cgutils.alloca_once(builder, retty)
-        # initialize return value
-        builder.store(cgutils.get_null_value(retty), retvaltmp)
-
-        arginfo = self._get_arg_packer(argtys)
-        args = arginfo.as_arguments(builder, args)
-        realargs = [retvaltmp] + list(args)
-        code = builder.call(callee, realargs)
-        status = self._get_return_status(builder, code)
-        retval = builder.load(retvaltmp)
-        out = self.context.get_returned_value(builder, resty, retval)
-        return status, out
-
-    def _make_call_helper(self, builder):
-        return None
-
-    def return_status_propagate(self, builder, status):
-        self._return_errcode_raw(builder, status.code, mark_exc=True)
-
-    def _get_return_status(self, builder, code):
-        """
-        Given a return *code*, get a Status instance.
-        """
-        norm = builder.icmp_signed('==', code, callconv.RETCODE_OK)
-        none = builder.icmp_signed('==', code, callconv.RETCODE_NONE)
-        ok = builder.or_(norm, none)
-        err = builder.not_(ok)
-        exc = builder.icmp_signed('==', code, callconv.RETCODE_EXC)
-        is_stop_iteration = builder.icmp_signed('==', code, callconv.RETCODE_STOPIT)
-        is_user_exc = builder.icmp_signed('>=', code, callconv.RETCODE_USEREXC)
-
-        status = callconv.Status(code=code,
-                                 is_ok=ok,
-                                 is_error=err,
-                                 is_python_exc=exc,
-                                 is_none=none,
-                                 is_user_exc=is_user_exc,
-                                 is_stop_iteration=is_stop_iteration,
-                                 excinfoptr=None)
-        return status
-
+class JITRemoteCallConv(callconv.MinimalCallConv):
+    pass
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
@@ -491,44 +398,44 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
-        main_library._optimize_final_module()
+        # main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
-        used_symbols = defaultdict(set)
-        for fname in function_names:
-            for k, v in get_called_functions(main_library, fname).items():
-                used_symbols[k].update(v)
+        # used_symbols = defaultdict(set)
+        # for fname in function_names:
+        #     for k, v in get_called_functions(main_library, fname).items():
+        #         used_symbols[k].update(v)
 
-        all_symbols = get_called_functions(main_library)
+        # all_symbols = get_called_functions(main_library)
 
-        unused_symbols = defaultdict(set)
-        for k, lst in all_symbols.items():
-            if k == 'libraries':
-                continue
-            for fn in lst:
-                if fn not in used_symbols[k]:
-                    unused_symbols[k].add(fn)
+        # unused_symbols = defaultdict(set)
+        # for k, lst in all_symbols.items():
+        #     if k == 'libraries':
+        #         continue
+        #     for fn in lst:
+        #         if fn not in used_symbols[k]:
+        #             unused_symbols[k].add(fn)
 
-        changed = False
-        for f in main_module.functions:
-            fn = f.name
-            if fn.startswith('llvm.'):
-                if f.name in unused_symbols['intrinsics']:
-                    f.linkage = llvm.Linkage.external
-                    changed = True
-            elif f.is_declaration:
-                if f.name in unused_symbols['declarations']:
-                    f.linkage = llvm.Linkage.external
-                    changed = True
-            else:
-                if f.name in unused_symbols['defined']:
-                    f.linkage = llvm.Linkage.private
-                    changed = True
+        # changed = False
+        # for f in main_module.functions:
+        #     fn = f.name
+        #     if fn.startswith('llvm.'):
+        #         if f.name in unused_symbols['intrinsics']:
+        #             f.linkage = llvm.Linkage.external
+        #             changed = True
+        #     elif f.is_declaration:
+        #         if f.name in unused_symbols['declarations']:
+        #             f.linkage = llvm.Linkage.external
+        #             changed = True
+        #     else:
+        #         if f.name in unused_symbols['defined']:
+        #             f.linkage = llvm.Linkage.private
+        #             changed = True
 
         # TODO: determine unused global_variables and struct_types
 
-        if changed:
-            main_library._optimize_final_module()
+        # if changed:
+        #     main_library._optimize_final_module()
 
         main_module.verify()
         main_library._finalized = True
