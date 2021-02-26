@@ -159,7 +159,7 @@ class LLVMIntrinsics(Library):
     instrprof.increment.step instrprof.value.profile thread.pointer
     call.preallocated.setup call.preallocated.arg
     call.preallocated.teardown abs smax smin umax umin memcpy
-    memcpy.inline memmove sqrt powi sin cos pow exp exp2 log log10
+    memcpy.inline memmove memset sqrt powi sin cos pow exp exp2 log log10
     log2 fma fabs minnum maxnum minimum maximum copysign floor ceil
     trunc rint nearbyint round roundeven lround llround lrint llrint
     ctpop ctlz cttz fshl fshr sadd.with.overflow uadd.with.overflow

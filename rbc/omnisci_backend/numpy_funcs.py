@@ -27,6 +27,31 @@ def expose_and_overload(func):
     return wrapper
 
 
+@expose_and_overload(np.arange)
+def omnisci_np_arange(start, stop=None, step=1, dtype=None):
+
+    if dtype is None:
+        nb_dtype = types.double
+    else:
+        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+
+    from rbc.irtools import printf
+
+    def impl(start, stop=None, step=1, dtype=None):
+        if stop is None:
+            start, stop = 0, start
+        printf("start=%d - stop=%d - diff=%d\n", start, stop, stop-start)
+        # size = np.floor_divide(stop-start, step)
+        size = (stop-start+1) // step
+        a = Array(size, nb_dtype)
+        for i, e in enumerate(range(start, stop, step)):
+            printf("i=%d\n", i)
+            a[i] = e
+        return a
+
+    return impl
+
+
 @expose_and_overload(np.full)
 def omnisci_np_full(shape, fill_value, dtype=None):
 
