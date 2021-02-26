@@ -86,16 +86,42 @@ class PointerData(tuple):
         return ptr
 
 
+class StructData(tuple):
+    """Holds structure data for pickling.
+
+    StructData is a 3-tuple containing:
+    - structure type class name
+    - tuple of fields as member name and member type pairs
+    - tuple member values with _prepickle_dumps applied
+    """
+
+    @classmethod
+    def fromctypes(cls, obj):
+        if isinstance(obj, _ctypes.Structure):
+            fields = obj._fields_
+            values = _prepickle_dumps(tuple([getattr(obj, name) for name, typ in obj._fields_]))
+            return cls((type(obj).__name__, fields, values))
+        raise NotImplementedError(repr((type(obj), obj)))
+
+    def toctypes(self):
+        clsname, fields, values = self
+        values = _postpickle_loads(values)
+        cls = type(clsname, (ctypes.Structure,), dict(_fields_=fields))
+        return cls(*values)
+
+
 def _prepickle_dumps(data):
     if isinstance(data, (_ctypes._Pointer, ctypes.c_void_p)):
         return PointerData.fromctypes(data)
+    if isinstance(data, _ctypes.Structure):
+        return StructData.fromctypes(data)
     if isinstance(data, tuple):
         return tuple(map(_prepickle_dumps, data))
     return data
 
 
 def _postpickle_loads(data):
-    if isinstance(data, PointerData):
+    if isinstance(data, (PointerData, StructData)):
         return data.toctypes()
     if isinstance(data, tuple):
         return tuple(map(_postpickle_loads, data))
