@@ -752,7 +752,7 @@ class DispatcherRJIT(Dispatcher):
                     member_values = [t.toctypes()(value[i]) for i, t in enumerate(typ)]
                 else:
                     member_values = [t.toctypes()(getattr(value, t.name)) for t in typ]
-                ctypes_arguments.append(typ.toctypes()(*member_values))
+                ctypes_arguments.extend(member_values)
             elif typ.is_pointer:
                 if isinstance(value, ctypes.c_void_p):
                     value = ctypes.cast(value, typ.toctypes())

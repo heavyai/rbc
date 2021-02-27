@@ -7,7 +7,6 @@ from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
 from rbc.external import external
 from rbc.targetinfo import TargetInfo
-import numba.types as nb_types
 
 win32 = sys.platform == 'win32'
 
@@ -546,12 +545,12 @@ def test_scalar_pointer_access_remote(rjit, memman, T):
         assert (arr == arr2).all()
 
 
-@pytest.mark.parametrize("location", ['local', 'remote'])
-@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'][:2])
+@pytest.mark.parametrize("location", ['local', 'remote'][:1])
+@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'][:])
 def test_struct_input(ljit, rjit, location, T):
     jit = rjit if location == 'remote' else ljit
 
-    S = '{T x, T y}'
+    S = '{T x, T y, T z}'
 
     with Type.alias(T=T, S=S):
 
@@ -578,22 +577,31 @@ def test_struct_input(ljit, rjit, location, T):
                 index = typ.get_field_position(name)
                 return self[index]
 
-        x, y = 1, 2
-        s = MyStruct((x, y))
+        x, y, z = 1, 2, 3
+        s = MyStruct((x, y, z))
 
         assert type(s).__typesystem_type__ == s.__typesystem_type__
         assert type(s).__typesystem_type__.annotation() != s.__typesystem_type__.annotation()
 
-        @jit('T get_x(S)')
-        def get_x(s):
-            return s.x
+        @jit('T(S)')
+        def get_x(s): return s.x
 
-        from rbc.irtools import printf
+        @jit('T(S)')
+        def get_y(s): return s.y
 
-        @jit('int64 get_y(S)')
-        def get_y(s):
-            printf("s.x,y=%d, %d\n", s.x, s.y)
-            return nb_types.int64(s.y)
+        @jit('T(S)')
+        def get_z(s): return s.z
+
+        assert get_x(s) == x
+        assert get_y(s) == y
+        assert get_z(s) == z
+
+        @jit('S(S)')
+        def noop(s): return s
+
+        r = MyStruct.fromobject(noop(s))
+        print(r)
+        return
 
         @jit('S set_x(S, T)')
         def set_x(s, v):
@@ -604,13 +612,3 @@ def test_struct_input(ljit, rjit, location, T):
         def set_y(s, v):
             s.y = v
             return s
-
-        print(get_y)
-
-        assert get_x(s) == x
-        assert get_y(s) == y
-
-        assert MyStruct.fromobject(set_x(s, 3)) == MyStruct((3, y))
-        assert MyStruct.fromobject(set_y(s, 4)) == MyStruct((x, 4))
-
-    print(T, type(T))

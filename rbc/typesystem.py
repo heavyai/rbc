@@ -913,7 +913,12 @@ class Type(tuple, metaclass=MetaType):
             typ = type(self).ctypes_types.get(ctypes_type_name)
             if typ is None:
                 rtype = self[0].toctypes()
-                atypes = [t.toctypes() for t in self[1] if not t.is_void]
+                atypes = []
+                for t in self[1]:
+                    if t.is_struct:
+                        atypes.extend([m.toctypes() for m in t])
+                    else:
+                        atypes.append(t.toctypes())
                 typ = ctypes.CFUNCTYPE(rtype, *atypes)
                 type(self).ctypes_types[ctypes_type_name] = typ
             return typ
@@ -1146,6 +1151,7 @@ class Type(tuple, metaclass=MetaType):
             return cls(cls(), '*')
         if hasattr(obj, '__typesystem_type__'):
             return cls.fromobject(obj.__typesystem_type__)
+
         # return cls.fromstring(type(obj).__name__)
         raise NotImplementedError('%s.fromvalue(%r|%s)'
                                   % (cls.__name__, obj, type(obj)))
