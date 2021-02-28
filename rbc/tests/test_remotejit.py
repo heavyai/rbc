@@ -603,8 +603,8 @@ def test_struct_input(ljit, rjit, location, T):
         with TargetInfo.host():  # TODO: can we eliminate this?
             calloc, free = map(external, memory_managers['cstdlib'])
 
-        @jit('S* new_S(size_t i)')
-        def new_S(i):
+        @jit('S* allocate_S(size_t i)')
+        def allocate_S(i):
             return calloc(i, sizeof(nb_S))
 
         @jit('void free_S(S*)')
@@ -623,7 +623,7 @@ def test_struct_input(ljit, rjit, location, T):
         def set_z(s, z):
             s.z = z
 
-        p = new_S(1)
+        p = allocate_S(1)
 
         set_x(p, x)
         assert get_x(p) == x
@@ -642,3 +642,29 @@ def test_struct_input(ljit, rjit, location, T):
 
         assert sizeof_S(s) == sizeof_S(nb_T(0)) * 3
         assert sizeof_S(p) == 8
+
+        #
+
+        @jit('void(S*, int64)')
+        def init_S(s, n):
+            s.x = 8
+            for i in range(n):
+                si = s + i  # pointer arithmetics
+                si.x = i
+                si.y = i*10
+                si.z = i*20
+
+        @jit('S*(S*)')
+        def next_S(s):
+            return s + 1
+
+        n = 5
+        p = allocate_S(n)
+        init_S(p, n)
+
+        r = p
+        for i in range(n):
+            assert (get_x(r), get_y(r), get_z(r)) == (i, i*10, i*20)
+            r = next_S(r)
+
+        free_S(p)

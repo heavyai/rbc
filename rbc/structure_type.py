@@ -1,3 +1,4 @@
+import operator
 from rbc.utils import get_version
 from llvmlite import ir
 if get_version('numba') >= (0, 49):
@@ -117,3 +118,30 @@ def StructureNumbaPointerType_setattr_impl(context, builder, sig, args, attr):
     ptr = builder.load(rawptr)
     buf = builder.load(builder.gep(ptr, [int32_t(0), int32_t(index)]))
     builder.store(value, buf.operands[0])
+
+
+@extending.intrinsic
+def StructureNumbaPointerType_add_impl(typingctx, data, index):
+    sig = data(data, index)
+    ptr_type = data
+
+    def codegen(context, builder, signature, args):
+        ll_ptr_type = context.get_value_type(ptr_type)
+        ll_value_type = context.get_value_type(ptr_type.dtype)
+        size = context.get_abi_sizeof(ll_value_type)
+        ptr, index = args
+
+        i = builder.ptrtoint(ptr, int64_t)
+        offset = builder.mul(index, int64_t(size))
+        new_i = builder.add(i, offset)
+
+        return builder.inttoptr(new_i, ll_ptr_type)
+    return sig, codegen
+
+
+@extending.overload(operator.add)
+def StructureNumbaPointerType_add(x, i):
+    if isinstance(x, StructureNumbaPointerType):
+        def impl(x, i):
+            return StructureNumbaPointerType_add_impl(x, i)
+        return impl
