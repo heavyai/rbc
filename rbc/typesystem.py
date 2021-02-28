@@ -471,6 +471,8 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(other, Type):
             self.annotation().update(other.annotation())
             for a, b in zip(self, other):
+                if b is None:
+                    continue
                 if isinstance(a, str):
                     pass
                 elif isinstance(a, Type):
