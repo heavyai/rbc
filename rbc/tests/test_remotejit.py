@@ -7,6 +7,7 @@ from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
 from rbc.external import external
 from rbc.targetinfo import TargetInfo
+from rbc.irtools import sizeof
 
 win32 = sys.platform == 'win32'
 
@@ -545,14 +546,17 @@ def test_scalar_pointer_access_remote(rjit, memman, T):
         assert (arr == arr2).all()
 
 
-@pytest.mark.parametrize("location", ['local', 'remote'][:1])
-@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'][:])
+@pytest.mark.parametrize("location", ['local', 'remote'])
+@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 def test_struct_input(ljit, rjit, location, T):
     jit = rjit if location == 'remote' else ljit
 
     S = '{T x, T y, T z}'
 
     with Type.alias(T=T, S=S):
+
+        nb_S = Type.fromstring(S).tonumba()
+        nb_T = Type.fromstring(T).tonumba()
 
         class MetaMyStructType(type):
 
@@ -577,38 +581,64 @@ def test_struct_input(ljit, rjit, location, T):
                 index = typ.get_field_position(name)
                 return self[index]
 
-        x, y, z = 1, 2, 3
+        x, y, z = 123, 2, 3
         s = MyStruct((x, y, z))
 
         assert type(s).__typesystem_type__ == s.__typesystem_type__
         assert type(s).__typesystem_type__.annotation() != s.__typesystem_type__.annotation()
 
-        @jit('T(S)')
+        @jit('T(S)', 'T(S*)')
         def get_x(s): return s.x
 
-        @jit('T(S)')
+        @jit('T(S)', 'T(S*)')
         def get_y(s): return s.y
 
-        @jit('T(S)')
+        @jit('T(S)', 'T(S*)')
         def get_z(s): return s.z
 
         assert get_x(s) == x
         assert get_y(s) == y
         assert get_z(s) == z
 
-        @jit('S(S)')
-        def noop(s): return s
+        with TargetInfo.host():  # TODO: can we eliminate this?
+            calloc, free = map(external, memory_managers['cstdlib'])
 
-        r = MyStruct.fromobject(noop(s))
-        print(r)
-        return
+        @jit('S* new_S(size_t i)')
+        def new_S(i):
+            return calloc(i, sizeof(nb_S))
 
-        @jit('S set_x(S, T)')
-        def set_x(s, v):
-            s.x = v
-            return s
+        @jit('void free_S(S*)')
+        def free_S(s):
+            free(s)
 
-        @jit('S set_y(S, T)')
-        def set_y(s, v):
-            s.y = v
-            return s
+        @jit('void set_x(S*, T)')
+        def set_x(s, x):
+            s.x = x
+
+        @jit('void set_y(S*, T)')
+        def set_y(s, y):
+            s.y = y
+
+        @jit('void set_z(S*, T)')
+        def set_z(s, z):
+            s.z = z
+
+        p = new_S(1)
+
+        set_x(p, x)
+        assert get_x(p) == x
+
+        set_y(p, y)
+        assert get_y(p) == y
+
+        set_z(p, z)
+        assert get_z(p) == z
+
+        free_S(p)
+
+        @jit('size_t sizeof_S(S)', 'size_t sizeof_S(S*)', 'size_t sizeof_T(T)')
+        def sizeof_S(s):
+            return sizeof(s)
+
+        assert sizeof_S(s) == sizeof_S(nb_T(0)) * 3
+        assert sizeof_S(p) == 8

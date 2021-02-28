@@ -37,6 +37,23 @@ def toobject(thrift, tobj, cls=None):
     return tobj
 
 
+class TypeData(tuple):
+    """Holds generated type for pickling:
+    - base class of generated type
+    - name of generated type
+    - sequence of class __dict__ keys and values
+    """
+    @classmethod
+    def fromctypes(cls, typ):
+        if issubclass(typ, _ctypes.Structure):
+            return cls((ctypes.Structure, typ.__name__, (('_fields_', typ._fields_),)))
+        raise NotImplementedError(repr((type(typ), typ)))
+
+    def toctypes(self):
+        baseclass, typname, members = self
+        return type(typname, (baseclass,), dict(members))
+
+
 class PointerData(tuple):
     """Holds pointer data for pickling.
 
@@ -58,13 +75,15 @@ class PointerData(tuple):
             if t == ctypes.c_void_p:
                 level += 1
             value = ctypes.cast(ptr, ctypes.c_void_p).value
+            td = _prepickle_dumps(t)
             return cls((value,
-                        t,
+                        td,
                         level,
                         ctypes.sizeof(t)))
         if isinstance(ptr, ctypes.c_void_p):
             t = type(ptr)
-            return cls((ptr.value,
+            value = ptr.value
+            return cls((value,
                         t,
                         1,
                         ctypes.sizeof(t)))
@@ -72,6 +91,7 @@ class PointerData(tuple):
 
     def toctypes(self):
         value, dtype, level, sizeof_dtype = self
+        dtype = _postpickle_loads(dtype)
         assert ctypes.sizeof(dtype) == sizeof_dtype, (
             dtype, ctypes.sizeof(dtype), sizeof_dtype)  # TODO: mismatch of type sizes!
         if dtype == ctypes.c_void_p:
@@ -89,24 +109,20 @@ class PointerData(tuple):
 class StructData(tuple):
     """Holds structure data for pickling.
 
-    StructData is a 3-tuple containing:
-    - structure type class name
-    - tuple of fields as member name and member type pairs
+    StructData is a 2-tuple containing:
+    - structure type with _prepickle_dumps applied
     - tuple member values with _prepickle_dumps applied
     """
 
     @classmethod
     def fromctypes(cls, obj):
         if isinstance(obj, _ctypes.Structure):
-            fields = obj._fields_
-            values = _prepickle_dumps(tuple([getattr(obj, name) for name, typ in obj._fields_]))
-            return cls((type(obj).__name__, fields, values))
+            values = tuple([getattr(obj, name) for name, typ in obj._fields_])
+            return cls(_prepickle_dumps(type(obj), values))
         raise NotImplementedError(repr((type(obj), obj)))
 
     def toctypes(self):
-        clsname, fields, values = self
-        values = _postpickle_loads(values)
-        cls = type(clsname, (ctypes.Structure,), dict(_fields_=fields))
+        cls, values = _postpickle_loads(self)
         return cls(*values)
 
 
@@ -117,11 +133,13 @@ def _prepickle_dumps(data):
         return StructData.fromctypes(data)
     if isinstance(data, tuple):
         return tuple(map(_prepickle_dumps, data))
+    if isinstance(data, type) and issubclass(data, _ctypes.Structure):
+        return TypeData.fromctypes(data)
     return data
 
 
 def _postpickle_loads(data):
-    if isinstance(data, (PointerData, StructData)):
+    if isinstance(data, (PointerData, StructData, TypeData)):
         return data.toctypes()
     if isinstance(data, tuple):
         return tuple(map(_postpickle_loads, data))

@@ -1,5 +1,7 @@
+import ast
 import socket
 import subprocess
+import inspect
 import ipaddress
 import netifaces
 import re
@@ -159,3 +161,37 @@ def triple_matches(triple, other):
     if os1 == os2 == 'linux':
         return (arch1, env1) == (arch2, env2)
     return (arch1, vendor1, os1, env1) == (arch2, vendor2, os2, env2)
+
+
+def get_function_source(func):
+    source = ''
+    intent = None
+    for line in inspect.getsourcelines(func)[0]:
+        if intent is None:
+            intent = len(line) - len(line.lstrip())
+        source += line[intent:]
+    return source
+
+
+def check_returns_none(func):
+    """Return True if function return value is always None.
+
+    Warning: the result of the check may be false-negative. For instance,
+
+      def foo():
+          a = None
+          return a
+
+      check_returns_none(foo) -> False
+    """
+    source = get_function_source(func)
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Return):
+            if node.value is None:
+                continue
+            if isinstance(node.value, ast.Constant):
+                if node.value.value is None:
+                    continue
+            return False
+    return True

@@ -400,7 +400,7 @@ class RemoteJIT(object):
 
     thrift_content = None
 
-    def __init__(self, host='localhost', port=11530,
+    def __init__(self, host='localhost', port=11532,
                  local=False, debug=False):
         """Construct remote JIT function decorator.
 
@@ -630,6 +630,8 @@ class RemoteJIT(object):
         Return the corresponding LLVM IR module instance which may be
         useful for debugging.
         """
+        if self.debug:
+            print(f'remote_compile({func}, {ftype})')
         llvm_module, succesful_fids = irtools.compile_to_LLVM(
             [(func, {0: ftype})], target_info, debug=self.debug)
         ir = str(llvm_module)
@@ -647,6 +649,8 @@ class RemoteJIT(object):
         function (see `remote_compile` method) is applied to the
         arguments, and the result is returned to local process.
         """
+        if self.debug:
+            print(f'remote_call({func}, {ftype}, {arguments})')
         fullname = func.__name__ + ftype.mangle()
         response = self.client(remotejit=dict(call=(fullname, arguments)))
         return response['remotejit']['call']
@@ -713,13 +717,19 @@ class DispatcherRJIT(Dispatcher):
         engine = irtools.compile_IR(ir)
         for msig in signatures.split(';'):
             sig = Type.demangle(msig)
+            ctypes_sig = sig.toctypes()
+            assert sig.is_function
+            if sig[0].is_aggregate:
+                raise RuntimeError(
+                    f'Functions with aggregate return type values are not supported,'
+                    f' got function `{name}` with `{sig}` signature')
             fullname = name + msig
             addr = engine.get_function_address(fullname)
             if self.debug:
                 print(f'compile({name}, {sig}) -> {hex(addr)}')
             # storing engine as the owner of function addresses
             if addr:
-                self.compiled_functions[fullname] = engine, sig.toctypes()(addr), sig
+                self.compiled_functions[fullname] = engine, ctypes_sig(addr), sig, ctypes_sig
             else:
                 warnings.warn('No compilation result for {name}|{sig=}')
         return True
@@ -740,11 +750,17 @@ class DispatcherRJIT(Dispatcher):
             print(f'call({fullname}, {arguments})')
         ef = self.compiled_functions.get(fullname)
         if ef is None:
-            raise RuntimeError('no such compiled function `%s`' % (fullname))
+            raise RuntimeError(
+                f'no such compiled function `{fullname}`. Available functions:\n'
+                f'  {"; ".join(list(self.compiled_functions))}\n.')
         sig = ef[2]
-        assert len(arguments) == sig.arity
+        ctypes_sig = ef[3]
+        if len(arguments) == 0:
+            assert sig.arity == 1 and sig[1][0].is_void, sig
+        else:
+            assert len(arguments) == sig.arity, (len(arguments), sig.arity)
         ctypes_arguments = []
-        for typ, value in zip(sig[1], arguments):
+        for typ, ctypes_typ, value in zip(sig[1], ctypes_sig._argtypes_, arguments):
             if typ.is_custom:
                 typ = typ.get_struct_type()
             if typ.is_struct:
@@ -755,7 +771,9 @@ class DispatcherRJIT(Dispatcher):
                 ctypes_arguments.extend(member_values)
             elif typ.is_pointer:
                 if isinstance(value, ctypes.c_void_p):
-                    value = ctypes.cast(value, typ.toctypes())
+                    value = ctypes.cast(value, ctypes_typ)
+                else:
+                    value = ctypes.cast(value, ctypes_typ)
                 ctypes_arguments.append(value)
             else:
                 ctypes_arguments.append(value)

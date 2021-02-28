@@ -11,7 +11,7 @@ import inspect
 from llvmlite import ir
 import warnings
 
-from .utils import get_version
+from .utils import get_version, check_returns_none
 from .targetinfo import TargetInfo
 
 try:
@@ -33,6 +33,9 @@ try:
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)
+
+
+from .structure_type import StructureNumbaType, StructureNumbaPointerType
 
 
 class TypeSystemManager:
@@ -339,6 +342,7 @@ class Type(tuple, metaclass=MetaType):
       function      e.g. ``int32(int32, int32)``      Type(<Type instance>,
                                                            (<Type instances>, ...), name='')
       custom        e.g. ``MyClass<int32, int32>``    Type((<object>,))
+      undefined     e.g. fromcallable(foo)            Type(None)
       ==========    ==============================    ==============================
 
     Atomic types are types with names (Type contains a single
@@ -515,6 +519,10 @@ class Type(tuple, metaclass=MetaType):
         return len(self) == 1 and isinstance(self[0], str)
 
     @property
+    def is_undefined(self):
+        return len(self) == 1 and self[0] is None
+
+    @property
     def is_int(self):
         return self.is_atomic and self[0].startswith('int')
 
@@ -541,6 +549,10 @@ class Type(tuple, metaclass=MetaType):
     @property
     def is_char(self):
         return self.is_atomic and self[0].startswith('char')
+
+    @property
+    def is_aggregate(self):
+        return self.is_struct or self.is_function
 
     @property
     def is_pointer(self):
@@ -599,6 +611,8 @@ class Type(tuple, metaclass=MetaType):
             for a in self[0]:
                 if isinstance(a, Type) and not a.is_complete:
                     return False
+        elif self.is_undefined:
+            return False
         else:
             raise NotImplementedError(repr(self))
         return True
@@ -629,6 +643,8 @@ class Type(tuple, metaclass=MetaType):
             for a in self[0]:
                 if isinstance(a, Type) and not a.is_concrete:
                     return False
+        elif self.is_undefined:
+            return False
         else:
             raise NotImplementedError(repr(self))
         return True
@@ -638,7 +654,7 @@ class Type(tuple, metaclass=MetaType):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct \
             or (self.is_function and len(self[1]) > 0) \
-            or self.is_custom
+            or self.is_custom or self.is_undefined
 
     def __repr__(self):
         if self._params:
@@ -841,8 +857,10 @@ class Type(tuple, metaclass=MetaType):
         if self.is_pointer:
             if self[0].is_void:
                 return nb.types.voidptr
-            return nb.types.CPointer(
-                self[0].tonumba(bool_is_int8=bool_is_int8))
+            if self[0].is_struct:
+                return StructureNumbaPointerType(
+                    self[0].tonumba(bool_is_int8=bool_is_int8))
+            return nb.types.CPointer(self[0].tonumba(bool_is_int8=bool_is_int8))
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -916,7 +934,11 @@ class Type(tuple, metaclass=MetaType):
                 atypes = []
                 for t in self[1]:
                     if t.is_struct:
+                        # LLVM struct argument (as an aggregate type)
+                        # is mapped to struct member arguments:
                         atypes.extend([m.toctypes() for m in t])
+                    elif t.is_void:
+                        pass
                     else:
                         atypes.append(t.toctypes())
                 typ = ctypes.CFUNCTYPE(rtype, *atypes)
@@ -946,6 +968,8 @@ class Type(tuple, metaclass=MetaType):
             # Used only as the return type of a function without a return value.
             # TODO: ensure that void is used only as function return type or a pointer dtype.
             return ir.VoidType()
+        if self.is_struct:
+            return ir.LiteralStructType([m.tollvmir(bool_is_int8=bool_is_int8) for m in self])
         raise NotImplementedError(f'{type(self).__name__}.tollvmir()|{self=}')
 
     @classmethod
@@ -1078,7 +1102,12 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(t, nb.types.misc.RawPointer):
             if t == nb.types.voidptr:
                 return cls(cls(), '*')
-        raise NotImplementedError(repr(t))
+        if isinstance(t, StructureNumbaType):
+            return t.origin
+        if isinstance(t, StructureNumbaPointerType):
+            return t.dtype.origin.pointer()
+
+        raise NotImplementedError(repr((t, type(t).__bases__)))
 
     @classmethod
     def fromctypes(cls, t):
@@ -1104,6 +1133,10 @@ class Type(tuple, metaclass=MetaType):
         The callable object must use annotations for specifying the
         types of arguments and return value.
         """
+        if not hasattr(func, '__name__'):
+            raise ValueError(
+                'constructing Type instance from a callable without `__name__`'
+                f' is not supported, got {func}')
         if func.__name__ == '<lambda>':
             # lambda function cannot carry annotations, hence:
             raise ValueError('constructing Type instance from '
@@ -1113,8 +1146,10 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(annot, dict):
             rtype = cls() | annot  # void
         elif annot == sig.empty:
-            rtype = cls()  # void
-            # TODO: check that function does not return other than None
+            if check_returns_none(func):
+                rtype = cls()  # void
+            else:
+                rtype = cls(None)   # cannot deterimine return value type
         else:
             rtype = cls.fromobject(annot)
         atypes = []
@@ -1135,6 +1170,7 @@ class Type(tuple, metaclass=MetaType):
                 atypes.append(cls('<type of %s>' % n))
             else:
                 atypes.append(cls.fromobject(annot))
+
         return cls(rtype, tuple(atypes) or (Type(),), name=func.__name__)
 
     @classmethod
@@ -1171,6 +1207,8 @@ class Type(tuple, metaclass=MetaType):
         n = _python_imap.get(obj)
         if n is not None:
             return cls.fromstring(n)
+        if hasattr(obj, "__typesystem_type__") or hasattr(type(obj), "__typesystem_type__"):
+            return obj.__typesystem_type__
         if hasattr(obj, '__module__'):
             if obj.__module__.startswith('numba'):
                 return cls.fromnumba(obj)
@@ -1381,6 +1419,8 @@ class Type(tuple, metaclass=MetaType):
                     if self[0].is_void:
                         penalty = 1
                 return penalty
+            elif self.is_pointer:
+                return
             elif other.is_struct:
                 if not self.is_struct:
                     return
@@ -1393,6 +1433,8 @@ class Type(tuple, metaclass=MetaType):
                         return
                     penalty = penalty + p
                 return penalty
+            elif self.is_struct:
+                return
             elif other.is_function:
                 if not self.is_function:
                     return
@@ -1407,6 +1449,8 @@ class Type(tuple, metaclass=MetaType):
                         return
                     penalty = penalty + p
                 return penalty
+            elif self.is_function:
+                return
             elif (
                     (other.is_int and self.is_int)
                     or (other.is_bool and self.is_bool)
@@ -1454,6 +1498,8 @@ class Type(tuple, metaclass=MetaType):
             if not self.is_function:
                 return
             atypes = self[1]
+            if len(other) == 0 and len(atypes) == 1 and atypes[0].is_void:
+                return 0
             if len(atypes) != len(other):
                 return
             penalty = 0
@@ -1719,7 +1765,6 @@ def make_numba_struct(name, members, base=None, origin=None, _cache={}):
     t = _cache.get(name)
     if t is None:
         if base is None:
-            from rbc.structure_type import StructureNumbaType
             base = Type.aliases.get('StructureNumbaType', StructureNumbaType)
         assert issubclass(base, nb.types.Type)
 
@@ -1730,9 +1775,16 @@ def make_numba_struct(name, members, base=None, origin=None, _cache={}):
                             (datamodel.StructModel,),
                             dict(__init__=model__init__))
         struct_type = type(name+'Type', (base,),
-                           dict(members=[t for n, t in members], origin=origin))
+                           dict(members=[t for n, t in members], origin=origin,
+                                __typesystem_type__=origin))
         datamodel.registry.register_default(struct_type)(struct_model)
         _cache[name] = t = struct_type(name)
+
+        tptr = StructureNumbaPointerType(t)
+        typeconv.rules.default_type_manager.set_compatible(
+            tptr, nb.types.voidptr, typeconv.Conversion.safe)
+        typeconv.rules.default_type_manager.set_compatible(
+            nb.types.voidptr, tptr, typeconv.Conversion.safe)
 
     return t
 

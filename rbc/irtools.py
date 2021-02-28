@@ -526,6 +526,28 @@ def printf(typingctx, format_type, *args):
         raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')
 
 
+@extending.intrinsic
+def sizeof(typingctx, arg_type):
+    if isinstance(arg_type, nb_types.TypeRef):
+        sig = nb_types.int32(arg_type)
+
+        def codegen(context, builder, signature, args):
+            value_type = context.get_value_type(arg_type.key)
+            size = context.get_abi_sizeof(value_type)
+            return ir.Constant(ir.IntType(32), size)
+
+        return sig, codegen
+    if isinstance(arg_type, nb_types.Type):
+        sig = nb_types.int32(arg_type)
+
+        def codegen(context, builder, signature, args):
+            value_type = context.get_value_type(arg_type)
+            size = context.get_abi_sizeof(value_type)
+            return ir.Constant(ir.IntType(32), size)
+
+        return sig, codegen
+
+
 def IS_CPU():
     pass
 
@@ -591,5 +613,9 @@ def impl_T_star_to_intp(context, builder, fromty, toty, value):
 @extending.lower_cast(nb_types.CPointer, nb_types.CPointer)
 @extending.lower_cast(nb_types.CPointer, nb_types.RawPointer)
 @extending.lower_cast(nb_types.RawPointer, nb_types.CPointer)
+@extending.lower_cast(nb_types.CPointer, structure_type.StructureNumbaPointerType)
+@extending.lower_cast(nb_types.RawPointer, structure_type.StructureNumbaPointerType)
+@extending.lower_cast(structure_type.StructureNumbaPointerType, nb_types.CPointer)
+@extending.lower_cast(structure_type.StructureNumbaPointerType, nb_types.RawPointer)
 def impl_T_star_to_T_star(context, builder, fromty, toty, value):
     return builder.bitcast(value, Type.fromnumba(toty).tollvmir())
