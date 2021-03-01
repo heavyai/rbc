@@ -587,6 +587,8 @@ def test_struct_input(ljit, rjit, location, T):
         assert type(s).__typesystem_type__ == s.__typesystem_type__
         assert type(s).__typesystem_type__.annotation() != s.__typesystem_type__.annotation()
 
+        # Get the members of struct given by value and reference
+
         @jit('T(S)', 'T(S*)')
         def get_x(s): return s.x
 
@@ -600,16 +602,19 @@ def test_struct_input(ljit, rjit, location, T):
         assert get_y(s) == y
         assert get_z(s) == z
 
+        # Set the members of struct given by reference
+        # Manage memory of the arrays with struct values
+
         with TargetInfo.host():  # TODO: can we eliminate this?
-            calloc, free = map(external, memory_managers['cstdlib'])
+            rcalloc, rfree = map(external, memory_managers['cstdlib'])
 
         @jit('S* allocate_S(size_t i)')
         def allocate_S(i):
-            return calloc(i, sizeof(nb_S))
+            return rcalloc(i, sizeof(nb_S))
 
-        @jit('void free_S(S*)')
-        def free_S(s):
-            free(s)
+        @jit('void free(void*)')
+        def free(s):
+            rfree(s)
 
         @jit('void set_x(S*, T)')
         def set_x(s, x):
@@ -634,7 +639,7 @@ def test_struct_input(ljit, rjit, location, T):
         set_z(p, z)
         assert get_z(p) == z
 
-        free_S(p)
+        free(p)
 
         @jit('size_t sizeof_S(S)', 'size_t sizeof_S(S*)', 'size_t sizeof_T(T)')
         def sizeof_S(s):
@@ -643,7 +648,7 @@ def test_struct_input(ljit, rjit, location, T):
         assert sizeof_S(s) == sizeof_S(nb_T(0)) * 3
         assert sizeof_S(p) == 8
 
-        #
+        # Pointer arithmetics and getitem
 
         @jit('void(S*, int64)')
         def init_S(s, n):
@@ -653,6 +658,18 @@ def test_struct_input(ljit, rjit, location, T):
                 si.x = i
                 si.y = i*10
                 si.z = i*20
+
+        @jit('void(S*, int64)')
+        def init_S2(s, n):
+            s.x = 8
+            for i in range(n):
+                # `s[i]` is equivalent to `s + i`! That is, the result
+                # of `s[i]` is a pointer value `S*` rather than a
+                # value of `S`.
+                si = s[i]
+                si.x = i*5
+                si.y = i*15
+                si.z = i*25
 
         @jit('S*(S*)')
         def next_S(s):
@@ -667,4 +684,96 @@ def test_struct_input(ljit, rjit, location, T):
             assert (get_x(r), get_y(r), get_z(r)) == (i, i*10, i*20)
             r = next_S(r)
 
-        free_S(p)
+        init_S2(p, n)
+
+        r = p
+        for i in range(n):
+            assert (get_x(r), get_y(r), get_z(r)) == (i*5, i*15, i*25)
+            r = next_S(r)
+
+        free(p)
+
+
+@pytest.mark.parametrize("location", ['local', 'remote'])
+@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
+def test_struct_pointer_members(ljit, rjit, location, T):
+    jit = rjit if location == 'remote' else ljit
+
+    index_t = 'int32'
+    S = '{T* data, index_t size}'
+
+    with Type.alias(T=T, S=S, index_t=index_t):
+        Sp = S + '*'
+        nb_S = Type.fromstring(S).tonumba()
+        nb_Sp = Type.fromstring(Sp).tonumba()
+        nb_T = Type.fromstring(T).tonumba()
+
+        with TargetInfo.host():  # TODO: can we eliminate this?
+            rcalloc, rfree = map(external, memory_managers['cstdlib'])
+
+        @jit('S* allocate_S(size_t i)')
+        def allocate_S(i):
+            raw = rcalloc(i, sizeof(nb_S))
+            s = raw.cast(nb_Sp)      # cast `void*` to `S*`
+            # s = raw.cast(Sp)       # cast `void*` to `S*`
+            s.size = 0
+            return s
+
+        @jit('void free(void*)')
+        def free(s):
+            rfree(s)
+
+        @jit('index_t getsize(S*)')
+        def getsize(s):
+            return s.size
+
+        @jit('T getitem(S*, index_t)')
+        def getitem(s, i):
+            if i >= 0 and i < s.size:
+                return s.data[i]
+            return 0  # TODO: return some null value or raise exception
+
+        @jit('void resize_S(S*, index_t)')
+        def resize_S(s, size):
+            if s.size == size:
+                return
+            if s.size != 0:
+                rfree(s.data)
+                s.size = 0
+            if s.size == 0 and size > 0:
+                raw = rcalloc(size, sizeof(nb_T))
+                s.data = raw
+                s.size = size
+
+        s = allocate_S(1)
+        assert getsize(s) == 0
+        assert getitem(s, 0) == 0
+
+        n = 10
+        resize_S(s, n)
+        assert getsize(s) == n
+
+        n = 5
+        resize_S(s, n)
+        assert getsize(s) == n
+
+        @jit('void fill_S(S*, T)')
+        def fill_S(s, v):
+            for i in range(s.size):
+                s.data[i] = v
+
+        fill_S(s, 123)
+        assert getitem(s, 0) == 123
+
+        @jit('void range_S(S*)')
+        def range_S(s):
+            for i in range(s.size):
+                s.data[i] = i
+
+        range_S(s)
+
+        for i in range(getsize(s)):
+            assert getitem(s, i) == i
+
+        resize_S(s, 0)  # deallocate data
+        free(s)         # deallocate struct

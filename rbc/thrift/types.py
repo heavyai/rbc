@@ -39,19 +39,28 @@ def toobject(thrift, tobj, cls=None):
 
 class TypeData(tuple):
     """Holds generated type for pickling:
-    - base class of generated type
+    - constructor of the type
     - name of generated type
-    - sequence of class __dict__ keys and values
+    - picklable data required to construct the type
     """
     @classmethod
     def fromctypes(cls, typ):
         if issubclass(typ, _ctypes.Structure):
-            return cls((ctypes.Structure, typ.__name__, (('_fields_', typ._fields_),)))
+            fields = _prepickle_dumps(tuple(typ._fields_))
+            return cls((ctypes.Structure, typ.__name__, (('_fields_', fields),)))
+        if issubclass(typ, _ctypes._Pointer):
+            return cls((ctypes.POINTER, typ.__name__, _prepickle_dumps(typ._type_)))
         raise NotImplementedError(repr((type(typ), typ)))
 
     def toctypes(self):
-        baseclass, typname, members = self
-        return type(typname, (baseclass,), dict(members))
+        constructor, typname, typedata = self
+        if isinstance(constructor, type) and issubclass(constructor, _ctypes.Structure):
+            return type(typname, (constructor,), dict(_postpickle_loads(typedata)))
+        if constructor is ctypes.POINTER:
+            typ = ctypes.POINTER(_postpickle_loads(typedata))
+            assert typ.__name__ == typname, (typ.__name__, typname)
+            return typ
+        raise NotImplementedError(repr(self))
 
 
 class PointerData(tuple):
@@ -133,7 +142,7 @@ def _prepickle_dumps(data):
         return StructData.fromctypes(data)
     if isinstance(data, tuple):
         return tuple(map(_prepickle_dumps, data))
-    if isinstance(data, type) and issubclass(data, _ctypes.Structure):
+    if isinstance(data, type) and issubclass(data, (_ctypes.Structure, _ctypes._Pointer)):
         return TypeData.fromctypes(data)
     return data
 

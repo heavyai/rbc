@@ -1,16 +1,17 @@
 import operator
 from rbc.utils import get_version
 from llvmlite import ir
+from rbc.typesystem import Type
+
 if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, extending, types, imputils, typing, cgutils
+    from numba.core import datamodel, extending, types, imputils, typing, cgutils, typeconv
 else:
-    from numba import datamodel, extending, types, typing
+    from numba import datamodel, extending, types, typing, typeconv
 
 from numba.core.typing.templates import Registry
 
 typing_registry = Registry()
 lowering_registry = imputils.Registry()
-
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -18,6 +19,36 @@ int64_t = ir.IntType(64)
 void_t = ir.VoidType()
 fp32 = ir.FloatType()
 fp64 = ir.DoubleType()
+
+
+def make_numba_struct(name, members, base=None, origin=None, _cache={}):
+    """Create numba struct type instance.
+    """
+    t = _cache.get(name)
+    if t is None:
+        if base is None:
+            base = Type.aliases.get('StructureNumbaType', StructureNumbaType)
+        assert issubclass(base, types.Type)  # base must be numba.types.Type
+
+        def model__init__(self, dmm, fe_type):
+            datamodel.StructModel.__init__(self, dmm, fe_type, members)
+
+        struct_model = type(name+'Model',
+                            (datamodel.StructModel,),
+                            dict(__init__=model__init__))
+        struct_type = type(name+'Type', (base,),
+                           dict(members=[t for n, t in members], origin=origin,
+                                __typesystem_type__=origin))
+        datamodel.registry.register_default(struct_type)(struct_model)
+        _cache[name] = t = struct_type(name)
+
+        tptr = StructureNumbaPointerType(t)
+        typeconv.rules.default_type_manager.set_compatible(
+            tptr, types.voidptr, typeconv.Conversion.safe)
+        typeconv.rules.default_type_manager.set_compatible(
+            types.voidptr, tptr, typeconv.Conversion.safe)
+
+    return t
 
 
 class StructureNumbaType(types.Type):
@@ -140,8 +171,35 @@ def StructureNumbaPointerType_add_impl(typingctx, data, index):
 
 
 @extending.overload(operator.add)
+@extending.overload(operator.getitem)
 def StructureNumbaPointerType_add(x, i):
     if isinstance(x, StructureNumbaPointerType):
+
         def impl(x, i):
             return StructureNumbaPointerType_add_impl(x, i)
         return impl
+
+
+@extending.intrinsic
+def voidptr_cast_impl(typingctx, ptr, typ):
+    # print(f'voidptr_cast_impl({ptr=}, {typ=})')
+    if isinstance(typ, types.StringLiteral):
+        dtype = Type.fromstring(typ.literal_value)
+    else:
+        dtype = Type.fromnumba(typ.key)
+    sig = dtype.tonumba()(ptr, typ)
+
+    def codegen(context, builder, signature, args):
+        return builder.bitcast(args[0], dtype.tollvmir())
+    return sig, codegen
+
+
+@extending.overload_method(type(types.voidptr), 'cast')
+def StructureNumbaPointerType_cast(ptr, typ):
+    # print(f'StructureNumbaPointerType_cast({ptr=}, {typ=}|{type(typ)=})')
+    if isinstance(ptr, type(types.voidptr)):
+        if isinstance(typ, (types.TypeRef, types.StringLiteral)):
+
+            def impl(ptr, typ):
+                return voidptr_cast_impl(ptr, typ)
+            return impl

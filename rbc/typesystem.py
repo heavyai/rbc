@@ -11,8 +11,9 @@ import inspect
 from llvmlite import ir
 import warnings
 
-from .utils import get_version, check_returns_none
 from .targetinfo import TargetInfo
+from .utils import get_version, check_returns_none
+
 
 try:
     import numba as nb
@@ -33,9 +34,6 @@ try:
 except ImportError as msg:
     np = None
     np_NA_message = str(msg)
-
-
-from .structure_type import StructureNumbaType, StructureNumbaPointerType
 
 
 class TypeSystemManager:
@@ -1696,6 +1694,8 @@ def _demangle(s):
 
 
 if nb is not None:
+    # TODO: move numba boolean support to rbc/boolean_type.py
+
     class Boolean1(nb.types.Boolean):
 
         def can_convert_from(self, typingctx, other):
@@ -1759,36 +1759,6 @@ if nb is not None:
                 _p1, _p2, typeconv.Conversion.safe)
             typeconv.rules.default_type_manager.set_compatible(
                 _p2, _p1, typeconv.Conversion.safe)
-
-
-def make_numba_struct(name, members, base=None, origin=None, _cache={}):
-    """Create numba struct type instance.
-    """
-    t = _cache.get(name)
-    if t is None:
-        if base is None:
-            base = Type.aliases.get('StructureNumbaType', StructureNumbaType)
-        assert issubclass(base, nb.types.Type)
-
-        def model__init__(self, dmm, fe_type):
-            datamodel.StructModel.__init__(self, dmm, fe_type, members)
-
-        struct_model = type(name+'Model',
-                            (datamodel.StructModel,),
-                            dict(__init__=model__init__))
-        struct_type = type(name+'Type', (base,),
-                           dict(members=[t for n, t in members], origin=origin,
-                                __typesystem_type__=origin))
-        datamodel.registry.register_default(struct_type)(struct_model)
-        _cache[name] = t = struct_type(name)
-
-        tptr = StructureNumbaPointerType(t)
-        typeconv.rules.default_type_manager.set_compatible(
-            tptr, nb.types.voidptr, typeconv.Conversion.safe)
-        typeconv.rules.default_type_manager.set_compatible(
-            nb.types.voidptr, tptr, typeconv.Conversion.safe)
-
-    return t
 
 
 _ufunc_pos_args_match = re.compile(
@@ -1859,3 +1829,9 @@ def get_signature(obj):
             return sig
 
     raise NotImplementedError(obj)
+
+
+# Import numba support
+
+if 1:  # to avoid flake E402
+    from .structure_type import StructureNumbaType, StructureNumbaPointerType, make_numba_struct
