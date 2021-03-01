@@ -192,12 +192,13 @@ def check_returns_none(func):
     last_instr = None
     for instr in dis.Bytecode(func):
         if instr.opname == 'RETURN_VALUE':
-            if last_instr.opname in ['LOAD_CONST', 'LOAD_FAST']:
+            if last_instr.opname in ['LOAD_CONST', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_GLOBAL']:
                 if last_instr.argval is None:
                     continue
                 return False
             else:
-                if any(map(last_instr.opname.startswith, ['UNARY_', 'BINARY_', 'CALL_'])):
+                if any(map(last_instr.opname.startswith,
+                           ['UNARY_', 'BINARY_', 'CALL_', 'COMPARE_'])):
                     return False
                 warnings.warn(
                     f'check_returns_none: assuming non-None return from {last_instr=} (FIXME)')
