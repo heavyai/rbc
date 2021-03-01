@@ -777,3 +777,102 @@ def test_struct_pointer_members(ljit, rjit, location, T):
 
         resize_S(s, 0)  # deallocate data
         free(s)         # deallocate struct
+
+
+@pytest.mark.parametrize("location", ['local', 'remote'])
+@pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
+def test_struct_double_pointer_members(ljit, rjit, location, T):
+    jit = rjit if location == 'remote' else ljit
+
+    index_t = 'int32'
+    S = '{T** data, index_t length, index_t size}'
+    S1 = '{T* data, index_t size}'
+
+    with Type.alias(T=T, S=S, S1=S1, index_t=index_t):
+        Sp = S + '*'
+        S1p = S1 + '*'
+        Tp = T + '*'
+        Tpp = T + '**'
+        nb_S = Type.fromstring(S).tonumba()
+        nb_Sp = Type.fromstring(Sp).tonumba()
+        nb_S1 = Type.fromstring(S1).tonumba()
+        nb_S1p = Type.fromstring(S1p).tonumba()
+        nb_T = Type.fromstring(T).tonumba()
+        nb_Tp = Type.fromstring(Tp).tonumba()
+        nb_Tpp = Type.fromstring(Tpp).tonumba()
+
+        with TargetInfo.host():  # TODO: can we eliminate this?
+            rcalloc, rfree = map(external, memory_managers['cstdlib'])
+
+        @jit('S* allocate_S(size_t length, size_t size)')
+        def allocate_S(length, size):
+            s = rcalloc(1, sizeof(nb_S)).cast(nb_Sp)
+            s.data = rcalloc(length, sizeof(nb_Tp)).cast(nb_Tpp)
+            s.length = length
+            for i in range(length):
+                s.data[i] = rcalloc(size, sizeof(nb_T)).cast(nb_Tp)
+            s.size = size
+            return s
+
+        @jit('void deallocate_S(S*)')
+        def deallocate_S(s):
+            if s.length > 0:
+                for i in range(s.length):
+                    rfree(s.data[i])
+                rfree(s.data)
+                rfree(s)
+
+        @jit('S1* viewitem(S*, index_t)')
+        def viewitem(s, i):
+            s1 = rcalloc(1, sizeof(nb_S1)).cast(nb_S1p)
+            if i >= 0 and i < s.size:
+                s1.size = s.size
+                s1.data = s.data[i]
+            else:
+                s1.size = 0
+            return s1
+
+        @jit('T getitem(S*, index_t, index_t)')
+        def getitem(s, col, row):
+            if col >= 0 and col < s.length:
+                if row >= 0 and row < s.size:
+                    return s.data[col][row]
+            return 0
+
+        @jit('void free(S1*)')
+        def free(s1):
+            rfree(s1)
+
+        @jit('void fill1(S1*, T)')
+        def fill1(s1, v):
+            for i in range(s1.size):
+                s1.data[i] = v
+
+        @jit('void range1(S1*)')
+        def range1(s1):
+            for i in range(s1.size):
+                s1.data[i] = i
+
+        m, n = 4, 5
+        s = allocate_S(m, n)
+
+        # initialize
+        expected = []
+        for col in range(m):
+            s1 = viewitem(s, col)
+            if col % 2:
+                expected.extend(n * [23+col*10])
+                fill1(s1, 23+col*10)
+            else:
+                expected.extend(range(n))
+                range1(s1)
+            free(s1)
+
+        # check
+        actual = []
+        for col in range(m):
+            for row in range(n):
+                actual.append(getitem(s, col, row))
+        deallocate_S(s)
+
+        assert expected == actual
