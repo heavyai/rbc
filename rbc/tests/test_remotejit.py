@@ -6,7 +6,6 @@ import numpy as np
 from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
 from rbc.external import external
-from rbc.targetinfo import TargetInfo
 from rbc.irtools import sizeof
 
 win32 = sys.platform == 'win32'
@@ -511,9 +510,8 @@ def test_scalar_pointer_access_remote(rjit, memman, T):
         arr = np.array([1, 2, 3, 4], dtype=T)
         arr2 = np.array([11, 12, 13, 14], dtype=T)
 
-        with TargetInfo.host():  # TODO: can we eliminate this?
-            calloc = external(calloc_prototype)
-            free = external(free_prototype)
+        calloc = external(calloc_prototype)
+        free = external(free_prototype)
 
         @rjit(calloc_prototype)
         def rcalloc(nmemb, size):
@@ -605,8 +603,7 @@ def test_struct_input(ljit, rjit, location, T):
         # Set the members of struct given by reference
         # Manage memory of the arrays with struct values
 
-        with TargetInfo.host():  # TODO: can we eliminate this?
-            rcalloc, rfree = map(external, memory_managers['cstdlib'])
+        rcalloc, rfree = map(external, memory_managers['cstdlib'])
 
         @jit('S* allocate_S(size_t i)')
         def allocate_S(i):
@@ -708,8 +705,7 @@ def test_struct_pointer_members(ljit, rjit, location, T):
         nb_Sp = Type.fromstring(Sp).tonumba()
         nb_T = Type.fromstring(T).tonumba()
 
-        with TargetInfo.host():  # TODO: can we eliminate this?
-            rcalloc, rfree = map(external, memory_managers['cstdlib'])
+        rcalloc, rfree = map(external, memory_managers['cstdlib'])
 
         @jit('S* allocate_S(size_t i)')
         def allocate_S(i):
@@ -801,8 +797,7 @@ def test_struct_double_pointer_members(ljit, rjit, location, T):
         nb_Tp = Type.fromstring(Tp).tonumba()
         nb_Tpp = Type.fromstring(Tpp).tonumba()
 
-        with TargetInfo.host():  # TODO: can we eliminate this?
-            rcalloc, rfree = map(external, memory_managers['cstdlib'])
+        rcalloc, rfree = map(external, memory_managers['cstdlib'])
 
         @jit('S* allocate_S(size_t length, size_t size)')
         def allocate_S(length, size):

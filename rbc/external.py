@@ -24,7 +24,8 @@ class External:
         ts = defaultdict(list)
         key = None
         for signature in args:
-            t = Type.fromobject(signature)
+            with TargetInfo.dummy():
+                t = Type.fromobject(signature)
             if not t.is_function:
                 raise ValueError("signature must represent a function type")
 

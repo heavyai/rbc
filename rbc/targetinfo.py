@@ -52,10 +52,19 @@ class TargetInfo(object):
         return cls._instance
 
     def __enter__(self):
+        if self.nested:
+            parent = type(self)._instance
+            if parent is not None:
+                type(self)._set_instance(None)
+                self.update(parent)
+            self._parent = parent
         return type(self)._set_instance(self)
 
     def __exit__(self, exc_type, exc_value, traceback):
         type(self)._set_instance(None)
+        if self._parent is not None:
+            assert self.nested
+            type(self)._set_instance(self._parent)
         if exc_type is None:
             return True
 
@@ -68,7 +77,7 @@ class TargetInfo(object):
         obj._init(*args, **kwargs)
         return obj
 
-    def _init(self, name, strict=False):
+    def _init(self, name, strict=False, nested=False):
         """
         Parameters
         ----------
@@ -77,9 +86,13 @@ class TargetInfo(object):
         strict: bool
           When True, require that atomic types are concrete. Used by
           typesystem.
+        nested: bool
+          When True, allow nested target info contexts.
         """
         self.name = name
         self.strict = strict
+        self.nested = nested
+        self._parent = None
         self.info = {}
         self.type_sizeof = {}
         self._supported_libraries = set()  # libfuncs.Library instances
@@ -110,7 +123,8 @@ class TargetInfo(object):
     def todict(self):
         return dict(name=self.name, strict=self.strict, info=self.info,
                     type_sizeof=self.type_sizeof,
-                    libraries=[lib.name for lib in self._supported_libraries])
+                    libraries=[lib.name for lib in self._supported_libraries],
+                    externals=list(self._userdefined_externals))
 
     @classmethod
     def fromdict(cls, data):
@@ -120,7 +134,19 @@ class TargetInfo(object):
         target_info.type_sizeof.update(data.get('type_sizeof', {}))
         for lib in data.get('libraries', []):
             target_info.add_library(lib)
+        target_info.add_external(*data.get('externals', ()))
         return target_info
+
+    def update(self, other):
+        """Update target info using other target info data. Any existing data
+        bit will be overwritten except the name and strict fields.
+        """
+        data = other.todict()
+        self.info.update(data.get('info', {}))
+        self.type_sizeof.update(data.get('info', {}))
+        for lib in data.get('libraries', []):
+            self.add_library(lib)
+        self.add_external(*data.get('externals', []))
 
     def tojson(self):
         return json.dumps(self.todict())
@@ -131,7 +157,14 @@ class TargetInfo(object):
 
     @classmethod
     def dummy(cls):
-        return TargetInfo(name='dummy', strict=False)
+        """Returns dummy target info instance.
+
+        Warning: When a target info context already exists, its data
+        is copied into the dummy target info except the name, strict
+        and nested fields. The existing target info context will be
+        restored when leaving the dummy target info context.
+        """
+        return TargetInfo(name='dummy', strict=False, nested=True)
 
     _host_target_info_cache = {}
 
