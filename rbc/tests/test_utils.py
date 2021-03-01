@@ -49,9 +49,34 @@ def test_check_returns_none():
         else:
             return 1
 
+    assert check_returns_none(foo)
+
+    def foo():
+        global a
+        if a:
+            return
+        else:
+            return 1
+
     assert not check_returns_none(foo)
 
     def foo(a=None):
         return a
 
     assert not check_returns_none(foo)
+
+    def foo(a):
+        if a:
+            return a + 1
+        else:
+            return
+    assert not check_returns_none(foo)
+
+    def foo(a):
+        pass
+    assert check_returns_none(foo)
+
+    def foo():
+        a = None
+        return a
+    assert not check_returns_none(foo)  # false-negative

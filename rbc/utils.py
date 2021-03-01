@@ -1,4 +1,4 @@
-import ast
+import dis
 import socket
 import subprocess
 import inspect
@@ -8,6 +8,7 @@ import re
 import uuid
 import ctypes
 import llvmlite.binding as llvm
+import warnings
 
 
 def get_version(package):
@@ -164,6 +165,10 @@ def triple_matches(triple, other):
 
 
 def get_function_source(func):
+    """Get function source code with intent fixes.
+
+    Warning: not all function objects have source code available.
+    """
     source = ''
     intent = None
     for line in inspect.getsourcelines(func)[0]:
@@ -184,14 +189,19 @@ def check_returns_none(func):
 
       check_returns_none(foo) -> False
     """
-    source = get_function_source(func)
-    tree = ast.parse(source)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Return):
-            if node.value is None:
-                continue
-            if isinstance(node.value, ast.Constant):
-                if node.value.value is None:
+    last_instr = None
+    for instr in dis.Bytecode(func):
+        if instr.opname == 'RETURN_VALUE':
+            if last_instr.opname in ['LOAD_CONST', 'LOAD_FAST']:
+                if last_instr.argval is None:
                     continue
-            return False
+                return False
+            else:
+                if any(map(last_instr.opname.startswith, ['UNARY_', 'BINARY_', 'CALL_'])):
+                    return False
+                warnings.warn(
+                    f'check_returns_none: assuming non-None return from {last_instr=} (FIXME)')
+                return False
+        last_instr = instr
+
     return True
