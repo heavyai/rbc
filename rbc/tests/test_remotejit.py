@@ -6,7 +6,7 @@ import numpy as np
 from rbc.remotejit import RemoteJIT, Signature, Caller
 from rbc.typesystem import Type
 from rbc.external import external
-from rbc.irtools import sizeof
+from rbc.externals.macros import sizeof, cast
 
 win32 = sys.platform == 'win32'
 
@@ -448,7 +448,7 @@ def test_scalar_pointer_conversion(rjit, T, V):
         def pp2r(a):
             return a
 
-        if T == V:
+        if T == V == 'void':
             i = 99
             p = i2p(i)
             pp = p2pp(p)
@@ -710,7 +710,7 @@ def test_struct_pointer_members(ljit, rjit, location, T):
         @jit('S* allocate_S(size_t i)')
         def allocate_S(i):
             raw = rcalloc(i, sizeof(nb_S))
-            s = raw.cast(nb_Sp)      # cast `void*` to `S*`
+            s = cast(raw, nb_Sp)     # cast `void*` to `S*`
             # s = raw.cast(Sp)       # cast `void*` to `S*`
             s.size = 0
             return s

@@ -10,19 +10,18 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .utils import get_version
 from .errors import UnsupportedError
-from .typesystem import Type
 from . import libfuncs, structure_type
 
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
-        extending, typeconv
+        extending
     from numba.core import types as nb_types
     from numba.core import errors as nb_errors
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
-        sigutils, cgutils, extending, typeconv
+        sigutils, cgutils, extending
     from numba import types as nb_types
     from numba import errors as nb_errors
 
@@ -137,8 +136,9 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        from rbc.externals import math
+        from rbc.externals import math, macros
         self.install_registry(math.typing_registry)
+        self.install_registry(macros.typing_registry)
         self.install_registry(structure_type.typing_registry)
         super().load_additional_registries()
 
@@ -153,8 +153,9 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        from rbc.externals import math
+        from rbc.externals import math, macros
         self.install_registry(math.lowering_registry)
+        self.install_registry(macros.lowering_registry)
         self.install_registry(structure_type.lowering_registry)
         super().load_additional_registries()
 
@@ -355,18 +356,12 @@ def compile_to_LLVM(functions_and_signatures,
 
     """
     target_desc = registry.cpu_target
-    if target_info is None and 0:
-        # RemoteJIT
-        target_info = TargetInfo.host()
-        typing_context = target_desc.typing_context
-        target_context = target_desc.target_context
-    else:
-        # OmnisciDB target
-        typing_context = JITRemoteTypingContext()
-        target_context = JITRemoteTargetContext(typing_context)
 
-        # Bring over Array overloads (a hack):
-        target_context._defns = target_desc.target_context._defns
+    typing_context = JITRemoteTypingContext()
+    target_context = JITRemoteTargetContext(typing_context)
+
+    # Bring over Array overloads (a hack):
+    target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
@@ -526,28 +521,6 @@ def printf(typingctx, format_type, *args):
         raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')
 
 
-@extending.intrinsic
-def sizeof(typingctx, arg_type):
-    if isinstance(arg_type, nb_types.TypeRef):
-        sig = nb_types.int32(arg_type)
-
-        def codegen(context, builder, signature, args):
-            value_type = context.get_value_type(arg_type.key)
-            size = context.get_abi_sizeof(value_type)
-            return ir.Constant(ir.IntType(32), size)
-
-        return sig, codegen
-    if isinstance(arg_type, nb_types.Type):
-        sig = nb_types.int32(arg_type)
-
-        def codegen(context, builder, signature, args):
-            value_type = context.get_value_type(arg_type)
-            size = context.get_abi_sizeof(value_type)
-            return ir.Constant(ir.IntType(32), size)
-
-        return sig, codegen
-
-
 def IS_CPU():
     pass
 
@@ -572,50 +545,3 @@ def is_gpu_impl():
         return lambda: True
     else:
         return lambda: False
-
-
-# Assuming maximum pointer level 2, although ANSI C requires 12 as a
-# maximum supported level.
-
-scalar_types = [getattr(nb_types, typename) for typename in
-                ['int64', 'int32', 'int16', 'int8', 'float32', 'float64', 'boolean']]
-pointer_value_types = [nb_types.intp, nb_types.voidptr]
-pointer_types = [nb_types.CPointer(s) for s in scalar_types] + pointer_value_types
-double_pointer_types = [nb_types.CPointer(s) for s in pointer_types] + pointer_value_types
-
-# TODO: use rbc specific type manager to not mess with numba defaults
-for p1 in pointer_types:
-    for p2 in pointer_types:
-        if p1 == p2:
-            continue
-        typeconv.rules.default_type_manager.set_compatible(
-            p1, p2, typeconv.Conversion.safe)
-    for p2 in double_pointer_types:
-        if p1 == p2:
-            continue
-        typeconv.rules.default_type_manager.set_compatible(
-            p1, p2, typeconv.Conversion.safe)
-        typeconv.rules.default_type_manager.set_compatible(
-            p2, p1, typeconv.Conversion.safe)
-
-
-@extending.lower_cast(nb_types.intp, nb_types.CPointer)
-def impl_intp_to_T_star(context, builder, fromty, toty, value):
-    return builder.inttoptr(value, Type.fromnumba(toty).tollvmir())
-
-
-@extending.lower_cast(nb_types.CPointer, nb_types.intp)
-@extending.lower_cast(nb_types.RawPointer, nb_types.intp)
-def impl_T_star_to_intp(context, builder, fromty, toty, value):
-    return builder.ptrtoint(value, ir.IntType(toty.bitwidth))
-
-
-@extending.lower_cast(nb_types.CPointer, nb_types.CPointer)
-@extending.lower_cast(nb_types.CPointer, nb_types.RawPointer)
-@extending.lower_cast(nb_types.RawPointer, nb_types.CPointer)
-@extending.lower_cast(nb_types.CPointer, structure_type.StructureNumbaPointerType)
-@extending.lower_cast(nb_types.RawPointer, structure_type.StructureNumbaPointerType)
-@extending.lower_cast(structure_type.StructureNumbaPointerType, nb_types.CPointer)
-@extending.lower_cast(structure_type.StructureNumbaPointerType, nb_types.RawPointer)
-def impl_T_star_to_T_star(context, builder, fromty, toty, value):
-    return builder.bitcast(value, Type.fromnumba(toty).tollvmir())

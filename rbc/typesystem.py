@@ -552,7 +552,8 @@ class Type(tuple, metaclass=MetaType):
 
     @property
     def is_aggregate(self):
-        return self.is_struct or self.is_function
+        # ref: https://llvm.org/docs/LangRef.html#aggregate-types
+        return self.is_struct
 
     @property
     def is_pointer(self):
@@ -1188,7 +1189,6 @@ class Type(tuple, metaclass=MetaType):
         if hasattr(obj, '__typesystem_type__'):
             return cls.fromobject(obj.__typesystem_type__)
 
-        # return cls.fromstring(type(obj).__name__)
         raise NotImplementedError('%s.fromvalue(%r|%s)'
                                   % (cls.__name__, obj, type(obj)))
 
@@ -1384,7 +1384,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_struct:
             return sum([m.bits for m in self])
         if self.is_pointer:
-            return 64  # TODO: check that pointer type bitwidth is 64
+            return TargetInfo().sizeof('void*') or 64
         return NotImplemented
 
     def match(self, other):
@@ -1492,7 +1492,6 @@ class Type(tuple, metaclass=MetaType):
                     return 1
                 return
             # TODO: lots of
-            # return None
             raise NotImplementedError(repr((self, other)))
         elif isinstance(other, tuple):
             if not self.is_function:

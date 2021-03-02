@@ -52,18 +52,17 @@ def make_numba_struct(name, members, base=None, origin=None, _cache={}):
 
 
 class StructureNumbaType(types.Type):
-    # pass_by_value = True
-    # return_as_first_argument = True  # use it only when deriving from types.PointerType
-
-    pass
+    """Represents a struct numba type.
+    """
 
 
 class StructureNumbaPointerType(types.Type):
-    """We are not deriving from CPointer because we may want to use
-    getitem for other purposes.
+    """Pointer type for StructureNumbaType values.
+
+    We are not deriving from CPointer because we may want to use
+    getitem for custom item access.
     """
-    # pass_by_value = True
-    # return_as_first_argument = True  # use it only when deriving from types.PointerType
+
     @property
     def __typesystem_type__(self):
         return self.dtype.origin.pointer()
@@ -83,7 +82,7 @@ class StructureNumbaPointerTypeModel(datamodel.models.PointerModel):
     pass
 
 
-@extending.infer_getattr
+@typing_registry.register_attr
 class StructAttribute(typing.templates.AttributeTemplate):
     key = StructureNumbaType
 
@@ -92,7 +91,7 @@ class StructAttribute(typing.templates.AttributeTemplate):
         return model.get_member_fe_type(attr)
 
 
-@extending.infer_getattr
+@typing_registry.register_attr
 class StructPointerAttribute(typing.templates.AttributeTemplate):
     key = StructureNumbaPointerType
 
@@ -103,7 +102,6 @@ class StructPointerAttribute(typing.templates.AttributeTemplate):
 
 @lowering_registry.lower_getattr_generic(StructureNumbaType)
 def StructureNumbaType_getattr_impl(context, builder, sig, struct, attr):
-    # print(f'StructureNumbaType_getattr_impl({sig=}, {struct=}, {attr=})')
     model = datamodel.default_manager.lookup(sig)
     assert struct.opname == 'load'
     index = model.get_field_position(attr)
@@ -114,7 +112,6 @@ def StructureNumbaType_getattr_impl(context, builder, sig, struct, attr):
 
 @lowering_registry.lower_setattr_generic(StructureNumbaType)
 def StructureNumbaType_setattr_impl(context, builder, sig, args, attr):
-    # print(f'StructureNumbaType_setattr_impl({sig=}, {args=}, {attr=})')
     typ = sig.args[0]
     struct, value = args
     model = datamodel.default_manager.lookup(typ)
@@ -126,7 +123,6 @@ def StructureNumbaType_setattr_impl(context, builder, sig, args, attr):
 
 @lowering_registry.lower_getattr_generic(StructureNumbaPointerType)
 def StructureNumbaPointerType_getattr_impl(context, builder, sig, struct, attr):
-    # print(f'StructureNumbaPointerType_getattr_impl({sig=}, {struct=}, {attr=})')
     typ = sig.dtype
     model = datamodel.default_manager.lookup(typ)
     assert struct.opname == 'load'
@@ -139,7 +135,6 @@ def StructureNumbaPointerType_getattr_impl(context, builder, sig, struct, attr):
 
 @lowering_registry.lower_setattr_generic(StructureNumbaPointerType)
 def StructureNumbaPointerType_setattr_impl(context, builder, sig, args, attr):
-    # print(f'StructureNumbaPointerType_setattr_impl({sig=}, {args=}, {attr=})')
     typ = sig.args[0].dtype
     struct, value = args
     model = datamodel.default_manager.lookup(typ)
@@ -180,26 +175,7 @@ def StructureNumbaPointerType_add(x, i):
         return impl
 
 
-@extending.intrinsic
-def voidptr_cast_impl(typingctx, ptr, typ):
-    # print(f'voidptr_cast_impl({ptr=}, {typ=})')
-    if isinstance(typ, types.StringLiteral):
-        dtype = Type.fromstring(typ.literal_value)
-    else:
-        dtype = Type.fromnumba(typ.key)
-    sig = dtype.tonumba()(ptr, typ)
-
-    def codegen(context, builder, signature, args):
-        return builder.bitcast(args[0], dtype.tollvmir())
-    return sig, codegen
-
-
-@extending.overload_method(type(types.voidptr), 'cast')
-def StructureNumbaPointerType_cast(ptr, typ):
-    # print(f'StructureNumbaPointerType_cast({ptr=}, {typ=}|{type(typ)=})')
-    if isinstance(ptr, type(types.voidptr)):
-        if isinstance(typ, (types.TypeRef, types.StringLiteral)):
-
-            def impl(ptr, typ):
-                return voidptr_cast_impl(ptr, typ)
-            return impl
+@lowering_registry.lower_cast(types.RawPointer, StructureNumbaPointerType)
+@lowering_registry.lower_cast(StructureNumbaPointerType, types.RawPointer)
+def impl_T_star_to_T_star(context, builder, fromty, toty, value):
+    return builder.bitcast(value, Type.fromnumba(toty).tollvmir())

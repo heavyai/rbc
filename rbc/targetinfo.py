@@ -130,20 +130,17 @@ class TargetInfo(object):
     def fromdict(cls, data):
         target_info = cls(data.get('name', 'somedevice'),
                           strict=data.get('strict', False))
-        target_info.info.update(data.get('info', {}))
-        target_info.type_sizeof.update(data.get('type_sizeof', {}))
-        for lib in data.get('libraries', []):
-            target_info.add_library(lib)
-        target_info.add_external(*data.get('externals', ()))
+        target_info.update(data)
         return target_info
 
-    def update(self, other):
+    def update(self, data):
         """Update target info using other target info data. Any existing data
         bit will be overwritten except the name and strict fields.
         """
-        data = other.todict()
+        if isinstance(data, type(self)):
+            data = data.todict()
         self.info.update(data.get('info', {}))
-        self.type_sizeof.update(data.get('info', {}))
+        self.type_sizeof.update(data.get('typeof_sizeof', {}))
         for lib in data.get('libraries', []):
             self.add_library(lib)
         self.add_external(*data.get('externals', []))
@@ -434,6 +431,7 @@ class TargetInfo(object):
             if t == 'char':
                 return 1  # IEC 9899
         if self.name == 'dummy':
+            # don't guess
             return
         if isinstance(t, str):
             if t == 'int':
