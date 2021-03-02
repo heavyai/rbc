@@ -14,7 +14,7 @@ Casts:
   intp, voidptr to/from T*, T**, ..., T************* where T is a scalar type.
 """
 
-__all__ = ['sizeof']
+__all__ = ['sizeof', 'cast']
 
 from llvmlite import ir
 from numba.core import extending, imputils, typing, typeconv
