@@ -1,16 +1,11 @@
+
+__all__ = ['StructureNumbaType', 'StructureNumbaPointerType', 'make_numba_struct']
+
 import operator
-from rbc.utils import get_version
 from llvmlite import ir
-from rbc.typesystem import Type
+from numba.core import datamodel, extending, types, imputils, typing, cgutils, typeconv
 
-if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, extending, types, imputils, typing, cgutils, typeconv
-else:
-    from numba import datamodel, extending, types, typing, typeconv
-
-from numba.core.typing.templates import Registry
-
-typing_registry = Registry()
+typing_registry = typing.templates.Registry()
 lowering_registry = imputils.Registry()
 
 int8_t = ir.IntType(8)
@@ -179,3 +174,7 @@ def StructureNumbaPointerType_add(x, i):
 @lowering_registry.lower_cast(StructureNumbaPointerType, types.RawPointer)
 def impl_T_star_to_T_star(context, builder, fromty, toty, value):
     return builder.bitcast(value, Type.fromnumba(toty).tollvmir())
+
+
+if 1:
+    from rbc.typesystem import Type
