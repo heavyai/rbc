@@ -165,7 +165,7 @@ class JITRemoteTargetContext(cpu.CPUContext):
 
         if TargetInfo().is_gpu:
             from rbc.externals import libdevice
-            self.install_registry(libdevice.typing_registry)
+            self.install_registry(libdevice.lowering_registry)
 
         self.install_registry(cmath.lowering_registry)
         self.install_registry(macros.lowering_registry)

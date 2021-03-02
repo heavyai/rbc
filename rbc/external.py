@@ -128,9 +128,9 @@ class External:
                 atypes = tuple(map(Type.fromobject, args))
                 t = self.obj.match_signature(atypes)
                 TargetInfo().add_external(t.name)
-                if self.obj.lowering:
-                    codegen = self.obj.get_codegen()
-                    extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
+
+                codegen = self.obj.get_codegen()
+                extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
                 return t.tonumba()
 
         typing.templates.infer(ExternalTemplate)
