@@ -1,3 +1,15 @@
+"""This module provides the following tools:
+
+Intrinsics:
+
+  fflush()
+  printf(<StringLiteral>, <arg0>, <arg1>, ..., <argN>)
+
+Methods:
+
+  cg_fflush(<llvmlite.ir.IRBuilder>)
+"""
+
 from llvmlite import ir
 from rbc.targetinfo import TargetInfo
 from rbc.utils import get_version
