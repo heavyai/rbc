@@ -24,7 +24,8 @@ class External:
         ts = defaultdict(list)
         key = None
         for signature in args:
-            t = Type.fromobject(signature)
+            with TargetInfo.dummy():
+                t = Type.fromobject(signature)
             if not t.is_function:
                 raise ValueError("signature must represent a function type")
 
@@ -128,7 +129,7 @@ class External:
                 # get the correct signature and function name for the current device
                 atypes = tuple(map(Type.fromobject, args))
                 t = self.obj.match_signature(atypes)
-
+                TargetInfo().add_external(t.name)
                 if self.obj.lowering:
                     codegen = self.obj.get_codegen()
                     extending.lower_builtin(self.key, *t.tonumba().args)(codegen)

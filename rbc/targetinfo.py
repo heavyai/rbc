@@ -52,10 +52,19 @@ class TargetInfo(object):
         return cls._instance
 
     def __enter__(self):
+        if self.nested:
+            parent = type(self)._instance
+            if parent is not None:
+                type(self)._set_instance(None)
+                self.update(parent)
+            self._parent = parent
         return type(self)._set_instance(self)
 
     def __exit__(self, exc_type, exc_value, traceback):
         type(self)._set_instance(None)
+        if self._parent is not None:
+            assert self.nested
+            type(self)._set_instance(self._parent)
         if exc_type is None:
             return True
 
@@ -68,7 +77,7 @@ class TargetInfo(object):
         obj._init(*args, **kwargs)
         return obj
 
-    def _init(self, name, strict=False):
+    def _init(self, name, strict=False, nested=False):
         """
         Parameters
         ----------
@@ -77,12 +86,20 @@ class TargetInfo(object):
         strict: bool
           When True, require that atomic types are concrete. Used by
           typesystem.
+        nested: bool
+          When True, allow nested target info contexts.
         """
         self.name = name
         self.strict = strict
+        self.nested = nested
+        self._parent = None
         self.info = {}
         self.type_sizeof = {}
         self._supported_libraries = set()  # libfuncs.Library instances
+        self._userdefined_externals = set()
+
+    def add_external(self, *names):
+        self._userdefined_externals.update(names)
 
     def add_library(self, lib):
         if isinstance(lib, str):
@@ -96,6 +113,8 @@ class TargetInfo(object):
     def supports(self, name):
         """Return True if the target system defines symbol name.
         """
+        if name in self._userdefined_externals:
+            return True
         for lib in self._supported_libraries:
             if name in lib:
                 return True
@@ -104,17 +123,27 @@ class TargetInfo(object):
     def todict(self):
         return dict(name=self.name, strict=self.strict, info=self.info,
                     type_sizeof=self.type_sizeof,
-                    libraries=[lib.name for lib in self._supported_libraries])
+                    libraries=[lib.name for lib in self._supported_libraries],
+                    externals=list(self._userdefined_externals))
 
     @classmethod
     def fromdict(cls, data):
         target_info = cls(data.get('name', 'somedevice'),
                           strict=data.get('strict', False))
-        target_info.info.update(data.get('info', {}))
-        target_info.type_sizeof.update(data.get('type_sizeof', {}))
-        for lib in data.get('libraries', []):
-            target_info.add_library(lib)
+        target_info.update(data)
         return target_info
+
+    def update(self, data):
+        """Update target info using other target info data. Any existing data
+        bit will be overwritten except the name and strict fields.
+        """
+        if isinstance(data, type(self)):
+            data = data.todict()
+        self.info.update(data.get('info', {}))
+        self.type_sizeof.update(data.get('typeof_sizeof', {}))
+        for lib in data.get('libraries', []):
+            self.add_library(lib)
+        self.add_external(*data.get('externals', []))
 
     def tojson(self):
         return json.dumps(self.todict())
@@ -125,7 +154,14 @@ class TargetInfo(object):
 
     @classmethod
     def dummy(cls):
-        return TargetInfo(name='dummy', strict=False)
+        """Returns dummy target info instance.
+
+        Warning: When a target info context already exists, its data
+        is copied into the dummy target info except the name, strict
+        and nested fields. The existing target info context will be
+        restored when leaving the dummy target info context.
+        """
+        return TargetInfo(name='dummy', strict=False, nested=True)
 
     _host_target_info_cache = {}
 
@@ -168,6 +204,7 @@ class TargetInfo(object):
                 float=ctypes.c_float,
                 double=ctypes.c_double,
                 longdouble=ctypes.c_longdouble,
+                voidptr=ctypes.c_void_p
         ).items():
             target_info.type_sizeof[tname] = ctypes.sizeof(ctype)
 
@@ -395,6 +432,7 @@ class TargetInfo(object):
             if t == 'char':
                 return 1  # IEC 9899
         if self.name == 'dummy':
+            # don't guess
             return
         if isinstance(t, str):
             if t == 'int':

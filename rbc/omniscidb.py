@@ -218,6 +218,17 @@ class RemoteOmnisci(RemoteJIT):
     multiplexed = False
     mangle_prefix = ''
 
+    typesystem_aliases = dict(
+        bool='bool8',
+        Array='OmnisciArrayType',
+        Bytes='OmnisciBytesType<char8>',
+        Cursor='OmnisciCursorType',
+        Column='OmnisciColumnType',
+        OutputColumn='OmnisciOutputColumnType',
+        RowMultiplier='int32|sizer=RowMultiplier',
+        ConstantParameter='int32|sizer=ConstantParameter',
+        Constant='int32|sizer=Constant')
+
     def __init__(self,
                  user='admin',
                  password='HyperInteractive',
@@ -628,8 +639,11 @@ class RemoteOmnisci(RemoteJIT):
             ext_arguments_map['Array<bool>'] = typemap[
                 'TExtArgumentType']['ArrayInt8']
 
+        ext_arguments_map['bool8'] = ext_arguments_map['bool']
+
         for ptr_type, T in [
                 ('bool', 'bool'),
+                ('bool8', 'bool'),
                 ('int8', 'int8_t'),
                 ('int16', 'int16_t'),
                 ('int32', 'int32_t'),
@@ -902,6 +916,10 @@ class RemoteOmnisci(RemoteJIT):
             atypes, rtype)
 
     def register(self):
+        with typesystem.Type.alias(**self.typesystem_aliases):
+            return self._register()
+
+    def _register(self):
         if self.have_last_compile:
             return
 

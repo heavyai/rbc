@@ -31,9 +31,6 @@ class OmnisciBytesType(OmnisciBufferType):
         return ('bool is_null',)
 
 
-typesystem.Type.alias(Bytes='OmnisciBytesType<char8>')
-
-
 BytesPointer = BufferPointer
 
 
