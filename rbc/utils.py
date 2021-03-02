@@ -1,11 +1,14 @@
+import dis
 import socket
 import subprocess
+import inspect
 import ipaddress
 import netifaces
 import re
 import uuid
 import ctypes
 import llvmlite.binding as llvm
+import warnings
 
 
 def get_version(package):
@@ -159,3 +162,47 @@ def triple_matches(triple, other):
     if os1 == os2 == 'linux':
         return (arch1, env1) == (arch2, env2)
     return (arch1, vendor1, os1, env1) == (arch2, vendor2, os2, env2)
+
+
+def get_function_source(func):
+    """Get function source code with intent fixes.
+
+    Warning: not all function objects have source code available.
+    """
+    source = ''
+    intent = None
+    for line in inspect.getsourcelines(func)[0]:
+        if intent is None:
+            intent = len(line) - len(line.lstrip())
+        source += line[intent:]
+    return source
+
+
+def check_returns_none(func):
+    """Return True if function return value is always None.
+
+    Warning: the result of the check may be false-negative. For instance,
+
+      def foo():
+          a = None
+          return a
+
+      check_returns_none(foo) -> False
+    """
+    last_instr = None
+    for instr in dis.Bytecode(func):
+        if instr.opname == 'RETURN_VALUE':
+            if last_instr.opname in ['LOAD_CONST', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_GLOBAL']:
+                if last_instr.argval is None:
+                    continue
+                return False
+            else:
+                if any(map(last_instr.opname.startswith,
+                           ['UNARY_', 'BINARY_', 'CALL_', 'COMPARE_'])):
+                    return False
+                warnings.warn(
+                    f'check_returns_none: assuming non-None return from {last_instr=} (FIXME)')
+                return False
+        last_instr = instr
+
+    return True

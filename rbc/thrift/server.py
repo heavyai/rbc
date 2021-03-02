@@ -91,6 +91,7 @@ class Server(object):
         self.thrift_content_service = options.pop(
             'thrift_content_service', 'info')
         thrift_content = options.pop('thrift_content', None)
+        self.debug = options.pop('debug', False)
         self.options = options
         module_name = os.path.splitext(
             os.path.abspath(thrift_file))[0]+'_thrift'
@@ -153,11 +154,11 @@ class Server(object):
             s_proc = MultiplexedProcessor(self)
             for service_name in service_names:
                 service = getattr(self.thrift, service_name)
-                proc = thr.thrift.TProcessor(service, self._dispatcher(self))
+                proc = thr.thrift.TProcessor(service, self._dispatcher(self, debug=self.debug))
                 s_proc.register_processor(service_name, proc)
         else:
             service = getattr(self.thrift, self.thrift_content_service)
-            s_proc = Processor(self, service, self._dispatcher(self))
+            s_proc = Processor(self, service, self._dispatcher(self, debug=self.debug))
         server = thr.server.TThreadedServer(
             s_proc,
             thr.transport.TServerSocket(**self.options),

@@ -10,7 +10,7 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .utils import get_version
 from .errors import UnsupportedError
-from . import libfuncs
+from . import libfuncs, structure_type
 
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
@@ -136,12 +136,17 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        from rbc.externals import cmath, libdevice
+        from rbc.externals import cmath, macros
         from rbc.omnisci_backend import mathimpl
 
-        self.install_registry(mathimpl.typing_registry)
+        if TargetInfo().is_gpu:
+            from rbc.externals import libdevice
+            self.install_registry(libdevice.typing_registry)
+
         self.install_registry(cmath.typing_registry)
-        self.install_registry(libdevice.typing_registry)
+        self.install_registry(macros.typing_registry)
+        self.install_registry(mathimpl.typing_registry)
+        self.install_registry(structure_type.typing_registry)
         super().load_additional_registries()
 
 
@@ -155,12 +160,17 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        from rbc.externals import cmath, libdevice
+        from rbc.externals import cmath, macros
         from rbc.omnisci_backend import mathimpl
 
-        self.install_registry(mathimpl.lowering_registry)
+        if TargetInfo().is_gpu:
+            from rbc.externals import libdevice
+            self.install_registry(libdevice.typing_registry)
+
         self.install_registry(cmath.lowering_registry)
-        self.install_registry(libdevice.lowering_registry)
+        self.install_registry(macros.lowering_registry)
+        self.install_registry(mathimpl.lowering_registry)
+        self.install_registry(structure_type.lowering_registry)
         super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):
@@ -361,18 +371,11 @@ def compile_to_LLVM(functions_and_signatures,
     """
     target_desc = registry.cpu_target
 
-    if target_info is None:
-        # RemoteJIT
-        target_info = TargetInfo.host()
-        typing_context = target_desc.typing_context
-        target_context = target_desc.target_context
-    else:
-        # OmnisciDB target
-        typing_context = JITRemoteTypingContext()
-        target_context = JITRemoteTargetContext(typing_context)
+    typing_context = JITRemoteTypingContext()
+    target_context = JITRemoteTargetContext(typing_context)
 
-        # Bring over Array overloads (a hack):
-        target_context._defns = target_desc.target_context._defns
+    # Bring over Array overloads (a hack):
+    target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
@@ -530,3 +533,29 @@ def printf(typingctx, format_type, *args):
 
     else:
         raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')
+
+
+def IS_CPU():
+    pass
+
+
+@extending.overload(IS_CPU, inline="always")
+def is_cpu_impl():
+    target_info = TargetInfo()
+    if target_info.is_cpu:
+        return lambda: True
+    else:
+        return lambda: False
+
+
+def IS_GPU():
+    pass
+
+
+@extending.overload(IS_GPU, inline="always")
+def is_gpu_impl():
+    target_info = TargetInfo()
+    if target_info.is_gpu:
+        return lambda: True
+    else:
+        return lambda: False

@@ -13,8 +13,9 @@ class Dispatcher(object):
     """Default implementation of a dispatcher.
     """
 
-    def __init__(self, server):
+    def __init__(self, server, debug=False):
         self.server = server
+        self.debug = debug
 
     @property
     def thrift(self):

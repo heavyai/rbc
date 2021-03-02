@@ -30,29 +30,29 @@ class External:
 
         ts = defaultdict(list)
         key = None
-        with targetinfo:
-            for signature in args:
+        for signature in args:
+            with TargetInfo.dummy():
                 t = Type.fromobject(signature)
-                if not t.is_function:
-                    raise ValueError("signature must represent a function type")
+            if not t.is_function:
+                raise ValueError("signature must represent a function type")
 
-                if not t.name:
-                    raise ValueError(
-                        f"external function name not specified for signature {signature}"
-                    )
+            if not t.name:
+                raise ValueError(
+                    f"external function name not specified for signature {signature}"
+                )
 
-                if key is None:
-                    key = t.name
-                if not key:
-                    raise ValueError(
-                        f"external function name not specified for signature {signature}"
-                    )
+            if key is None:
+                key = t.name
+            if not key:
+                raise ValueError(
+                    f"external function name not specified for signature {signature}"
+                )
 
-                for device in [a for a in t.annotation() or [] if a in ["CPU", "GPU"]] or [
-                    "CPU",
-                    "GPU",
-                ]:
-                    ts[device].append(signature)
+            for device in [a for a in t.annotation() or [] if a in ["CPU", "GPU"]] or [
+                "CPU",
+                "GPU",
+            ]:
+                ts[device].append(signature)
 
         obj = cls(key, ts)
         obj.register()
@@ -127,10 +127,10 @@ class External:
                 # get the correct signature and function name for the current device
                 atypes = tuple(map(Type.fromobject, args))
                 t = self.obj.match_signature(atypes)
-
-                codegen = self.obj.get_codegen()
-                extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
-
+                TargetInfo().add_external(t.name)
+                if self.obj.lowering:
+                    codegen = self.obj.get_codegen()
+                    extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
                 return t.tonumba()
 
         typing.templates.infer(ExternalTemplate)

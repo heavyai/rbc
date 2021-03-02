@@ -80,11 +80,11 @@ jobs:
           environment-file: .conda/environment.yml
 
       # omniscidb must be run in an environment that is independent of rbc environment
-      - name: Install omniscidb [conda]
+      - name: Install omniscidb v${{ matrix.omniscidb-version }} [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
-          mamba create -n omniscidb-env omniscidb=*=*_cpu -c conda-forge
+          mamba create -n omniscidb-env omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
       
       # omniscidb docker
       - name: Build the docker image [docker]
