@@ -386,7 +386,7 @@ def test_array_constructor_return(omnisci):
 
     from rbc.omnisci_backend import Array
     from numba import types
-    from rbc.irtools import printf
+    from rbc.externals.stdio import printf
 
     @omnisci('float64[](int32)')
     def array_return(size):
