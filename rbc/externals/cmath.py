@@ -1,17 +1,14 @@
 from collections import namedtuple
-from rbc.externals import utils
-from rbc.typesystem import Type
+from . import register_external
 from numba.core import imputils, typing
 
 arg = namedtuple("arg", ("name", "ty"))
 
 # Typing
 typing_registry = typing.templates.Registry()
-infer_global = typing_registry.register_global
 
 # Lowering
 lowering_registry = imputils.Registry()
-lower = lowering_registry.lower
 
 cmath = {
     # Trigonometric
@@ -185,27 +182,8 @@ cmath = {
 }
 
 
-def register(fname, retty, argtys):
-
-    # expose
-    s = f"def {fname}(*args): pass"
-    exec(s, globals())
-    _key = globals()[fname]
-
-    # typing
-    @infer_global(_key)
-    class CMathTemplate(typing.templates.AbstractTemplate):
-        key = _key
-
-        def generic(self, args, kws):
-            # get the correct signature and function name for the current device
-            t = Type.fromstring(f"{retty} {fname}({', '.join(argtys)})")
-            codegen = utils.gen_codegen(fname)
-            lower(_key, *t.tonumba().args)(codegen)
-
-            return t.tonumba()
-
-
 for fname, (retty, args) in cmath.items():
     argtys = tuple(map(lambda x: x.ty, args))
-    register(fname, retty, argtys)
+    register_external(
+        fname, retty, argtys, __name__, globals(), typing_registry, lowering_registry
+    )

@@ -1,7 +1,7 @@
 import numpy as np
 from llvmlite import ir
 from rbc.utils import get_version
-from rbc.externals.utils import gen_codegen, dispatch_codegen
+from rbc.externals import gen_codegen, dispatch_codegen
 
 if get_version("numba") >= (0, 49):
     from numba.cpython import numbers

@@ -1,5 +1,5 @@
 import math
-from rbc.externals import utils
+from rbc.externals import gen_codegen, dispatch_codegen
 from numba.core import imputils
 from numba.core.typing.templates import ConcreteTemplate, signature, Registry
 from numba.types import float32, float64, int32, int64, uint64, intp
@@ -90,15 +90,15 @@ binarys += [("remainder", "remainderf", math.remainder)]
 
 
 def impl_unary(fname, key, typ):
-    cpu = utils.gen_codegen(fname)
-    gpu = utils.gen_codegen(f"__nv_{fname}")
-    lower(key, typ)(utils.dispatch_codegen(cpu, gpu))
+    cpu = gen_codegen(fname)
+    gpu = gen_codegen(f"__nv_{fname}")
+    lower(key, typ)(dispatch_codegen(cpu, gpu))
 
 
 def impl_binary(fname, key, typ):
-    cpu = utils.gen_codegen(fname)
-    gpu = utils.gen_codegen(f"__nv_{fname}")
-    lower(key, typ, typ)(utils.dispatch_codegen(cpu, gpu))
+    cpu = gen_codegen(fname)
+    gpu = gen_codegen(f"__nv_{fname}")
+    lower(key, typ, typ)(dispatch_codegen(cpu, gpu))
 
 
 for fname64, fname32, key in unarys:
@@ -113,14 +113,14 @@ for fname64, fname32, key in binarys:
 
 # manual mapping
 def impl_ldexp():
-    ldexp_cpu = utils.gen_codegen('ldexp')
-    ldexp_gpu = utils.gen_codegen('__nv_ldexp')
+    ldexp_cpu = gen_codegen('ldexp')
+    ldexp_gpu = gen_codegen('__nv_ldexp')
 
-    ldexpf_cpu = utils.gen_codegen('ldexpf')
-    ldexpf_gpu = utils.gen_codegen('__nv_ldexpf')
+    ldexpf_cpu = gen_codegen('ldexpf')
+    ldexpf_gpu = gen_codegen('__nv_ldexpf')
 
-    lower(math.ldexp, float64, int32)(utils.dispatch_codegen(ldexp_cpu, ldexp_gpu))
-    lower(math.ldexp, float32, int32)(utils.dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
+    lower(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
+    lower(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
 
 
 impl_ldexp()
