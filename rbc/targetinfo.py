@@ -204,6 +204,7 @@ class TargetInfo(object):
                 float=ctypes.c_float,
                 double=ctypes.c_double,
                 longdouble=ctypes.c_longdouble,
+                voidptr=ctypes.c_void_p
         ).items():
             target_info.type_sizeof[tname] = ctypes.sizeof(ctype)
 

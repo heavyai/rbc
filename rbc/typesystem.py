@@ -1384,7 +1384,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_struct:
             return sum([m.bits for m in self])
         if self.is_pointer:
-            return TargetInfo().sizeof('void*') or 64
+            return TargetInfo().sizeof('voidptr')*8 or 64
         return NotImplemented
 
     def match(self, other):
