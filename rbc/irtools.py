@@ -5,24 +5,26 @@ import re
 import warnings
 from contextlib import contextmanager
 from collections import defaultdict
+import types as py_types
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .utils import get_version
 from .errors import UnsupportedError
 from . import libfuncs, structure_type
+from rbc import externals
+from rbc.omnisci_backend import mathimpl
+
 
 if get_version('numba') >= (0, 49):
     from numba.core import codegen, cpu, compiler_lock, \
         registry, typing, compiler, sigutils, cgutils, \
         extending
-    from numba.core import types as nb_types
     from numba.core import errors as nb_errors
 else:
     from numba.targets import codegen, cpu, registry
     from numba import compiler_lock, typing, compiler, \
         sigutils, cgutils, extending
-    from numba import types as nb_types
     from numba import errors as nb_errors
 
 int32_t = ir.IntType(32)
@@ -136,9 +138,15 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        from rbc.externals import math, macros
-        self.install_registry(math.typing_registry)
-        self.install_registry(macros.typing_registry)
+        for module in externals.__dict__.values():
+            if not isinstance(module, py_types.ModuleType):
+                continue
+
+            typing_registry = getattr(module, 'typing_registry', None)
+            if typing_registry:
+                self.install_registry(typing_registry)
+
+        self.install_registry(mathimpl.typing_registry)
         self.install_registry(structure_type.typing_registry)
         super().load_additional_registries()
 
@@ -153,9 +161,15 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        from rbc.externals import math, macros
-        self.install_registry(math.lowering_registry)
-        self.install_registry(macros.lowering_registry)
+        for module in externals.__dict__.values():
+            if not isinstance(module, py_types.ModuleType):
+                continue
+
+            lowering_registry = getattr(module, 'lowering_registry', None)
+            if lowering_registry:
+                self.install_registry(lowering_registry)
+
+        self.install_registry(mathimpl.lowering_registry)
         self.install_registry(structure_type.lowering_registry)
         super().load_additional_registries()
 
@@ -232,7 +246,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                cg_fflush(builder)
+                externals.stdio.cg_fflush(builder)
             builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
@@ -249,7 +263,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                cg_fflush(builder)
+                externals.stdio.cg_fflush(builder)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
@@ -472,53 +486,6 @@ def compile_IR(ir):
     engine.run_static_constructors()
 
     return engine
-
-
-def cg_fflush(builder):
-    int8_t = ir.IntType(8)
-    fflush_fnty = ir.FunctionType(int32_t, [int8_t.as_pointer()])
-    fflush_fn = builder.module.get_or_insert_function(
-        fflush_fnty, name='fflush')
-
-    builder.call(fflush_fn, [int8_t.as_pointer()(None)])
-
-
-@extending.intrinsic
-def fflush(typingctx):
-    """fflush that can be called from Numba jit-decorated functions.
-
-    Note: fflush is available only for CPU target.
-    """
-    sig = nb_types.void(nb_types.void)
-
-    def codegen(context, builder, signature, args):
-        target_info = TargetInfo()
-        if target_info.is_cpu:
-            cg_fflush(builder)
-
-    return sig, codegen
-
-
-@extending.intrinsic
-def printf(typingctx, format_type, *args):
-    """printf that can be called from Numba jit-decorated functions.
-
-    Note: printf is available only for CPU target.
-    """
-
-    if isinstance(format_type, nb_types.StringLiteral):
-        sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
-
-        def codegen(context, builder, signature, args):
-            target_info = TargetInfo()
-            if target_info.is_cpu:
-                cgutils.printf(builder, format_type.literal_value, *args[1:])
-                cg_fflush(builder)
-
-        return sig, codegen
-
-    else:
-        raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')
 
 
 def IS_CPU():

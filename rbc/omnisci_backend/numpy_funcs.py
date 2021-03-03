@@ -1,5 +1,5 @@
 import numpy as np
-from rbc.irtools import printf
+from rbc.externals.stdio import printf
 from rbc import typesystem
 from .omnisci_array import Array, ArrayPointer
 from rbc.utils import get_version
