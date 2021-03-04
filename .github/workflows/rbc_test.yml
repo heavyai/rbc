@@ -93,7 +93,7 @@ jobs:
       # omniscidb docker
       - name: Build the docker image [docker]
         shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
+        if: matrix.omniscidb-from == 'docker'
         run: |
           # force docker-compose installation
           mamba create -n docker docker-compose -c conda-forge
