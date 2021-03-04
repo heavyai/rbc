@@ -273,7 +273,7 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
 
     result = list(map(lambda inputs: fn(*inputs), zip(*args)))
     if fname in ["nexttoward"] and sys.platform == "darwin":
-        pytest.xfail(f"{fname} fails with OS {sys.platform}")
+        pytest.xfail(f"{fname} fails on {sys.platform}")
 
     for values in zip(*args, result):
         if fn.nargs == 2:
