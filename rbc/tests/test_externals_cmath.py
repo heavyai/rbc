@@ -1,3 +1,4 @@
+import sys
 import atexit
 import pytest
 from rbc.tests import omnisci_fixture
@@ -271,6 +272,8 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
         args = (f8 + 10.0,)
 
     result = list(map(lambda inputs: fn(*inputs), zip(*args)))
+    if fname in ["nexttoward"] and sys.platform == "darwin":
+        pytest.xfail(f"{fname} fails with OS {sys.platform}")
 
     for values in zip(*args, result):
         if fn.nargs == 2:
