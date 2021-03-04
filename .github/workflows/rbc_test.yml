@@ -97,7 +97,7 @@ jobs:
         run: |
           # force docker-compose installation
           # mamba create -n docker docker-compose -c conda-forge
-          mamba create -n docker wget -c conda-forge
+          mamba create -n docker wget -c menpo
           # get docker-compose using wget
           wget -O docker-compose.exe https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Windows-x86_64.exe
           # run docker services
