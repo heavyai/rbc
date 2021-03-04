@@ -57,7 +57,11 @@ jobs:
             omniscidb-from: None
           - os: ubuntu-latest
             python-version: 3.8
-            omniscidb-version: 5.5.0
+            omniscidb-version: 5.5.1
+            omniscidb-from: docker
+          - os: windows-latest
+            python-version: 3.8
+            omniscidb-version: 5.5.1
             omniscidb-from: docker
 
           
