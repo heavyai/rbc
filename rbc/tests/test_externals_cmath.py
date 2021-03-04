@@ -1,5 +1,7 @@
+import atexit
 import pytest
 from rbc.tests import omnisci_fixture
+from rbc.remotejit import RemoteJIT
 from rbc.externals import cmath
 from rbc.typesystem import Type
 import numpy as np
@@ -7,10 +9,26 @@ import math
 
 
 @pytest.fixture(scope="module")
+def rjit(request):
+    local = False
+    rjit = RemoteJIT(debug=not True, local=local)
+    if not local:
+        rjit.start_server(background=True)
+        request.addfinalizer(rjit.stop_server)
+        atexit.register(rjit.stop_server)
+    return rjit
+
+
+@pytest.fixture(scope="module")
+def ljit(request):
+    ljit = RemoteJIT(debug=not True, local=True)
+    return ljit
+
+
+@pytest.fixture(scope="module")
 def omnisci():
 
     for o in omnisci_fixture(globals()):
-        define(o)
         yield o
 
 
@@ -36,7 +54,7 @@ cmath_funcs = (
     ("ldexp", "float64 ldexp(float64, int64)|CPU"),
     ("log", "float64 log(float64)|CPU"),
     ("log10", "float64 log10(float64)|CPU"),
-    ("modf", "float64 modf(float64)|CPU"),
+    ("modf", "float64 modf(float64, float64*)|CPU"),
     ("exp2", "float64 exp2(float64)|CPU"),
     ("expm1", "float64 expm1(float64)|CPU"),
     ("ilogb", "float64 ilogb(float64)|CPU"),
@@ -68,7 +86,7 @@ cmath_funcs = (
     ("remainder", "float64 remainder(float64, float64)|CPU"),
     # Floating-point manipulation
     ("copysign", "float64 copysign(float64, float64)|CPU"),
-    ("nan", "float64 nan(float64)|CPU"),
+    ("nan", "float64 nan(const char*)|CPU"),
     ("nextafter", "float64 nextafter(float64, float64)|CPU"),
     ("nexttoward", "float64 nexttoward(float64, float64)|CPU"),
     # Minimum, maximum, difference functions
@@ -82,7 +100,7 @@ cmath_funcs = (
 )
 
 
-def define(omnisci):
+def define(jit, fn_name, fname, signature):
     def inner(fname, signature):
         cmath_fn = getattr(cmath, fname)
         t = Type.fromstring(signature)
@@ -90,44 +108,27 @@ def define(omnisci):
         argtypes = tuple(map(str, t[1]))
         arity = len(argtypes)
 
-        # define omnisci callable
+        # define callable
         if arity == 1:
-
             def fn(a):
                 return cmath_fn(a)
 
         elif arity == 2:
-
             def fn(a, b):
                 return cmath_fn(a, b)
 
         else:
-
             def fn(a, b, c):
                 return cmath_fn(a, b, c)
 
-        fn.__name__ = f"{omnisci.table_name}_{fname}"
-        fn = omnisci(f"{retty}({', '.join(argtypes)})", devices=["cpu"])(fn)
+        fn.__name__ = fn_name
+        fn = jit(f"{retty}({', '.join(argtypes)})", devices=["cpu"])(fn)
+        return fn
 
-    for _fname, signature in cmath_funcs:
-        inner(_fname, signature)
+    return inner(fname, signature)
 
 
-@pytest.mark.parametrize("fname,sig", cmath_funcs)
-def test_external_cmath(omnisci, fname, sig):
-
-    if fname in ["logb", "ilogb"]:
-        pytest.skip(f"cmath function {fname} not supported")
-
-    if fname in ["frexp", "modf", "nan"]:
-        pytest.skip(f"cmath function {fname} crashes omniscidb server")
-
-    if fname in ["remainder"]:
-        pytest.skip(f"cmath.{fname} wrong output!")
-
-    table = omnisci.table_name
-    cmath_func = f"{table}_{fname}"
-
+def _get_pyfunc(fname):
     remap = {
         "acos": "arccos",
         "asin": "arcsin",
@@ -147,8 +148,34 @@ def test_external_cmath(omnisci, fname, sig):
         "fdim": "subtract",
     }
 
+    if fname == "fma":
+        return lambda a, b, c: a*b + c
+    if fname == "ilogb":
+        return lambda a: np.trunc(np.log2(a))
+    if fname == "logb":
+        return np.log2
+
     mod = math if fname in ["erf", "erfc", "tgamma", "lgamma"] else np
-    fn = getattr(mod, remap.get(fname, fname)) if fname != "fma" else None
+    fn = getattr(mod, remap.get(fname, fname))
+    return fn
+
+
+@pytest.mark.parametrize("fname,sig", cmath_funcs, ids=[item[0] for item in cmath_funcs])
+def test_external_cmath_omnisci(omnisci, fname, sig):
+
+    if fname in ["logb", "ilogb", "modf"]:
+        pytest.skip(f"cmath function {fname} not supported")
+
+    if fname in ["frexp", "nan"]:
+        pytest.skip(f"cmath function {fname} crashes omniscidb server")
+
+    if fname in ["remainder"]:
+        pytest.skip(f"cmath.{fname} wrong output!")
+
+    table = omnisci.table_name
+    cmath_func = f"{table}_{fname}"
+    fn = define(omnisci, cmath_func, fname, sig)
+    pyfunc = _get_pyfunc(fname)
 
     if fname in ["acos", "asin", "atan"]:
         query = f"SELECT f8/10.0, {cmath_func}(f8/10.0) from {table}"
@@ -182,25 +209,76 @@ def test_external_cmath(omnisci, fname, sig):
     _, result = omnisci.sql_execute(query)
 
     for values in result:
-        if fname in [
-            "atan2",
-            "pow",
-            "ldexp",
-            "hypot",
-            "fmod",
-            "remainder",
-            "copysign",
-            "nextafter",
-            "nexttoward",
-            "fdim",
-            "fmax",
-            "fmin",
-        ]:
+        if fn.nargs == 2:
             a, b, r = values
-            assert np.isclose(r, fn(a, b)), fname
-        elif fname == "fma":
+            assert np.isclose(r, pyfunc(a, b)), fname
+        elif fn.nargs == 3:
+            a, b, c, r = values
+            assert np.isclose(r, pyfunc(a, b, c)), fname
+        else:
+            a, r = values
+            assert np.isclose(r, pyfunc(a)), fname
+
+
+@pytest.fixture(scope="module")
+def input_data():
+    return {
+        'f8': np.arange(5, dtype=np.float64),
+        'i8': np.arange(5, dtype=np.int64)
+    }
+
+
+@pytest.mark.parametrize("location", ['local', 'remote'])
+@pytest.mark.parametrize("fname,sig", cmath_funcs, ids=[item[0] for item in cmath_funcs])
+def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
+
+    if fname in ["modf", "frexp", "nan"]:
+        pytest.skip(f"cmath function {fname} requires a pointer argument")
+
+    if fname in ["remainder", "ilogb", "logb"]:
+        pytest.skip(f"cmath function {fname} returns the wrong value")
+
+    jit = rjit if location == 'remote' else ljit
+
+    name = f"{location}_{fname}"
+    fn = define(jit, name, fname, sig)
+
+    i8 = input_data['i8']
+    f8 = input_data['f8']
+
+    pyfunc = _get_pyfunc(fname)
+
+    if fname in ["acos", "asin", "atan"]:
+        args = (f8/10.0,)
+    elif fname in ["logb"]:
+        args = ((f8+1)*10.0,)
+    elif fname in ["atan2"]:
+        args = (f8/10.0, f8/8.0)
+    elif fname in ["pow", "hypot", "fmod", "remainder", "nextafter",
+                   "nexttoward", "fdim", "fmax", "fmin"]:
+        args = (f8+10.0, f8+1.0)
+    elif fname == "copysign":
+        args = (f8, -1*f8)
+    elif fname == "fma":
+        args = (f8, f8, f8)
+    elif fname == "ldexp":
+        args = f8+1.0, np.full_like(f8, 2, dtype=np.int32)
+    elif fname == "atanh":
+        args = (f8/8.0,)
+    elif fname == "abs":
+        args = (-1*i8,)
+    else:
+        args = (f8 + 10.0,)
+
+    result = list(map(lambda inputs: fn(*inputs), zip(*args)))
+
+    for values in zip(*args, result):
+        if fn.nargs == 2:
+            a, b, r = values
+            assert np.isclose(r, pyfunc(a, b)), fname
+        elif fn.nargs == 3:
             a, b, c, r = values
             assert np.isclose(r, a * b + c), fname
         else:
             a, r = values
-            assert np.isclose(r, fn(a)), fname
+            assert np.isclose(r, pyfunc(a)), fname
