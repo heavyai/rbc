@@ -10,6 +10,7 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
 from llvmlite import ir
 from rbc import typesystem
 from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
+from .column_list import OmnisciColumnListType
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types
 
@@ -119,7 +120,7 @@ class OmnisciCursorType(typesystem.Type):
         assert len(args) == 1
         params = []
         for p in args[0]:
-            if not isinstance(p, OmnisciColumnType):
+            if not isinstance(p, (OmnisciColumnType, OmnisciColumnListType)):
                 p = OmnisciColumnType((p,))
             params.append(p)
         return (tuple(params),)
