@@ -238,7 +238,7 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
 
     if fname in ["remainder", "ilogb", "logb"]:
         pytest.xfail(f"cmath function {fname} returns the wrong value")
-    
+
     if fname in ["nexttoward"] and sys.platform == "darwin":
         pytest.xfail(f"{fname} fails on {sys.platform}")
 
