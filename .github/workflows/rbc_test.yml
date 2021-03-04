@@ -29,7 +29,7 @@ jobs:
           flake8 .
 
   omniscidb:
-    name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}-${{ matrix.omniscidb-from }}
+    name: [RemoteOmnisci] ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}-${{ matrix.omniscidb-from }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -118,7 +118,7 @@ jobs:
           mamba run -n rbc pytest -sv -r A rbc/ -x
 
   remotejit:
-    name: ${{ matrix.os }} - Python v${{ matrix.python-version }}
+    name: [RemoteJIT] ${{ matrix.os }} - Python v${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
