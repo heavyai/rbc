@@ -168,10 +168,10 @@ def test_external_cmath_omnisci(omnisci, fname, sig):
         pytest.skip(f"cmath function {fname} not supported")
 
     if fname in ["frexp", "nan"]:
-        pytest.skip(f"cmath function {fname} crashes omniscidb server")
+        pytest.xfail(f"cmath function {fname} crashes omniscidb server")
 
     if fname in ["remainder"]:
-        pytest.skip(f"cmath.{fname} wrong output!")
+        pytest.xfail(f"cmath.{fname} wrong output!")
 
     table = omnisci.table_name
     cmath_func = f"{table}_{fname}"
@@ -237,7 +237,10 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
         pytest.skip(f"cmath function {fname} requires a pointer argument")
 
     if fname in ["remainder", "ilogb", "logb"]:
-        pytest.skip(f"cmath function {fname} returns the wrong value")
+        pytest.xfail(f"cmath function {fname} returns the wrong value")
+    
+    if fname in ["nexttoward"] and sys.platform == "darwin":
+        pytest.xfail(f"{fname} fails on {sys.platform}")
 
     jit = rjit if location == 'remote' else ljit
 
@@ -272,8 +275,6 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
         args = (f8 + 10.0,)
 
     result = list(map(lambda inputs: fn(*inputs), zip(*args)))
-    if fname in ["nexttoward"] and sys.platform == "darwin":
-        pytest.xfail(f"{fname} fails on {sys.platform}")
 
     for values in zip(*args, result):
         if fn.nargs == 2:
