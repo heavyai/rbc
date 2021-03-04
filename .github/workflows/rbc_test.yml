@@ -94,29 +94,20 @@ jobs:
         run: |
           mamba create -n omniscidb-env omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
       
+      # Install docker on macos - not included by default
+      - name: Install docker
+        if: matrix.os == 'macos-latest' && matrix.omniscidb-from == 'docker'
+        run: |
+          brew install docker docker-machine docker-compose
+      
       # omniscidb docker
-      - name: Build the docker image (ubuntu/macos) [docker]
+      - name: Build the docker image [docker]
         shell: bash -l {0}
-        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest') && matrix.omniscidb-from == 'docker'
+        if: matrix.omniscidb-from == 'docker'
         run: |
-          # force docker-compose installation
-          mamba create -n docker docker-compose -c conda-forge
           # run docker services
-          mamba run -n docker docker-compose build
-          mamba run -n docker docker-compose up -d
-          sleep 20
-
-      # omniscidb docker windows
-      - name: Build the docker image (windows) [docker]
-        shell: bash -l {0}
-        if: matrix.os == 'windows-latest' && matrix.omniscidb-from == 'docker'
-        run: |
-          # get docker-compose using wget
-          mamba create -n wget wget -c menpo
-          mamba run -n wget -O docker-compose.exe https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Windows-x86_64.exe
-          # run docker services
-          mamba run -n wget docker-compose.exe build
-          mamba run -n wget docker-compose.exe up -d
+          docker-compose build
+          docker-compose up -d
           sleep 20
 
       - name: omniscidb-env conda list [conda]
