@@ -59,6 +59,10 @@ jobs:
             python-version: 3.8
             omniscidb-version: 5.5.1
             omniscidb-from: docker
+          - os: macos-latest
+            python-version: 3.8
+            omniscidb-version: 5.5.1
+            omniscidb-from: docker
           - os: windows-latest
             python-version: 3.8
             omniscidb-version: 5.5.1
@@ -91,18 +95,28 @@ jobs:
           mamba create -n omniscidb-env omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
       
       # omniscidb docker
-      - name: Build the docker image [docker]
+      - name: Build the docker image (ubuntu/macos) [docker]
         shell: bash -l {0}
-        if: matrix.omniscidb-from == 'docker'
+        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest') && matrix.omniscidb-from == 'docker'
         run: |
           # force docker-compose installation
-          # mamba create -n docker docker-compose -c conda-forge
-          mamba create -n docker wget -c menpo
-          # get docker-compose using wget
-          wget -O docker-compose.exe https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Windows-x86_64.exe
+          mamba create -n docker docker-compose -c conda-forge
           # run docker services
           mamba run -n docker docker-compose build
           mamba run -n docker docker-compose up -d
+          sleep 20
+
+      # omniscidb docker windows
+      - name: Build the docker image (windows) [docker]
+        shell: bash -l {0}
+        if: matrix.os == 'windows-latest' && matrix.omniscidb-from == 'docker'
+        run: |
+          # get docker-compose using wget
+          mamba create -n wget wget -c menpo
+          mamba run -n wget -O docker-compose.exe https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Windows-x86_64.exe
+          # run docker services
+          mamba run -n wget docker-compose.exe build
+          mamba run -n wget docker-compose.exe up -d
           sleep 20
 
       - name: omniscidb-env conda list [conda]
