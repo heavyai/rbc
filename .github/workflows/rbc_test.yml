@@ -96,7 +96,10 @@ jobs:
         if: matrix.omniscidb-from == 'docker'
         run: |
           # force docker-compose installation
-          mamba create -n docker docker-compose -c conda-forge
+          # mamba create -n docker docker-compose -c conda-forge
+          mamba create -n docker wget -c conda-forge
+          # get docker-compose using wget
+          wget -O docker-compose.exe https://github.com/docker/compose/releases/download/1.28.5/docker-compose-Windows-x86_64.exe
           # run docker services
           mamba run -n docker docker-compose build
           mamba run -n docker docker-compose up -d
