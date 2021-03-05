@@ -28,13 +28,9 @@ from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from rbc import typesystem
-from rbc.utils import get_version
 from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
-if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils, extending, types
-else:
-    from numba import datamodel, cgutils, extending, types
+from numba.core import datamodel, cgutils, extending, types
 
 
 int8_t = ir.IntType(8)

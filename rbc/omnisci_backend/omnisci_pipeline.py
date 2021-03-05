@@ -1,18 +1,9 @@
-from rbc.utils import get_version
 from .omnisci_buffer import BufferMeta, free_omnisci_buffer
-
-if get_version("numba") >= (0, 49):
-    from numba.core import ir
-    from numba.core.compiler import CompilerBase, DefaultPassBuilder
-    from numba.core.compiler_machinery import FunctionPass, register_pass
-    from numba.core.untyped_passes import IRProcessing, DeadBranchPrune, SimplifyCFG
-    from numba.core.typed_passes import InlineOverloads
-else:
-    from numba import ir
-    from numba.compiler import CompilerBase, DefaultPassBuilder
-    from numba.compiler_machinery import FunctionPass, register_pass
-    from numba.untyped_passes import IRProcessing, DeadBranchPrune, SimplifyCFG
-    from numba.typed_passes import InlineOverloads
+from numba.core import ir
+from numba.core.compiler import CompilerBase, DefaultPassBuilder
+from numba.core.compiler_machinery import FunctionPass, register_pass
+from numba.core.untyped_passes import IRProcessing, DeadBranchPrune, SimplifyCFG
+from numba.core.typed_passes import InlineOverloads
 
 
 # Register this pass with the compiler framework, declare that it will not

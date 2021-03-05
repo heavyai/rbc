@@ -1,11 +1,7 @@
 import pytest
 import numpy as np
 import rbc.omnisci_backend as omni
-from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import types
-else:
-    from numba import types
+from numba.core import types
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')

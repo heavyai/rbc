@@ -12,17 +12,13 @@ from llvmlite import ir
 import warnings
 
 from .targetinfo import TargetInfo
-from .utils import get_version, check_returns_none
+from .utils import check_returns_none
 
 
 try:
     import numba as nb
-    if get_version('numba') >= (0, 49):
-        from numba.core import typing, datamodel, extending, typeconv
-        from numba.core.imputils import lower_cast
-    else:
-        from numba import typing, datamodel, extending, typeconv
-        from numba.targets.imputils import lower_cast
+    from numba.core import typing, datamodel, extending, typeconv
+    from numba.core.imputils import lower_cast
     nb_NA_message = None
 except ImportError as msg:
     nb = None
