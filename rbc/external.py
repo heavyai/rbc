@@ -15,19 +15,6 @@ class External:
         signature : object (str, ctypes function, python callable, numba function)
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
         """
-        try:
-            targetinfo = TargetInfo()
-        except RuntimeError:
-            targetinfo = TargetInfo.dummy()
-
-        # If we already have a targetinfo registered, then, use an empty context manager
-        try:
-            with targetinfo:
-                pass
-        except AssertionError:
-            import contextlib
-            targetinfo = contextlib.nullcontext()
-
         ts = defaultdict(list)
         key = None
         for signature in args:
