@@ -4,9 +4,6 @@ __all__ = ['OmnisciColumnListType']
 from rbc.typesystem import Type
 from rbc import structure_type
 
-lowering_registry = structure_type.lowering_registry
-typing_registry = structure_type.typing_registry
-
 
 class OmnisciColumnListType(Type):
     """OmnisciColumnListType<T> is a typesystem custom type that
