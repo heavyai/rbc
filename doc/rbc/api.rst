@@ -38,23 +38,6 @@ These methods are in the ``rbc.ominscidb`` module namespace
   RemoteOmnisci
 
 
-Omnisci Array
---------------
-
-These methods are in the ``rbc.omnisci_array`` module namespace
-
-.. currentmodule:: rbc.omnisci_array
-
-.. autosummary::
-  :toctree: generated
-
-  ArrayPointer
-  ArrayPointerModel
-  omnisci_array_len
-  omnisci_array_getitem
-  array_type_converter
-
-
 TargetInfo
 -----------
 
@@ -95,9 +78,6 @@ These methods are in the ``rbc.irtools`` module namespace
 .. autosummary::
   :toctree: generated
  
-  get_function_dependencies
-  JITRemoteCPUCodegen
-  RemoteCPUContext
   compile_to_LLVM
   compile_IR
 

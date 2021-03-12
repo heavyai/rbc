@@ -23,5 +23,4 @@ and llvmlite tools.
 
    rbc/index.rst
    rbc/api.rst
-   rbc/numpy_support.rst
    releases/index.rst
