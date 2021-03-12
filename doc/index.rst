@@ -22,5 +22,5 @@ and llvmlite tools.
    :maxdepth: 2
 
    rbc/index.rst
-   rbc/api.rst
+   rbc/rbc.rst
    releases/index.rst
