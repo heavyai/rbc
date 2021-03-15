@@ -3,12 +3,7 @@ rbc-specific errors and warnings.
 """
 
 import numba
-from .utils import get_version
-
-if get_version('numba') >= (0, 49):
-    numba_errors = numba.core.errors
-else:
-    numba_errors = numba.errors
+numba_errors = numba.core.errors
 
 
 class OmnisciServerError(Exception):

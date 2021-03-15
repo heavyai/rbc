@@ -11,11 +11,7 @@ from llvmlite import ir
 from rbc import typesystem
 from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
 from rbc.targetinfo import TargetInfo
-from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types
-else:
-    from numba import extending, types
+from numba.core import extending, types
 
 
 int32_t = ir.IntType(32)

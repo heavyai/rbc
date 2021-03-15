@@ -12,14 +12,8 @@ Methods:
 
 from llvmlite import ir
 from rbc.targetinfo import TargetInfo
-from rbc.utils import get_version
-
-if get_version("numba") >= (0, 49):
-    from numba.core import cgutils, extending
-    from numba.core import types as nb_types
-else:
-    from numba import cgutils, extending
-    from numba import types as nb_types
+from numba.core import cgutils, extending
+from numba.core import types as nb_types
 
 int32_t = ir.IntType(32)
 
