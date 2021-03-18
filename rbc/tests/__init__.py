@@ -11,13 +11,16 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                     load_columnar=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
-      import pytest
-      from rbc.tests import omnisci_fixture
-      @pytest.fixture(scope='module')
-      def omnisci():
-          from o in omnisci_fixture(globals()):
-              # do some customization here
-              yield o
+    .. code-block:: python
+
+       import pytest
+       from rbc.tests import omnisci_fixture
+
+       @pytest.fixture(scope='module')
+       def omnisci():
+           from o in omnisci_fixture(globals()):
+               # do some customization here
+               yield o
 
     This fixture creates the following tables:
 

@@ -6,10 +6,10 @@
 .. sectionauthor:: Pearu Peterson <pearu.peterson at quansight.com>
 
 
-*rbc*
------
+*Remote Backend Compiler (rbc)*
+-------------------------------
 
-*rbc* implements remote backend compiler in Python.
+The *rbc* library implements remote backend compiler in Python.
 
 
 

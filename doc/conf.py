@@ -5,15 +5,8 @@ import docutils  # noqa: E402
 
 
 def get_version():
-    setup_py = os.path.join(os.path.dirname(__file__), '..', 'setup.py')
-    for line in open(setup_py).readlines():
-        line = line.strip().replace(' ', '')
-        if line.startswith('VERSION='):
-            q = line[8]
-            assert q in '\'"', (line, q)
-            line = line[9:]
-            return line[:line.index(q)]
-    return '0.0.0'
+    import rbc
+    return rbc.__version__.split('+')[0]
 
 
 extensions = [
@@ -23,7 +16,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx_rtd_theme'
 ]
 
 napoleon_google_docstring = False
@@ -51,7 +45,6 @@ primary_domain = 'py'
 add_function_parentheses = False
 
 html_theme = "sphinx_rtd_theme"
-html_theme_path = ["_themes", ]
 
 html_theme_options = {
     'canonical_url': 'https://xnd.io/',

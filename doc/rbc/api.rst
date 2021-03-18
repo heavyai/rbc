@@ -1,5 +1,5 @@
-rbc package
-===========
+API Reference
+=============
 
 .. automodule:: rbc
    :members:
@@ -16,9 +16,6 @@ Subpackages
    rbc.omnisci_backend
    rbc.tests
    rbc.thrift
-
-Submodules
-----------
 
 rbc.ctools module
 -----------------
