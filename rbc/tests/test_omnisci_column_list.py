@@ -11,7 +11,7 @@ sql_type_map = dict(int64='BIGINT', int32='INT', int16='SMALLINT', int8='TINYINT
 @pytest.fixture(scope='module')
 def omnisci():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 5, 5)):
         define(o)
         yield o
 
@@ -20,7 +20,7 @@ def define(omnisci):
 
     @omnisci('int32 columns_sum1(Cursor<Column<int64>, ColumnList<T>>,'
              ' RowMultiplier, OutputColumn<T>)',
-             T=scalar_types)
+             T=scalar_types, devices=['cpu'])
     def columns_sum1(rowid, lst, m, out):
         for i in range(lst.size):
             out[i] *= 0
@@ -30,7 +30,7 @@ def define(omnisci):
 
     @omnisci('int32 columns_sum2(Cursor<Column<int64>, ColumnList<T>>,'
              ' RowMultiplier, OutputColumn<T>)',
-             T=scalar_types)
+             T=scalar_types, devices=['cpu'])
     def columns_sum2(rowid, lst, m, out):
         for j in range(lst.length):
             col = lst[j]  # equivalent to lst.ptrs[j]
