@@ -5,8 +5,11 @@ import operator
 from llvmlite import ir
 from numba.core import datamodel, extending, types, imputils, typing, cgutils, typeconv
 
-typing_registry = typing.templates.Registry()
-lowering_registry = imputils.Registry()
+
+""" TODO: use local registries, currently blocked by overloading
+operator.getitem that should use rbc pipeline class.  """
+typing_registry = typing.templates.builtin_registry  # TODO: Registry()
+lowering_registry = imputils.builtin_registry        # TODO: Registry()
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -16,34 +19,20 @@ fp32 = ir.FloatType()
 fp64 = ir.DoubleType()
 
 
-def make_numba_struct(name, members, base=None, origin=None, _cache={}):
-    """Create numba struct type instance.
-    """
-    t = _cache.get(name)
-    if t is None:
-        if base is None:
-            base = Type.aliases.get('StructureNumbaType', StructureNumbaType)
-        assert issubclass(base, types.Type)  # base must be numba.types.Type
+class StructureTypeAttributeTemplate(typing.templates.AttributeTemplate):
+    key = NotImplemented
 
-        def model__init__(self, dmm, fe_type):
-            datamodel.StructModel.__init__(self, dmm, fe_type, members)
+    def generic_resolve(self, typ, attr):
+        model = datamodel.default_manager.lookup(typ)
+        return model.get_member_fe_type(attr)
 
-        struct_model = type(name+'Model',
-                            (datamodel.StructModel,),
-                            dict(__init__=model__init__))
-        struct_type = type(name+'Type', (base,),
-                           dict(members=[t for n, t in members], origin=origin,
-                                __typesystem_type__=origin))
-        datamodel.registry.register_default(struct_type)(struct_model)
-        _cache[name] = t = struct_type(name)
 
-        tptr = StructureNumbaPointerType(t)
-        typeconv.rules.default_type_manager.set_compatible(
-            tptr, types.voidptr, typeconv.Conversion.safe)
-        typeconv.rules.default_type_manager.set_compatible(
-            types.voidptr, tptr, typeconv.Conversion.safe)
+class StructurePointerTypeAttributeTemplate(typing.templates.AttributeTemplate):
+    key = NotImplemented
 
-    return t
+    def generic_resolve(self, typ, attr):
+        model = datamodel.default_manager.lookup(typ.dtype)
+        return model.get_member_fe_type(attr)
 
 
 class StructureNumbaType(types.Type):
@@ -60,39 +49,82 @@ class StructureNumbaPointerType(types.Type):
 
     @property
     def __typesystem_type__(self):
-        return self.dtype.origin.pointer()
+        return Type.fromnumba(self.dtype).pointer()
 
     def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
-        name = "(%s)*" % dtype
+        name = "%s[%s]*" % (type(self).__name__, dtype)
         super().__init__(name)
 
     @property
     def key(self):
         return self.dtype
 
+    # Subclasses may redefine the following methods
 
-@datamodel.register_default(StructureNumbaPointerType)
-class StructureNumbaPointerTypeModel(datamodel.models.PointerModel):
-    pass
+    def get_add_impl(self):
+        def impl(x, i):
+            return StructureNumbaPointerType_add_impl(x, i)
+        return impl
 
-
-@typing_registry.register_attr
-class StructAttribute(typing.templates.AttributeTemplate):
-    key = StructureNumbaType
-
-    def generic_resolve(self, typ, attr):
-        model = datamodel.default_manager.lookup(typ)
-        return model.get_member_fe_type(attr)
+    def get_getitem_impl(self):
+        return self.get_add_impl()
 
 
-@typing_registry.register_attr
-class StructPointerAttribute(typing.templates.AttributeTemplate):
-    key = StructureNumbaPointerType
+def make_numba_struct(name, members, origin=None, _cache={}):
+    """Create numba struct type instance.
+    """
+    t = _cache.get(name)
+    if t is None:
+        base = None
+        if origin is not None:
+            assert origin.is_struct
+            base = origin._params.get('NumbaType')
+            numba_ptr_type = origin._params.get('NumbaPointerType', StructureNumbaPointerType)
+        else:
+            base = None
+            numba_ptr_type = StructureNumbaPointerType
+        if base is None:
+            base = Type.aliases.get('StructureNumbaType', StructureNumbaType)
+        assert issubclass(base, types.Type)  # base must be numba.types.Type
+        assert issubclass(numba_ptr_type, types.Type)  # numba_ptr_type must be numba.types.Type
 
-    def generic_resolve(self, typ, attr):
-        model = datamodel.default_manager.lookup(typ.dtype)
-        return model.get_member_fe_type(attr)
+        struct_type = type(name+'Type', (base,),
+                           dict(members=[t for n, t in members],
+                                __typesystem_type__=origin))
+        _cache[name] = t = struct_type(name)
+
+        def model__init__(self, dmm, fe_type):
+            datamodel.StructModel.__init__(self, dmm, fe_type, members)
+        struct_model = type(name+'Model',
+                            (datamodel.StructModel,),
+                            dict(__init__=model__init__))
+        struct_pointer_model = type(name+'PointerModel', (datamodel.models.PointerModel,), dict())
+
+        datamodel.registry.register_default(struct_type)(struct_model)
+        datamodel.registry.register_default(numba_ptr_type)(struct_pointer_model)
+
+        if not issubclass(numba_ptr_type, StructureNumbaPointerType):
+            return t
+
+        # member access via attribute getters/setters
+        struct_attr_template = type(name+'AttributeTemplate',
+                                    (StructureTypeAttributeTemplate,),
+                                    dict(key=struct_type))
+        struct_pointer_attr_template = type(name+'PointerAttributeTemplate',
+                                            (StructurePointerTypeAttributeTemplate,),
+                                            dict(key=numba_ptr_type))
+        typing_registry.register_attr(struct_pointer_attr_template)
+        typing_registry.register_attr(struct_attr_template)
+
+        # allow casting to/from voidptr
+        tptr = numba_ptr_type(t)
+        typeconv.rules.default_type_manager.set_compatible(
+            tptr, types.voidptr, typeconv.Conversion.safe)
+        typeconv.rules.default_type_manager.set_compatible(
+            types.voidptr, tptr, typeconv.Conversion.safe)
+
+    return t
 
 
 @lowering_registry.lower_getattr_generic(StructureNumbaType)
@@ -161,13 +193,15 @@ def StructureNumbaPointerType_add_impl(typingctx, data, index):
 
 
 @extending.overload(operator.add)
-@extending.overload(operator.getitem)
 def StructureNumbaPointerType_add(x, i):
     if isinstance(x, StructureNumbaPointerType):
+        return x.get_add_impl()
 
-        def impl(x, i):
-            return StructureNumbaPointerType_add_impl(x, i)
-        return impl
+
+@extending.overload(operator.getitem)
+def StructureNumbaPointerType_getitem(x, i):
+    if isinstance(x, StructureNumbaPointerType):
+        return x.get_getitem_impl()
 
 
 @lowering_registry.lower_cast(types.RawPointer, StructureNumbaPointerType)

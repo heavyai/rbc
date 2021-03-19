@@ -12,7 +12,7 @@ from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta)
+    BufferMeta, OmnisciColumnListType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
@@ -227,7 +227,9 @@ class RemoteOmnisci(RemoteJIT):
         OutputColumn='OmnisciOutputColumnType',
         RowMultiplier='int32|sizer=RowMultiplier',
         ConstantParameter='int32|sizer=ConstantParameter',
-        Constant='int32|sizer=Constant')
+        Constant='int32|sizer=Constant',
+        ColumnList='OmnisciColumnListType',
+    )
 
     def __init__(self,
                  user='admin',
@@ -633,6 +635,14 @@ class RemoteOmnisci(RemoteJIT):
             'Text<8>': typemap['TExtArgumentType'].get('TextEncodingDict8'),
             'Text<16>': typemap['TExtArgumentType'].get('TextEncodingDict16'),
             'Text<32>': typemap['TExtArgumentType'].get('TextEncodingDict32'),
+            'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
+            'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
+            'ColumnList<int16_t>': typemap['TExtArgumentType'].get('ColumnListInt16'),
+            'ColumnList<int32_t>': typemap['TExtArgumentType'].get('ColumnListInt32'),
+            'ColumnList<int64_t>': typemap['TExtArgumentType'].get('ColumnListInt64'),
+            'ColumnList<float>': typemap['TExtArgumentType'].get('ColumnListFloat'),
+            'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
+
         }
 
         if self.version[:2] < (5, 4):
@@ -657,6 +667,10 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['OmnisciOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
+            ext_arguments_map['OmnisciColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            ext_arguments_map['OmnisciOutputColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
 
         ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
 
@@ -848,7 +862,7 @@ class RemoteOmnisci(RemoteJIT):
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
-                    if isinstance(a, OmnisciColumnType):
+                    if isinstance(a, (OmnisciColumnType, OmnisciColumnListType)):
                         sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:

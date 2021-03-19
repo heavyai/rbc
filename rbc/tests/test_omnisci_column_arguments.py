@@ -109,3 +109,48 @@ def test_copy(omnisci, inputs):
     result = list(result)
 
     assert result == expected
+
+
+@pytest.mark.parametrize('kind', ['1', '11', '111', '211', '221', '212', '13', '32', '34', '242'])
+def test_ct_binding_constant_sizer(omnisci, kind):
+    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274')
+    colnames = ', '.join({'1': 'i4', '2': 'i8', '3': 'i4, i4, i4',
+                          '4': 'i8, i8, i8'}[n] for n in kind)
+
+    query = (f'select * from table(ct_binding_udtf(cursor('
+             f'select {colnames} from {omnisci.table_name})))')
+    _, result = omnisci.sql_execute(query)
+    result = list(result)
+
+    assert result == [(int(kind),)]
+
+
+@pytest.mark.parametrize('kind', ['19', '119', '1119', '2119', '2219',
+                                  '2129', '139', '329', '349', '2429',
+                                  '91', '196', '396', '369', '169'])
+def test_ct_binding_row_multiplier(omnisci, kind):
+    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274')
+    suffix = {'91': '2', '369': '2', '169': '3'}.get(kind, '')
+    codes = {'1': 'i4', '2': 'i8', '3': 'i4, i4, i4', '4': 'i8, i8, i8',
+             '9': '1', '6': 'cast(123 as int)'}
+    first = []
+    last = []
+    cursor = []
+    for n in kind:
+        if n in '69':
+            if cursor:
+                last.append(codes[n])
+            else:
+                first.append(codes[n])
+        else:
+            assert n in '1234'
+            cursor.append(codes[n])
+    first = ', '.join(first + [''])
+    last = ', '.join([''] + last)
+    cursor = ', '.join(cursor)
+    query = (f'select * from table(ct_binding_udtf{suffix}({first}cursor('
+             f'select {cursor} from {omnisci.table_name}){last}))')
+    _, result = omnisci.sql_execute(query)
+    result = list(result)
+
+    assert result == [(1000 + int(kind),)], (result, query)

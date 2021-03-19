@@ -466,17 +466,19 @@ class Type(tuple, metaclass=MetaType):
                     raise NotImplementedError('inherit_annotations: %s'
                                               % ((a, type(a)),))
 
-    def update_params(self, other):
-        """In-place update of parameters from other and return self.
+    def params(self, other=None, **params):
+        """In-place update of parameters from other or/and dictionary and return self.
         """
-        for k, v in other._params.items():
+        if other is not None:
+            return self.params(None, **other._params).params(None, **params)
+        for k, v in params.items():
             if k == 'annotation':
                 self.annotation().update(v)
             else:
                 orig_v = self._params.get(k)
                 if orig_v is not None and orig_v != v:
                     warnings.warn(
-                        f'{type(self).__name__}.update_params: overwriting '
+                        f'{type(self).__name__}.params: overwriting '
                         f'existing parameter {k} with {v} (original value is {orig_v})')
                 self._params[k] = v
         return self
@@ -639,9 +641,12 @@ class Type(tuple, metaclass=MetaType):
             or self.is_custom or self.is_undefined
 
     def __repr__(self):
-        if self._params:
-            return '%s%s|%s' % (type(self).__name__,
-                                tuple.__repr__(self), self._params)
+        d = {}
+        for k, v in self._params.items():
+            if v:
+                d[k] = v
+        if d:
+            return '%s%s|%s' % (type(self).__name__, tuple.__repr__(self), d)
         return '%s%s' % (type(self).__name__, tuple.__repr__(self))
 
     @property
@@ -840,9 +845,10 @@ class Type(tuple, metaclass=MetaType):
             if self[0].is_void:
                 return nb.types.voidptr
             if self[0].is_struct:
-                return StructureNumbaPointerType(
-                    self[0].tonumba(bool_is_int8=bool_is_int8))
-            return nb.types.CPointer(self[0].tonumba(bool_is_int8=bool_is_int8))
+                ptr_type = self._params.get('NumbaType', structure_type.StructureNumbaPointerType)
+            else:
+                ptr_type = self._params.get('NumbaType', nb.types.CPointer)
+            return ptr_type(self[0].tonumba(bool_is_int8=bool_is_int8))
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -852,10 +858,7 @@ class Type(tuple, metaclass=MetaType):
                 name = member._params.get('name', '_%s' % (i+1))
                 members.append((name,
                                 member.tonumba(bool_is_int8=bool_is_int8)))
-            base = self._params.get('numba.Type')
-            if base is not None:
-                return make_numba_struct(struct_name, members, base=base, origin=self)
-            return make_numba_struct(struct_name, members, origin=self)
+            return structure_type.make_numba_struct(struct_name, members, origin=self)
         if self.is_function:
             rtype = self[0].tonumba(bool_is_int8=bool_is_int8)
             atypes = [t.tonumba(bool_is_int8=bool_is_int8)
@@ -869,7 +872,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_atomic:
             return nb.types.Type(self[0])
         if self.is_custom:
-            raise NotImplementedError(f'{type(self).__name__}.tonumba(bool_is_int8=None)')
+            return self.__typesystem_type__.tonumba(bool_is_int8=bool_is_int8)
         raise NotImplementedError(repr(self))
 
     def toctypes(self):
@@ -1005,9 +1008,10 @@ class Type(tuple, metaclass=MetaType):
             name = cls.aliases.get(name, name)
             if name in cls.custom_types:
                 cls = cls.custom_types[name]
-                return cls(params)
+                r = cls(params)
             else:
-                return cls((name,) + params)
+                r = cls((name,) + params)
+            return r
         if s == 'void' or s == 'none' or not s:  # void
             return cls()
         if '|' in s:
@@ -1062,6 +1066,8 @@ class Type(tuple, metaclass=MetaType):
     def fromnumba(cls, t):
         """Return new Type instance from numba type object.
         """
+        if hasattr(t, "__typesystem_type__") or hasattr(type(t), "__typesystem_type__"):
+            return t.__typesystem_type__
         n = _numba_imap.get(t)
         if n is not None:
             return cls.fromstring(n)
@@ -1079,10 +1085,6 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(t, nb.types.misc.RawPointer):
             if t == nb.types.voidptr:
                 return cls(cls(), '*')
-        if isinstance(t, StructureNumbaType):
-            return t.origin
-        if isinstance(t, StructureNumbaPointerType):
-            return t.dtype.origin.pointer()
 
         raise NotImplementedError(repr((t, type(t).__bases__)))
 
@@ -1113,7 +1115,7 @@ class Type(tuple, metaclass=MetaType):
         if not hasattr(func, '__name__'):
             raise ValueError(
                 'constructing Type instance from a callable without `__name__`'
-                f' is not supported, got {func}')
+                f' is not supported, got {func}|{type(func).__bases__}')
         if func.__name__ == '<lambda>':
             # lambda function cannot carry annotations, hence:
             raise ValueError('constructing Type instance from '
@@ -1198,7 +1200,7 @@ class Type(tuple, metaclass=MetaType):
             return cls.fromstring(obj.__name__)
         if callable(obj):
             return cls.fromcallable(obj)
-        raise NotImplementedError(repr(type(obj)))
+        raise NotImplementedError(repr((type(obj))))
 
     def _normalize(self):
         """Return new Type instance with atomic types normalized.
@@ -1210,7 +1212,7 @@ class Type(tuple, metaclass=MetaType):
             s = self[0]
             a = type(self).aliases.get(s)
             if a is not None:
-                return Type.fromobject(a).update_params(self)._normalize()
+                return Type.fromobject(a).params(self)._normalize()
             m = _string_match(s)
             if m is not None:
                 return Type('string', **params)
@@ -1490,6 +1492,9 @@ class Type(tuple, metaclass=MetaType):
         return Type(self, atypes, **params)
 
     def pointer(self):
+        numba_ptr_type = self._params.get('NumbaPointerType')
+        if numba_ptr_type is not None:
+            return Type(self, '*').params(NumbaType=numba_ptr_type)
         return Type(self, '*')
 
     def apply_templates(self, templates):
@@ -1576,7 +1581,7 @@ class Type(tuple, metaclass=MetaType):
                         typ = cls((cname,) + params)
                     else:
                         typ = cls(params)
-                    yield from typ.update_params(self).apply_templates(templates)
+                    yield from typ.params(self).apply_templates(templates)
                 return
             for i, t in enumerate(params):
                 if not isinstance(t, Type):
@@ -1815,4 +1820,4 @@ def get_signature(obj):
 # Import numba support
 
 if 1:  # to avoid flake E402
-    from .structure_type import StructureNumbaType, StructureNumbaPointerType, make_numba_struct
+    from . import structure_type
