@@ -1,6 +1,7 @@
 __all__ = ['OmnisciColumnListType']
 
 
+from numba.core import extending
 from rbc.typesystem import Type
 from rbc import structure_type
 
@@ -32,3 +33,17 @@ class OmnisciColumnListNumbaType(structure_type.StructureNumbaPointerType):
         def impl(x, i):
             return x.ptrs[i]
         return impl
+
+
+@extending.overload_method(OmnisciColumnListNumbaType, 'nrows')
+def get_nrows(clst):
+    def impl(clst):
+        return clst.size
+    return impl
+
+
+@extending.overload_method(OmnisciColumnListNumbaType, 'ncols')
+def get_ncols(clst):
+    def impl(clst):
+        return clst.length
+    return impl

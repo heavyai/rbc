@@ -42,8 +42,18 @@ def define(omnisci):
                     out[i] += col[i]
         return lst.size
 
+    @omnisci('int32 columns_sum3(Cursor<Column<int64>, ColumnList<T>>,'
+             ' RowMultiplier, OutputColumn<T>)',
+             T=scalar_types)
+    def columns_sum3(rowid, lst, m, out):
+        for j in range(lst.ncols()):
+            col = lst[j]
+            for i in range(lst.nrows()):
+                out[i] = col[i] if j == 0 else out[i] + col[i]
+        return lst.nrows()
 
-@pytest.mark.parametrize("variant", ['1', "2"])
+
+@pytest.mark.parametrize("variant", ['1', "2", "3"])
 @pytest.mark.parametrize("T", scalar_types)
 def test_columns_sum(omnisci, T, variant):
     v = table_columns_map[T]
