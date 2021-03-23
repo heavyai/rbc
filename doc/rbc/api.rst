@@ -6,7 +6,8 @@ API Reference
 
 
 .. autosummary::
-    :toctree: generated
+    :nosignatures:
+    :toctree: ../generated
 
     ctools
     errors
@@ -24,7 +25,7 @@ API Reference
 .. rubric:: External Functions
 .. currentmodule:: rbc.externals
 .. autosummary::
-	:toctree: generated
+	:toctree: ../generated
 
 	cmath
 	libdevice

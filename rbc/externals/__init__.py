@@ -30,6 +30,7 @@ def register_external(
     module_globals,
     typing_registry,
     lowering_registry,
+    doc=None,
 ):
 
     # expose
@@ -52,5 +53,6 @@ def register_external(
 
     module_globals[fname] = _key
     _key.__module__ = module_name
+    _key.__doc__ = doc
     del globals()[fname]
     return _key

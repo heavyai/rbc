@@ -186,5 +186,5 @@ cmath = {
 for fname, (retty, args) in cmath.items():
     argtys = tuple(map(lambda x: x.ty, args))
     register_external(
-        fname, retty, argtys, __name__, globals(), typing_registry, lowering_registry
+        fname, retty, argtys, __name__, globals(), typing_registry, lowering_registry,
     )
