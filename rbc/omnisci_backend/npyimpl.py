@@ -1,15 +1,9 @@
 import numpy as np
 from llvmlite import ir
-from rbc.utils import get_version
 from rbc.externals import gen_codegen, dispatch_codegen
-
-if get_version("numba") >= (0, 49):
-    from numba.cpython import numbers
-    from numba.np import ufunc_db, npyfuncs
-    from numba.core import types
-else:
-    from numba.targets import ufunc_db, npyfuncs, numbers
-    from numba import types
+from numba.cpython import numbers
+from numba.np import ufunc_db, npyfuncs
+from numba.core import types
 
 
 def np_logaddexp_impl(context, builder, sig, args):

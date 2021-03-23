@@ -1,12 +1,7 @@
 import types as py_types
 from rbc.targetinfo import TargetInfo
-from rbc.utils import get_version
 from rbc.typesystem import Type
-
-if get_version("numba") >= (0, 49):
-    from numba.core import funcdesc, typing
-else:
-    from numba import funcdesc, typing
+from numba.core import funcdesc, typing
 
 
 def gen_codegen(fn_name):

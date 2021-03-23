@@ -28,13 +28,9 @@ from collections import defaultdict
 from llvmlite import ir
 import numpy as np
 from rbc import typesystem
-from rbc.utils import get_version
 from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
-if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils, extending, types
-else:
-    from numba import datamodel, cgutils, extending, types
+from numba.core import datamodel, cgutils, extending, types
 
 
 int8_t = ir.IntType(8)
@@ -78,13 +74,12 @@ class OmnisciBufferType(typesystem.Type):
             size_t,
             *extra_members
         )
-        buffer_type._params['numba.Type'] = BufferType
+        buffer_type._params['NumbaType'] = BufferType
+        buffer_type._params['NumbaPointerType'] = BufferPointer
         numba_type = buffer_type.tonumba(bool_is_int8=True)
         if self.pass_by_value:
             return numba_type
-        numba_eltype = self.element_type.tonumba(bool_is_int8=True)
-        numba_type_ptr = BufferPointer(numba_type, numba_eltype)
-        return numba_type_ptr
+        return BufferPointer(numba_type)
 
 
 class BufferType(types.Type):
@@ -108,10 +103,10 @@ class BufferPointer(types.Type):
     mutable = True
     return_as_first_argument = True
 
-    def __init__(self, dtype, eltype):
+    def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
-        self.eltype = eltype  # buffer element dtype
-        name = "(%s)*" % dtype
+        self.eltype = dtype.eltype  # buffer element dtype
+        name = "%s[%s]*" % (type(self).__name__, dtype)
         super().__init__(name)
 
     @property

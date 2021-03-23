@@ -4,15 +4,10 @@
 __all__ = ['ArrayPointer', 'Array', 'OmnisciArrayType']
 
 from rbc import typesystem
-from rbc.utils import get_version
 from .omnisci_buffer import (BufferPointer, Buffer,
                              OmnisciBufferType,
                              omnisci_buffer_constructor)
-
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types
-else:
-    from numba import extending, types
+from numba.core import extending, types
 
 
 class OmnisciArrayType(OmnisciBufferType):

@@ -10,12 +10,7 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 import numba.cuda
 import numba as nb
-from .utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import sigutils, registry
-else:
-    from numba import sigutils
-    from numba.targets import registry
+from numba.core import sigutils, registry
 
 
 def initialize_llvm():

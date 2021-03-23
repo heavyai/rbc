@@ -9,23 +9,15 @@ import types as py_types
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
-from .utils import get_version
 from .errors import UnsupportedError
 from . import libfuncs, structure_type
 from rbc import externals
 from rbc.omnisci_backend import mathimpl
+from numba.core import codegen, cpu, compiler_lock, \
+    registry, typing, compiler, sigutils, cgutils, \
+    extending
+from numba.core import errors as nb_errors
 
-
-if get_version('numba') >= (0, 49):
-    from numba.core import codegen, cpu, compiler_lock, \
-        registry, typing, compiler, sigutils, cgutils, \
-        extending
-    from numba.core import errors as nb_errors
-else:
-    from numba.targets import codegen, cpu, registry
-    from numba import compiler_lock, typing, compiler, \
-        sigutils, cgutils, extending
-    from numba import errors as nb_errors
 
 int32_t = ir.IntType(32)
 
@@ -282,8 +274,7 @@ def compile_instance(func, sig,
     flags = compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
-    if get_version('numba') >= (0, 49):
-        flags.set('no_cfunc_wrapper')
+    flags.set('no_cfunc_wrapper')
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(

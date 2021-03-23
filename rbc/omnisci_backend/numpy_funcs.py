@@ -2,15 +2,9 @@ import numpy as np
 from rbc.externals.stdio import printf
 from rbc import typesystem
 from .omnisci_array import Array, ArrayPointer
-from rbc.utils import get_version
 from numba import njit
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types, \
-        errors
-    from numba.np import numpy_support
-else:
-    from numba import extending, types, \
-        errors, numpy_support
+from numba.core import extending, types, errors
+from numba.np import numpy_support
 
 
 def expose_and_overload(func):
