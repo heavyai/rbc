@@ -28,11 +28,23 @@ def define(omnisci):
 
 
 typs = (
-    ("1", "1"),
-    ("1", "1a"),
-    ("2", "1b"),
-    ("1", "2"),
-    ("3", "1a1"),
+    ("1", "1"),  # udtf_default_sizer1__cpu_1
+    ("1", "1r"),  # udtf_default_sizer1__cpu_1
+    ("2", "1a"),  # udtf_default_sizer2__cpu_1
+    ("2", "1ar"),  # udtf_default_sizer2__cpu_1
+    # ("3", "2"),  # udtf_default_sizer3__cpu_1     # should this one work?
+    ("3", "11r"),  # udtf_default_sizer3__cpu_1
+    # ("3", "2r"),  # udtf_default_sizer3__cpu_1    # should this one work???
+    ("4", "11"),  # udtf_default_sizer4__cpu_1
+    ("4", "1r1"),  # udtf_default_sizer4__cpu_1
+    ("5", "1a"),  # udtf_default_sizer5__cpu_1
+    ("5", "1ra"),  # udtf_default_sizer5__cpu_1
+    ("6", "1a1"),  # udtf_default_sizer6__cpu_1
+    ("6", "1a1r"),  # udtf_default_sizer6__cpu_1
+    ("7", "11a"),  # udtf_default_sizer7__cpu_1
+    ("7", "1r1a"),  # udtf_default_sizer7__cpu_1
+    ("8", "31a"),  # udtf_default_sizer8__cpu_1
+    ("8", "3r1a"),  # udtf_default_sizer8__cpu_1
 )
 
 
@@ -46,6 +58,7 @@ def test_default_sizer(omnisci, suffix, kind):
         "3": "i4, i4, i4",
         "a": "cast(231 as INT)",
         "b": "132",
+        "r": "1",
     }
 
     table = omnisci.table_name
@@ -64,4 +77,6 @@ def test_default_sizer(omnisci, suffix, kind):
     result = list(result)
 
     r = sum(map(lambda x: int(x) if str.isdigit(x) else ord(x), kind))
+    if "r" in kind:
+        r -= ord("r")
     assert result == [(1000 + r,)], (result, query)
