@@ -117,7 +117,7 @@ def test_ct_binding_constant_sizer(omnisci, kind):
     colnames = ', '.join({'1': 'i4', '2': 'i8', '3': 'i4, i4, i4',
                           '4': 'i8, i8, i8'}[n] for n in kind)
 
-    query = (f'select * from table(ct_binding_udtf(cursor('
+    query = (f'select * from table(ct_binding_udtf_constant(cursor('
              f'select {colnames} from {omnisci.table_name})))')
     _, result = omnisci.sql_execute(query)
     result = list(result)
@@ -150,6 +150,7 @@ def test_ct_binding_row_multiplier(omnisci, kind):
     cursor = ', '.join(cursor)
     query = (f'select * from table(ct_binding_udtf{suffix}({first}cursor('
              f'select {cursor} from {omnisci.table_name}){last}))')
+    print(query)
     _, result = omnisci.sql_execute(query)
     result = list(result)
 
