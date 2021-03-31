@@ -59,6 +59,8 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.8
+          activate-environment: rbc
+          use-mamba: True
           mamba-version: "*"
           channels: conda-forge
           environment-file: .conda/environment.yml
