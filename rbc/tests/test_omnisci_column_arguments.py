@@ -76,11 +76,12 @@ def define(omnisci):
         return len(x)
 
 
+@pytest.mark.parametrize('default', [True, False])
 @pytest.mark.parametrize("inputs",
                          ['i8', 'cursor(i8,f8)', 'i8;f8', 'i4;cursor(f8,i8)',
                           'cursor(i4,i8);f8', 'cursor(i4,i8);cursor(f8,f4)',
                           'cursor(i4,i8,f8,f4)'])
-def test_copy(omnisci, inputs):
+def test_copy(omnisci, default, inputs):
     omnisci.require_version((5, 5), 'Requires omniscidb-internal PR 5134')
 
     groups = inputs.split(';')
@@ -100,11 +101,13 @@ def test_copy(omnisci, inputs):
         expected = [row1 + row2 for row1, row2 in zip(expected, result)]
         args.append(f'cursor(select {colnames} from {table_name})')
         cc.append((colnames.count(',') + 1) * 'c')
-    args.append('1')
+    if default:
+        args.append('1')
     args = ', '.join(args)
     cc = '_'.join(cc)
 
     query = f'select * from table(text_rbc_copy_{cc}_rowmul({args}))'
+    print(query)
     _, result = omnisci.sql_execute(query)
     result = list(result)
 

@@ -5,7 +5,25 @@ from rbc.tests import omnisci_fixture
 @pytest.fixture(scope="module")
 def omnisci():
     for o in omnisci_fixture(globals(), minimal_version=(5, 5, 5)):
+        define(o)
         yield o
+
+
+def define(omnisci):
+    @omnisci("int32(Column<int64>, RowMultiplier, OutputColumn<int64>)")
+    def udtf_default_sizer_1(c, sizer, o):
+        o[0] = 3
+        return 1
+
+
+def test_python_fn_with_default_sizer(omnisci):
+
+    table = omnisci.table_name
+    fn = "udtf_default_sizer_1"
+    query = f"select * from table({fn}(cursor(select i8 from {table})));"
+    _, result = omnisci.sql_execute(query)
+
+    assert list(result) == [(3,)]
 
 
 typs = (

@@ -231,6 +231,8 @@ class RemoteOmnisci(RemoteJIT):
         ColumnList='OmnisciColumnListType',
     )
 
+    DEFAULT_ROW_MULTIPLIER_SUFFIX = "__default_RowMultiplier_"
+
     def __init__(self,
                  user='admin',
                  password='HyperInteractive',
@@ -812,7 +814,7 @@ class RemoteOmnisci(RemoteJIT):
                     'exp2', 'log2', 'log1p', 'fmod']
         return []
 
-    def _make_udtf(self, caller, orig_sig, sig):
+    def _make_udtf(self, caller, orig_sig, sig, use_default_sizer=False):
         if self.version < (5, 4):
             v = '.'.join(map(str, self.version))
             raise RuntimeError(
@@ -848,6 +850,9 @@ class RemoteOmnisci(RemoteJIT):
                 assert sizer_index == -1
                 sizer_index = consumed_index + 1
                 sizer = _sizer
+
+            if _sizer is not unspecified and use_default_sizer is True:
+                continue
 
             if isinstance(a, OmnisciCursorType):
                 sqlArgTypes.append(self.type_to_extarg('Cursor'))
@@ -886,6 +891,14 @@ class RemoteOmnisci(RemoteJIT):
                 f' integer (got {sizer_index})')
         sizer_type = (thrift.TOutputBufferSizeType
                       ._NAMES_TO_VALUES[sizer])
+
+        if use_default_sizer and sizer == sizer_map["RowMultiplier"]:
+            return thrift.TUserDefinedTableFunction(
+                name + sig.mangling() + self.DEFAULT_ROW_MULTIPLIER_SUFFIX,
+                # sizer_type, sizer_index,
+                None, None,
+                inputArgTypes, outputArgTypes, sqlArgTypes)
+
         return thrift.TUserDefinedTableFunction(
             name + sig.mangling(),
             sizer_type, sizer_index,
@@ -1005,10 +1018,12 @@ class RemoteOmnisci(RemoteJIT):
 
                         if sig_is_udtf:
                             # new style UDTF, requires omniscidb version >= 5.4
-                            udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
+                            udtfs_map[fid] = [
+                                self._make_udtf(caller, orig_sig, sig),
+                                self._make_udtf(caller, orig_sig, sig, use_default_sizer=True)]
                         elif is_old_udtf:
                             # old style UDTF for omniscidb <= 5.3, to be deprecated
-                            udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
+                            udtfs_map[fid] = [self._make_udtf_old(caller, orig_sig, sig)]
                         else:
                             udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
                         signatures[fid] = sig
@@ -1036,7 +1051,7 @@ class RemoteOmnisci(RemoteJIT):
 
                 for fid, udtf in udtfs_map.items():
                     if fid in succesful_fids:
-                        udtfs.append(udtf)
+                        udtfs += udtf
                     else:
                         skipped_names.append(udtf.name)
                 if self.debug:
@@ -1044,6 +1059,10 @@ class RemoteOmnisci(RemoteJIT):
         # Make sure that all registered functions have
         # implementations, otherwise, we will crash the server.
         for f in udtfs:
+            # functions with the _default_RowMultiplier_ suffix only exist
+            # for calcite and we can safely ignore them here!
+            if self.DEFAULT_ROW_MULTIPLIER_SUFFIX in f.name:
+                continue
             assert f.name in llvm_function_names
         for f in udfs:
             assert f.name in llvm_function_names
