@@ -1,3 +1,6 @@
+"""Collection of helper functions
+"""
+
 import dis
 import socket
 import subprocess

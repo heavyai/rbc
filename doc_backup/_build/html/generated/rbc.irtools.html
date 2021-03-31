@@ -1,0 +1,1070 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rbc.irtools &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/generated/rbc.irtools.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>rbc.irtools</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="rbc-irtools">
+<h1>rbc.irtools<a class="headerlink" href="#rbc-irtools" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">Description</p>
+<span class="target" id="module-rbc.irtools"></span><dl class="py class">
+<dt id="rbc.irtools.JITRemoteCodeLibrary">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">JITRemoteCodeLibrary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">codegen</span><span class="p">:</span> <span class="n">numba.core.codegen.BaseCPUCodegen</span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary" title="Permalink to this definition">¶</a></dt>
+<dd><p>JITRemoteCodeLibrary was introduce to prevent numba from calling functions
+that checks if the module is final. See xnd-project/rbc issue #87.</p>
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.add_ir_module">
+<code class="sig-name descname">add_ir_module</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ir_module</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.add_ir_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a LLVM IR module’s contents to this library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.add_linking_library">
+<code class="sig-name descname">add_linking_library</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">library</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.add_linking_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a library for linking into this library, without losing
+the original library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.codegen">
+<em class="property">property </em><code class="sig-name descname">codegen</code><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.codegen" title="Permalink to this definition">¶</a></dt>
+<dd><p>The codegen object owning this library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.create_ir_module">
+<code class="sig-name descname">create_ir_module</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.create_ir_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a LLVM IR module for use by this library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.finalize">
+<code class="sig-name descname">finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.finalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finalize the library.  After this call, nothing can be added anymore.
+Finalization involves various stages of code optimization and
+linking.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_asm_str">
+<code class="sig-name descname">get_asm_str</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_asm_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the human-readable assembly.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_defined_functions">
+<code class="sig-name descname">get_defined_functions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_defined_functions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all functions defined in the library.  The library must have
+been finalized.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg">
+<code class="sig-name descname">get_disasm_cfg</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the CFG of the disassembly of the ELF object</p>
+<p>Requires python package: r2pipe
+Requires radare2 binary on $PATH.
+Notebook rendering requires python package: graphviz</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_function_cfg">
+<code class="sig-name descname">get_function_cfg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">py_func</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_function_cfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get control-flow graph of the LLVM function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_llvm_str">
+<code class="sig-name descname">get_llvm_str</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_llvm_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the human-readable form of the LLVM module.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function">
+<code class="sig-name descname">get_pointer_to_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>We can return any random number here! This is just to prevent numba from
+trying to check if the symbol given by “name” is defined in the module.
+In cases were RBC is calling an external function (i.e. allocate_varlen_buffer)
+the symbol will not be defined in the module, resulting in an error.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode">
+<code class="sig-name descname">serialize_using_bitcode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize this library using its bitcode as the cached representation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code">
+<code class="sig-name descname">serialize_using_object_code</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize this library using its object code as the cached
+representation.  We also include its bitcode for further inlining
+with other libraries.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="rbc.irtools.JITRemoteCodegen">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">JITRemoteCodegen</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">module_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodegen" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodegen.create_library">
+<code class="sig-name descname">create_library</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodegen.create_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a <code class="xref py py-class docutils literal notranslate"><span class="pre">CodeLibrary</span></code> object for use with this codegen
+instance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodegen.magic_tuple">
+<code class="sig-name descname">magic_tuple</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodegen.magic_tuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a tuple unambiguously describing the codegen behaviour.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodegen.set_env">
+<code class="sig-name descname">set_env</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">env_name</span></em>, <em class="sig-param"><span class="n">env</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodegen.set_env" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the environment address.</p>
+<p>Update the GlobalVariable named <em>env_name</em> to the address of <em>env</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodegen.target_data">
+<em class="property">property </em><code class="sig-name descname">target_data</code><a class="headerlink" href="#rbc.irtools.JITRemoteCodegen.target_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>The LLVM “target data” object for this codegen instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="rbc.irtools.JITRemoteTargetContext">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">JITRemoteTargetContext</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typing_context</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.active_code_library">
+<em class="property">property </em><code class="sig-name descname">active_code_library</code><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.active_code_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the active code library</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.add_dynamic_addr">
+<code class="sig-name descname">add_dynamic_addr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">intaddr</span></em>, <em class="sig-param"><span class="n">info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.add_dynamic_addr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns dynamic address as a void pointer <cite>i8*</cite>.</p>
+<p>Internally, a global variable is added to inform the lowerer about
+the usage of dynamic addresses.  Caching will be disabled.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.add_linking_libs">
+<code class="sig-name descname">add_linking_libs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">libs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.add_linking_libs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add iterable of linking libraries to the <em>active_code_library</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.build_list">
+<code class="sig-name descname">build_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">list_type</span></em>, <em class="sig-param"><span class="n">items</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.build_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a list from the Numba <em>list_type</em> and its initial <em>items</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.build_set">
+<code class="sig-name descname">build_set</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">set_type</span></em>, <em class="sig-param"><span class="n">items</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.build_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a set from the Numba <em>set_type</em> and its initial <em>items</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.calc_array_sizeof">
+<code class="sig-name descname">calc_array_sizeof</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ndim</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.calc_array_sizeof" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the size of an array struct on the CPU target</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.call_internal">
+<code class="sig-name descname">call_internal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">fndesc</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.call_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the function descriptor of an internally compiled function,
+emit a call to that function with the given arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate">
+<code class="sig-name descname">call_internal_no_propagate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">fndesc</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to <cite>.call_internal()</cite> but does not handle or propagate
+the return status automatically.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.call_unresolved">
+<code class="sig-name descname">call_unresolved</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.call_unresolved" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert a function call to an unresolved symbol with the given <em>name</em>.</p>
+<p>Note: this is used for recursive call.</p>
+<p>In the mutual recursion case:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@njit</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+    <span class="o">...</span>  <span class="c1"># calls bar()</span>
+
+<span class="nd">@njit</span>
+<span class="k">def</span> <span class="nf">bar</span><span class="p">():</span>
+    <span class="o">...</span> <span class="c1"># calls foo()</span>
+
+<span class="n">foo</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>When foo() is called, the compilation of bar() is fully completed
+(codegen’ed and loaded) before foo() is. Since MCJIT’s eager compilation
+doesn’t allow loading modules with declare-only functions (which is
+needed for foo() in bar()), the call_unresolved injects a global
+variable that the “linker” can update even after the module is loaded by
+MCJIT. The linker would allocate space for the global variable before
+the bar() module is loaded. When later foo() module is defined, it will
+update bar()’s reference to foo().</p>
+<p>The legacy lazy JIT and the new ORC JIT would allow a declare-only
+function be used in a module as long as it is defined by the time of its
+first use.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.cast">
+<code class="sig-name descname">cast</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">val</span></em>, <em class="sig-param"><span class="n">fromty</span></em>, <em class="sig-param"><span class="n">toty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.cast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cast a value of type <em>fromty</em> to type <em>toty</em>.
+This implements implicit conversions as can happen due to the
+granularity of the Numba type system, or lax Python semantics.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.compile_internal">
+<code class="sig-name descname">compile_internal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">impl</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">locals</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.compile_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like compile_subroutine(), but also call the function with the given
+<em>args</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.compile_subroutine">
+<code class="sig-name descname">compile_subroutine</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">impl</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">locals</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">flags</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">caching</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.compile_subroutine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile the function <em>impl</em> for the given <em>sig</em> (in nopython mode).
+Return an instance of CompileResult.</p>
+<p>If <em>caching</em> evaluates True, the function keeps the compiled function
+for reuse in <em>.cached_internal_func</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.create_module">
+<code class="sig-name descname">create_module</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.create_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a LLVM module</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.declare_env_global">
+<code class="sig-name descname">declare_env_global</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">module</span></em>, <em class="sig-param"><span class="n">envname</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.declare_env_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Declare the Environment pointer as a global of the module.</p>
+<p>The pointer is initialized to NULL.  It must be filled by the runtime
+with the actual address of the Env before the associated function
+can be executed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>module</strong> – The LLVM Module</p></li>
+<li><p><strong>envname</strong> (<em>str</em>) – The name of the global variable.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.generic_compare">
+<code class="sig-name descname">generic_compare</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">key</span></em>, <em class="sig-param"><span class="n">argtypes</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.generic_compare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare the given LLVM values of the given Numba types using
+the comparison <em>key</em> (e.g. ‘==’).  The values are first cast to
+a common safe conversion type.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_abi_alignment">
+<code class="sig-name descname">get_abi_alignment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_abi_alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the ABI alignment of LLVM type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_abi_sizeof">
+<code class="sig-name descname">get_abi_sizeof</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_abi_sizeof" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the ABI size of LLVM type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_argument_value">
+<code class="sig-name descname">get_argument_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_argument_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Argument representation to local value representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_c_value">
+<code class="sig-name descname">get_c_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">dllimport</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_c_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a global value through its C-accessible <em>name</em>, with the given
+LLVM type.
+If <em>dllimport</em> is true, the symbol will be marked as imported
+from a DLL (necessary for AOT compilation under Windows).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_constant">
+<code class="sig-name descname">get_constant</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as get_constant_generic(), but without specifying <em>builder</em>.
+Works only for simple types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_constant_generic">
+<code class="sig-name descname">get_constant_generic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_constant_generic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a LLVM constant representing value <em>val</em> of Numba type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_data_type">
+<code class="sig-name descname">get_data_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_data_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a LLVM data representation of the Numba type <em>ty</em> that is safe
+for storage.  Record data are stored as byte array.</p>
+<p>The return value is a llvmlite.ir.Type object, or None if the type
+is an opaque pointer (???).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_env_body">
+<code class="sig-name descname">get_env_body</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">envptr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_env_body" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the given <em>envptr</em> (a pointer to a _dynfunc.Environment object),
+get a EnvBody allowing structured access to environment fields.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_env_name">
+<code class="sig-name descname">get_env_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fndesc</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_env_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the environment name given a FunctionDescriptor.</p>
+<p>Use this instead of the <code class="docutils literal notranslate"><span class="pre">fndesc.env_name</span></code> so that the target-context
+can provide necessary mangling of the symbol to meet ABI requirements.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_executable">
+<code class="sig-name descname">get_executable</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">library</span></em>, <em class="sig-param"><span class="n">fndesc</span></em>, <em class="sig-param"><span class="n">env</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_executable" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><em>(cfunc, fnptr)</em></p></li>
+<li><p><em>- cfunc</em> – callable function (Can be None)</p></li>
+<li><p><em>- fnptr</em> – callable function address</p></li>
+<li><p><em>- env</em> – an execution environment (from _dynfunc)</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_function">
+<code class="sig-name descname">get_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fn</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">_firstcall</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the implementation of function <em>fn</em> for signature <em>sig</em>.
+The return value is a callable with the signature (builder, args).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_generator_desc">
+<code class="sig-name descname">get_generator_desc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">genty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_generator_desc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_generator_impl">
+<code class="sig-name descname">get_generator_impl</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">genty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_generator_impl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_generator_state">
+<code class="sig-name descname">get_generator_state</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">genptr</span></em>, <em class="sig-param"><span class="n">return_type</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_generator_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the given <em>genptr</em> (a pointer to a _dynfunc.Generator object),
+get a pointer to its state area.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_getattr">
+<code class="sig-name descname">get_getattr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_getattr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the getattr() implementation for the given type and attribute name.
+The return value is a callable with the signature
+(context, builder, typ, val, attr).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_helper_class">
+<code class="sig-name descname">get_helper_class</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">kind</span><span class="o">=</span><span class="default_value">'value'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_helper_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a helper class for the given <em>typ</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment">
+<code class="sig-name descname">get_preferred_array_alignment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get preferred array alignment for Numba type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_return_value">
+<code class="sig-name descname">get_return_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_return_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Local value representation to return type representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_returned_value">
+<code class="sig-name descname">get_returned_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_returned_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value representation to local value representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_setattr">
+<code class="sig-name descname">get_setattr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">attr</span></em>, <em class="sig-param"><span class="n">sig</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_setattr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the setattr() implementation for the given attribute name
+and signature.
+The return value is a callable with the signature (builder, args).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_struct_type">
+<code class="sig-name descname">get_struct_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">struct</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_struct_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the LLVM struct type for the given Structure class <em>struct</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_value_as_argument">
+<code class="sig-name descname">get_value_as_argument</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_value_as_argument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare local value representation as argument type representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.init">
+<code class="sig-name descname">init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.init" title="Permalink to this definition">¶</a></dt>
+<dd><p>For subclasses to add initializer</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.insert_const_bytes">
+<code class="sig-name descname">insert_const_bytes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">bytes</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.insert_const_bytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert constant <em>byte</em> (a <cite>bytes</cite> object) into module <em>mod</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.insert_const_string">
+<code class="sig-name descname">insert_const_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">string</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.insert_const_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert constant <em>string</em> (a str object) into module <em>mod</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.insert_unique_const">
+<code class="sig-name descname">insert_unique_const</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.insert_unique_const" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert a unique internal constant named <em>name</em>, with LLVM value
+<em>val</em>, into module <em>mod</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.install_registry">
+<code class="sig-name descname">install_registry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">registry</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.install_registry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Install a <em>registry</em> (a imputils.Registry instance) of function
+and attribute implementations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.is_true">
+<code class="sig-name descname">is_true</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.is_true" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the truth value of a value of the given Numba type.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.load_additional_registries">
+<code class="sig-name descname">load_additional_registries</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.load_additional_registries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load target-specific registries.  Can be overridden by subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_complex">
+<code class="sig-name descname">make_complex</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">value</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a helper object to access the given complex numbers’ members.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_constant_array">
+<code class="sig-name descname">make_constant_array</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">ary</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_constant_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an array structure reifying the given constant array.
+A low-level contiguous array constant is created in the LLVM IR.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_data_helper">
+<code class="sig-name descname">make_data_helper</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">ref</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_data_helper" title="Permalink to this definition">¶</a></dt>
+<dd><p>As make_helper(), but considers the value as stored in memory,
+rather than a live value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_helper">
+<code class="sig-name descname">make_helper</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">value</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_helper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a helper object to access the <em>typ</em>’s members,
+for the given value or reference.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_tuple">
+<code class="sig-name descname">make_tuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">values</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_tuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a tuple of the given <em>typ</em> containing the <em>values</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.mangler">
+<code class="sig-name descname">mangler</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">types</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.mangler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform name mangling.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.pack_value">
+<code class="sig-name descname">pack_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">value</span></em>, <em class="sig-param"><span class="n">ptr</span></em>, <em class="sig-param"><span class="n">align</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.pack_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pack value into the array storage at <em>ptr</em>.
+If <em>align</em> is given, it is the guaranteed alignment for <em>ptr</em>
+(by default, the standard ABI alignment).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.pair_first">
+<code class="sig-name descname">pair_first</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">val</span></em>, <em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.pair_first" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the first element of a heterogeneous pair.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.pair_second">
+<code class="sig-name descname">pair_second</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">val</span></em>, <em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.pair_second" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the second element of a heterogeneous pair.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.populate_array">
+<code class="sig-name descname">populate_array</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">arr</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.populate_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Populate array structure.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.post_lowering">
+<code class="sig-name descname">post_lowering</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">library</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.post_lowering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run target specific post-lowering transformation here.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.push_code_library">
+<code class="sig-name descname">push_code_library</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lib</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.push_code_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Push the active code library for the context</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.refresh">
+<code class="sig-name descname">refresh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refresh context with new declarations from known registries.
+Useful for third-party extensions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.remove_user_function">
+<code class="sig-name descname">remove_user_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.remove_user_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user function <em>func</em>.
+KeyError is raised if the function isn’t known to us.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.sentry_record_alignment">
+<code class="sig-name descname">sentry_record_alignment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rectyp</span></em>, <em class="sig-param"><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.sentry_record_alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assumes offset starts from a properly aligned location</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.unpack_value">
+<code class="sig-name descname">unpack_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">ptr</span></em>, <em class="sig-param"><span class="n">align</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.unpack_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unpack value from the array storage at <em>ptr</em>.
+If <em>align</em> is given, it is the guaranteed alignment for <em>ptr</em>
+(by default, the standard ABI alignment).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="rbc.irtools.JITRemoteTypingContext">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">JITRemoteTypingContext</code><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.can_convert">
+<code class="sig-name descname">can_convert</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fromty</span></em>, <em class="sig-param"><span class="n">toty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.can_convert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether conversion is possible from <em>fromty</em> to <em>toty</em>.
+If successful, return a numba.typeconv.Conversion instance;
+otherwise None is returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.explain_function_type">
+<code class="sig-name descname">explain_function_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.explain_function_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a string description of the type of a function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.init">
+<code class="sig-name descname">init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the typing context.  Can be overridden by subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.insert_user_function">
+<code class="sig-name descname">insert_user_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fn</span></em>, <em class="sig-param"><span class="n">ft</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.insert_user_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert a user function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fn</strong> (<em>-</em>) – object used as callee</p></li>
+<li><p><strong>ft</strong> (<em>-</em>) – function template</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.install_possible_conversions">
+<code class="sig-name descname">install_possible_conversions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actualargs</span></em>, <em class="sig-param"><span class="n">formalargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.install_possible_conversions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Install possible conversions from the actual argument types to
+the formal argument types in the C++ type manager.
+Return True if all arguments can be converted.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.install_registry">
+<code class="sig-name descname">install_registry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">registry</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.install_registry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Install a <em>registry</em> (a templates.Registry instance) of function,
+attribute and global declarations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.load_additional_registries">
+<code class="sig-name descname">load_additional_registries</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.load_additional_registries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load target-specific registries.  Can be overridden by subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.refresh">
+<code class="sig-name descname">refresh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refresh context with new declarations from known registries.
+Useful for third-party extensions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_argument_type">
+<code class="sig-name descname">resolve_argument_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_argument_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the numba type of a Python value that is being used
+as a function argument.  Integer types will all be considered
+int64, regardless of size.</p>
+<p>ValueError is raised for unsupported types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_function_type">
+<code class="sig-name descname">resolve_function_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em>, <em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">kws</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_function_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resolve function type <em>func</em> for argument types <em>args</em> and <em>kws</em>.
+A signature is returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_getattr">
+<code class="sig-name descname">resolve_getattr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_getattr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resolve getting the attribute <em>attr</em> (a string) on the Numba type.
+The attribute’s type is returned, or None if resolution failed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_module_constants">
+<code class="sig-name descname">resolve_module_constants</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_module_constants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resolve module-level global constants.
+Return None or the attribute type</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_overload">
+<code class="sig-name descname">resolve_overload</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">key</span></em>, <em class="sig-param"><span class="n">cases</span></em>, <em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">kws</span></em>, <em class="sig-param"><span class="n">allow_ambiguous</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">unsafe_casting</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">exact_match_required</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_overload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given actual <em>args</em> and <em>kws</em>, find the best matching
+signature in <em>cases</em>, or None if none matches.
+<em>key</em> is used for error reporting purposes.
+If <em>allow_ambiguous</em> is False, a tie in the best matches
+will raise an error.
+If <em>unsafe_casting</em> is False, unsafe casting is forbidden.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_setattr">
+<code class="sig-name descname">resolve_setattr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">target</span></em>, <em class="sig-param"><span class="n">attr</span></em>, <em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_setattr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resolve setting the attribute <em>attr</em> (a string) on the <em>target</em> type
+to the given <em>value</em> type.
+A function signature is returned, or None if resolution failed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_value_type">
+<code class="sig-name descname">resolve_value_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_value_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the numba type of a Python value that is being used
+as a runtime constant.
+ValueError is raised for unsupported types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.resolve_value_type_prefer_literal">
+<code class="sig-name descname">resolve_value_type_prefer_literal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.resolve_value_type_prefer_literal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resolve value type and prefer Literal types whenever possible.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTypingContext.unify_pairs">
+<code class="sig-name descname">unify_pairs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">first</span></em>, <em class="sig-param"><span class="n">second</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTypingContext.unify_pairs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to unify the two given types.  A third type is returned,
+or None in case of failure.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.irtools.compile_IR">
+<code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">compile_IR</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ir</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.compile_IR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return execution engine with IR compiled in.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ir</strong> (<em>str</em>) – Specify LLVM IR code as a string.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Execution engine.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>engine</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>To get the address of the compiled functions, use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">addr</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_function_address</span><span class="p">(</span><span class="s2">&quot;&lt;function name&gt;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.irtools.compile_instance">
+<code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">compile_instance</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">target</span><span class="p">:</span> <span class="n"><a class="reference internal" href="rbc.targetinfo.TargetInfo.html#rbc.targetinfo.TargetInfo" title="rbc.targetinfo.TargetInfo">rbc.targetinfo.TargetInfo</a></span></em>, <em class="sig-param"><span class="n">typing_context</span></em>, <em class="sig-param"><span class="n">target_context</span></em>, <em class="sig-param"><span class="n">pipeline_class</span></em>, <em class="sig-param"><span class="n">main_library</span></em>, <em class="sig-param"><span class="n">debug</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.compile_instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile a function with given signature. Return function name when
+succesful.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.irtools.compile_to_LLVM">
+<code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">compile_to_LLVM</code><span class="sig-paren">(</span><em class="sig-param">functions_and_signatures</em>, <em class="sig-param">target_info: rbc.targetinfo.TargetInfo</em>, <em class="sig-param">pipeline_class=&lt;class 'numba.core.compiler.Compiler'&gt;</em>, <em class="sig-param">user_defined_llvm_ir=None</em>, <em class="sig-param">debug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.compile_to_LLVM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile functions with given signatures to target specific LLVM IR.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>functions_and_signatures</strong> (<em>list</em>) – Specify a list of Python function and its signatures pairs.</p></li>
+<li><p><strong>target</strong> (<a class="reference internal" href="rbc.targetinfo.TargetInfo.html#rbc.targetinfo.TargetInfo" title="rbc.targetinfo.TargetInfo"><em>TargetInfo</em></a>) – Specify target device information.</p></li>
+<li><p><strong>user_defined_llvm_ir</strong> (<em>{None</em><em>, </em><em>str</em><em>, </em><em>ModuleRef}</em>) – Specify user-defined LLVM IR module that is linked in to the
+returned module.</p></li>
+<li><p><strong>debug</strong> (<em>bool</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>module</strong> – LLVM module instance. To get the IR string, use <cite>str(module)</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>llvmlite.binding.ModuleRef</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.irtools.make_wrapper">
+<code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">make_wrapper</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fname</span></em>, <em class="sig-param"><span class="n">atypes</span></em>, <em class="sig-param"><span class="n">rtype</span></em>, <em class="sig-param"><span class="n">cres</span></em>, <em class="sig-param"><span class="n">target</span><span class="p">:</span> <span class="n"><a class="reference internal" href="rbc.targetinfo.TargetInfo.html#rbc.targetinfo.TargetInfo" title="rbc.targetinfo.TargetInfo">rbc.targetinfo.TargetInfo</a></span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.make_wrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make wrapper function to numba compile result.</p>
+<p>The compilation result contains a function with prototype:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">status</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">function</span> <span class="n">name</span><span class="o">&gt;</span><span class="p">(</span><span class="o">&lt;</span><span class="n">rtype</span><span class="o">&gt;**</span> <span class="n">result</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">arguments</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The make_wrapper adds a wrapper function to compilation result
+library with the following prototype:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">rtype</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">fname</span><span class="o">&gt;</span><span class="p">(</span><span class="o">&lt;</span><span class="n">arguments</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or, if &lt;rtype&gt;.return_as_first_argument == True, then</p>
+<blockquote>
+<div><p>void &lt;fname&gt;(&lt;rtype&gt;* &lt;arguments&gt;)</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fname</strong> (<em>str</em>) – Function name.</p></li>
+<li><p><strong>atypes</strong> (<em>tuple</em>) – A tuple of argument Numba types.</p></li>
+<li><p><strong>rtype</strong> (<em>numba.Type</em>) – The return Numba type</p></li>
+<li><p><strong>cres</strong> (<em>CompileResult</em>) – Numba compilation result.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – When True, insert printf statements for debugging errors. For
+CUDA target this feature is disabled.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.html#rbc.irtools.JITRemoteCodeLibrary" title="rbc.irtools.JITRemoteCodeLibrary"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary</span></code></a>(codegen, name)</p></td>
+<td><p>JITRemoteCodeLibrary was introduce to prevent numba from calling functions that checks if the module is final.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodegen.html#rbc.irtools.JITRemoteCodegen" title="rbc.irtools.JITRemoteCodegen"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodegen</span></code></a>(module_name)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.html#rbc.irtools.JITRemoteTargetContext" title="rbc.irtools.JITRemoteTargetContext"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext</span></code></a>(typing_context)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTypingContext.html#rbc.irtools.JITRemoteTypingContext" title="rbc.irtools.JITRemoteTypingContext"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTypingContext</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.IS_CPU.html#rbc.irtools.IS_CPU" title="rbc.irtools.IS_CPU"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IS_CPU</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.IS_GPU.html#rbc.irtools.IS_GPU" title="rbc.irtools.IS_GPU"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IS_GPU</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.compile_IR.html#rbc.irtools.compile_IR" title="rbc.irtools.compile_IR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile_IR</span></code></a>(ir)</p></td>
+<td><p>Return execution engine with IR compiled in.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.compile_instance.html#rbc.irtools.compile_instance" title="rbc.irtools.compile_instance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile_instance</span></code></a>(func, sig, target, …[, debug])</p></td>
+<td><p>Compile a function with given signature.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.compile_to_LLVM.html#rbc.irtools.compile_to_LLVM" title="rbc.irtools.compile_to_LLVM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compile_to_LLVM</span></code></a>(functions_and_signatures, …)</p></td>
+<td><p>Compile functions with given signatures to target specific LLVM IR.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.get_called_functions.html#rbc.irtools.get_called_functions" title="rbc.irtools.get_called_functions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_called_functions</span></code></a>(library[, funcname])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.is_cpu_impl.html#rbc.irtools.is_cpu_impl" title="rbc.irtools.is_cpu_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_cpu_impl</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.is_gpu_impl.html#rbc.irtools.is_gpu_impl" title="rbc.irtools.is_gpu_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gpu_impl</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.make_wrapper.html#rbc.irtools.make_wrapper" title="rbc.irtools.make_wrapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_wrapper</span></code></a>(fname, atypes, rtype, cres, target)</p></td>
+<td><p>Make wrapper function to numba compile result.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.replace_numba_internals_hack.html#rbc.irtools.replace_numba_internals_hack" title="rbc.irtools.replace_numba_internals_hack"><code class="xref py py-obj docutils literal notranslate"><span class="pre">replace_numba_internals_hack</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

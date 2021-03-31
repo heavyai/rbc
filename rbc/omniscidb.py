@@ -1,3 +1,6 @@
+"""OmniSciDB client config functions
+"""
+
 import ast
 import inspect
 import os

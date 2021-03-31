@@ -1,0 +1,357 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rbc.utils &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/rbc/rbc.utils.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="check_returns_none" href="rbc.utils.check_returns_none.html" />
+    <link rel="prev" title="API Reference" href="api.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="api.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">rbc.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.check_returns_none.html">check_returns_none</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.get_datamodel.html">get_datamodel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.get_function_source.html">get_function_source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.get_local_ip.html">get_local_ip</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.get_version.html">get_version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.is_localhost.html">is_localhost</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.parse_version.html">parse_version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.runcommand.html">runcommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.triple_matches.html">triple_matches</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbc.utils.triple_split.html">triple_split</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="api.html">API Reference</a> &raquo;</li>
+        
+      <li>rbc.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="rbc-utils">
+<h1>rbc.utils<a class="headerlink" href="#rbc-utils" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">Description</p>
+<span class="target" id="module-rbc.utils"></span><dl class="py function">
+<dt id="rbc.utils.check_returns_none">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">check_returns_none</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.check_returns_none" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if function return value is always None.</p>
+<p>Warning: the result of the check may be false-negative. For instance:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">a</span>
+
+<span class="n">check_returns_none</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span> <span class="o">==</span> <span class="n">false</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.get_datamodel">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">get_datamodel</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.get_datamodel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the data model of a host system.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.get_function_source">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">get_function_source</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.get_function_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get function source code with intent fixes.</p>
+<p>Warning: not all function objects have source code available.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.get_local_ip">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">get_local_ip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.get_local_ip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return localhost IP.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.get_version">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">get_version</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">package</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.get_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a package version as a 3-tuple of integers.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.is_localhost">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">is_localhost</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ip</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.is_localhost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if ip is the IP of a localhost.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.parse_version">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">parse_version</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">version</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.parse_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return parsed version tuple from version string.</p>
+<p>For instance:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">parse_version</span><span class="p">(</span><span class="s1">&#39;1.2.3dev4&#39;</span><span class="p">)</span>
+<span class="go">(1, 2, 3, &#39;dev4&#39;)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.runcommand">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">runcommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">cmd</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.runcommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a command with arguments and return stdout messages.</p>
+<p>The results are cached.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.triple_matches">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">triple_matches</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">triple</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.triple_matches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if target triples match.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.utils.triple_split">
+<code class="sig-prename descclassname">rbc.utils.</code><code class="sig-name descname">triple_split</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">triple</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.utils.triple_split" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split target triple into parts.</p>
+</dd></dl>
+
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.utils.check_returns_none.html#rbc.utils.check_returns_none" title="rbc.utils.check_returns_none"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_returns_none</span></code></a>(func)</p></td>
+<td><p>Return True if function return value is always None.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.utils.get_datamodel.html#rbc.utils.get_datamodel" title="rbc.utils.get_datamodel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_datamodel</span></code></a>()</p></td>
+<td><p>Return the data model of a host system.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.utils.get_function_source.html#rbc.utils.get_function_source" title="rbc.utils.get_function_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_function_source</span></code></a>(func)</p></td>
+<td><p>Get function source code with intent fixes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.utils.get_local_ip.html#rbc.utils.get_local_ip" title="rbc.utils.get_local_ip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_local_ip</span></code></a>()</p></td>
+<td><p>Return localhost IP.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.utils.get_version.html#rbc.utils.get_version" title="rbc.utils.get_version"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_version</span></code></a>(package)</p></td>
+<td><p>Return a package version as a 3-tuple of integers.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.utils.is_localhost.html#rbc.utils.is_localhost" title="rbc.utils.is_localhost"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_localhost</span></code></a>(ip)</p></td>
+<td><p>Check if ip is the IP of a localhost.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.utils.parse_version.html#rbc.utils.parse_version" title="rbc.utils.parse_version"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_version</span></code></a>(version)</p></td>
+<td><p>Return parsed version tuple from version string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.utils.runcommand.html#rbc.utils.runcommand" title="rbc.utils.runcommand"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runcommand</span></code></a>(*cmd)</p></td>
+<td><p>Run a command with arguments and return stdout messages.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.utils.triple_matches.html#rbc.utils.triple_matches" title="rbc.utils.triple_matches"><code class="xref py py-obj docutils literal notranslate"><span class="pre">triple_matches</span></code></a>(triple, other)</p></td>
+<td><p>Check if target triples match.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.utils.triple_split.html#rbc.utils.triple_split" title="rbc.utils.triple_split"><code class="xref py py-obj docutils literal notranslate"><span class="pre">triple_split</span></code></a>(triple)</p></td>
+<td><p>Split target triple into parts.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="rbc.utils.check_returns_none.html" class="btn btn-neutral float-right" title="check_returns_none" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="api.html" class="btn btn-neutral float-left" title="API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

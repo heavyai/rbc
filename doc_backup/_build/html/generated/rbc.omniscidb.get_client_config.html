@@ -1,0 +1,259 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>get_client_config &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/generated/rbc.omniscidb.get_client_config.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>get_client_config</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="get-client-config">
+<h1>get_client_config<a class="headerlink" href="#get-client-config" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="rbc.omniscidb.get_client_config">
+<code class="sig-prename descclassname">rbc.omniscidb.</code><code class="sig-name descname">get_client_config</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.omniscidb.get_client_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve the omnisci client configuration parameters from a client
+home directory.</p>
+<p>Note that here the client configurations parameters are those that
+are used to configure the client software such as rbc or pymapd.
+This is different from omnisci instance configuration described in
+<a class="reference external" href="https://docs.omnisci.com/latest/4_configuration.html">https://docs.omnisci.com/latest/4_configuration.html</a> that is used
+for configuring the omniscidb server software.</p>
+<p>In Linux clients, the omnisci client configuration is read from:
+<code class="code docutils literal notranslate"><span class="pre">$HOME/.config/omnisci/client.conf</span></code></p>
+<p>In Windows clients, the configuration is read from
+<code class="code docutils literal notranslate"><span class="pre">%UserProfile/.config/omnisci/client.conf</span></code> or
+<code class="code docutils literal notranslate"><span class="pre">%AllUsersProfile/.config/omnisci/client.conf</span></code></p>
+<p>When <code class="code docutils literal notranslate"><span class="pre">OMNISCI_CLIENT_CONF</span></code> environment variable is defined then
+the configuration is read from the file specified in this
+variable.</p>
+<p>The configuration file must use configuration language similar to
+one used in MS Windows INI files. For omnisci client
+configuration, the file may contain, for instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">user</span><span class="p">]</span>
+<span class="n">name</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">OmniSciDB</span> <span class="n">user</span> <span class="n">name</span><span class="p">,</span> <span class="n">defaults</span> <span class="n">to</span> <span class="n">admin</span><span class="o">&gt;</span>
+<span class="n">password</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">OmniSciDB</span> <span class="n">user</span> <span class="n">password</span><span class="o">&gt;</span>
+
+<span class="p">[</span><span class="n">server</span><span class="p">]</span>
+<span class="n">host</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">OmniSciDB</span> <span class="n">server</span> <span class="n">host</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">IP</span><span class="p">,</span> <span class="n">defaults</span> <span class="n">to</span> <span class="n">localhost</span><span class="o">&gt;</span>
+<span class="n">port</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">OmniSciDB</span> <span class="n">server</span> <span class="n">port</span><span class="p">,</span> <span class="n">defaults</span> <span class="n">to</span> <span class="mi">6274</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>dict</em>) – Specify configuration parameters that override the parameters
+from configuration file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>config</strong> – A dictionary of <cite>user</cite>, <cite>password</cite>, <cite>host</cite>, <cite>port</cite>, <cite>dbname</cite> and
+other RemoteJIT options.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -6,22 +6,18 @@
 .. sectionauthor:: Pearu Peterson <pearu.peterson at quansight.com>
 
 
-Remote Backend Compiler
-=======================
+Welcome to RBC's documentation!
+===============================
 
 The RBC project provides a JIT compiler with remote backend.
-
-
-rbc
----
 
 A Python package implementing a remote backend compiler using numba
 and llvmlite tools.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Contents:
 
-   rbc/index.rst
-   rbc/api.rst
-   backends/index.rst
-   releases/index.rst
+   design
+   api
+   releases

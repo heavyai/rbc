@@ -1,0 +1,1028 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>JITRemoteTargetContext &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/generated/rbc.irtools.JITRemoteTargetContext.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>JITRemoteTargetContext</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="jitremotetargetcontext">
+<h1>JITRemoteTargetContext<a class="headerlink" href="#jitremotetargetcontext" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="rbc.irtools.JITRemoteTargetContext">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">JITRemoteTargetContext</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typing_context</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext" title="Permalink to this definition">¶</a></dt>
+<dd><p class="rubric">Attributes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.active_code_library.html#rbc.irtools.JITRemoteTargetContext.active_code_library" title="rbc.irtools.JITRemoteTargetContext.active_code_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.active_code_library</span></code></a></p></td>
+<td><p>Get the active code library</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.allow_dynamic_globals.html#rbc.irtools.JITRemoteTargetContext.allow_dynamic_globals" title="rbc.irtools.JITRemoteTargetContext.allow_dynamic_globals"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.allow_dynamic_globals</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.aot_mode.html#rbc.irtools.JITRemoteTargetContext.aot_mode" title="rbc.irtools.JITRemoteTargetContext.aot_mode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.aot_mode</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.auto_parallel.html#rbc.irtools.JITRemoteTargetContext.auto_parallel" title="rbc.irtools.JITRemoteTargetContext.auto_parallel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.auto_parallel</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.call_conv.html#rbc.irtools.JITRemoteTargetContext.call_conv" title="rbc.irtools.JITRemoteTargetContext.call_conv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.call_conv</span></code></a></p></td>
+<td><p>Decorator that converts a method with a single self argument into a property cached on the instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.enable_boundscheck.html#rbc.irtools.JITRemoteTargetContext.enable_boundscheck" title="rbc.irtools.JITRemoteTargetContext.enable_boundscheck"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.enable_boundscheck</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.enable_debuginfo.html#rbc.irtools.JITRemoteTargetContext.enable_debuginfo" title="rbc.irtools.JITRemoteTargetContext.enable_debuginfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.enable_debuginfo</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.enable_nrt.html#rbc.irtools.JITRemoteTargetContext.enable_nrt" title="rbc.irtools.JITRemoteTargetContext.enable_nrt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.enable_nrt</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.environment.html#rbc.irtools.JITRemoteTargetContext.environment" title="rbc.irtools.JITRemoteTargetContext.environment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.environment</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.error_model.html#rbc.irtools.JITRemoteTargetContext.error_model" title="rbc.irtools.JITRemoteTargetContext.error_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.error_model</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.fastmath.html#rbc.irtools.JITRemoteTargetContext.fastmath" title="rbc.irtools.JITRemoteTargetContext.fastmath"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.fastmath</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.fndesc.html#rbc.irtools.JITRemoteTargetContext.fndesc" title="rbc.irtools.JITRemoteTargetContext.fndesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.fndesc</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.implement_pow_as_math_call.html#rbc.irtools.JITRemoteTargetContext.implement_pow_as_math_call" title="rbc.irtools.JITRemoteTargetContext.implement_pow_as_math_call"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.implement_pow_as_math_call</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.implement_powi_as_math_call.html#rbc.irtools.JITRemoteTargetContext.implement_powi_as_math_call" title="rbc.irtools.JITRemoteTargetContext.implement_powi_as_math_call"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.implement_powi_as_math_call</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.nonconst_module_attrs.html#rbc.irtools.JITRemoteTargetContext.nonconst_module_attrs" title="rbc.irtools.JITRemoteTargetContext.nonconst_module_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.nonconst_module_attrs</span></code></a></p></td>
+<td><p>Decorator that converts a method with a single self argument into a property cached on the instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.nrt.html#rbc.irtools.JITRemoteTargetContext.nrt" title="rbc.irtools.JITRemoteTargetContext.nrt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.nrt</span></code></a></p></td>
+<td><p>Decorator that converts a method with a single self argument into a property cached on the instance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.strict_alignment.html#rbc.irtools.JITRemoteTargetContext.strict_alignment" title="rbc.irtools.JITRemoteTargetContext.strict_alignment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.strict_alignment</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.target_data.html#rbc.irtools.JITRemoteTargetContext.target_data" title="rbc.irtools.JITRemoteTargetContext.target_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.target_data</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.__init__.html#rbc.irtools.JITRemoteTargetContext.__init__" title="rbc.irtools.JITRemoteTargetContext.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.__init__</span></code></a>(typing_context)</p></td>
+<td><p>Initialize self.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.add_dynamic_addr.html#rbc.irtools.JITRemoteTargetContext.add_dynamic_addr" title="rbc.irtools.JITRemoteTargetContext.add_dynamic_addr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.add_dynamic_addr</span></code></a>(…)</p></td>
+<td><p>Returns dynamic address as a void pointer <cite>i8*</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.add_linking_libs.html#rbc.irtools.JITRemoteTargetContext.add_linking_libs" title="rbc.irtools.JITRemoteTargetContext.add_linking_libs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.add_linking_libs</span></code></a>(libs)</p></td>
+<td><p>Add iterable of linking libraries to the <em>active_code_library</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.add_user_function.html#rbc.irtools.JITRemoteTargetContext.add_user_function" title="rbc.irtools.JITRemoteTargetContext.add_user_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.add_user_function</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.build_list.html#rbc.irtools.JITRemoteTargetContext.build_list" title="rbc.irtools.JITRemoteTargetContext.build_list"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.build_list</span></code></a>(builder, …)</p></td>
+<td><p>Build a list from the Numba <em>list_type</em> and its initial <em>items</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.build_map.html#rbc.irtools.JITRemoteTargetContext.build_map" title="rbc.irtools.JITRemoteTargetContext.build_map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.build_map</span></code></a>(builder, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.build_set.html#rbc.irtools.JITRemoteTargetContext.build_set" title="rbc.irtools.JITRemoteTargetContext.build_set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.build_set</span></code></a>(builder, …)</p></td>
+<td><p>Build a set from the Numba <em>set_type</em> and its initial <em>items</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.calc_array_sizeof.html#rbc.irtools.JITRemoteTargetContext.calc_array_sizeof" title="rbc.irtools.JITRemoteTargetContext.calc_array_sizeof"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.calc_array_sizeof</span></code></a>(ndim)</p></td>
+<td><p>Calculate the size of an array struct on the CPU target</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.call_external_function.html#rbc.irtools.JITRemoteTargetContext.call_external_function" title="rbc.irtools.JITRemoteTargetContext.call_external_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.call_external_function</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.call_function_pointer.html#rbc.irtools.JITRemoteTargetContext.call_function_pointer" title="rbc.irtools.JITRemoteTargetContext.call_function_pointer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.call_function_pointer</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.call_internal.html#rbc.irtools.JITRemoteTargetContext.call_internal" title="rbc.irtools.JITRemoteTargetContext.call_internal"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.call_internal</span></code></a>(…)</p></td>
+<td><p>Given the function descriptor of an internally compiled function, emit a call to that function with the given arguments.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate.html#rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate" title="rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.call_internal_no_propagate</span></code></a>(…)</p></td>
+<td><p>Similar to <cite>.call_internal()</cite> but does not handle or propagate the return status automatically.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.call_unresolved.html#rbc.irtools.JITRemoteTargetContext.call_unresolved" title="rbc.irtools.JITRemoteTargetContext.call_unresolved"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.call_unresolved</span></code></a>(…)</p></td>
+<td><p>Insert a function call to an unresolved symbol with the given <em>name</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.cast.html#rbc.irtools.JITRemoteTargetContext.cast" title="rbc.irtools.JITRemoteTargetContext.cast"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.cast</span></code></a>(builder, val, …)</p></td>
+<td><p>Cast a value of type <em>fromty</em> to type <em>toty</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.codegen.html#rbc.irtools.JITRemoteTargetContext.codegen" title="rbc.irtools.JITRemoteTargetContext.codegen"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.codegen</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.compile_internal.html#rbc.irtools.JITRemoteTargetContext.compile_internal" title="rbc.irtools.JITRemoteTargetContext.compile_internal"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.compile_internal</span></code></a>(…)</p></td>
+<td><p>Like compile_subroutine(), but also call the function with the given <em>args</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.compile_subroutine.html#rbc.irtools.JITRemoteTargetContext.compile_subroutine" title="rbc.irtools.JITRemoteTargetContext.compile_subroutine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.compile_subroutine</span></code></a>(…)</p></td>
+<td><p>Compile the function <em>impl</em> for the given <em>sig</em> (in nopython mode).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.create_cfunc_wrapper.html#rbc.irtools.JITRemoteTargetContext.create_cfunc_wrapper" title="rbc.irtools.JITRemoteTargetContext.create_cfunc_wrapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.create_cfunc_wrapper</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.create_cpython_wrapper.html#rbc.irtools.JITRemoteTargetContext.create_cpython_wrapper" title="rbc.irtools.JITRemoteTargetContext.create_cpython_wrapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.create_cpython_wrapper</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.create_module.html#rbc.irtools.JITRemoteTargetContext.create_module" title="rbc.irtools.JITRemoteTargetContext.create_module"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.create_module</span></code></a>(name)</p></td>
+<td><p>Create a LLVM module</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.debug_print.html#rbc.irtools.JITRemoteTargetContext.debug_print" title="rbc.irtools.JITRemoteTargetContext.debug_print"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.debug_print</span></code></a>(builder, text)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.declare_env_global.html#rbc.irtools.JITRemoteTargetContext.declare_env_global" title="rbc.irtools.JITRemoteTargetContext.declare_env_global"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.declare_env_global</span></code></a>(…)</p></td>
+<td><p>Declare the Environment pointer as a global of the module.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.declare_external_function.html#rbc.irtools.JITRemoteTargetContext.declare_external_function" title="rbc.irtools.JITRemoteTargetContext.declare_external_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.declare_external_function</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.declare_function.html#rbc.irtools.JITRemoteTargetContext.declare_function" title="rbc.irtools.JITRemoteTargetContext.declare_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.declare_function</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.generic_compare.html#rbc.irtools.JITRemoteTargetContext.generic_compare" title="rbc.irtools.JITRemoteTargetContext.generic_compare"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.generic_compare</span></code></a>(…)</p></td>
+<td><p>Compare the given LLVM values of the given Numba types using the comparison <em>key</em> (e.g.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_abi_alignment.html#rbc.irtools.JITRemoteTargetContext.get_abi_alignment" title="rbc.irtools.JITRemoteTargetContext.get_abi_alignment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_abi_alignment</span></code></a>(ty)</p></td>
+<td><p>Get the ABI alignment of LLVM type <em>ty</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_abi_sizeof.html#rbc.irtools.JITRemoteTargetContext.get_abi_sizeof" title="rbc.irtools.JITRemoteTargetContext.get_abi_sizeof"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_abi_sizeof</span></code></a>(ty)</p></td>
+<td><p>Get the ABI size of LLVM type <em>ty</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_arg_packer.html#rbc.irtools.JITRemoteTargetContext.get_arg_packer" title="rbc.irtools.JITRemoteTargetContext.get_arg_packer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_arg_packer</span></code></a>(fe_args)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_argument_type.html#rbc.irtools.JITRemoteTargetContext.get_argument_type" title="rbc.irtools.JITRemoteTargetContext.get_argument_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_argument_type</span></code></a>(ty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_argument_value.html#rbc.irtools.JITRemoteTargetContext.get_argument_value" title="rbc.irtools.JITRemoteTargetContext.get_argument_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_argument_value</span></code></a>(…)</p></td>
+<td><p>Argument representation to local value representation</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_bound_function.html#rbc.irtools.JITRemoteTargetContext.get_bound_function" title="rbc.irtools.JITRemoteTargetContext.get_bound_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_bound_function</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_c_value.html#rbc.irtools.JITRemoteTargetContext.get_c_value" title="rbc.irtools.JITRemoteTargetContext.get_c_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_c_value</span></code></a>(builder, …)</p></td>
+<td><p>Get a global value through its C-accessible <em>name</em>, with the given LLVM type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_constant.html#rbc.irtools.JITRemoteTargetContext.get_constant" title="rbc.irtools.JITRemoteTargetContext.get_constant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_constant</span></code></a>(ty, val)</p></td>
+<td><p>Same as get_constant_generic(), but without specifying <em>builder</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_constant_generic.html#rbc.irtools.JITRemoteTargetContext.get_constant_generic" title="rbc.irtools.JITRemoteTargetContext.get_constant_generic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_constant_generic</span></code></a>(…)</p></td>
+<td><p>Return a LLVM constant representing value <em>val</em> of Numba type <em>ty</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_constant_null.html#rbc.irtools.JITRemoteTargetContext.get_constant_null" title="rbc.irtools.JITRemoteTargetContext.get_constant_null"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_constant_null</span></code></a>(ty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_constant_undef.html#rbc.irtools.JITRemoteTargetContext.get_constant_undef" title="rbc.irtools.JITRemoteTargetContext.get_constant_undef"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_constant_undef</span></code></a>(ty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_data_as_value.html#rbc.irtools.JITRemoteTargetContext.get_data_as_value" title="rbc.irtools.JITRemoteTargetContext.get_data_as_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_data_as_value</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_data_packer.html#rbc.irtools.JITRemoteTargetContext.get_data_packer" title="rbc.irtools.JITRemoteTargetContext.get_data_packer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_data_packer</span></code></a>(fe_types)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_data_type.html#rbc.irtools.JITRemoteTargetContext.get_data_type" title="rbc.irtools.JITRemoteTargetContext.get_data_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_data_type</span></code></a>(ty)</p></td>
+<td><p>Get a LLVM data representation of the Numba type <em>ty</em> that is safe for storage.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_dummy_type.html#rbc.irtools.JITRemoteTargetContext.get_dummy_type" title="rbc.irtools.JITRemoteTargetContext.get_dummy_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_dummy_type</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_dummy_value.html#rbc.irtools.JITRemoteTargetContext.get_dummy_value" title="rbc.irtools.JITRemoteTargetContext.get_dummy_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_dummy_value</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_env_body.html#rbc.irtools.JITRemoteTargetContext.get_env_body" title="rbc.irtools.JITRemoteTargetContext.get_env_body"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_env_body</span></code></a>(builder, …)</p></td>
+<td><p>From the given <em>envptr</em> (a pointer to a _dynfunc.Environment object), get a EnvBody allowing structured access to environment fields.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_env_manager.html#rbc.irtools.JITRemoteTargetContext.get_env_manager" title="rbc.irtools.JITRemoteTargetContext.get_env_manager"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_env_manager</span></code></a>(builder)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_env_name.html#rbc.irtools.JITRemoteTargetContext.get_env_name" title="rbc.irtools.JITRemoteTargetContext.get_env_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_env_name</span></code></a>(fndesc)</p></td>
+<td><p>Get the environment name given a FunctionDescriptor.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_executable.html#rbc.irtools.JITRemoteTargetContext.get_executable" title="rbc.irtools.JITRemoteTargetContext.get_executable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_executable</span></code></a>(…)</p></td>
+<td><p><dl class="field-list simple">
+<dt class="field-odd">returns</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><em>(cfunc, fnptr)</em></p></li>
+</ul>
+</dd>
+</dl>
+</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_external_function_type.html#rbc.irtools.JITRemoteTargetContext.get_external_function_type" title="rbc.irtools.JITRemoteTargetContext.get_external_function_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_external_function_type</span></code></a>(fndesc)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_function.html#rbc.irtools.JITRemoteTargetContext.get_function" title="rbc.irtools.JITRemoteTargetContext.get_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_function</span></code></a>(fn, sig)</p></td>
+<td><p>Return the implementation of function <em>fn</em> for signature <em>sig</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_function_pointer_type.html#rbc.irtools.JITRemoteTargetContext.get_function_pointer_type" title="rbc.irtools.JITRemoteTargetContext.get_function_pointer_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_function_pointer_type</span></code></a>(typ)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_generator_desc.html#rbc.irtools.JITRemoteTargetContext.get_generator_desc" title="rbc.irtools.JITRemoteTargetContext.get_generator_desc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_generator_desc</span></code></a>(genty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_generator_impl.html#rbc.irtools.JITRemoteTargetContext.get_generator_impl" title="rbc.irtools.JITRemoteTargetContext.get_generator_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_generator_impl</span></code></a>(genty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_generator_state.html#rbc.irtools.JITRemoteTargetContext.get_generator_state" title="rbc.irtools.JITRemoteTargetContext.get_generator_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_generator_state</span></code></a>(…)</p></td>
+<td><p>From the given <em>genptr</em> (a pointer to a _dynfunc.Generator object), get a pointer to its state area.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_getattr.html#rbc.irtools.JITRemoteTargetContext.get_getattr" title="rbc.irtools.JITRemoteTargetContext.get_getattr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_getattr</span></code></a>(typ, attr)</p></td>
+<td><p>Get the getattr() implementation for the given type and attribute name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_helper_class.html#rbc.irtools.JITRemoteTargetContext.get_helper_class" title="rbc.irtools.JITRemoteTargetContext.get_helper_class"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_helper_class</span></code></a>(typ)</p></td>
+<td><p>Get a helper class for the given <em>typ</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment.html#rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment" title="rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_preferred_array_alignment</span></code></a>(ty)</p></td>
+<td><p>Get preferred array alignment for Numba type <em>ty</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_python_api.html#rbc.irtools.JITRemoteTargetContext.get_python_api" title="rbc.irtools.JITRemoteTargetContext.get_python_api"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_python_api</span></code></a>(builder)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_return_type.html#rbc.irtools.JITRemoteTargetContext.get_return_type" title="rbc.irtools.JITRemoteTargetContext.get_return_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_return_type</span></code></a>(ty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_return_value.html#rbc.irtools.JITRemoteTargetContext.get_return_value" title="rbc.irtools.JITRemoteTargetContext.get_return_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_return_value</span></code></a>(…)</p></td>
+<td><p>Local value representation to return type representation</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_returned_value.html#rbc.irtools.JITRemoteTargetContext.get_returned_value" title="rbc.irtools.JITRemoteTargetContext.get_returned_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_returned_value</span></code></a>(…)</p></td>
+<td><p>Return value representation to local value representation</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_setattr.html#rbc.irtools.JITRemoteTargetContext.get_setattr" title="rbc.irtools.JITRemoteTargetContext.get_setattr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_setattr</span></code></a>(attr, sig)</p></td>
+<td><p>Get the setattr() implementation for the given attribute name and signature.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_struct_type.html#rbc.irtools.JITRemoteTargetContext.get_struct_type" title="rbc.irtools.JITRemoteTargetContext.get_struct_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_struct_type</span></code></a>(struct)</p></td>
+<td><p>Get the LLVM struct type for the given Structure class <em>struct</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_value_as_argument.html#rbc.irtools.JITRemoteTargetContext.get_value_as_argument" title="rbc.irtools.JITRemoteTargetContext.get_value_as_argument"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_value_as_argument</span></code></a>(…)</p></td>
+<td><p>Prepare local value representation as argument type representation</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_value_as_data.html#rbc.irtools.JITRemoteTargetContext.get_value_as_data" title="rbc.irtools.JITRemoteTargetContext.get_value_as_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_value_as_data</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.get_value_type.html#rbc.irtools.JITRemoteTargetContext.get_value_type" title="rbc.irtools.JITRemoteTargetContext.get_value_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.get_value_type</span></code></a>(ty)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.init.html#rbc.irtools.JITRemoteTargetContext.init" title="rbc.irtools.JITRemoteTargetContext.init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.init</span></code></a>()</p></td>
+<td><p>For subclasses to add initializer</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.insert_const_bytes.html#rbc.irtools.JITRemoteTargetContext.insert_const_bytes" title="rbc.irtools.JITRemoteTargetContext.insert_const_bytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.insert_const_bytes</span></code></a>(…)</p></td>
+<td><p>Insert constant <em>byte</em> (a <cite>bytes</cite> object) into module <em>mod</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.insert_const_string.html#rbc.irtools.JITRemoteTargetContext.insert_const_string" title="rbc.irtools.JITRemoteTargetContext.insert_const_string"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.insert_const_string</span></code></a>(…)</p></td>
+<td><p>Insert constant <em>string</em> (a str object) into module <em>mod</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.insert_func_defn.html#rbc.irtools.JITRemoteTargetContext.insert_func_defn" title="rbc.irtools.JITRemoteTargetContext.insert_func_defn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.insert_func_defn</span></code></a>(defns)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.insert_generator.html#rbc.irtools.JITRemoteTargetContext.insert_generator" title="rbc.irtools.JITRemoteTargetContext.insert_generator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.insert_generator</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.insert_unique_const.html#rbc.irtools.JITRemoteTargetContext.insert_unique_const" title="rbc.irtools.JITRemoteTargetContext.insert_unique_const"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.insert_unique_const</span></code></a>(…)</p></td>
+<td><p>Insert a unique internal constant named <em>name</em>, with LLVM value <em>val</em>, into module <em>mod</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.insert_user_function.html#rbc.irtools.JITRemoteTargetContext.insert_user_function" title="rbc.irtools.JITRemoteTargetContext.insert_user_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.insert_user_function</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.install_registry.html#rbc.irtools.JITRemoteTargetContext.install_registry" title="rbc.irtools.JITRemoteTargetContext.install_registry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.install_registry</span></code></a>(registry)</p></td>
+<td><p>Install a <em>registry</em> (a imputils.Registry instance) of function and attribute implementations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.is_true.html#rbc.irtools.JITRemoteTargetContext.is_true" title="rbc.irtools.JITRemoteTargetContext.is_true"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.is_true</span></code></a>(builder, typ, val)</p></td>
+<td><p>Return the truth value of a value of the given Numba type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.load_additional_registries.html#rbc.irtools.JITRemoteTargetContext.load_additional_registries" title="rbc.irtools.JITRemoteTargetContext.load_additional_registries"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.load_additional_registries</span></code></a>()</p></td>
+<td><p>Load target-specific registries.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_array.html#rbc.irtools.JITRemoteTargetContext.make_array" title="rbc.irtools.JITRemoteTargetContext.make_array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_array</span></code></a>(typ)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_complex.html#rbc.irtools.JITRemoteTargetContext.make_complex" title="rbc.irtools.JITRemoteTargetContext.make_complex"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_complex</span></code></a>(builder, typ)</p></td>
+<td><p>Get a helper object to access the given complex numbers’ members.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_constant_array.html#rbc.irtools.JITRemoteTargetContext.make_constant_array" title="rbc.irtools.JITRemoteTargetContext.make_constant_array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_constant_array</span></code></a>(…)</p></td>
+<td><p>Create an array structure reifying the given constant array.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_data_helper.html#rbc.irtools.JITRemoteTargetContext.make_data_helper" title="rbc.irtools.JITRemoteTargetContext.make_data_helper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_data_helper</span></code></a>(…)</p></td>
+<td><p>As make_helper(), but considers the value as stored in memory, rather than a live value.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_helper.html#rbc.irtools.JITRemoteTargetContext.make_helper" title="rbc.irtools.JITRemoteTargetContext.make_helper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_helper</span></code></a>(builder, typ)</p></td>
+<td><p>Get a helper object to access the <em>typ</em>’s members, for the given value or reference.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_optional_none.html#rbc.irtools.JITRemoteTargetContext.make_optional_none" title="rbc.irtools.JITRemoteTargetContext.make_optional_none"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_optional_none</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_optional_value.html#rbc.irtools.JITRemoteTargetContext.make_optional_value" title="rbc.irtools.JITRemoteTargetContext.make_optional_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_optional_value</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.make_tuple.html#rbc.irtools.JITRemoteTargetContext.make_tuple" title="rbc.irtools.JITRemoteTargetContext.make_tuple"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.make_tuple</span></code></a>(builder, …)</p></td>
+<td><p>Create a tuple of the given <em>typ</em> containing the <em>values</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.mangler.html#rbc.irtools.JITRemoteTargetContext.mangler" title="rbc.irtools.JITRemoteTargetContext.mangler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.mangler</span></code></a>(name, types)</p></td>
+<td><p>Perform name mangling.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.pack_value.html#rbc.irtools.JITRemoteTargetContext.pack_value" title="rbc.irtools.JITRemoteTargetContext.pack_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.pack_value</span></code></a>(builder, …)</p></td>
+<td><p>Pack value into the array storage at <em>ptr</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.pair_first.html#rbc.irtools.JITRemoteTargetContext.pair_first" title="rbc.irtools.JITRemoteTargetContext.pair_first"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.pair_first</span></code></a>(builder, …)</p></td>
+<td><p>Extract the first element of a heterogeneous pair.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.pair_second.html#rbc.irtools.JITRemoteTargetContext.pair_second" title="rbc.irtools.JITRemoteTargetContext.pair_second"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.pair_second</span></code></a>(builder, …)</p></td>
+<td><p>Extract the second element of a heterogeneous pair.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.populate_array.html#rbc.irtools.JITRemoteTargetContext.populate_array" title="rbc.irtools.JITRemoteTargetContext.populate_array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.populate_array</span></code></a>(arr, …)</p></td>
+<td><p>Populate array structure.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.post_lowering.html#rbc.irtools.JITRemoteTargetContext.post_lowering" title="rbc.irtools.JITRemoteTargetContext.post_lowering"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.post_lowering</span></code></a>(mod, …)</p></td>
+<td><p>Run target specific post-lowering transformation here.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.print_string.html#rbc.irtools.JITRemoteTargetContext.print_string" title="rbc.irtools.JITRemoteTargetContext.print_string"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.print_string</span></code></a>(builder, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.printf.html#rbc.irtools.JITRemoteTargetContext.printf" title="rbc.irtools.JITRemoteTargetContext.printf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.printf</span></code></a>(builder, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.push_code_library.html#rbc.irtools.JITRemoteTargetContext.push_code_library" title="rbc.irtools.JITRemoteTargetContext.push_code_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.push_code_library</span></code></a>(lib)</p></td>
+<td><p>Push the active code library for the context</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.refresh.html#rbc.irtools.JITRemoteTargetContext.refresh" title="rbc.irtools.JITRemoteTargetContext.refresh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.refresh</span></code></a>()</p></td>
+<td><p>Refresh context with new declarations from known registries.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.remove_user_function.html#rbc.irtools.JITRemoteTargetContext.remove_user_function" title="rbc.irtools.JITRemoteTargetContext.remove_user_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.remove_user_function</span></code></a>(func)</p></td>
+<td><p>Remove user function <em>func</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.sentry_record_alignment.html#rbc.irtools.JITRemoteTargetContext.sentry_record_alignment" title="rbc.irtools.JITRemoteTargetContext.sentry_record_alignment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.sentry_record_alignment</span></code></a>(…)</p></td>
+<td><p>Assumes offset starts from a properly aligned location</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.subtarget.html#rbc.irtools.JITRemoteTargetContext.subtarget" title="rbc.irtools.JITRemoteTargetContext.subtarget"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.subtarget</span></code></a>(**kws)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.unpack_value.html#rbc.irtools.JITRemoteTargetContext.unpack_value" title="rbc.irtools.JITRemoteTargetContext.unpack_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.unpack_value</span></code></a>(builder, …)</p></td>
+<td><p>Unpack value from the array storage at <em>ptr</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteTargetContext.with_aot_codegen.html#rbc.irtools.JITRemoteTargetContext.with_aot_codegen" title="rbc.irtools.JITRemoteTargetContext.with_aot_codegen"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteTargetContext.with_aot_codegen</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.active_code_library">
+<em class="property">property </em><code class="sig-name descname">active_code_library</code><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.active_code_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the active code library</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.add_dynamic_addr">
+<code class="sig-name descname">add_dynamic_addr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">intaddr</span></em>, <em class="sig-param"><span class="n">info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.add_dynamic_addr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns dynamic address as a void pointer <cite>i8*</cite>.</p>
+<p>Internally, a global variable is added to inform the lowerer about
+the usage of dynamic addresses.  Caching will be disabled.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.add_linking_libs">
+<code class="sig-name descname">add_linking_libs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">libs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.add_linking_libs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add iterable of linking libraries to the <em>active_code_library</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.build_list">
+<code class="sig-name descname">build_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">list_type</span></em>, <em class="sig-param"><span class="n">items</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.build_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a list from the Numba <em>list_type</em> and its initial <em>items</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.build_set">
+<code class="sig-name descname">build_set</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">set_type</span></em>, <em class="sig-param"><span class="n">items</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.build_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a set from the Numba <em>set_type</em> and its initial <em>items</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.calc_array_sizeof">
+<code class="sig-name descname">calc_array_sizeof</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ndim</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.calc_array_sizeof" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the size of an array struct on the CPU target</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.call_internal">
+<code class="sig-name descname">call_internal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">fndesc</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.call_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the function descriptor of an internally compiled function,
+emit a call to that function with the given arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate">
+<code class="sig-name descname">call_internal_no_propagate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">fndesc</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.call_internal_no_propagate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to <cite>.call_internal()</cite> but does not handle or propagate
+the return status automatically.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.call_unresolved">
+<code class="sig-name descname">call_unresolved</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.call_unresolved" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert a function call to an unresolved symbol with the given <em>name</em>.</p>
+<p>Note: this is used for recursive call.</p>
+<p>In the mutual recursion case:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@njit</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+    <span class="o">...</span>  <span class="c1"># calls bar()</span>
+
+<span class="nd">@njit</span>
+<span class="k">def</span> <span class="nf">bar</span><span class="p">():</span>
+    <span class="o">...</span> <span class="c1"># calls foo()</span>
+
+<span class="n">foo</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>When foo() is called, the compilation of bar() is fully completed
+(codegen’ed and loaded) before foo() is. Since MCJIT’s eager compilation
+doesn’t allow loading modules with declare-only functions (which is
+needed for foo() in bar()), the call_unresolved injects a global
+variable that the “linker” can update even after the module is loaded by
+MCJIT. The linker would allocate space for the global variable before
+the bar() module is loaded. When later foo() module is defined, it will
+update bar()’s reference to foo().</p>
+<p>The legacy lazy JIT and the new ORC JIT would allow a declare-only
+function be used in a module as long as it is defined by the time of its
+first use.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.cast">
+<code class="sig-name descname">cast</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">val</span></em>, <em class="sig-param"><span class="n">fromty</span></em>, <em class="sig-param"><span class="n">toty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.cast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cast a value of type <em>fromty</em> to type <em>toty</em>.
+This implements implicit conversions as can happen due to the
+granularity of the Numba type system, or lax Python semantics.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.compile_internal">
+<code class="sig-name descname">compile_internal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">impl</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">args</span></em>, <em class="sig-param"><span class="n">locals</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.compile_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like compile_subroutine(), but also call the function with the given
+<em>args</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.compile_subroutine">
+<code class="sig-name descname">compile_subroutine</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">impl</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">locals</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">flags</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">caching</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.compile_subroutine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile the function <em>impl</em> for the given <em>sig</em> (in nopython mode).
+Return an instance of CompileResult.</p>
+<p>If <em>caching</em> evaluates True, the function keeps the compiled function
+for reuse in <em>.cached_internal_func</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.create_module">
+<code class="sig-name descname">create_module</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.create_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a LLVM module</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.declare_env_global">
+<code class="sig-name descname">declare_env_global</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">module</span></em>, <em class="sig-param"><span class="n">envname</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.declare_env_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Declare the Environment pointer as a global of the module.</p>
+<p>The pointer is initialized to NULL.  It must be filled by the runtime
+with the actual address of the Env before the associated function
+can be executed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>module</strong> – The LLVM Module</p></li>
+<li><p><strong>envname</strong> (<em>str</em>) – The name of the global variable.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.generic_compare">
+<code class="sig-name descname">generic_compare</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">key</span></em>, <em class="sig-param"><span class="n">argtypes</span></em>, <em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.generic_compare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare the given LLVM values of the given Numba types using
+the comparison <em>key</em> (e.g. ‘==’).  The values are first cast to
+a common safe conversion type.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_abi_alignment">
+<code class="sig-name descname">get_abi_alignment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_abi_alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the ABI alignment of LLVM type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_abi_sizeof">
+<code class="sig-name descname">get_abi_sizeof</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_abi_sizeof" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the ABI size of LLVM type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_argument_value">
+<code class="sig-name descname">get_argument_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_argument_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Argument representation to local value representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_c_value">
+<code class="sig-name descname">get_c_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">dllimport</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_c_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a global value through its C-accessible <em>name</em>, with the given
+LLVM type.
+If <em>dllimport</em> is true, the symbol will be marked as imported
+from a DLL (necessary for AOT compilation under Windows).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_constant">
+<code class="sig-name descname">get_constant</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as get_constant_generic(), but without specifying <em>builder</em>.
+Works only for simple types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_constant_generic">
+<code class="sig-name descname">get_constant_generic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_constant_generic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a LLVM constant representing value <em>val</em> of Numba type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_data_type">
+<code class="sig-name descname">get_data_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_data_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a LLVM data representation of the Numba type <em>ty</em> that is safe
+for storage.  Record data are stored as byte array.</p>
+<p>The return value is a llvmlite.ir.Type object, or None if the type
+is an opaque pointer (???).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_env_body">
+<code class="sig-name descname">get_env_body</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">envptr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_env_body" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the given <em>envptr</em> (a pointer to a _dynfunc.Environment object),
+get a EnvBody allowing structured access to environment fields.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_env_name">
+<code class="sig-name descname">get_env_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fndesc</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_env_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the environment name given a FunctionDescriptor.</p>
+<p>Use this instead of the <code class="docutils literal notranslate"><span class="pre">fndesc.env_name</span></code> so that the target-context
+can provide necessary mangling of the symbol to meet ABI requirements.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_executable">
+<code class="sig-name descname">get_executable</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">library</span></em>, <em class="sig-param"><span class="n">fndesc</span></em>, <em class="sig-param"><span class="n">env</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_executable" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><em>(cfunc, fnptr)</em></p></li>
+<li><p><em>- cfunc</em> – callable function (Can be None)</p></li>
+<li><p><em>- fnptr</em> – callable function address</p></li>
+<li><p><em>- env</em> – an execution environment (from _dynfunc)</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_function">
+<code class="sig-name descname">get_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fn</span></em>, <em class="sig-param"><span class="n">sig</span></em>, <em class="sig-param"><span class="n">_firstcall</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the implementation of function <em>fn</em> for signature <em>sig</em>.
+The return value is a callable with the signature (builder, args).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_generator_desc">
+<code class="sig-name descname">get_generator_desc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">genty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_generator_desc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_generator_impl">
+<code class="sig-name descname">get_generator_impl</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">genty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_generator_impl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_generator_state">
+<code class="sig-name descname">get_generator_state</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">genptr</span></em>, <em class="sig-param"><span class="n">return_type</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_generator_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the given <em>genptr</em> (a pointer to a _dynfunc.Generator object),
+get a pointer to its state area.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_getattr">
+<code class="sig-name descname">get_getattr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_getattr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the getattr() implementation for the given type and attribute name.
+The return value is a callable with the signature
+(context, builder, typ, val, attr).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_helper_class">
+<code class="sig-name descname">get_helper_class</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">kind</span><span class="o">=</span><span class="default_value">'value'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_helper_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a helper class for the given <em>typ</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment">
+<code class="sig-name descname">get_preferred_array_alignment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_preferred_array_alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get preferred array alignment for Numba type <em>ty</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_return_value">
+<code class="sig-name descname">get_return_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_return_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Local value representation to return type representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_returned_value">
+<code class="sig-name descname">get_returned_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_returned_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return value representation to local value representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_setattr">
+<code class="sig-name descname">get_setattr</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">attr</span></em>, <em class="sig-param"><span class="n">sig</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_setattr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the setattr() implementation for the given attribute name
+and signature.
+The return value is a callable with the signature (builder, args).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_struct_type">
+<code class="sig-name descname">get_struct_type</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">struct</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_struct_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the LLVM struct type for the given Structure class <em>struct</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.get_value_as_argument">
+<code class="sig-name descname">get_value_as_argument</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.get_value_as_argument" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare local value representation as argument type representation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.init">
+<code class="sig-name descname">init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.init" title="Permalink to this definition">¶</a></dt>
+<dd><p>For subclasses to add initializer</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.insert_const_bytes">
+<code class="sig-name descname">insert_const_bytes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">bytes</span></em>, <em class="sig-param"><span class="n">name</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.insert_const_bytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert constant <em>byte</em> (a <cite>bytes</cite> object) into module <em>mod</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.insert_const_string">
+<code class="sig-name descname">insert_const_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">string</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.insert_const_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert constant <em>string</em> (a str object) into module <em>mod</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.insert_unique_const">
+<code class="sig-name descname">insert_unique_const</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.insert_unique_const" title="Permalink to this definition">¶</a></dt>
+<dd><p>Insert a unique internal constant named <em>name</em>, with LLVM value
+<em>val</em>, into module <em>mod</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.install_registry">
+<code class="sig-name descname">install_registry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">registry</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.install_registry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Install a <em>registry</em> (a imputils.Registry instance) of function
+and attribute implementations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.is_true">
+<code class="sig-name descname">is_true</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">val</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.is_true" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the truth value of a value of the given Numba type.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.load_additional_registries">
+<code class="sig-name descname">load_additional_registries</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.load_additional_registries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load target-specific registries.  Can be overridden by subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_complex">
+<code class="sig-name descname">make_complex</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">value</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_complex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a helper object to access the given complex numbers’ members.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_constant_array">
+<code class="sig-name descname">make_constant_array</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">ary</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_constant_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an array structure reifying the given constant array.
+A low-level contiguous array constant is created in the LLVM IR.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_data_helper">
+<code class="sig-name descname">make_data_helper</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">ref</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_data_helper" title="Permalink to this definition">¶</a></dt>
+<dd><p>As make_helper(), but considers the value as stored in memory,
+rather than a live value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_helper">
+<code class="sig-name descname">make_helper</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">value</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_helper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a helper object to access the <em>typ</em>’s members,
+for the given value or reference.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.make_tuple">
+<code class="sig-name descname">make_tuple</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">typ</span></em>, <em class="sig-param"><span class="n">values</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.make_tuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a tuple of the given <em>typ</em> containing the <em>values</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.mangler">
+<code class="sig-name descname">mangler</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">types</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.mangler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform name mangling.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.pack_value">
+<code class="sig-name descname">pack_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">value</span></em>, <em class="sig-param"><span class="n">ptr</span></em>, <em class="sig-param"><span class="n">align</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.pack_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pack value into the array storage at <em>ptr</em>.
+If <em>align</em> is given, it is the guaranteed alignment for <em>ptr</em>
+(by default, the standard ABI alignment).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.pair_first">
+<code class="sig-name descname">pair_first</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">val</span></em>, <em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.pair_first" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the first element of a heterogeneous pair.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.pair_second">
+<code class="sig-name descname">pair_second</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">val</span></em>, <em class="sig-param"><span class="n">ty</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.pair_second" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the second element of a heterogeneous pair.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.populate_array">
+<code class="sig-name descname">populate_array</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">arr</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.populate_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Populate array structure.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.post_lowering">
+<code class="sig-name descname">post_lowering</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mod</span></em>, <em class="sig-param"><span class="n">library</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.post_lowering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run target specific post-lowering transformation here.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.push_code_library">
+<code class="sig-name descname">push_code_library</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lib</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.push_code_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Push the active code library for the context</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.refresh">
+<code class="sig-name descname">refresh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refresh context with new declarations from known registries.
+Useful for third-party extensions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.remove_user_function">
+<code class="sig-name descname">remove_user_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.remove_user_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user function <em>func</em>.
+KeyError is raised if the function isn’t known to us.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.sentry_record_alignment">
+<code class="sig-name descname">sentry_record_alignment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rectyp</span></em>, <em class="sig-param"><span class="n">attr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.sentry_record_alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assumes offset starts from a properly aligned location</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteTargetContext.unpack_value">
+<code class="sig-name descname">unpack_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">builder</span></em>, <em class="sig-param"><span class="n">ty</span></em>, <em class="sig-param"><span class="n">ptr</span></em>, <em class="sig-param"><span class="n">align</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteTargetContext.unpack_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unpack value from the array storage at <em>ptr</em>.
+If <em>align</em> is given, it is the guaranteed alignment for <em>ptr</em>
+(by default, the standard ABI alignment).</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

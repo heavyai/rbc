@@ -1,5 +1,5 @@
-# Author: Pearu Peterson
-# Created: February 2019
+"""RemoteJIT client/server config functions
+"""
 
 __all__ = ['RemoteJIT', 'Signature', 'Caller']
 

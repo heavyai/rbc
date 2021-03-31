@@ -1,0 +1,411 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rbc.structure_type &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/generated/rbc.structure_type.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>rbc.structure_type</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="rbc-structure-type">
+<h1>rbc.structure_type<a class="headerlink" href="#rbc-structure-type" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">Description</p>
+<span class="target" id="module-rbc.structure_type"></span><dl class="py class">
+<dt id="rbc.structure_type.StructureNumbaPointerType">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.structure_type.</code><code class="sig-name descname">StructureNumbaPointerType</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pointer type for StructureNumbaType values.</p>
+<p>We are not deriving from CPointer because we may want to use
+getitem for custom item access.</p>
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.augment">
+<code class="sig-name descname">augment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.augment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Augment this type with the <em>other</em>.  Return the augmented type,
+or None if not supported.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.can_convert_from">
+<code class="sig-name descname">can_convert_from</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typingctx</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.can_convert_from" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to <em>can_convert_to</em>, but in reverse.  Only needed if
+the type provides conversion from other types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.can_convert_to">
+<code class="sig-name descname">can_convert_to</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typingctx</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.can_convert_to" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether this type can be converted to the <em>other</em>.
+If successful, must return a string describing the conversion, e.g.
+“exact”, “promote”, “unsafe”, “safe”; otherwise None is returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.is_internal">
+<em class="property">property </em><code class="sig-name descname">is_internal</code><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.is_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if this class is an internally defined Numba type by
+virtue of the module in which it is instantiated, False else.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.is_precise">
+<code class="sig-name descname">is_precise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.is_precise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether this type is precise, i.e. can be part of a successful
+type inference.  Default implementation returns True.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.key">
+<em class="property">property </em><code class="sig-name descname">key</code><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>A property used for __eq__, __ne__ and __hash__.  Can be overridden
+in subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.mangling_args">
+<em class="property">property </em><code class="sig-name descname">mangling_args</code><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.mangling_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns <cite>(basename, args)</cite> where <cite>basename</cite> is the name of the type
+and <cite>args</cite> is a sequence of parameters of the type.</p>
+<p>Subclass should override to specialize the behavior.
+By default, this returns <cite>(self.name, ())</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaPointerType.unify">
+<code class="sig-name descname">unify</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typingctx</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaPointerType.unify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to unify this type with the <em>other</em>.  A third type must
+be returned, or None if unification is not possible.
+Only override this if the coercion logic cannot be expressed
+as simple casting rules.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="rbc.structure_type.StructureNumbaType">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.structure_type.</code><code class="sig-name descname">StructureNumbaType</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a struct numba type.</p>
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.augment">
+<code class="sig-name descname">augment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.augment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Augment this type with the <em>other</em>.  Return the augmented type,
+or None if not supported.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.can_convert_from">
+<code class="sig-name descname">can_convert_from</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typingctx</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.can_convert_from" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to <em>can_convert_to</em>, but in reverse.  Only needed if
+the type provides conversion from other types.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.can_convert_to">
+<code class="sig-name descname">can_convert_to</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typingctx</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.can_convert_to" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether this type can be converted to the <em>other</em>.
+If successful, must return a string describing the conversion, e.g.
+“exact”, “promote”, “unsafe”, “safe”; otherwise None is returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.is_internal">
+<em class="property">property </em><code class="sig-name descname">is_internal</code><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.is_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if this class is an internally defined Numba type by
+virtue of the module in which it is instantiated, False else.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.is_precise">
+<code class="sig-name descname">is_precise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.is_precise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether this type is precise, i.e. can be part of a successful
+type inference.  Default implementation returns True.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.key">
+<em class="property">property </em><code class="sig-name descname">key</code><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.key" title="Permalink to this definition">¶</a></dt>
+<dd><p>A property used for __eq__, __ne__ and __hash__.  Can be overridden
+in subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.mangling_args">
+<em class="property">property </em><code class="sig-name descname">mangling_args</code><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.mangling_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns <cite>(basename, args)</cite> where <cite>basename</cite> is the name of the type
+and <cite>args</cite> is a sequence of parameters of the type.</p>
+<p>Subclass should override to specialize the behavior.
+By default, this returns <cite>(self.name, ())</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.structure_type.StructureNumbaType.unify">
+<code class="sig-name descname">unify</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">typingctx</span></em>, <em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.StructureNumbaType.unify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try to unify this type with the <em>other</em>.  A third type must
+be returned, or None if unification is not possible.
+Only override this if the coercion logic cannot be expressed
+as simple casting rules.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="rbc.structure_type.make_numba_struct">
+<code class="sig-prename descclassname">rbc.structure_type.</code><code class="sig-name descname">make_numba_struct</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">members</span></em>, <em class="sig-param"><span class="n">origin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">_cache</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.structure_type.make_numba_struct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create numba struct type instance.</p>
+</dd></dl>
+
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaPointerType.html#rbc.structure_type.StructureNumbaPointerType" title="rbc.structure_type.StructureNumbaPointerType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaPointerType</span></code></a>(*args, **kwargs)</p></td>
+<td><p>Pointer type for StructureNumbaType values.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaType.html#rbc.structure_type.StructureNumbaType" title="rbc.structure_type.StructureNumbaType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaType</span></code></a>(*args, **kwargs)</p></td>
+<td><p>Represents a struct numba type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.structure_type.StructurePointerTypeAttributeTemplate.html#rbc.structure_type.StructurePointerTypeAttributeTemplate" title="rbc.structure_type.StructurePointerTypeAttributeTemplate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructurePointerTypeAttributeTemplate</span></code></a>(context)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.structure_type.StructureTypeAttributeTemplate.html#rbc.structure_type.StructureTypeAttributeTemplate" title="rbc.structure_type.StructureTypeAttributeTemplate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureTypeAttributeTemplate</span></code></a>(context)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaPointerType_add.html#rbc.structure_type.StructureNumbaPointerType_add" title="rbc.structure_type.StructureNumbaPointerType_add"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaPointerType_add</span></code></a>(x, i)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaPointerType_getattr_impl.html#rbc.structure_type.StructureNumbaPointerType_getattr_impl" title="rbc.structure_type.StructureNumbaPointerType_getattr_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaPointerType_getattr_impl</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaPointerType_getitem.html#rbc.structure_type.StructureNumbaPointerType_getitem" title="rbc.structure_type.StructureNumbaPointerType_getitem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaPointerType_getitem</span></code></a>(x, i)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaPointerType_setattr_impl.html#rbc.structure_type.StructureNumbaPointerType_setattr_impl" title="rbc.structure_type.StructureNumbaPointerType_setattr_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaPointerType_setattr_impl</span></code></a>(…)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaType_getattr_impl.html#rbc.structure_type.StructureNumbaType_getattr_impl" title="rbc.structure_type.StructureNumbaType_getattr_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaType_getattr_impl</span></code></a>(context, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.structure_type.StructureNumbaType_setattr_impl.html#rbc.structure_type.StructureNumbaType_setattr_impl" title="rbc.structure_type.StructureNumbaType_setattr_impl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StructureNumbaType_setattr_impl</span></code></a>(context, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.structure_type.impl_T_star_to_T_star.html#rbc.structure_type.impl_T_star_to_T_star" title="rbc.structure_type.impl_T_star_to_T_star"><code class="xref py py-obj docutils literal notranslate"><span class="pre">impl_T_star_to_T_star</span></code></a>(context, builder, …)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.structure_type.make_numba_struct.html#rbc.structure_type.make_numba_struct" title="rbc.structure_type.make_numba_struct"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_numba_struct</span></code></a>(name, members[, origin, …])</p></td>
+<td><p>Create numba struct type instance.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

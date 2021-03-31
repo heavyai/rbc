@@ -1,0 +1,383 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>JITRemoteCodeLibrary &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/generated/rbc.irtools.JITRemoteCodeLibrary.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>JITRemoteCodeLibrary</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="jitremotecodelibrary">
+<h1>JITRemoteCodeLibrary<a class="headerlink" href="#jitremotecodelibrary" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="rbc.irtools.JITRemoteCodeLibrary">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.irtools.</code><code class="sig-name descname">JITRemoteCodeLibrary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">codegen</span><span class="p">:</span> <span class="n">numba.core.codegen.BaseCPUCodegen</span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary" title="Permalink to this definition">¶</a></dt>
+<dd><p>JITRemoteCodeLibrary was introduce to prevent numba from calling functions
+that checks if the module is final. See xnd-project/rbc issue #87.</p>
+<p class="rubric">Attributes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.codegen.html#rbc.irtools.JITRemoteCodeLibrary.codegen" title="rbc.irtools.JITRemoteCodeLibrary.codegen"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.codegen</span></code></a></p></td>
+<td><p>The codegen object owning this library.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.has_dynamic_globals.html#rbc.irtools.JITRemoteCodeLibrary.has_dynamic_globals" title="rbc.irtools.JITRemoteCodeLibrary.has_dynamic_globals"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.has_dynamic_globals</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.__init__.html#rbc.irtools.JITRemoteCodeLibrary.__init__" title="rbc.irtools.JITRemoteCodeLibrary.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.__init__</span></code></a>(codegen, name)</p></td>
+<td><p>Initialize self.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.add_ir_module.html#rbc.irtools.JITRemoteCodeLibrary.add_ir_module" title="rbc.irtools.JITRemoteCodeLibrary.add_ir_module"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.add_ir_module</span></code></a>(ir_module)</p></td>
+<td><p>Add a LLVM IR module’s contents to this library.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.add_linking_library.html#rbc.irtools.JITRemoteCodeLibrary.add_linking_library" title="rbc.irtools.JITRemoteCodeLibrary.add_linking_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.add_linking_library</span></code></a>(library)</p></td>
+<td><p>Add a library for linking into this library, without losing the original library.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.add_llvm_module.html#rbc.irtools.JITRemoteCodeLibrary.add_llvm_module" title="rbc.irtools.JITRemoteCodeLibrary.add_llvm_module"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.add_llvm_module</span></code></a>(ll_module)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.create_ir_module.html#rbc.irtools.JITRemoteCodeLibrary.create_ir_module" title="rbc.irtools.JITRemoteCodeLibrary.create_ir_module"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.create_ir_module</span></code></a>(name)</p></td>
+<td><p>Create a LLVM IR module for use by this library.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.enable_object_caching.html#rbc.irtools.JITRemoteCodeLibrary.enable_object_caching" title="rbc.irtools.JITRemoteCodeLibrary.enable_object_caching"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.enable_object_caching</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.finalize.html#rbc.irtools.JITRemoteCodeLibrary.finalize" title="rbc.irtools.JITRemoteCodeLibrary.finalize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.finalize</span></code></a>()</p></td>
+<td><p>Finalize the library.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_asm_str.html#rbc.irtools.JITRemoteCodeLibrary.get_asm_str" title="rbc.irtools.JITRemoteCodeLibrary.get_asm_str"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_asm_str</span></code></a>()</p></td>
+<td><p>Get the human-readable assembly.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_defined_functions.html#rbc.irtools.JITRemoteCodeLibrary.get_defined_functions" title="rbc.irtools.JITRemoteCodeLibrary.get_defined_functions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_defined_functions</span></code></a>()</p></td>
+<td><p>Get all functions defined in the library.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg.html#rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg" title="rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_disasm_cfg</span></code></a>()</p></td>
+<td><p>Get the CFG of the disassembly of the ELF object</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_function.html#rbc.irtools.JITRemoteCodeLibrary.get_function" title="rbc.irtools.JITRemoteCodeLibrary.get_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_function</span></code></a>(name)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_function_cfg.html#rbc.irtools.JITRemoteCodeLibrary.get_function_cfg" title="rbc.irtools.JITRemoteCodeLibrary.get_function_cfg"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_function_cfg</span></code></a>(name)</p></td>
+<td><p>Get control-flow graph of the LLVM function</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_llvm_str.html#rbc.irtools.JITRemoteCodeLibrary.get_llvm_str" title="rbc.irtools.JITRemoteCodeLibrary.get_llvm_str"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_llvm_str</span></code></a>()</p></td>
+<td><p>Get the human-readable form of the LLVM module.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function.html#rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function" title="rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.get_pointer_to_function</span></code></a>(name)</p></td>
+<td><p>We can return any random number here! This is just to prevent numba from trying to check if the symbol given by “name” is defined in the module.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode.html#rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode" title="rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.serialize_using_bitcode</span></code></a>()</p></td>
+<td><p>Serialize this library using its bitcode as the cached representation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code.html#rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code" title="rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JITRemoteCodeLibrary.serialize_using_object_code</span></code></a>()</p></td>
+<td><p>Serialize this library using its object code as the cached representation.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.add_ir_module">
+<code class="sig-name descname">add_ir_module</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ir_module</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.add_ir_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a LLVM IR module’s contents to this library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.add_linking_library">
+<code class="sig-name descname">add_linking_library</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">library</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.add_linking_library" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a library for linking into this library, without losing
+the original library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.codegen">
+<em class="property">property </em><code class="sig-name descname">codegen</code><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.codegen" title="Permalink to this definition">¶</a></dt>
+<dd><p>The codegen object owning this library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.create_ir_module">
+<code class="sig-name descname">create_ir_module</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.create_ir_module" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a LLVM IR module for use by this library.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.finalize">
+<code class="sig-name descname">finalize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.finalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finalize the library.  After this call, nothing can be added anymore.
+Finalization involves various stages of code optimization and
+linking.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_asm_str">
+<code class="sig-name descname">get_asm_str</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_asm_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the human-readable assembly.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_defined_functions">
+<code class="sig-name descname">get_defined_functions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_defined_functions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all functions defined in the library.  The library must have
+been finalized.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg">
+<code class="sig-name descname">get_disasm_cfg</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_disasm_cfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the CFG of the disassembly of the ELF object</p>
+<p>Requires python package: r2pipe
+Requires radare2 binary on $PATH.
+Notebook rendering requires python package: graphviz</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_function_cfg">
+<code class="sig-name descname">get_function_cfg</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">py_func</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_function_cfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get control-flow graph of the LLVM function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_llvm_str">
+<code class="sig-name descname">get_llvm_str</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_llvm_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the human-readable form of the LLVM module.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function">
+<code class="sig-name descname">get_pointer_to_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.get_pointer_to_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>We can return any random number here! This is just to prevent numba from
+trying to check if the symbol given by “name” is defined in the module.
+In cases were RBC is calling an external function (i.e. allocate_varlen_buffer)
+the symbol will not be defined in the module, resulting in an error.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode">
+<code class="sig-name descname">serialize_using_bitcode</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.serialize_using_bitcode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize this library using its bitcode as the cached representation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code">
+<code class="sig-name descname">serialize_using_object_code</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.irtools.JITRemoteCodeLibrary.serialize_using_object_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize this library using its object code as the cached
+representation.  We also include its bitcode for further inlining
+with other libraries.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,449 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>RemoteJIT &mdash; rbc 0.5.1+108.gb8e7a1f.dirty documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://xnd.io/generated/rbc.remotejit.RemoteJIT.html"/>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/xndlogo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.5.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/index.html"><em>Remote Backend Compiler (rbc)</em></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rbc/api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backends/index.html">Backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases/index.html">Releases</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rbc</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>RemoteJIT</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="remotejit">
+<h1>RemoteJIT<a class="headerlink" href="#remotejit" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="rbc.remotejit.RemoteJIT">
+<em class="property">class </em><code class="sig-prename descclassname">rbc.remotejit.</code><code class="sig-name descname">RemoteJIT</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">host</span><span class="o">=</span><span class="default_value">'localhost'</span></em>, <em class="sig-param"><span class="n">port</span><span class="o">=</span><span class="default_value">11532</span></em>, <em class="sig-param"><span class="n">local</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">debug</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT" title="Permalink to this definition">¶</a></dt>
+<dd><p>RemoteJIT is a decorator generator for user functions to be
+remotely JIT compiled.</p>
+<p>To use, define</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rjit</span> <span class="o">=</span> <span class="n">RemoteJIT</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6274</span><span class="p">)</span>
+
+<span class="nd">@rjit</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+
+<span class="nd">@rjit</span><span class="p">(</span><span class="s1">&#39;double(double, double)&#39;</span><span class="p">,</span>
+      <span class="s1">&#39;int64(int64, int64)&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+
+<span class="c1"># Finally, call</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">foo</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="c1"># c = 3</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">bar</span><span class="p">(</span><span class="mf">7.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="c1"># b = 8.0</span>
+</pre></div>
+</div>
+<p>The sum will be evaluated in the remote host.</p>
+<p class="rubric">Attributes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.client.html#rbc.remotejit.RemoteJIT.client" title="rbc.remotejit.RemoteJIT.client"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.client</span></code></a></p></td>
+<td><p>Return remote host connection as Client instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.have_last_compile.html#rbc.remotejit.RemoteJIT.have_last_compile" title="rbc.remotejit.RemoteJIT.have_last_compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.have_last_compile</span></code></a></p></td>
+<td><p>Check if compile data exists.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.local.html#rbc.remotejit.RemoteJIT.local" title="rbc.remotejit.RemoteJIT.local"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.local</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.multiplexed.html#rbc.remotejit.RemoteJIT.multiplexed" title="rbc.remotejit.RemoteJIT.multiplexed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.multiplexed</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.targets.html#rbc.remotejit.RemoteJIT.targets" title="rbc.remotejit.RemoteJIT.targets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.targets</span></code></a></p></td>
+<td><p>Return device-target_info mapping of the remote server.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.thrift_content.html#rbc.remotejit.RemoteJIT.thrift_content" title="rbc.remotejit.RemoteJIT.thrift_content"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.thrift_content</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.__init__.html#rbc.remotejit.RemoteJIT.__init__" title="rbc.remotejit.RemoteJIT.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.__init__</span></code></a>([host, port, local, debug])</p></td>
+<td><p>Construct remote JIT function decorator.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.add_caller.html#rbc.remotejit.RemoteJIT.add_caller" title="rbc.remotejit.RemoteJIT.add_caller"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.add_caller</span></code></a>(caller)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.discard_last_compile.html#rbc.remotejit.RemoteJIT.discard_last_compile" title="rbc.remotejit.RemoteJIT.discard_last_compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.discard_last_compile</span></code></a>()</p></td>
+<td><p>Discard compile data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.get_callers.html#rbc.remotejit.RemoteJIT.get_callers" title="rbc.remotejit.RemoteJIT.get_callers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.get_callers</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.preprocess_callable.html#rbc.remotejit.RemoteJIT.preprocess_callable" title="rbc.remotejit.RemoteJIT.preprocess_callable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.preprocess_callable</span></code></a>(func)</p></td>
+<td><p>Preprocess func to be used as a remotejit function definition.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.python.html#rbc.remotejit.RemoteJIT.python" title="rbc.remotejit.RemoteJIT.python"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.python</span></code></a>(statement)</p></td>
+<td><p>Execute Python statement remotely.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.remote_call.html#rbc.remotejit.RemoteJIT.remote_call" title="rbc.remotejit.RemoteJIT.remote_call"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.remote_call</span></code></a>(func, ftype, arguments)</p></td>
+<td><p>Call function remotely on given arguments.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.remote_compile.html#rbc.remotejit.RemoteJIT.remote_compile" title="rbc.remotejit.RemoteJIT.remote_compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.remote_compile</span></code></a>(func, ftype, …)</p></td>
+<td><p>Remote compile function and signatures to machine code.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.reset.html#rbc.remotejit.RemoteJIT.reset" title="rbc.remotejit.RemoteJIT.reset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.reset</span></code></a>()</p></td>
+<td><p>Drop all callers definitions and compilation results.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.retrieve_targets.html#rbc.remotejit.RemoteJIT.retrieve_targets" title="rbc.remotejit.RemoteJIT.retrieve_targets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.retrieve_targets</span></code></a>()</p></td>
+<td><p>Retrieve target device information from remote client.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.set_last_compile.html#rbc.remotejit.RemoteJIT.set_last_compile" title="rbc.remotejit.RemoteJIT.set_last_compile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.set_last_compile</span></code></a>(compile_data)</p></td>
+<td><p>Save compile data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.start_server.html#rbc.remotejit.RemoteJIT.start_server" title="rbc.remotejit.RemoteJIT.start_server"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.start_server</span></code></a>([background])</p></td>
+<td><p>Start remotejit server from client.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rbc.remotejit.RemoteJIT.stop_server.html#rbc.remotejit.RemoteJIT.stop_server" title="rbc.remotejit.RemoteJIT.stop_server"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RemoteJIT.stop_server</span></code></a>()</p></td>
+<td><p>Stop remotejit server from client.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.client">
+<em class="property">property </em><code class="sig-name descname">client</code><a class="headerlink" href="#rbc.remotejit.RemoteJIT.client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return remote host connection as Client instance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.discard_last_compile">
+<code class="sig-name descname">discard_last_compile</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.discard_last_compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discard compile data.</p>
+<p>See <cite>set_last_compile</cite> method for more information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.have_last_compile">
+<em class="property">property </em><code class="sig-name descname">have_last_compile</code><a class="headerlink" href="#rbc.remotejit.RemoteJIT.have_last_compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if compile data exists.</p>
+<p>See <cite>set_last_compile</cite> method for more information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.preprocess_callable">
+<code class="sig-name descname">preprocess_callable</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.preprocess_callable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preprocess func to be used as a remotejit function definition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> (<em>callable</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>func</strong> – Preprocessed func.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.python">
+<code class="sig-name descname">python</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">statement</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.python" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute Python statement remotely.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.remote_call">
+<code class="sig-name descname">remote_call</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em>, <em class="sig-param"><span class="n">ftype</span><span class="p">:</span> <span class="n"><a class="reference internal" href="rbc.typesystem.Type.html#rbc.typesystem.Type" title="rbc.typesystem.Type">rbc.typesystem.Type</a></span></em>, <em class="sig-param"><span class="n">arguments</span><span class="p">:</span> <span class="n">tuple</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.remote_call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call function remotely on given arguments.</p>
+<p>The input function <cite>func</cite> is called remotely by sending the
+arguments data to remote host where the previously compiled
+function (see <cite>remote_compile</cite> method) is applied to the
+arguments, and the result is returned to local process.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.remote_compile">
+<code class="sig-name descname">remote_compile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span></em>, <em class="sig-param"><span class="n">ftype</span><span class="p">:</span> <span class="n"><a class="reference internal" href="rbc.typesystem.Type.html#rbc.typesystem.Type" title="rbc.typesystem.Type">rbc.typesystem.Type</a></span></em>, <em class="sig-param"><span class="n">target_info</span><span class="p">:</span> <span class="n"><a class="reference internal" href="rbc.targetinfo.TargetInfo.html#rbc.targetinfo.TargetInfo" title="rbc.targetinfo.TargetInfo">rbc.targetinfo.TargetInfo</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.remote_compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remote compile function and signatures to machine code.</p>
+<p>The input function <cite>func</cite> is compiled to LLVM IR module, the
+LLVM IR module is sent to remote host where the remote host is
+expected to complete the compilation process.</p>
+<p>Return the corresponding LLVM IR module instance which may be
+useful for debugging.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drop all callers definitions and compilation results.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.retrieve_targets">
+<code class="sig-name descname">retrieve_targets</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.retrieve_targets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve target device information from remote client.</p>
+<p>Redefine this method if remote client is not native.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>targets</strong> – Map of target device names and informations.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.set_last_compile">
+<code class="sig-name descname">set_last_compile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">compile_data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.set_last_compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save compile data.</p>
+<p>The caller is responsible for discarding previous compiler
+data by calling <cite>discard_last_compile</cite> method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>compile_data</strong> (<em>object</em>) – Compile data can be any Python object. When None, it is
+interpreted as no compile data is available.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The have/discard/set_last_compile methods provide a way to
+avoid unnecessary compilations when the remote server supports
+registration of compiled functions. The corresponding
+<cite>register</cite> method is expected to use the following pattern:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">have_last_compile</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="o">&lt;</span><span class="nb">compile</span> <span class="n">defined</span> <span class="n">functions</span><span class="o">&gt;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">set_last_compile</span><span class="p">(</span><span class="o">&lt;</span><span class="n">compilation</span> <span class="n">results</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <cite>discard_last_compile()</cite> method is called when the compile
+data becomes obsolete or needs to be discarded. For instance,
+the compile data will be discarded when calling the following
+methods: <cite>reset</cite>, <cite>add_caller</cite>. Note that the <cite>add_caller</cite>
+call is triggered when applying the remotejit decorator to a
+Python function to be compiled.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.start_server">
+<code class="sig-name descname">start_server</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">background</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.start_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start remotejit server from client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.stop_server">
+<code class="sig-name descname">stop_server</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#rbc.remotejit.RemoteJIT.stop_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop remotejit server from client.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="rbc.remotejit.RemoteJIT.targets">
+<em class="property">property </em><code class="sig-name descname">targets</code><a class="headerlink" href="#rbc.remotejit.RemoteJIT.targets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return device-target_info mapping of the remote server.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2021, Xnd-Project
+      <span class="lastupdated">
+        Last updated on True.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
