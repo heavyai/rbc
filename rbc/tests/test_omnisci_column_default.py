@@ -17,6 +17,7 @@ def define(omnisci):
 
 
 def test_python_fn_with_default_sizer(omnisci):
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5403")
 
     table = omnisci.table_name
     fn = "udtf_default_sizer_1"
@@ -48,7 +49,7 @@ typs = (
 
 @pytest.mark.parametrize("suffix,kind", typs)
 def test_default_sizer(omnisci, suffix, kind):
-    omnisci.require_version((5, 5, 5), "Requires omniscidb-internal PR 5403")
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5403")
 
     codes = {
         "1": "i4",
