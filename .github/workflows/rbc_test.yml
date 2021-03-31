@@ -59,7 +59,6 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.8
-          activate-environment: rbc
           use-mamba: True
           mamba-version: "*"
           channels: conda-forge
@@ -102,22 +101,22 @@ jobs:
 
       - name: rbc conda config
         shell: bash -l {0}
-        run: mamba run -n rbc conda config --show  
+        run: mamba run -n test conda config --show  
 
       - name: rbc conda list
         shell: bash -l {0}
         run: |
-          mamba run -n rbc conda list
+          mamba run -n test conda list
 
       - name: Develop rbc
         shell: bash -l {0}
         run: |
-          mamba run -n rbc python setup.py develop
+          mamba run -n test python setup.py develop
 
       - name: Run rbc tests
         shell: bash -l {0}
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/ -x
+          mamba run -n test pytest -sv -r A rbc/ -x
 
   remotejit:
     name: RemoteJIT ${{ matrix.os }} - Python v${{ matrix.python-version }}
@@ -148,19 +147,19 @@ jobs:
       
       - name: rbc conda config
         shell: bash -l {0}
-        run: mamba run -n rbc conda config --show  
+        run: mamba run -n test conda config --show  
 
       - name: rbc conda list
         shell: bash -l {0}
         run: |
-          mamba run -n rbc conda list
+          mamba run -n test conda list
 
       - name: Develop rbc
         shell: bash -l {0}
         run: |
-          mamba run -n rbc python setup.py develop
+          mamba run -n test python setup.py develop
 
       - name: Run rbc tests
         shell: bash -l {0}
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/ -x
+          mamba run -n test pytest -sv -r A rbc/ -x
