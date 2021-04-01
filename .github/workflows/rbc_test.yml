@@ -35,8 +35,8 @@ jobs:
       # fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.7, 3.8, 3.9]
-        numba-version: ['0.50', 0.52, 0.53]
+        python-version: [3.9, 3.8, 3.7]
+        numba-version: [0.53, 0.52, '0.50']
 
     needs: lint
 
@@ -97,8 +97,8 @@ jobs:
       # fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9]
-        omniscidb-version: [5.2, 5.4, 5.5]
+        python-version: [3.9, 3.8, 3.7]
+        omniscidb-version: [5.5, 5.4, 5.2]
         omniscidb-from: [conda]
         include:
           - os: ubuntu-latest
