@@ -16,6 +16,8 @@ lowering_registry = imputils.Registry()
 
 for fname, (retty, args) in libdevicefuncs.functions.items():
     doc = f"libdevice function {fname}"
-    register_external(
+    fn = register_external(
         fname, retty, args, __name__, globals(), typing_registry, lowering_registry, doc
     )
+
+    fn.__name__ = fname

@@ -52,8 +52,9 @@ extensions = [
 
 # autosummary configuration
 autosummary_generate = True
-
 autodoc_typehints = "none"
+
+html_copy_source = False
 
 # Napoleon configurations
 napoleon_google_docstring = False

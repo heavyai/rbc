@@ -13,7 +13,16 @@
     {% endfor %}
 {% endif %}
 
-{% if functions %}
+{% if module == "rbc.externals.libdevice" %}
+.. rubric:: Functions
+.. autosummary::
+    :toctree:
+    {% for function in members %}
+        {% if "__nv" in function %}
+            {{ function }}
+        {% endif %}
+    {% endfor %}
+{% elif functions %}
 .. rubric:: Functions
 .. autosummary::
     :toctree:
