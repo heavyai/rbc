@@ -69,9 +69,6 @@ jobs:
           cat .conda/environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
-          echo "variables:" >> rbc_test.yaml
-          echo "  EXPECTED_PYTHON_VERSION: '${{ matrix.python-version }}'" >> rbc_test.yaml
-          echo "  EXPECTED_NUMBA_VERSION: '${{ matrix.numba-version }}'" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
@@ -90,6 +87,9 @@ jobs:
 
       - name: Run rbc tests
         shell: bash -l {0}
+        env:
+          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
+          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
         run: |
           mamba run -n rbc python -m pytest -sv -r A rbc/ -x
 
@@ -171,9 +171,6 @@ jobs:
         run: |
           cat .conda/environment.yml > rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
-          echo "variables:" >> rbc_test.yaml
-          echo "  EXPECTED_PYTHON_VERSION: '${{ matrix.python-version }}'" >> rbc_test.yaml
-          echo "  EXPECTED_OMNISCIDB_VERSION: '${{ matrix.omniscidb-version }}'" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
@@ -193,5 +190,8 @@ jobs:
 
       - name: Run rbc tests
         shell: bash -l {0}
+        env:
+          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
+          EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
         run: |
           mamba run -n rbc python -m pytest -sv -r A rbc/ -x
