@@ -102,7 +102,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           cat .conda/environment.yml > rbc_test.yml
-          echo "  - python=v${{ matrix.python-version }}" >> rbc_test.yml
+          echo "  - python=${{ matrix.python-version }}" >> rbc_test.yml
           mamba env create  --file=rbc_test.yml -n rbc
 
       - name: rbc conda config
