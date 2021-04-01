@@ -15,6 +15,8 @@ def test_python_version():
     varname = 'EXPECTED_PYTHON_VERSION'
     current = tuple(sys.version_info)
     expected = os.environ.get(varname)
+    if os.environ.get('CI'):
+        assert expected is not None, (varname, current)
     if expected is None:
         pytest.skip(
             f'Undefined environment variable {varname},'
