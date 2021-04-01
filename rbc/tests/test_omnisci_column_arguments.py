@@ -76,13 +76,13 @@ def define(omnisci):
         return len(x)
 
 
-@pytest.mark.parametrize('default', [True, False])
+@pytest.mark.parametrize('use_default', [True, False])
 @pytest.mark.parametrize("inputs",
                          ['i8', 'cursor(i8,f8)', 'i8;f8', 'i4;cursor(f8,i8)',
                           'cursor(i4,i8);f8', 'cursor(i4,i8);cursor(f8,f4)',
                           'cursor(i4,i8,f8,f4)'])
-def test_copy(omnisci, default, inputs):
-    if default is True:
+def test_copy(omnisci, use_default, inputs):
+    if use_default is True:
         omnisci.require_version((5, 7), 'Requires omnisci-internal PR 5403')
     omnisci.require_version((5, 5), 'Requires omniscidb-internal PR 5134')
 
@@ -103,13 +103,12 @@ def test_copy(omnisci, default, inputs):
         expected = [row1 + row2 for row1, row2 in zip(expected, result)]
         args.append(f'cursor(select {colnames} from {table_name})')
         cc.append((colnames.count(',') + 1) * 'c')
-    if default:
+    if use_default is False:
         args.append('1')
     args = ', '.join(args)
     cc = '_'.join(cc)
 
     query = f'select * from table(text_rbc_copy_{cc}_rowmul({args}))'
-    print(query)
     _, result = omnisci.sql_execute(query)
     result = list(result)
 
@@ -130,12 +129,12 @@ def test_ct_binding_constant_sizer(omnisci, kind):
     assert result == [(int(kind),)]
 
 
-@pytest.mark.parametrize('default', [True, False])
+@pytest.mark.parametrize('use_default', [True, False])
 @pytest.mark.parametrize('kind', ['19', '119', '1119', '2119', '2219',
                                   '2129', '139', '329', '349', '2429',
                                   '91', '196', '396', '369', '169'])
-def test_ct_binding_row_multiplier(omnisci, default, kind):
-    if default is True:
+def test_ct_binding_row_multiplier(omnisci, use_default, kind):
+    if use_default is True:
         omnisci.require_version((5, 7), 'Requires omnisci-internal PR 5403')
     omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274')
     suffix = {'91': '2', '369': '5', '169': '3', '396': '4', '196': '6'}.get(kind, '')
@@ -151,7 +150,7 @@ def test_ct_binding_row_multiplier(omnisci, default, kind):
             else:
                 first.append(codes[n])
         elif n == '9':
-            if default is False:
+            if use_default is True:
                 continue
             if cursor:
                 last.append(codes[n])
@@ -165,7 +164,6 @@ def test_ct_binding_row_multiplier(omnisci, default, kind):
     cursor = ', '.join(cursor)
     query = (f'select * from table(ct_binding_udtf{suffix}({first}cursor('
              f'select {cursor} from {omnisci.table_name}){last}))')
-    print(query)
     _, result = omnisci.sql_execute(query)
     result = list(result)
 
