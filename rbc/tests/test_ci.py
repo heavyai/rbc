@@ -34,6 +34,10 @@ def test_omniscidb_version(omnisci):
         pytest.skip(
             f'Undefined environment variable {varname},'
             f' cannot test omniscidb version (current={".".join(map(str, current))})')
+    if expected == 'dev':
+        assert current[:2] >= (5, 7), current  # TODO: update dev version periodically
+        pytest.skip(
+            f'omniscidb dev version is {".".join(map(str, current))}')
     expected = parse_version(expected)
     current_stripped = current[:len(expected)]
     assert expected == current_stripped

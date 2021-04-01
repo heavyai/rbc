@@ -106,7 +106,7 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: 3.8
-            omniscidb-version: 5.5
+            omniscidb-version: dev
             omniscidb-from: docker
 
     needs: lint
