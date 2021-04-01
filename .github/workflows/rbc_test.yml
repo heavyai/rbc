@@ -198,7 +198,7 @@ jobs:
 
       - name: Show Omniscidb docker logs [docker]
         shell: bash -l {0}
-        if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }} 
+        if: ${{ (failure() || success()) && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }} 
         run: |
           mamba run -n docker docker-compose logs -f -t \> omniscidb-docker.log
           cat omniscidb-docker.log
