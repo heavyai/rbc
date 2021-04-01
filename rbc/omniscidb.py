@@ -851,7 +851,7 @@ class RemoteOmnisci(RemoteJIT):
                 sizer_index = consumed_index + 1
                 sizer = _sizer
 
-            if _sizer is not unspecified and use_default_sizer is True:
+            if _sizer is sizer_map["RowMultiplier"] and use_default_sizer is True:
                 continue
 
             if isinstance(a, OmnisciCursorType):
