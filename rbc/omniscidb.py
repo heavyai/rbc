@@ -895,8 +895,7 @@ class RemoteOmnisci(RemoteJIT):
         if use_default_sizer and sizer == sizer_map["RowMultiplier"]:
             return thrift.TUserDefinedTableFunction(
                 name + sig.mangling() + self.DEFAULT_ROW_MULTIPLIER_SUFFIX,
-                # sizer_type, sizer_index,
-                None, None,
+                sizer_type, None,  # sizer_index
                 inputArgTypes, outputArgTypes, sqlArgTypes)
 
         return thrift.TUserDefinedTableFunction(
