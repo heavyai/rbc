@@ -14,7 +14,7 @@ Casts:
   intp, voidptr to/from T*, T**, ..., T************* where T is a scalar type.
 """
 
-__all__ = ['sizeof', 'cast']
+__all__ = ["sizeof", "cast"]
 
 from llvmlite import ir
 from numba.core import extending, imputils, typing, typeconv
@@ -28,8 +28,7 @@ lowering_registry = imputils.Registry()
 
 @extending.intrinsic
 def sizeof(typingctx, arg_type):
-    """Return sizeof type.
-    """
+    """Return sizeof type."""
     if isinstance(arg_type, nb_types.TypeRef):
         arg_val_type = arg_type.key
     elif isinstance(arg_type, nb_types.Type):
@@ -48,8 +47,7 @@ def sizeof(typingctx, arg_type):
 
 @extending.intrinsic
 def cast(typingctx, ptr, typ):
-    """Cast pointer value to any pointer type.
-    """
+    """Cast pointer value to any pointer type."""
     if isinstance(typ, nb_types.StringLiteral):
         dtype = Type.fromstring(typ.literal_value)
     elif isinstance(typ, nb_types.TypeRef):
@@ -65,14 +63,15 @@ def cast(typingctx, ptr, typ):
     return sig, codegen
 
 
-@extending.overload_method(type(nb_types.voidptr), 'cast')
+@extending.overload_method(type(nb_types.voidptr), "cast")
 def voidptr_cast_to_any(ptr, typ):
-    """Convenience method for casting voidptr to any pointer type.
-    """
+    """Convenience method for casting voidptr to any pointer type."""
     if isinstance(ptr, type(nb_types.voidptr)):
         if isinstance(typ, (nb_types.TypeRef, nb_types.StringLiteral)):
+
             def impl(ptr, typ):
                 return cast(ptr, typ)
+
             return impl
 
 
@@ -93,10 +92,22 @@ def impl_T_star_to_T_star(context, builder, fromty, toty, value):
     return builder.bitcast(value, Type.fromnumba(toty).tollvmir())
 
 
-scalar_types = [getattr(nb_types, typename) for typename in
-                ['int64', 'int32', 'int16', 'int8',
-                 'uint64', 'uint32', 'uint16', 'uint8',
-                 'float32', 'float64', 'boolean']]
+scalar_types = [
+    getattr(nb_types, typename)
+    for typename in [
+        "int64",
+        "int32",
+        "int16",
+        "int8",
+        "uint64",
+        "uint32",
+        "uint16",
+        "uint8",
+        "float32",
+        "float64",
+        "boolean",
+    ]
+]
 pointer_value_types = [nb_types.intp, nb_types.voidptr]
 pointer_types = [nb_types.CPointer(s) for s in scalar_types] + [nb_types.voidptr]
 for p1 in pointer_value_types:
@@ -105,7 +116,9 @@ for p1 in pointer_value_types:
         for i in range(12):
             if p1 != p2:
                 typeconv.rules.default_type_manager.set_compatible(
-                    p1, p2, typeconv.Conversion.safe)
+                    p1, p2, typeconv.Conversion.safe
+                )
                 typeconv.rules.default_type_manager.set_compatible(
-                    p2, p1, typeconv.Conversion.safe)
+                    p2, p1, typeconv.Conversion.safe
+                )
             p2 = nb_types.CPointer(p2)

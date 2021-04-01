@@ -22,6 +22,12 @@ def dispatch_codegen(cpu, gpu):
     return inner
 
 
+forbidden_names = ('in')
+def sanitize(name):
+    if name in forbidden_names:
+        return f"{name}_"
+    return name
+
 def register_external(
     fname,
     retty,
@@ -30,11 +36,12 @@ def register_external(
     module_globals,
     typing_registry,
     lowering_registry,
-    doc=None,
+    doc,
 ):
 
     # expose
-    _key = py_types.FunctionType((lambda *args: None).__code__, {}, fname)
+    fn = eval(f'lambda {",".join(map(lambda x: sanitize(x.name), argtys))}: None', {}, {})
+    _key = py_types.FunctionType(fn.__code__, {}, fname)
     _key.__module__ = __name__
     globals()[fname] = _key
 

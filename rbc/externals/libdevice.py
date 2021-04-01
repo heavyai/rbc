@@ -1,3 +1,6 @@
+"""https://docs.nvidia.com/cuda/libdevice-users-guide/index.html
+"""
+
 from rbc.utils import get_version
 from . import register_external
 
@@ -12,7 +15,7 @@ typing_registry = typing.templates.Registry()
 lowering_registry = imputils.Registry()
 
 for fname, (retty, args) in libdevicefuncs.functions.items():
-    argtys = tuple(map(lambda x: f"{x.ty}*" if x.is_ptr else f"{x.ty}", args))
-    fn = register_external(
-        fname, retty, argtys, __name__, globals(), typing_registry, lowering_registry,
-        doc = f'libdevice function {fname}')
+    doc = f"libdevice function {fname}"
+    register_external(
+        fname, retty, args, __name__, globals(), typing_registry, lowering_registry, doc
+    )
