@@ -932,7 +932,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_string:
             return ctypes.c_wchar_p
         if self.is_custom:
-            raise NotImplementedError(f'{type(self).__name__}.toctypes()|{self=}')
+            raise NotImplementedError(f'{type(self).__name__}.toctypes()|self={self}')
         raise NotImplementedError(repr((self, self.is_string)))
 
     def tollvmir(self, bool_is_int8=None):
@@ -955,7 +955,7 @@ class Type(tuple, metaclass=MetaType):
             return ir.VoidType()
         if self.is_struct:
             return ir.LiteralStructType([m.tollvmir(bool_is_int8=bool_is_int8) for m in self])
-        raise NotImplementedError(f'{type(self).__name__}.tollvmir()|{self=}')
+        raise NotImplementedError(f'{type(self).__name__}.tollvmir()|self={self}')
 
     @classmethod
     def _fromstring(cls, s):
