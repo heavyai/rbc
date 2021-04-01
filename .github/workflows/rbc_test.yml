@@ -196,6 +196,13 @@ jobs:
         run: |
           mamba run -n rbc pytest -sv -r A rbc/ -x
 
+      - name: Show Omniscidb docker logs [docker]
+        shell: bash -l {0}
+        if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }} 
+        run: |
+          mamba run -n docker docker-compose logs -f -t \> omniscidb-docker.log
+          cat omniscidb-docker.log
+
       - name: Stop Omniscidb server [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
@@ -208,10 +215,3 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           cat omniscidb-output.txt
-
-      - name: Show Omniscidb docker logs [docker]
-        shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
-        run: |
-          mamba run -n docker docker-compose logs -f -t \> omniscidb-docker.log
-          cat omniscidb-docker.log
