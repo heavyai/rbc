@@ -42,7 +42,7 @@ def test_omniscidb_version(omnisci):
 def test_numba_version():
     varname = 'EXPECTED_NUMBA_VERSION'
     import numba
-    current = numba.version_info.full
+    current = parse_version(numba.__version__)
     expected = os.environ.get(varname)
     if expected is None:
         pytest.skip(

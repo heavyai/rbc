@@ -28,6 +28,68 @@ jobs:
         run: |
           flake8 .
 
+  remotejit:
+    name: RemoteJIT ${{ matrix.os }} - Python v${{ matrix.python-version }} - Numba v${{ matrix.numba-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.7, 3.8, 3.9]
+        numba-version: ['0.50', 0.52, 0.53]
+
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
+          channels: conda-forge
+
+      - name: Configure miniconda
+        shell: bash -l {0}
+        run: |
+          conda env config vars set MAMBA_NO_BANNER=1
+
+      - name: Create rbc test environment v${{ matrix.python-version }}
+        shell: bash -l {0}
+        run: |
+          cat .conda/environment.yml > rbc_test.yaml
+          echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
+          echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
+          echo "variables:" >> rbc_test.yaml
+          echo "  EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}" >> rbc_test.yaml
+          echo "  EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}" >> rbc_test.yaml
+          mamba env create  --file=rbc_test.yaml -n rbc
+
+      - name: rbc conda config
+        shell: bash -l {0}
+        run: mamba run -n rbc conda config --show
+
+      - name: rbc conda list
+        shell: bash -l {0}
+        run: |
+          mamba run -n rbc conda list
+
+      - name: Develop rbc
+        shell: bash -l {0}
+        run: |
+          mamba run -n rbc python setup.py develop
+
+      - name: Run rbc tests
+        shell: bash -l {0}
+        run: |
+          mamba run -n rbc python -m pytest -sv -r A rbc/ -x
+
   omniscidb:
     name: RemoteOmnisci ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}-${{ matrix.omniscidb-from }}
     runs-on: ${{ matrix.os }}
@@ -115,68 +177,6 @@ jobs:
         shell: bash -l {0}
         run: |
           mamba run -n rbc conda config --show
-
-      - name: rbc conda list
-        shell: bash -l {0}
-        run: |
-          mamba run -n rbc conda list
-
-      - name: Develop rbc
-        shell: bash -l {0}
-        run: |
-          mamba run -n rbc python setup.py develop
-
-      - name: Run rbc tests
-        shell: bash -l {0}
-        run: |
-          mamba run -n rbc python -m pytest -sv -r A rbc/ -x
-
-  remotejit:
-    name: RemoteJIT ${{ matrix.os }} - Python v${{ matrix.python-version }} - Numba v${{ matrix.numba-version }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      # fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.7, 3.8, 3.9]
-        numba-version: ['0.50', 0.52, 0.53]
-
-    needs: lint
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-        
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          channels: conda-forge
-
-      - name: Configure miniconda
-        shell: bash -l {0}
-        run: |
-          conda env config vars set MAMBA_NO_BANNER=1
-
-      - name: Create rbc test environment v${{ matrix.python-version }}
-        shell: bash -l {0}
-        run: |
-          cat .conda/environment.yml > rbc_test.yaml
-          echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
-          echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
-          echo "variables:" >> rbc_test.yaml
-          echo "  EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}" >> rbc_test.yaml
-          echo "  EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}" >> rbc_test.yaml
-          mamba env create  --file=rbc_test.yaml -n rbc
-
-      - name: rbc conda config
-        shell: bash -l {0}
-        run: mamba run -n rbc conda config --show  
 
       - name: rbc conda list
         shell: bash -l {0}
