@@ -201,7 +201,7 @@ def check_returns_none(func):
                            ['UNARY_', 'BINARY_', 'CALL_', 'COMPARE_'])):
                     return False
                 warnings.warn(
-                    f'check_returns_none: assuming non-None return from {last_instr=} (FIXME)')
+                    f'check_returns_none: assuming non-None return from last_instr={last_instr} (FIXME)')
                 return False
         last_instr = instr
 

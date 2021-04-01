@@ -10,17 +10,13 @@ channels:
   - defaults
 dependencies:
   - python>=3
-  #- c-compiler
   - setuptools
-  #- pip
   - numba
   - llvmlite
   - pytest
   - tblib
-  - pymapd
   - thriftpy2
   - netifaces
-  - flake8
   - clang
   - six
   # - cudatoolkit-dev   # disable temporary
