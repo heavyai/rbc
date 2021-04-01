@@ -199,7 +199,14 @@ jobs:
 
       - name: Stop Omniscidb server [conda]
         shell: bash -l {0}
-        if: ${{ success() || failure() }} && matrix.omniscidb-from == 'conda'
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
-          test -f omniscidb.pid && kill `cat omniscidb.pid` || exit 1
-          test -f omniscidb-output.txt && cat omniscidb-output.txt || exit 1
+          test -f omniscidb.pid && kill -INT `cat omniscidb.pid`
+          sleep 5
+
+
+      - name: Show Omniscidb server output [conda]
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
+        run: |
+          cat omniscidb-output.txt
