@@ -91,7 +91,7 @@ jobs:
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
         run: |
-          mamba run -n rbc python -m pytest -sv -r A rbc/ -x
+          mamba run -n rbc pytest -sv -r A rbc/ -x
 
   omniscidb:
     name: RemoteOmnisci ${{ matrix.os }} - Python v${{ matrix.python-version }} - Omniscidb v${{ matrix.omniscidb-version }}-${{ matrix.omniscidb-from }}
@@ -163,7 +163,8 @@ jobs:
           mkdir data
           mamba run -n omniscidb-env omnisci_initdb data -f
           mamba run -n omniscidb-env omnisci_server --version
-          mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+          mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt & echo $! > omniscidb.pid
+          cat omniscidb.pid
           sleep 10
 
       - name: Create rbc test environment v${{ matrix.python-version }}
@@ -194,4 +195,17 @@ jobs:
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
         run: |
-          mamba run -n rbc python -m pytest -sv -r A rbc/ -x
+          mamba run -n rbc pytest -sv -r A rbc/ -x
+
+      - name: Stop omniscidb server on success
+        shell: bash -l {0}
+        if: matrix.omniscidb-from == 'conda'
+        run:
+          test -f omniscidb.pid && kill `cat omniscidb.pid` || exit 1
+
+      - name: Show omniscidb output on failure
+        shell: bash -l {0}
+        if: ${{ failure() }} && matrix.omniscidb-from == 'conda'
+        run:
+          test -f omniscidb.pid && kill `cat omniscidb.pid`
+          test -f omniscidb-output.txt && cat omniscidb-output.txt || exit 1
