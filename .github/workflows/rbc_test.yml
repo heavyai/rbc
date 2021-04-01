@@ -197,15 +197,9 @@ jobs:
         run: |
           mamba run -n rbc pytest -sv -r A rbc/ -x
 
-      - name: Stop omniscidb server on success
+      - name: Stop Omniscidb server [conda]
         shell: bash -l {0}
-        if: ${{ success() }} && matrix.omniscidb-from == 'conda'
-        run:
-          test -f omniscidb.pid && kill `cat omniscidb.pid` || exit 1
-
-      - name: Show omniscidb output on failure
-        shell: bash -l {0}
-        if: ${{ failure() }} && matrix.omniscidb-from == 'conda'
+        if: ${{ success() || failure() }} && matrix.omniscidb-from == 'conda'
         run: |
           test -f omniscidb.pid && kill `cat omniscidb.pid` || exit 1
           test -f omniscidb-output.txt && cat omniscidb-output.txt || exit 1
