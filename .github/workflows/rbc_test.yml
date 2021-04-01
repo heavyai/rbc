@@ -60,7 +60,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           mamba-version: "*"
           channels: conda-forge
-          # environment-file: .conda/environment.yml
 
       - name: Configure miniconda
         shell: bash -l {0}
@@ -72,7 +71,7 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
-          mamba create -n omniscidb-env omniscidb=${{ matrix.omniscidb-version }}=*_cpu -c conda-forge
+          mamba create -n omniscidb-env omniscidb=${{ matrix.omniscidb-version }}*=*_cpu -c conda-forge
 
       # omniscidb docker
       - name: Build the docker image [docker]
@@ -140,7 +139,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [3.7, 3.8, 3.9]
-        numba-version: [0.50, 0.51, 0.52, 0.53]
+        numba-version: ['0.50', 0.51, 0.52, 0.53]
 
     needs: lint
 
@@ -169,8 +168,8 @@ jobs:
         shell: bash -l {0}
         run: |
           cat .conda/environment.yml > rbc_test.yaml
-          echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
+          echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           echo "variables:" >> rbc_test.yaml
           echo "  - EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}" >> rbc_test.yaml
           echo "  - EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}" >> rbc_test.yaml
