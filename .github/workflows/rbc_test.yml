@@ -182,12 +182,12 @@ jobs:
       - name: rbc conda list
         shell: bash -l {0}
         run: |
-          mamba run -n test conda list
+          mamba run -n rbc conda list
 
       - name: Develop rbc
         shell: bash -l {0}
         run: |
-          mamba run -n test python setup.py develop
+          mamba run -n rbc python setup.py develop
 
       - name: Run rbc tests
         shell: bash -l {0}
@@ -195,7 +195,7 @@ jobs:
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
         run: |
-          mamba run -n test pytest -sv -r A rbc/ -x
+          mamba run -n rbc pytest -sv -r A rbc/ -x
 
       - name: Stop Omniscidb server [conda]
         shell: bash -l {0}
