@@ -3,7 +3,9 @@ __all__ = ['omnisci_fixture']
 
 import os
 import pytest
+import warnings
 from collections import defaultdict
+from rbc.utils import version_date
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
@@ -41,14 +43,27 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
 
-    def require_version(version, message=None):
+    def require_version(version, message=None, date=None):
         if not available_version:
             pytest.skip(reason)
+        assert isinstance(version, tuple)
         if available_version < version:
             _reason = f'test requires version {version} or newer, got {available_version}'
             if message is not None:
                 _reason += f': {message}'
             pytest.skip(_reason)
+        if date is not None:
+            assert isinstance(date, int)
+            available_date = version_date(available_version)
+            if not available_date:
+                warnings.warn('could not determine date of {available_version}')
+                return
+            if available_date < date:
+                _reason = (f'test requires version {version} with date {date} or newer,'
+                           f' got {available_version} with date {available_date}')
+                if message is not None:
+                    _reason += f': {message}'
+                pytest.skip(_reason)
 
     # Throw an error on Travis CI if the server is not available
     if "TRAVIS" in os.environ and not available_version:
