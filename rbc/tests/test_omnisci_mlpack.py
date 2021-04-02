@@ -20,18 +20,18 @@ def test_mlpack(omnisci, func):
 
     extra_args = dict(db_scan='cast(1 as float), 1',
                       kmeans='1')[func]
-
     query = (f'select * from table({func}(cursor(select cast(rowid as int), f8, f8, f8 '
              f'from {omnisci.table_name}), {extra_args}, 1))')
+
     try:
         _, result = omnisci.sql_execute(query)
     except OmnisciServerError as msg:
-        print(msg)
         m = re.match(r'.*No match found for function signature ' + func + r'[(]',
                      msg.args[0])
         if m is not None:
-            pytest.skip('test requires omniscidb server with MLPACK support')
+            pytest.skip(f'test requires omniscidb server with MLPACK support: {msg}')
         raise
+
     result = list(result)
 
     expected = dict(
