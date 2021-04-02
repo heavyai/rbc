@@ -26,7 +26,7 @@ def version_date(version):
     `yyyymmdd`. Return 0 if date information is not available.
     """
     if version and isinstance(version[-1], str):
-        m = re.match(r'([12]\d\d\d[01]\d[0123]\d)', version[-1])
+        m = re.match(r'.*([12]\d\d\d[01]\d[0123]\d)', version[-1])
         if m is not None:
             return int(m.groups()[0])
     return 0
