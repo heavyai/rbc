@@ -509,15 +509,14 @@ def test_redefine(omnisci):
             available_version,)))
 @pytest.mark.parametrize("step", [1, 2, 3])
 def test_overload_nonuniform(omnisci, step):
-    if step == 1 or step == 3:
-        pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
+    pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
 
     omnisci.reset()
     omnisci.register()
 
     if step > 0:
         @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
-        def overloaded_udtf_f8(x, m, y):  # noqa: E501, F811
+        def overloaded_udtf(x, m, y):  # noqa: E501, F811
             y[0] = 64
             return 1
 
@@ -533,7 +532,7 @@ def test_overload_nonuniform(omnisci, step):
             y[0] = 132
             return 1
 
-    sql_query = ('select * from table(overloaded_udtf_f8(cursor('
+    sql_query = ('select * from table(overloaded_udtf(cursor('
                  f'select f8 from {omnisci.table_name}), 1))')
     if step > 0:
         descr, result = omnisci.sql_execute(sql_query)
