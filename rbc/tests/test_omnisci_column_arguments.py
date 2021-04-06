@@ -167,4 +167,7 @@ def test_ct_binding_row_multiplier(omnisci, use_default, kind):
     _, result = omnisci.sql_execute(query)
     result = list(result)
 
-    assert result == [(1000 + int(kind),)], (result, query)
+    if kind in ('169', '196', '369', '396'):
+        kind = str(int(kind) + 1230)
+
+    assert result == [(1000 + int(kind) + 1,)], (result, query)
