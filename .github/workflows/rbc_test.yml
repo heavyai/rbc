@@ -138,8 +138,7 @@ jobs:
         run: |
           mamba create -n omniscidb-env omniscidb=${{ matrix.omniscidb-version }}*=*_cpu -c conda-forge
 
-      # omniscidb docker
-      - name: Build the docker image [docker]
+      - name: Build Omniscidb docker image and run it [docker]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
         run: |
@@ -197,13 +196,19 @@ jobs:
         run: |
           mamba run -n rbc pytest -sv -r A rbc/ -x
 
+      - name: Show Omniscidb docker logs on failure [docker]
+        shell: bash -l {0}
+        if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
+        run: |
+          mamba run -n docker docker-compose logs -f -t \> omniscidb-docker.log
+          cat omniscidb-docker.log
+
       - name: Stop Omniscidb server [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
         run: |
           test -f omniscidb.pid && kill -INT `cat omniscidb.pid`
           sleep 5
-
 
       - name: Show Omniscidb server output [conda]
         shell: bash -l {0}

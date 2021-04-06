@@ -83,7 +83,7 @@ def define(omnisci):
                           'cursor(i4,i8,f8,f4)'])
 def test_copy(omnisci, use_default, inputs):
     if use_default is True:
-        omnisci.require_version((5, 7), 'Requires omnisci-internal PR 5403')
+        omnisci.require_version((5, 6), 'Requires omnisci-internal PR 5403', date=20210430)
     omnisci.require_version((5, 5), 'Requires omniscidb-internal PR 5134')
 
     groups = inputs.split(';')
@@ -135,7 +135,7 @@ def test_ct_binding_constant_sizer(omnisci, kind):
                                   '91', '196', '396', '369', '169'])
 def test_ct_binding_row_multiplier(omnisci, use_default, kind):
     if use_default is True:
-        omnisci.require_version((5, 7), 'Requires omnisci-internal PR 5403')
+        omnisci.require_version((5, 6), 'Requires omnisci-internal PR 5403', date=20210430)
     omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274')
     suffix = {'91': '2', '369': '5', '169': '3', '396': '4', '196': '6'}.get(kind, '')
     codes = {'1': 'i4', '2': 'i8', '3': 'i4, i4, i4', '4': 'i8, i8, i8',
