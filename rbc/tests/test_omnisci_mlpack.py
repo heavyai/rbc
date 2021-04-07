@@ -11,7 +11,7 @@ def omnisci():
         yield o
 
 
-@pytest.mark.parametrize("func", ['db_scan', 'kmeans'])
+@pytest.mark.parametrize("func", ['dbscan', 'kmeans'])
 def test_mlpack(omnisci, func):
     omnisci.require_version(
         (5, 6),
