@@ -18,7 +18,7 @@ def test_mlpack(omnisci, func):
         'Requires omniscidb-internal PR 5430 and omniscidb built with -DENABLE_MLPACK',
         date=20210401)
 
-    extra_args = dict(db_scan='cast(1 as float), 1',
+    extra_args = dict(dbscan='cast(1 as float), 1',
                       kmeans='1')[func]
     query = (f'select * from table({func}(cursor(select cast(rowid as int), f8, f8, f8 '
              f'from {omnisci.table_name}), {extra_args}, 1))')
