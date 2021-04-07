@@ -42,7 +42,6 @@ Array
 
 
 .. code-block:: Python
-    :linenos:
 
     from numba import types
     from rbc.omnisci_backend import Array
