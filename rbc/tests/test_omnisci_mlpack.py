@@ -35,7 +35,7 @@ def test_mlpack(omnisci, func):
     result = list(result)
 
     expected = dict(
-        db_scan=[(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)],
+        dbscan=[(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)],
         kmeans=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)]
     )[func]
 
