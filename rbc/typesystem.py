@@ -23,7 +23,7 @@ class TypeSystemManager:
     """Manages context specific aliases.
 
     Usage:
-    
+
     .. code-block:: python
 
         with Type.alias(A='Array', bool='bool8', ...):

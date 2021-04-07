@@ -22,11 +22,12 @@ def dispatch_codegen(cpu, gpu):
     return inner
 
 
-forbidden_names = ('in')
 def sanitize(name):
+    forbidden_names = ('in')
     if name in forbidden_names:
         return f"{name}_"
     return name
+
 
 def register_external(
     fname,

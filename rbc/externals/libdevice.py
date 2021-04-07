@@ -1,7 +1,6 @@
 """https://docs.nvidia.com/cuda/libdevice-users-guide/index.html
 """
 
-from rbc.utils import get_version
 from . import register_external
 from numba.core import imputils, typing  # noqa: E402
 from numba.cuda import libdevicefuncs  # noqa: E402
