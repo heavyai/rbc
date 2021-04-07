@@ -47,12 +47,13 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
+    'sphinx_autodoc_typehints',
     'sphinx_rtd_theme'
 ]
 
 # autosummary configuration
 autosummary_generate = True
-autodoc_typehints = "none"
+autodoc_typehints = "description"
 
 html_copy_source = False
 

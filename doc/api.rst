@@ -41,6 +41,14 @@ Externals
 OmniSciDB Backend
 =================
 
+The table below contains the data structures available for the OmniSciDB backend.
+It should be noticed that the following types are not regular Python types but
+`Numba types <https://numba.readthedocs.io/en/stable/reference/types.html>`__.
+
+The set of types below are only materialize inside the OmniSciDB SQL Engine. Thus,
+one cannot create and use them inside the REPL, for instance.
+
+
 .. raw:: html
 
     <table class="longtable docutils align-default">
@@ -60,6 +68,15 @@ OmniSciDB Backend
             </tr>
             <tr class="row-even">
                 <td>
+                    <p><a class="reference internal" href="omnisci/bytes.html" title="rbc.omnisci_backend.Bytes">
+                            <code class="xref py py-obj docutils literal notranslate">
+                                <span class="pre">rbc.omnisci_backend.Bytes</span>
+                            </code></a></p>
+                </td>
+                <td><p></p></td>
+            </tr>
+            <tr class="row-odd">
+                <td>
                     <p><a class="reference internal" href="omnisci/column.html" title="rbc.omnisci_backend.Column">
                             <code class="xref py py-obj docutils literal notranslate">
                                 <span class="pre">rbc.omnisci_backend.Column</span>
@@ -67,9 +84,18 @@ OmniSciDB Backend
                 </td>
                 <td><p></p></td>
             </tr>
+            <tr class="row-even">
+                <td>
+                    <p><a class="reference internal" href="omnisci/outputcolumn.html" title="rbc.omnisci_backend.OutputColumn">
+                            <code class="xref py py-obj docutils literal notranslate">
+                                <span class="pre">rbc.omnisci_backend.OutputColumn</span>
+                            </code></a></p>
+                </td>
+                <td><p></p></td>
+            </tr>
             <tr class="row-odd">
                 <td>
-                    <p><a class="reference internal" href="omnisci/column_list.html" title="rbc.omnisci_backend.ColumnList">
+                    <p><a class="reference internal" href="omnisci/columnlist.html" title="rbc.omnisci_backend.ColumnList">
                             <code class="xref py py-obj docutils literal notranslate">
                                 <span class="pre">rbc.omnisci_backend.ColumnList</span>
                             </code></a></p>
