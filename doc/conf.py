@@ -40,6 +40,10 @@ release = __version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
+# append _ext so that one can use "numbaext"
+sys.path.append(os.path.abspath("./_ext"))
+
 extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
@@ -50,7 +54,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme'
+    'sphinx_rtd_theme',
+    'numbadoc',
 ]
 
 # autosummary configuration

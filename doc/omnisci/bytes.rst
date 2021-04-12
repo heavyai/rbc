@@ -5,11 +5,22 @@ Bytes
 
 .. py:class:: Bytes
 
+    In OmniSciDB, Bytes is represented as follows:
+
+    .. code-block:: C
+
+        {
+            char* ptr,
+            int64_t size,  // when non-negative, Bytes has fixed width.
+            int8_t is_null,
+        }
+
+
     .. rubric:: Methods
 
-    .. py:method:: __init__(self: Bytes, n: int)
-    .. py:method:: __getitem__(self: Bytes, idx: int) -> int
-    .. py:method:: __setitem__(self: Bytes, idx: int, value: int)
+    .. py:method:: __init__(self, n: int)
+    .. py:method:: __getitem__(self, idx: int) -> int
+    .. py:method:: __setitem__(self, idx: int, value: int)
 
     .. rubric:: Functions
 

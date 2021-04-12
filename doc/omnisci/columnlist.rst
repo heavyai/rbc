@@ -17,12 +17,12 @@ ColumnList
     
     .. rubric:: Methods
 
-    .. py:method:: ncols(self: ColumnList) -> int
+    .. py:method:: ncols(self) -> int
 
         Returns :py:`ColumnList.length`
 
-    .. py:method:: nrows(self: ColumnList) -> int
+    .. py:method:: nrows(self) -> int
 
         Returns :py:`ColumnList.size`
     
-    .. py:method:: __getitem__(self: ColumnList, idx: int) -> Column
+    .. py:method:: __getitem__(self, idx: int) -> Column

@@ -16,6 +16,7 @@ Casts:
 
 __all__ = ["sizeof", "cast"]
 
+import functools
 from llvmlite import ir
 from numba.core import extending, imputils, typing, typeconv
 from numba.core import types as nb_types
@@ -61,6 +62,11 @@ def cast(typingctx, ptr, typ):
         return builder.bitcast(args[0], dtype.tollvmir())
 
     return sig, codegen
+
+
+# fix docstring for intrinsics
+for __func in (sizeof, cast):
+    functools.update_wrapper(__func, __func._defn)
 
 
 @extending.overload_method(type(nb_types.voidptr), "cast")
