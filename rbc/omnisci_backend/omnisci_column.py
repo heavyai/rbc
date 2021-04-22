@@ -23,6 +23,10 @@ class OmnisciColumnType(OmnisciBufferType):
     """
     pass_by_value = True
 
+    @property
+    def buffer_extra_members(self):
+        return ('int32_t dict_id',)
+
 
 class OmnisciOutputColumnType(OmnisciColumnType):
     """Omnisci OutputColumn type for RBC typesystem.
@@ -110,6 +114,25 @@ def omnisci_column_is_null_(typingctx, col_var, row_idx):
 def omnisci_column_is_null(col_var, row_idx):
     def impl(col_var, row_idx):
         return omnisci_column_is_null_(col_var, row_idx)
+    return impl
+
+
+@extending.intrinsic
+def omnisci_column_get_dict_id_(typingctx, data):
+    sig = types.int32(data)
+
+    def codegen(context, builder, signature, args):
+        data, = args
+        col_typ = signature.args[0]
+        column = context.make_helper(builder, col_typ, value=data)
+        return column.dict_id
+    return sig, codegen
+
+
+@extending.overload_method(BufferType, 'get_dict_id')
+def omnisci_column_get_dict_id(col_var):
+    def impl(col_var):
+        return omnisci_column_get_dict_id_(col_var)
     return impl
 
 

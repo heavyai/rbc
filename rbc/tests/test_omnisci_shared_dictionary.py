@@ -1,77 +1,69 @@
-import os
-from collections import defaultdict
 import pytest
-
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
-if available_version and available_version < (5, 5):
-    reason = ("test file requires omniscidb version 5.5+ with bytes support"
-              "(got %s)" % (available_version, ))
-    available_version = None
-
-pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+from rbc.tests import omnisci_fixture
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def omnisci():
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = os.path.splitext(os.path.basename(__file__))[0]
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
-    m.sql_execute(f'''
-        CREATE TABLE IF NOT EXISTS {table_name} (
-            base TEXT ENCODING DICT(32),
-            derived TEXT,
-            SHARED DICTIONARY (derived) REFERENCES {table_name}(base)
-        );
-    ''')
-
-    data = {
-        "base": ["hello", "foo", "foofoo", "world", "bar", "foo", "foofoo"],
-        "derived": ["world", "bar", "hello", "foo", "baz", "hello", "foo"]
-    }
-
-    m.load_table_columnar(table_name, **data)
-    m.table_name = table_name
-
-    yield m
-    try:
-        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    except Exception as msg:
-        print('%s in deardown' % (type(msg)))
+    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
+        define(o)
+        yield o
 
 
-def test_data(omnisci):
-    omnisci.reset()
-
-    _, result = omnisci.sql_execute(
-        f'select * from {omnisci.table_name}')
-
-    result = list(result)
-
-    assert result == [('hello', 'world'),
-                      ('foo', 'bar'),
-                      ('foofoo', 'Hello'),
-                      ('world', 'foo'),
-                      ('bar', 'baz')]
+def define(omnisci):
+    @omnisci("int32(Column<int32>, RowMultiplier, OutputColumn<int32>)")
+    def test_shared_dict(x, m, y):
+        sz = len(x)
+        for i in range(sz):
+            y[i] = 1000 * x.get_dict_id() + x[i]
+        return m * sz
 
 
-def test_fx(omnisci):
+@pytest.fixture(scope="function")
+def create_columns(omnisci):
 
-    fn = "ct_binding_dict_encoded1"
-    table = omnisci.table_name
-    
-    _, result = omnisci.sql_execute(
-        f"SELECT base, key_for_string(base) FROM {table};")
-    print(list(result))
+    for size in (8, 16, 32):
+        table_name = f"dict_{size}"
+        base = f"base_{size}"
+        derived = f"derived_{size}"
 
-    query = (
-        f"SELECT * FROM table({fn}("
-        f" cursor(SELECT base FROM {table}),"
-         " 1));"
+        omnisci.sql_execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                {base} TEXT ENCODING DICT({size}),
+                {derived} TEXT,
+                SHARED DICTIONARY ({derived}) REFERENCES {table_name}({base})
+            );
+        """
+        )
+
+        data = {
+            base: ["hello", "foo", "foofoo", "world", "bar", "foo", "foofoo"],
+            derived: ["world", "bar", "hello", "foo", "baz", "hello", "foo"],
+        }
+
+        omnisci.load_table_columnar(table_name, **data)
+
+    yield omnisci
+
+    for size in (8, 16, 32):
+        table_name = f"dict_{size}"
+        omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name}")
+
+
+@pytest.mark.usefixtures("create_columns")
+@pytest.mark.parametrize("size", (8, 16, 32))
+def test_table_function_shared_dict(omnisci, size):
+
+    fn = "test_shared_dict"
+    table = f"dict_{size}"
+    base = f"base_{size}"
+
+    _, expected = omnisci.sql_execute(
+        f"SELECT key_for_string(base_{size}) FROM {table};"
     )
-    print(query)
 
+    query = f"SELECT * FROM table({fn}(" f" cursor(SELECT {base} FROM {table})," " 1));"
     _, result = omnisci.sql_execute(query)
-    print(list(result))
+
+    assert list(expected) == [(r[0] % 1000,) for r in list(result)]
