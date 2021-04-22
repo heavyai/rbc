@@ -149,7 +149,7 @@ def omnisci_column_is_dict_encoded_(typingctx, data):
 
 
 @extending.overload_method(BufferType, 'is_dict_encoded')
-def omnisci_column_get_dict_id(col_var):
+def omnisci_column_is_dict_encoded(col_var):
     def impl(col_var):
         return omnisci_column_is_dict_encoded_(col_var)
     return impl

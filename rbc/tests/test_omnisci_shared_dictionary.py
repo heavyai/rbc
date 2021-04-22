@@ -89,6 +89,7 @@ def test_table_function_is_shared_dict(omnisci, size):
 
     assert all(list(map(lambda x: x[0], result)))
 
+
 @pytest.mark.usefixtures("create_columns")
 def test_table_function_is_not_shared_dict(omnisci):
 
@@ -99,4 +100,4 @@ def test_table_function_is_not_shared_dict(omnisci):
     query = f"SELECT * FROM table({fn}(cursor(SELECT {col} FROM {table}), 1));"
     _, result = omnisci.sql_execute(query)
 
-    assert all(list(map(lambda x: x[0], result))) == False
+    assert all(list(map(lambda x: x[0], result))) == False  # noqa: E712
