@@ -65,10 +65,6 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                     _reason += f': {message}'
                 pytest.skip(_reason)
 
-    # Throw an error on Travis CI if the server is not available
-    if "TRAVIS" in os.environ and not available_version:
-        pytest.exit(msg=reason, returncode=1)
-
     require_version(minimal_version)
 
     filename = caller_globals['__file__']

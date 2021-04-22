@@ -5,7 +5,7 @@ from rbc.tests import omnisci_fixture
 @pytest.fixture(scope="module")
 def omnisci():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 7)):
         define(o)
         yield o
 
@@ -28,6 +28,9 @@ def define(omnisci):
 
 @pytest.fixture(scope="function")
 def create_columns(omnisci):
+    omnisci.require_version(
+        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
+    )
 
     for size in (8, 16, 32):
         table_name = f"dict_{size}"
@@ -61,6 +64,9 @@ def create_columns(omnisci):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_table_function_shared_dict(omnisci, size):
+    omnisci.require_version(
+        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
+    )
 
     fn = "test_shared_dict"
     table = f"dict_{size}"
@@ -79,6 +85,9 @@ def test_table_function_shared_dict(omnisci, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (32,))
 def test_table_function_is_shared_dict(omnisci, size):
+    omnisci.require_version(
+        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
+    )
 
     fn = "test_shared_dict_is_dict_encoded"
     table = f"dict_{size}"
@@ -92,6 +101,9 @@ def test_table_function_is_shared_dict(omnisci, size):
 
 @pytest.mark.usefixtures("create_columns")
 def test_table_function_is_not_shared_dict(omnisci):
+    omnisci.require_version(
+        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
+    )
 
     fn = "test_shared_dict_is_dict_encoded"
     table = f"{omnisci.table_name}"
