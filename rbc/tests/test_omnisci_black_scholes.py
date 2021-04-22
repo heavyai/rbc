@@ -118,7 +118,7 @@ def test_black_scholes_udtf(omnisci):
         pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [issue 169]')
 
-    if omnisci.version in ((5, 5), (5, 4)):
+    if omnisci.version > (5, 3) and omnisci.version < (5, 6):
         pytest.xfail('crashes omniscidb server [issue 325]')
 
     omnisci.reset()
