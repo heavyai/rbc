@@ -200,7 +200,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
         run: |
-          mamba run -n docker docker-compose logs -f -t \> omniscidb-docker.log
+          mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> omniscidb-docker.log
           cat omniscidb-docker.log
 
       - name: Stop Omniscidb server [conda]
