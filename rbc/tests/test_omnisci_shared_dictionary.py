@@ -1,3 +1,4 @@
+import os
 import pytest
 from rbc.tests import omnisci_fixture
 
@@ -33,7 +34,7 @@ def create_columns(omnisci):
     )
 
     for size in (8, 16, 32):
-        table_name = f"dict_{size}"
+        table_name = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
         base = f"base_{size}"
         derived = f"derived_{size}"
 
@@ -57,7 +58,7 @@ def create_columns(omnisci):
     yield omnisci
 
     for size in (8, 16, 32):
-        table_name = f"dict_{size}"
+        table_name = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
         omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name}")
 
 
@@ -69,7 +70,8 @@ def test_table_function_shared_dict(omnisci, size):
     )
 
     fn = "test_shared_dict"
-    table = f"dict_{size}"
+    table = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
+
     base = f"base_{size}"
 
     _, expected = omnisci.sql_execute(
@@ -90,7 +92,7 @@ def test_table_function_is_shared_dict(omnisci, size):
     )
 
     fn = "test_shared_dict_is_dict_encoded"
-    table = f"dict_{size}"
+    table = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
     base = f"base_{size}"
 
     query = f"SELECT * FROM table({fn}(cursor(SELECT {base} FROM {table}), 1));"
