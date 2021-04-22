@@ -18,6 +18,13 @@ def define(omnisci):
             y[i] = 1000 * x.get_dict_id() + x[i]
         return m * sz
 
+    @omnisci("int32(Column<int32>, RowMultiplier, OutputColumn<bool>)")
+    def test_shared_dict_is_dict_encoded(x, m, y):
+        sz = len(x)
+        for i in range(sz):
+            y[i] = x.is_dict_encoded()
+        return m * sz
+
 
 @pytest.fixture(scope="function")
 def create_columns(omnisci):
@@ -63,7 +70,33 @@ def test_table_function_shared_dict(omnisci, size):
         f"SELECT key_for_string(base_{size}) FROM {table};"
     )
 
-    query = f"SELECT * FROM table({fn}(" f" cursor(SELECT {base} FROM {table})," " 1));"
+    query = f"SELECT * FROM table({fn}(cursor(SELECT {base} FROM {table}), 1));"
     _, result = omnisci.sql_execute(query)
 
     assert list(expected) == [(r[0] % 1000,) for r in list(result)]
+
+
+@pytest.mark.usefixtures("create_columns")
+@pytest.mark.parametrize("size", (32,))
+def test_table_function_is_shared_dict(omnisci, size):
+
+    fn = "test_shared_dict_is_dict_encoded"
+    table = f"dict_{size}"
+    base = f"base_{size}"
+
+    query = f"SELECT * FROM table({fn}(cursor(SELECT {base} FROM {table}), 1));"
+    _, result = omnisci.sql_execute(query)
+
+    assert all(list(map(lambda x: x[0], result)))
+
+@pytest.mark.usefixtures("create_columns")
+def test_table_function_is_not_shared_dict(omnisci):
+
+    fn = "test_shared_dict_is_dict_encoded"
+    table = f"{omnisci.table_name}"
+    col = "i4"
+
+    query = f"SELECT * FROM table({fn}(cursor(SELECT {col} FROM {table}), 1));"
+    _, result = omnisci.sql_execute(query)
+
+    assert all(list(map(lambda x: x[0], result))) == False

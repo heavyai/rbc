@@ -136,6 +136,25 @@ def omnisci_column_get_dict_id(col_var):
     return impl
 
 
+@extending.intrinsic
+def omnisci_column_is_dict_encoded_(typingctx, data):
+    sig = types.boolean(data)
+
+    def codegen(context, builder, signature, args):
+        data, = args
+        col_typ = signature.args[0]
+        column = context.make_helper(builder, col_typ, value=data)
+        return builder.icmp_signed('!=', column.dict_id, int32_t(-1))
+    return sig, codegen
+
+
+@extending.overload_method(BufferType, 'is_dict_encoded')
+def omnisci_column_get_dict_id(col_var):
+    def impl(col_var):
+        return omnisci_column_is_dict_encoded_(col_var)
+    return impl
+
+
 class OmnisciCursorType(typesystem.Type):
 
     @classmethod
