@@ -66,9 +66,18 @@ class OmnisciBufferType(typesystem.Type):
         return ()
 
     def tonumba(self, bool_is_int8=None):
+        server_version = TargetInfo().software[1][:3]
         ptr_t = typesystem.Type(self.element_type, '*', name='ptr')
         size_t = typesystem.Type.fromstring('size_t sz')
-        extra_members = tuple(map(typesystem.Type.fromobject, self.buffer_extra_members))
+        extra_members = []
+        for member in self.buffer_extra_members:
+            if isinstance(member, (list, tuple)):
+                member, req_version = member
+                if server_version >= req_version:
+                    extra_members.append(typesystem.Type.fromobject(member))
+            else:
+                extra_members.append(typesystem.Type.fromobject(member))
+
         buffer_type = typesystem.Type(
             ptr_t,
             size_t,

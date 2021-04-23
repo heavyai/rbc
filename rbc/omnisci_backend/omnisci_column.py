@@ -25,7 +25,7 @@ class OmnisciColumnType(OmnisciBufferType):
 
     @property
     def buffer_extra_members(self):
-        return ('int32_t dict_id',)
+        return (('int32_t dict_id', (5, 7)),)
 
 
 class OmnisciOutputColumnType(OmnisciColumnType):
