@@ -1,6 +1,6 @@
 import os
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import omnisci_fixture, skip_on_ci
 
 
 @pytest.fixture(scope="module")
@@ -62,6 +62,7 @@ def create_columns(omnisci):
         omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name}")
 
 
+@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_table_function_shared_dict(omnisci, size):
@@ -84,6 +85,7 @@ def test_table_function_shared_dict(omnisci, size):
     assert list(expected) == [(r[0] % 1000,) for r in list(result)]
 
 
+@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (32,))
 def test_table_function_is_shared_dict(omnisci, size):
@@ -101,6 +103,7 @@ def test_table_function_is_shared_dict(omnisci, size):
     assert all(list(map(lambda x: x[0], result)))
 
 
+@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 def test_table_function_is_not_shared_dict(omnisci):
     omnisci.require_version(
