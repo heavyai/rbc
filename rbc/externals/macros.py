@@ -65,6 +65,8 @@ def cast(typingctx, ptr, typ):
 
 
 # fix docstring for intrinsics
+# TODO: remove this after Numba 0.54 is released
+# https://github.com/numba/numba/pull/6915 
 for __func in (sizeof, cast):
     functools.update_wrapper(__func, __func._defn)
 

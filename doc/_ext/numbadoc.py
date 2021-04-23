@@ -7,7 +7,7 @@ from numba.core.extending import _Intrinsic as Intrinsic
 
 
 class RBCDocumenter(FunctionDocumenter):
-    """Sphinx directive that also understands numba decorators"""
+    """Sphinx directive that also understands numba intrinsic decorator"""
 
     objtype = 'function'
     directivetype = 'function'
@@ -35,9 +35,6 @@ def setup(app):
     # Set the default prefix which is printed in front of the function signature
     app.setup_extension('sphinx.ext.autodoc')
     app.add_autodocumenter(RBCDocumenter)
-    # app.add_directive_to_domain('py', 'task', TaskDirective)
-    # app.add_config_value('celery_task_prefix', '(task)', True)
-    # app.connect('autodoc-skip-member', autodoc_skip_member_handler)
 
     return {
         'parallel_read_safe': True
