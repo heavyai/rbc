@@ -229,6 +229,7 @@ class RemoteOmnisci(RemoteJIT):
         ConstantParameter='int32|sizer=ConstantParameter',
         Constant='int32|sizer=Constant',
         ColumnList='OmnisciColumnListType',
+        TextEncodingDict32='OmnisciTextEncodingType',
     )
 
     def __init__(self,
@@ -624,6 +625,12 @@ class RemoteOmnisci(RemoteJIT):
             'Column<int64_t>': typemap['TExtArgumentType'].get('ColumnInt64'),
             'Column<float>': typemap['TExtArgumentType'].get('ColumnFloat'),
             'Column<double>': typemap['TExtArgumentType'].get('ColumnDouble'),
+            'Column<TextEncodingDict8>': typemap['TExtArgumentType'].get(
+                'ColumnTextEncodingDict8'),
+            'Column<TextEncodingDict16>': typemap['TExtArgumentType'].get(
+                'ColumnTextEncodingDict16'),
+            'Column<TextEncodingDict32>': typemap['TExtArgumentType'].get(
+                'ColumnTextEncodingDict32'),
             'Cursor': typemap['TExtArgumentType']['Cursor'],
             'void': typemap['TExtArgumentType']['Void'],
             'GeoPoint': typemap['TExtArgumentType'].get('GeoPoint'),
@@ -632,9 +639,9 @@ class RemoteOmnisci(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
             'Bytes': typemap['TExtArgumentType'].get('TextEncodingNone'),
-            'Text<8>': typemap['TExtArgumentType'].get('TextEncodingDict8'),
-            'Text<16>': typemap['TExtArgumentType'].get('TextEncodingDict16'),
-            'Text<32>': typemap['TExtArgumentType'].get('TextEncodingDict32'),
+            'TextEncodingDict8': typemap['TExtArgumentType'].get('TextEncodingDict8'),
+            'TextEncodingDict16': typemap['TExtArgumentType'].get('TextEncodingDict16'),
+            'TextEncodingDict32': typemap['TExtArgumentType'].get('TextEncodingDict32'),
             'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
             'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
             'ColumnList<int16_t>': typemap['TExtArgumentType'].get('ColumnListInt16'),
@@ -673,6 +680,16 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('ColumnList<%s>' % T)
 
         ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
+
+        for size in (8, 16, 32):
+            ext_arguments_map['OmnisciColumnType<TextEncodingDict%s>' % size] \
+                = ext_arguments_map.get('Column<TextEncodingDict%s>' % size)
+            ext_arguments_map['OmnisciOutputColumnType<TextEncodingDict%s>' % size] \
+                = ext_arguments_map.get('Column<TextEncodingDict%s>' % size)
+            # ext_arguments_map['OmnisciColumnListType<%s>' % ptr_type] \
+            #     = ext_arguments_map.get('ColumnList<%s>' % T)
+            # ext_arguments_map['OmnisciOutputColumnListType<%s>' % ptr_type] \
+            #     = ext_arguments_map.get('ColumnList<%s>' % T)
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():

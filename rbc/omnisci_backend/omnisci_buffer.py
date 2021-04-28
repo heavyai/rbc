@@ -25,6 +25,7 @@ Omnisci buffer objects from UDF/UDTFs.
 
 import operator
 from collections import defaultdict
+from .omnisci_metatype import OmnisciMetaType
 from llvmlite import ir
 import numpy as np
 from rbc import typesystem
@@ -123,12 +124,8 @@ class BufferPointer(types.Type):
         return self.dtype
 
 
-class BufferMeta(type):
-
-    class_names = set()
-
-    def __init__(cls, name, bases, dct):
-        type(cls).class_names.add(name)
+class BufferMeta(OmnisciMetaType):
+    pass
 
 
 class Buffer(object, metaclass=BufferMeta):

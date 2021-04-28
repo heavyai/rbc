@@ -50,7 +50,8 @@ enum TExtArgumentType {
   ColumnListInt64,
   ColumnListFloat,
   ColumnListDouble,
-  ColumnListBool
+  ColumnListBool,
+  ColumnTextEncodingDict32
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required

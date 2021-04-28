@@ -12,14 +12,19 @@ def omnisci():
 
 
 def define(omnisci):
-    @omnisci("int32(Column<int32>, RowMultiplier, OutputColumn<int32>)")
+    @omnisci(
+        "int32(Column<TextEncodingDict32>, RowMultiplier, OutputColumn<TextEncodingDict32>)"
+    )
     def test_shared_dict(x, m, y):
         sz = len(x)
         for i in range(sz):
             y[i] = 1000 * x.get_dict_id() + x[i]
         return m * sz
 
-    @omnisci("int32(Column<int32>, RowMultiplier, OutputColumn<bool>)")
+    @omnisci(
+        "int32(Column<T>, RowMultiplier, OutputColumn<bool>)",
+        T=["TextEncodingDict32", "int32"],
+    )
     def test_shared_dict_is_dict_encoded(x, m, y):
         sz = len(x)
         for i in range(sz):
@@ -29,9 +34,7 @@ def define(omnisci):
 
 @pytest.fixture(scope="function")
 def create_columns(omnisci):
-    omnisci.require_version(
-        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
-    )
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
 
     for size in (8, 16, 32):
         table_name = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
@@ -66,9 +69,7 @@ def create_columns(omnisci):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_table_function_shared_dict(omnisci, size):
-    omnisci.require_version(
-        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
-    )
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
 
     fn = "test_shared_dict"
     table = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
@@ -89,9 +90,7 @@ def test_table_function_shared_dict(omnisci, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (32,))
 def test_table_function_is_shared_dict(omnisci, size):
-    omnisci.require_version(
-        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
-    )
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
 
     fn = "test_shared_dict_is_dict_encoded"
     table = f"{os.path.splitext(os.path.basename(__file__))[0]}_{size}"
@@ -104,17 +103,13 @@ def test_table_function_is_shared_dict(omnisci, size):
 
 
 @skip_on_ci
-@pytest.mark.usefixtures("create_columns")
 def test_table_function_is_not_shared_dict(omnisci):
-    omnisci.require_version(
-        (5, 7), "Requires omniscidb-internal PR 5492", date=20210531
-    )
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
 
     fn = "test_shared_dict_is_dict_encoded"
-    table = f"{omnisci.table_name}"
-    col = "i4"
-
-    query = f"SELECT * FROM table({fn}(cursor(SELECT {col} FROM {table}), 1));"
+    query = (
+        f"SELECT * FROM table({fn}(cursor(SELECT i4 FROM {omnisci.table_name}), 1));"
+    )
     _, result = omnisci.sql_execute(query)
 
     assert all(list(map(lambda x: x[0], result))) == False  # noqa: E712
