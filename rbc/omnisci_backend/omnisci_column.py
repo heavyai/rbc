@@ -137,6 +137,27 @@ def omnisci_column_get_dict_id(col_var):
 
 
 @extending.intrinsic
+def omnisci_column_set_dict_id_(typingctx, data, dict_id):
+    sig = types.void(data, dict_id)
+
+    def codegen(context, builder, signature, args):
+        zero, two = int32_t(0), int32_t(2)
+        data, dict_id = args
+        assert data.opname == 'load'
+        buf = data.operands[0]
+        builder.store(dict_id, builder.gep(buf, [zero, two]))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferType, 'set_dict_id')
+def omnisci_column_set_dict_id(col_var, dict_id):
+    def impl(col_var, dict_id):
+        return omnisci_column_set_dict_id_(col_var, dict_id)
+    return impl
+
+
+@extending.intrinsic
 def omnisci_column_is_dict_encoded_(typingctx, data):
     sig = types.boolean(data)
 

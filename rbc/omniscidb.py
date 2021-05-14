@@ -229,6 +229,8 @@ class RemoteOmnisci(RemoteJIT):
         ConstantParameter='int32|sizer=ConstantParameter',
         Constant='int32|sizer=Constant',
         ColumnList='OmnisciColumnListType',
+        TextEncodingDict8='OmnisciTextEncodingType',
+        TextEncodingDict16='OmnisciTextEncodingType',
         TextEncodingDict32='OmnisciTextEncodingType',
     )
 
@@ -639,6 +641,9 @@ class RemoteOmnisci(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
             'Bytes': typemap['TExtArgumentType'].get('TextEncodingNone'),
+            'text8': typemap['TExtArgumentType'].get('TextEncodingDict8'),
+            'text16': typemap['TExtArgumentType'].get('TextEncodingDict16'),
+            'text32': typemap['TExtArgumentType'].get('TextEncodingDict32'),
             'TextEncodingDict8': typemap['TExtArgumentType'].get('TextEncodingDict8'),
             'TextEncodingDict16': typemap['TExtArgumentType'].get('TextEncodingDict16'),
             'TextEncodingDict32': typemap['TExtArgumentType'].get('TextEncodingDict32'),
@@ -649,7 +654,12 @@ class RemoteOmnisci(RemoteJIT):
             'ColumnList<int64_t>': typemap['TExtArgumentType'].get('ColumnListInt64'),
             'ColumnList<float>': typemap['TExtArgumentType'].get('ColumnListFloat'),
             'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
-
+            'ColumnList<TextEncodingDict8>': typemap['TExtArgumentType'].get(
+                'ColumnListTextEncodingDict8'),
+            'ColumnList<TextEncodingDict16>': typemap['TExtArgumentType'].get(
+                'ColumnListTextEncodingDict16'),
+            'ColumnList<TextEncodingDict32>': typemap['TExtArgumentType'].get(
+                'ColumnListTextEncodingDict32'),
         }
 
         if self.version[:2] < (5, 4):
@@ -686,10 +696,10 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('Column<TextEncodingDict%s>' % size)
             ext_arguments_map['OmnisciOutputColumnType<TextEncodingDict%s>' % size] \
                 = ext_arguments_map.get('Column<TextEncodingDict%s>' % size)
-            # ext_arguments_map['OmnisciColumnListType<%s>' % ptr_type] \
-            #     = ext_arguments_map.get('ColumnList<%s>' % T)
-            # ext_arguments_map['OmnisciOutputColumnListType<%s>' % ptr_type] \
-            #     = ext_arguments_map.get('ColumnList<%s>' % T)
+            ext_arguments_map['OmnisciColumnListType<TextEncodingDict%s>' % size] \
+                = ext_arguments_map.get('ColumnList<TextEncodingDict%s>' % size)
+            # ext_arguments_map['OmnisciOutputColumnListType<%s>' % size] \
+            #     = ext_arguments_map.get('ColumnList<%s>' % size)
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():

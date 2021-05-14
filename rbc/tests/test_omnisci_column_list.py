@@ -46,11 +46,11 @@ def define(omnisci):
              ' RowMultiplier, OutputColumn<T>)',
              T=scalar_types)
     def columns_sum3(rowid, lst, m, out):
-        for j in range(lst.ncols()):
+        for j in range(lst.ncols):
             col = lst[j]
-            for i in range(lst.nrows()):
+            for i in range(lst.nrows):
                 out[i] = col[i] if j == 0 else out[i] + col[i]
-        return lst.nrows()
+        return lst.nrows
 
 
 @pytest.mark.parametrize("variant", ['1', "2", "3"])
