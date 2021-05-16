@@ -10,6 +10,9 @@ def test_table_load(mth, suffix):
 
     count = 0
     for omnisci in omnisci_fixture(globals(), load_columnar=load_columnar):
+        omnisci.require_version((5, 7),
+                                'Requires omniscidb-internal PR 5465 [rbc PR 330]',
+                                date=20210517)
         count += 1
         descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}')
         result = list(result)
@@ -55,7 +58,7 @@ def test_table_load(mth, suffix):
     elif suffix == 'arraynull':
         assert colnames == ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
         assert result == [(None, [], None, [], None, [], None),
-                          ([1.0], [], [None], [], [1], [], [0]),
+                          ([1.0], None, [None], None, [1], None, [0]),
                           (None, [None, 3.0], None, [2, None], None, [2, 3], None),
                           ([None, 4.0, 5.0], None, [3, None, 5], None, [3, 4, None],
                            None, [1, 1, 0]),

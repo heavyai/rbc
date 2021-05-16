@@ -33,7 +33,7 @@ def test_array_null(omnisci, col):
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
     if col in ['i2', 'i8', 'f8']:
         omnisci.require_version((5, 7),
-                                'Requires omniscidb-internal PR 5104 [rbc PR 330]',
+                                'Requires omniscidb-internal PR 5465 [rbc PR 330]',
                                 date=20210517)
     # skipping bool test since NULL is converted to true - rbc issue #245
     if col == 'b':
