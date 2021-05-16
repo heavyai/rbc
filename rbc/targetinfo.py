@@ -1,3 +1,5 @@
+"""TargetInfo class specific
+"""
 import ctypes
 import json
 import warnings

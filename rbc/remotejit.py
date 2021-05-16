@@ -1,5 +1,5 @@
-# Author: Pearu Peterson
-# Created: February 2019
+"""RemoteJIT client/server config functions
+"""
 
 __all__ = ['RemoteJIT', 'Signature', 'Caller']
 
@@ -482,7 +482,8 @@ class RemoteJIT(object):
           Compile data can be any Python object. When None, it is
           interpreted as no compile data is available.
 
-        Usage
+
+        Notes
         -----
 
         The have/discard/set_last_compile methods provide a way to
@@ -490,13 +491,15 @@ class RemoteJIT(object):
         registration of compiled functions. The corresponding
         `register` method is expected to use the following pattern:
 
-        ```
-          def register(self):
-              if self.have_last_compile:
-                  return
-              <compile defined functions>
-              self.set_last_compile(<compilation results>)
-        ```
+
+        .. code-block:: python
+
+           def register(self):
+               if self.have_last_compile:
+                   return
+               <compile defined functions>
+               self.set_last_compile(<compilation results>)
+
 
         The `discard_last_compile()` method is called when the compile
         data becomes obsolete or needs to be discarded. For instance,

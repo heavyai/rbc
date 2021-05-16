@@ -11,6 +11,7 @@ class OmnisciServerError(Exception):
     Launch when OmnisciDB server raises a runtime error that RBC knows
     how to interpret.
     """
+    pass
 
 
 class UnsupportedError(numba_errors.UnsupportedError):
@@ -18,6 +19,7 @@ class UnsupportedError(numba_errors.UnsupportedError):
     Launch when an attempt is to use a feature that is not supported
     for a given target.
     """
+    pass
 
 
 class ForbiddenNameError(Exception):

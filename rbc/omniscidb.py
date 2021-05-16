@@ -1,3 +1,6 @@
+"""OmniSciDB client config functions
+"""
+
 import ast
 import inspect
 import os
@@ -201,8 +204,7 @@ class RemoteOmnisci(RemoteJIT):
 
     """Usage:
 
-    .. highlight:: python
-    .. code-block:: python
+    .. code:: python
 
         omnisci = RemoteOmnisci(host=..., port=...)
 
