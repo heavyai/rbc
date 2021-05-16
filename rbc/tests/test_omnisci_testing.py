@@ -10,9 +10,9 @@ def test_table_load(mth, suffix):
 
     count = 0
     for omnisci in omnisci_fixture(globals(), load_columnar=load_columnar):
-        omnisci.require_version((5, 7),
+        omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5465 [rbc PR 330]',
-                                date=20210517)
+                                hash='4777a06b01')
         count += 1
         descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}')
         result = list(result)

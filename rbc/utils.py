@@ -32,6 +32,17 @@ def version_date(version):
     return 0
 
 
+def version_hash(version):
+    """Return hash from version dev part as string. Return None if hash
+    information is not available.
+    """
+    if version and isinstance(version[-1], str):
+        m = re.match(r'.*([12]\d\d\d[01]\d[0123]\d)[-](\w{10,10}\b)', version[-1])
+        if m is not None:
+            return m.groups()[1]
+    return None
+
+
 def parse_version(version):
     """Return parsed version tuple from version string.
 

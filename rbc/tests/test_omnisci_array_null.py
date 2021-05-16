@@ -32,9 +32,9 @@ def test_array_null(omnisci, col):
     omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
     if col in ['i2', 'i8', 'f8']:
-        omnisci.require_version((5, 7),
+        omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5465 [rbc PR 330]',
-                                date=20210517)
+                                hash='4777a06b01')
     # skipping bool test since NULL is converted to true - rbc issue #245
     if col == 'b':
         pytest.skip('Skipping Array<boolean> test [RBC issue 240]')
