@@ -76,11 +76,14 @@ def define(omnisci):
         return len(x)
 
 
+@pytest.mark.parametrize('use_default', [True, False])
 @pytest.mark.parametrize("inputs",
                          ['i8', 'cursor(i8,f8)', 'i8;f8', 'i4;cursor(f8,i8)',
                           'cursor(i4,i8);f8', 'cursor(i4,i8);cursor(f8,f4)',
                           'cursor(i4,i8,f8,f4)'])
-def test_copy(omnisci, inputs):
+def test_copy(omnisci, use_default, inputs):
+    if use_default is True:
+        omnisci.require_version((5, 6), 'Requires omnisci-internal PR 5403', date=20210530)
     omnisci.require_version((5, 5), 'Requires omniscidb-internal PR 5134')
 
     groups = inputs.split(';')
@@ -100,7 +103,8 @@ def test_copy(omnisci, inputs):
         expected = [row1 + row2 for row1, row2 in zip(expected, result)]
         args.append(f'cursor(select {colnames} from {table_name})')
         cc.append((colnames.count(',') + 1) * 'c')
-    args.append('1')
+    if use_default is False:
+        args.append('1')
     args = ', '.join(args)
     cc = '_'.join(cc)
 
@@ -113,11 +117,11 @@ def test_copy(omnisci, inputs):
 
 @pytest.mark.parametrize('kind', ['1', '11', '111', '211', '221', '212', '13', '32', '34', '242'])
 def test_ct_binding_constant_sizer(omnisci, kind):
-    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274')
+    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274', date=20210530)
     colnames = ', '.join({'1': 'i4', '2': 'i8', '3': 'i4, i4, i4',
                           '4': 'i8, i8, i8'}[n] for n in kind)
 
-    query = (f'select * from table(ct_binding_udtf(cursor('
+    query = (f'select * from table(ct_binding_udtf_constant(cursor('
              f'select {colnames} from {omnisci.table_name})))')
     _, result = omnisci.sql_execute(query)
     result = list(result)
@@ -125,19 +129,27 @@ def test_ct_binding_constant_sizer(omnisci, kind):
     assert result == [(int(kind),)]
 
 
+@pytest.mark.parametrize('use_default', [True, False])
 @pytest.mark.parametrize('kind', ['19', '119', '1119', '2119', '2219',
                                   '2129', '139', '329', '349', '2429',
                                   '91', '196', '396', '369', '169'])
-def test_ct_binding_row_multiplier(omnisci, kind):
-    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5274')
-    suffix = {'91': '2', '369': '2', '169': '3'}.get(kind, '')
+def test_ct_binding_row_multiplier(omnisci, use_default, kind):
+    omnisci.require_version((5, 6), 'Requires omnisci-internal PR 5403/PR 5274', date=20210530)
+    suffix = {'91': '2', '369': '5', '169': '3', '396': '4', '196': '6'}.get(kind, '')
     codes = {'1': 'i4', '2': 'i8', '3': 'i4, i4, i4', '4': 'i8, i8, i8',
              '9': '1', '6': 'cast(123 as int)'}
     first = []
     last = []
     cursor = []
     for n in kind:
-        if n in '69':
+        if n == '6':
+            if cursor:
+                last.append(codes[n])
+            else:
+                first.append(codes[n])
+        elif n == '9':
+            if use_default is True:
+                continue
             if cursor:
                 last.append(codes[n])
             else:
@@ -153,4 +165,7 @@ def test_ct_binding_row_multiplier(omnisci, kind):
     _, result = omnisci.sql_execute(query)
     result = list(result)
 
-    assert result == [(1000 + int(kind),)], (result, query)
+    if kind in ('169', '196', '369', '396'):
+        kind = str(int(kind) + 1230)
+
+    assert result == [(1000 + int(kind) + 1,)], (result, query)
