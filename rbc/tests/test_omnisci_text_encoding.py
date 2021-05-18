@@ -184,6 +184,23 @@ def test_text_encoding_is_shared_dict(omnisci, size):
 
     assert all(list(map(lambda x: x[0], result)))
 
+@skip_on_ci
+@pytest.mark.usefixtures("create_columns")
+@pytest.mark.parametrize("size", (8, 16, 32,))
+def test_text_encoding_count(omnisci, size):
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
+
+    fn = "test_shared_dict_copy"
+    table = f"{omnisci.base_name}_{size}"
+
+    base = f"base_{size}"
+
+    query = f"SELECT COUNT(out0) FROM table({fn}(cursor(SELECT {base} FROM {table}), 1))"
+    _, result = omnisci.sql_execute(query)
+
+    assert list(result) == [(7,)]
+
+
 
 @skip_on_ci
 def test_text_encoding_is_not_shared_dict(omnisci):
