@@ -17,7 +17,7 @@ dependencies:
   - tblib
   - thriftpy2
   - netifaces
-  - clang
-  - clangxx
+  - clang=11.1
+  - clangxx=11.1
   - six
   # - cudatoolkit-dev   # disable temporary
