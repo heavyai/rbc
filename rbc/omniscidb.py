@@ -229,9 +229,9 @@ class RemoteOmnisci(RemoteJIT):
         ConstantParameter='int32|sizer=ConstantParameter',
         Constant='int32|sizer=Constant',
         ColumnList='OmnisciColumnListType',
-        TextEncodingDict8='OmnisciTextEncodingType',
-        TextEncodingDict16='OmnisciTextEncodingType',
-        TextEncodingDict32='OmnisciTextEncodingType',
+        TextEncodingDict8='OmnisciTextEncodingDict8Type',
+        TextEncodingDict16='OmnisciTextEncodingDict16Type',
+        TextEncodingDict32='OmnisciTextEncodingDict32Type',
     )
 
     def __init__(self,

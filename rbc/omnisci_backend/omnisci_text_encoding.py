@@ -12,11 +12,23 @@ class OmnisciTextEncodingType(typesystem.Type):
     """
 
     def tostring(self, use_typename=False, use_annotation=True):
-        return 'TextEncodingDict32'
+        return f'TextEncodingDict{self.dict_size}'
 
     @property
     def __typesystem_type__(self):
         return typesystem.Type('int32')
+
+
+class OmnisciTextEncodingDict8Type(OmnisciTextEncodingType):
+    dict_size = 8
+
+
+class OmnisciTextEncodingDict16Type(OmnisciTextEncodingType):
+    dict_size = 16
+
+
+class OmnisciTextEncodingDict32Type(OmnisciTextEncodingType):
+    dict_size = 32
 
 
 class TextEncodingDict(object, metaclass=OmnisciMetaType):
