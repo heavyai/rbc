@@ -67,7 +67,7 @@ instance/
 # Sphinx documentation
 docs/_build/
 doc/_build
-doc/rbc/generated
+doc/generated
 
 # PyBuilder
 target/
@@ -109,5 +109,9 @@ venv.bak/
 # PyCharm
 .idea/
 
+
+# macos
+.DS_Store
+
 # vscode
-settings.json
+.vscode/

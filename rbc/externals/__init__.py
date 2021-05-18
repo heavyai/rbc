@@ -22,6 +22,13 @@ def dispatch_codegen(cpu, gpu):
     return inner
 
 
+def sanitize(name):
+    forbidden_names = ('in')
+    if name in forbidden_names:
+        return f"{name}_"
+    return name
+
+
 def register_external(
     fname,
     retty,
@@ -30,10 +37,12 @@ def register_external(
     module_globals,
     typing_registry,
     lowering_registry,
+    doc,
 ):
 
     # expose
-    _key = py_types.FunctionType((lambda *args: None).__code__, {}, fname)
+    fn = eval(f'lambda {",".join(map(lambda x: sanitize(x.name), argtys))}: None', {}, {})
+    _key = py_types.FunctionType(fn.__code__, {}, fname)
     _key.__module__ = __name__
     globals()[fname] = _key
 
@@ -43,8 +52,9 @@ def register_external(
         key = _key
 
         def generic(self, args, kws):
+            argtys_ = tuple(map(lambda x: x.ty, argtys))
             # get the correct signature and function name for the current device
-            t = Type.fromstring(f"{retty} {fname}({', '.join(argtys)})")
+            t = Type.fromstring(f"{retty} {fname}({', '.join(argtys_)})")
             codegen = gen_codegen(fname)
             lowering_registry.lower(_key, *t.tonumba().args)(codegen)
 
@@ -52,5 +62,6 @@ def register_external(
 
     module_globals[fname] = _key
     _key.__module__ = module_name
+    _key.__doc__ = doc
     del globals()[fname]
     return _key

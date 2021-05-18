@@ -1,3 +1,6 @@
+"""Low-level intrinsics to expose external functions
+"""
+
 # This code has heavily inspired in the numba.extending.intrisic code
 from typing import Dict, List, Union
 from collections import defaultdict

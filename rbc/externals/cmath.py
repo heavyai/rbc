@@ -1,3 +1,7 @@
+"""https://en.cppreference.com/w/c/numeric/math
+"""
+
+
 from collections import namedtuple
 from . import register_external
 from numba.core import imputils, typing
@@ -184,7 +188,7 @@ cmath = {
 
 
 for fname, (retty, args) in cmath.items():
-    argtys = tuple(map(lambda x: x.ty, args))
+    doc = f"C math function {fname}"
     register_external(
-        fname, retty, argtys, __name__, globals(), typing_registry, lowering_registry
+        fname, retty, args, __name__, globals(), typing_registry, lowering_registry, doc
     )

@@ -1,3 +1,6 @@
+"""Collection of helper functions
+"""
+
 import dis
 import socket
 import subprocess
@@ -192,13 +195,16 @@ def get_function_source(func):
 def check_returns_none(func):
     """Return True if function return value is always None.
 
-    Warning: the result of the check may be false-negative. For instance,
+    Warning: the result of the check may be false-negative. For instance:
 
-      def foo():
-          a = None
-          return a
+    .. code-block:: python
 
-      check_returns_none(foo) -> False
+        def foo():
+            a = None
+            return a
+
+        check_returns_none(foo) == false
+
     """
     last_instr = None
     for instr in dis.Bytecode(func):

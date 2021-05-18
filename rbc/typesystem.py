@@ -24,8 +24,10 @@ class TypeSystemManager:
 
     Usage:
 
-      with Type.alias(A='Array', bool='bool8', ...):
-          # Type.fromstring('A a') will be replaced with Type.fromstring('Array a')
+    .. code-block:: python
+
+        with Type.alias(A='Array', bool='bool8', ...):
+            # Type.fromstring('A a') will be replaced with Type.fromstring('Array a')
 
     """
 
@@ -318,10 +320,9 @@ class Type(tuple, metaclass=MetaType):
       atomic        e.g. ``int32``                    Type(<str>,)
       pointer       e.g. ``int32*``                   Type(<Type instance>, '*')
       struct        e.g. ``{int32, int32}``           Type(<Type instances>, <Type instances>, ...)
-      function      e.g. ``int32(int32, int32)``      Type(<Type instance>,
-                                                           (<Type instances>, ...), name='')
+      function      e.g. ``int32(int32, int32)``      Type(<Type instance>, ..., name='')
       custom        e.g. ``MyClass<int32, int32>``    Type((<object>,))
-      undefined     e.g. fromcallable(foo)            Type(None)
+      undefined     e.g. ``fromcallable(foo)``        Type(None)
       ==========    ==============================    ==============================
 
     Atomic types are types with names (Type contains a single
