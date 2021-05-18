@@ -5,7 +5,7 @@ import os
 import pytest
 import warnings
 from collections import defaultdict
-from rbc.utils import version_date
+from rbc.utils import version_date, version_hash
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
@@ -46,7 +46,15 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
 
-    def require_version(version, message=None, date=None):
+    def require_version(version, message=None, date=None, hash=None):
+        # version date is the build data while version hash determines
+        # the merge date of a feature, see rbc issue 332
+        hash_date_map = {
+            '4777a06b01': 20210429.5,  # PR 5465
+            '758cf7a61a': 20210429,    # v5.7.0dev-20210429
+            '9dbd553c44': 20210329,    # v5.5.2
+            '5b4ddfcdcd': 20210112,    # v5.4.1
+        }
         if not available_version:
             pytest.skip(reason)
         assert isinstance(version, tuple)
@@ -55,15 +63,22 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
             if message is not None:
                 _reason += f': {message}'
             pytest.skip(_reason)
+        available_hash = version_hash(available_version)
+        available_date = hash_date_map.get(available_hash)
+        if hash is not None:
+            date = hash_date_map.get(hash, date)
         if date is not None:
-            assert isinstance(date, int)
-            available_date = version_date(available_version)
+            assert isinstance(date, (int, float))
+            if available_date is None:
+                available_date = version_date(available_version)
             if not available_date:
                 warnings.warn('could not determine date of {available_version}')
                 return
             if available_date < date:
-                _reason = (f'test requires version {version} with date {date} or newer,'
-                           f' got {available_version} with date {available_date}')
+                required_version = f'{".".join(map(str, version))}-{date or "*"}-{hash or "*"}'
+                current_version = (f'{".".join(map(str, available_version[:3]))}'
+                                   f'-{available_date or "*"}-{available_hash or "*"}')
+                _reason = f'version {required_version} or newer required, got {current_version}'
                 if message is not None:
                     _reason += f': {message}'
                 pytest.skip(_reason)
