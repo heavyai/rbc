@@ -82,7 +82,7 @@ def define(omnisci):
                           'cursor(i4,i8);f8', 'cursor(i4,i8);cursor(f8,f4)',
                           'cursor(i4,i8,f8,f4)'])
 def test_copy(omnisci, use_default, inputs):
-    if use_default is True:
+    if use_default:
         omnisci.require_version((5, 6), 'Requires omnisci-internal PR 5403', date=20210430)
     omnisci.require_version((5, 5), 'Requires omniscidb-internal PR 5134')
 
@@ -103,7 +103,7 @@ def test_copy(omnisci, use_default, inputs):
         expected = [row1 + row2 for row1, row2 in zip(expected, result)]
         args.append(f'cursor(select {colnames} from {table_name})')
         cc.append((colnames.count(',') + 1) * 'c')
-    if use_default is False:
+    if not use_default:
         args.append('1')
     args = ', '.join(args)
     cc = '_'.join(cc)
@@ -148,7 +148,7 @@ def test_ct_binding_row_multiplier(omnisci, use_default, kind):
             else:
                 first.append(codes[n])
         elif n == '9':
-            if use_default is True:
+            if use_default:
                 continue
             if cursor:
                 last.append(codes[n])
