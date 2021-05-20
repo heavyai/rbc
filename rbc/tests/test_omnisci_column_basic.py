@@ -527,7 +527,7 @@ def test_overload_nonuniform(omnisci, step):
             return 1
 
     if step > 2:
-        @omnisci('int32(Column<float>, Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        @omnisci('int32(Cursor<Column<float>, Column<float>>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
         def overloaded_udtf(x1, x2, m, y):  # noqa: E501, F811
             y[0] = 132
             return 1
@@ -620,6 +620,13 @@ omnisci_binary_operations = ['+', '-', '*', '/']
 def test_column_aggregate(omnisci, prop, oper):
     if not omnisci.has_cuda and oper in omnisci_aggregators2 and prop == 'groupby':
         pytest.skip(f'{oper}-{prop} test crashes CPU-only omnisci server [rbc issue 237]')
+    if omnisci.has_cuda and oper in ['sample', 'stddev', 'stddev_pop', 'stddev_samp',
+                                     'correlation', 'corr']:
+        # unreliable means that the results computed on CPU and on
+        # CUDA device may slightly vary causing test failures.
+        pytest.skip(f'{oper}-{prop} test result unreliable when on CUDA')
+    if omnisci.has_cuda and oper in ['covar_samp', 'covar_pop']:
+        pytest.skip(f'{oper}-{prop} test crashes CUDA enabled omnisci server')
 
     omnisci.reset()
     omnisci.register()
@@ -635,7 +642,8 @@ def test_column_aggregate(omnisci, prop, oper):
 
         sql_query = (f'select f8 from {omnisci.table_name}')
         descr, result = omnisci.sql_execute(sql_query)
-        expected_result = list(result)[-1:]
+        result = list(result)
+        expected_result = result[-1:]
 
         sql_query = (f'select {oper}(out0) from table(test_rbc_last(cursor('
                      f'select f8 from {omnisci.table_name}), 1))')
@@ -709,7 +717,6 @@ def test_column_aggregate(omnisci, prop, oper):
 
     descr, result_expected = omnisci.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
-
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
 

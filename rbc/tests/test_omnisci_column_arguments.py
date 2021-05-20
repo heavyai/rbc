@@ -133,11 +133,12 @@ def test_ct_binding_constant_sizer(omnisci, kind):
 @pytest.mark.parametrize('kind', ['19', '119', '1119', '2119', '2219',
                                   '2129', '139', '329', '349', '2429',
                                   '91', '196', '396', '369', '169'])
-def test_ct_binding_row_multiplier(omnisci, use_default, kind):
-    omnisci.require_version((5, 6), 'Requires omnisci-internal PR 5403/PR 5274', date=20210430)
-    suffix = {'91': '2', '369': '5', '169': '3', '396': '4', '196': '6'}.get(kind, '')
+def test_ct_binding_row_multiplier(omnisci, kind):
+    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5403/5274', date=20210430)
+    suffix = {'91': '2', '369': '5', '169': '3', '196': '6', '396': '4'}.get(kind, '')
     codes = {'1': 'i4', '2': 'i8', '3': 'i4, i4, i4', '4': 'i8, i8, i8',
              '9': '1', '6': 'cast(123 as int)'}
+    input_val = 123 if suffix and suffix in '6543' else 0
     first = []
     last = []
     cursor = []
@@ -165,7 +166,4 @@ def test_ct_binding_row_multiplier(omnisci, use_default, kind):
     _, result = omnisci.sql_execute(query)
     result = list(result)
 
-    if kind in ('169', '196', '369', '396'):
-        kind = str(int(kind) + 1230)
-
-    assert result == [(1000 + int(kind) + 1,)], (result, query)
+    assert result == [(1000 + int(kind) + 1 + 10*input_val,)], (result, query)
