@@ -41,9 +41,7 @@ enum TExtArgumentType {
   ColumnDouble,
   ColumnBool,
   TextEncodingNone,
-  TextEncodingDict8,
-  TextEncodingDict16,
-  TextEncodingDict32,
+  TextEncodingDict,
   ColumnListInt8,
   ColumnListInt16,
   ColumnListInt32,
@@ -51,12 +49,8 @@ enum TExtArgumentType {
   ColumnListFloat,
   ColumnListDouble,
   ColumnListBool,
-  ColumnTextEncodingDict8,
-  ColumnTextEncodingDict16,
-  ColumnTextEncodingDict32,
-  ColumnListTextEncodingDict8,
-  ColumnListTextEncodingDict16,
-  ColumnListTextEncodingDict32
+  ColumnTextEncodingDict,
+  ColumnListTextEncodingDict,
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required

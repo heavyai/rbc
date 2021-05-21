@@ -15,7 +15,7 @@ def omnisci():
 
 def define(omnisci):
     @omnisci("int32(Column<T>, RowMultiplier, OutputColumn<T>)",
-             T=["TextEncodingDict8", "TextEncodingDict16", "TextEncodingDict32"])
+             T=["TextEncodingDict"])
     def test_shared_dict_copy(x, m, y):
         sz = len(x)
         for i in range(sz):
@@ -23,7 +23,7 @@ def define(omnisci):
         return m * sz
 
     @omnisci("int32(Column<T>, Column<T>, int32_t, RowMultiplier, OutputColumn<T>)",
-             T=["TextEncodingDict8", "TextEncodingDict16", "TextEncodingDict32"])
+             T=["TextEncodingDict"])
     def test_shared_dict_copy2(x, y, s, m, z):
         sz = len(x)
         for i in range(sz):
@@ -33,8 +33,7 @@ def define(omnisci):
                 z[i] = y[i]
         return m * sz
 
-    @omnisci("int32(ColumnList<T>, RowMultiplier, OutputColumn<int32_t>)",
-             T=["TextEncodingDict8", "TextEncodingDict16", "TextEncodingDict32"])
+    @omnisci("int32(ColumnList<TextEncodingDict>, RowMultiplier, OutputColumn<int32_t>)")
     def test_copy_column_list(lst, m, y):
         for j in range(len(y)):
             y[j] = 0
@@ -46,7 +45,7 @@ def define(omnisci):
         return lst.nrows
 
     @omnisci("int32(Column<T>, RowMultiplier, OutputColumn<bool>)",
-             T=["TextEncodingDict8", "TextEncodingDict16", "TextEncodingDict32", "int32"])
+             T=["TextEncodingDict", "int32"])
     def test_shared_dict_is_dict_encoded(x, m, y):
         sz = len(x)
         for i in range(sz):
