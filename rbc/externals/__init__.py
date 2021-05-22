@@ -1,5 +1,6 @@
 import types as py_types
 from rbc.targetinfo import TargetInfo
+from rbc.typesystem import Type
 from numba.core import funcdesc, typing
 
 
@@ -51,11 +52,11 @@ def register_external(
         key = _key
 
         def generic(self, args, kws):
-            argtys_ = tuple(map(lambda x: x.ty, argtys))
-            assert args == argtys_
+            retty_ = Type.fromobject(retty).tonumba()
+            argtys_ = tuple(map(lambda x: Type.fromobject(x.ty).tonumba(), argtys))
             codegen = gen_codegen(fname)
-            lowering_registry.lower(_key, *args)(codegen)
-            return retty(*args)
+            lowering_registry.lower(_key, *argtys_)(codegen)
+            return retty_(*argtys_)
 
     module_globals[fname] = _key
     _key.__module__ = module_name
