@@ -1,6 +1,5 @@
 import types as py_types
 from rbc.targetinfo import TargetInfo
-from rbc.typesystem import Type
 from numba.core import funcdesc, typing
 
 
@@ -53,12 +52,10 @@ def register_external(
 
         def generic(self, args, kws):
             argtys_ = tuple(map(lambda x: x.ty, argtys))
-            # get the correct signature and function name for the current device
-            t = Type.fromstring(f"{retty} {fname}({', '.join(argtys_)})")
+            assert args == argtys_
             codegen = gen_codegen(fname)
-            lowering_registry.lower(_key, *t.tonumba().args)(codegen)
-
-            return t.tonumba()
+            lowering_registry.lower(_key, *args)(codegen)
+            return retty(*args)
 
     module_globals[fname] = _key
     _key.__module__ = module_name
