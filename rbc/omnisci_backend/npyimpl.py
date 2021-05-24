@@ -23,7 +23,8 @@ def np_logaddexp_impl(context, builder, sig, args):
                 # NaN's
                 return tmp
 
-    return context.compile_internal(builder, impl, sig, args)
+    cres = context.compile_subroutine(builder, impl, sig, locals={}, caching=False)
+    return context.call_internal(builder, cres.fndesc, sig, args)
 
 
 def np_logaddexp2_impl(context, builder, sig, args):
@@ -41,7 +42,8 @@ def np_logaddexp2_impl(context, builder, sig, args):
                 # NaN's
                 return tmp
 
-    return context.compile_internal(builder, impl, sig, args)
+    cres = context.compile_subroutine(builder, impl, sig, locals={}, caching=False)
+    return context.call_internal(builder, cres.fndesc, sig, args)
 
 
 def np_signbit_impl(context, builder, sig, args):

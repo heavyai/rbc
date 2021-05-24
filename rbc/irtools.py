@@ -157,6 +157,9 @@ class JITRemoteTargetContext(cpu.CPUContext):
             if not isinstance(module, py_types.ModuleType):
                 continue
 
+            if 'rbc.externals' not in module.__name__:
+                continue
+
             lowering_registry = getattr(module, 'lowering_registry', None)
             if lowering_registry:
                 self.install_registry(lowering_registry)
