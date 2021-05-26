@@ -6,34 +6,6 @@ from rbc.externals import libdevice
 
 libdevicefuncs = pytest.importorskip("numba.cuda.libdevicefuncs")
 
-# see rbc issue 336
-unsupported_functions = (
-        "cos",
-        "cosf",
-        "j0",
-        "j0f",
-        "j1",
-        "j1f",
-        "jn",
-        "jnf",
-        "lgamma",
-        "lgammaf",
-        "pow",
-        "powf",
-        "sin",
-        "sinf",
-        "tan",
-        "tanf",
-        "tgamma",
-        "tgammaf",
-        "y0",
-        "y0f",
-        "y1",
-        "y1f",
-        "yn",
-        "ynf",
-    )
-
 funcs = []
 for fname, (retty, args) in libdevicefuncs.functions.items():
     assert fname.startswith('__nv_'), fname
@@ -78,8 +50,6 @@ def define(omnisci):
         fn = omnisci(f"{retty}({', '.join(argtypes)})", devices=["gpu"])(fn)
 
     for fname, retty, argtys, has_ptr_arg in funcs:
-        if fname[5:] in unsupported_functions:
-            continue
         if has_ptr_arg:
             continue
         inner(fname, str(retty), argtys)
@@ -99,9 +69,6 @@ cols_dict = {
     "fname,retty,argtys,has_ptr_arg", funcs, ids=[item[0] for item in funcs]
 )
 def test_externals_libdevice(omnisci, fname, retty, argtys, has_ptr_arg):
-    if fname[5:] in unsupported_functions:
-        pytest.skip(f'{fname} not supported [rbc issue 336]')
-
     if has_ptr_arg:
         pytest.skip(f"{fname} has a pointer argument")
 
