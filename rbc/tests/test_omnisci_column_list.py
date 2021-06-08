@@ -1,6 +1,7 @@
 import pytest
 from rbc.tests import omnisci_fixture
 
+
 scalar_types = ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']
 table_columns_map = dict(int64='i8', int32='i4', int16='i2', int8='i1',
                          float64='f8', float32='f4')

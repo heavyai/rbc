@@ -21,7 +21,12 @@ int32_t = ir.IntType(32)
 class OmnisciColumnType(OmnisciBufferType):
     """Omnisci Column type for RBC typesystem.
     """
-    pass_by_value = True
+    @property
+    def pass_by_value(self):
+        omnisci_version = TargetInfo().software[1][:3]
+        if omnisci_version < (5, 7, 0):
+            return True
+        return False
 
 
 class OmnisciOutputColumnType(OmnisciColumnType):

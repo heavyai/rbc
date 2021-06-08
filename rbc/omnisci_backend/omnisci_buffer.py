@@ -47,7 +47,9 @@ class OmnisciBufferType(typesystem.Type):
     """
     # When True, buffer type arguments are passed by value to
     # functions [not recommended].
-    pass_by_value = False
+    @property
+    def pass_by_value(self):
+        return False
 
     @classmethod
     def preprocess_args(cls, args):
