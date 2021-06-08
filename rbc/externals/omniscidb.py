@@ -13,7 +13,7 @@ from llvmlite import ir
 def set_output_row_size(typingctx, set_output_row_size):
     """``set_output_row_size`` sets the row size of output Columns and
     allocates the corresponding column buffers
-    
+
     .. note::
         ``set_output_row_size`` is available only for CPU target and OmniSciDB v5.7 or newer
     """
