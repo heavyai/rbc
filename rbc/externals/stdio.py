@@ -21,9 +21,10 @@ def cg_fflush(builder):
 
 @extending.intrinsic
 def fflush(typingctx):
-    """fflush that can be called from Numba jit-decorated functions.
+    """``fflush`` that can be called from Numba jit-decorated functions.
 
-    Note: fflush is available only for CPU target.
+    .. note::
+        ``fflush`` is available only for CPU target.
     """
     sig = nb_types.void(nb_types.void)
 
@@ -37,9 +38,10 @@ def fflush(typingctx):
 
 @extending.intrinsic
 def printf(typingctx, format_type, *args):
-    """printf that can be called from Numba jit-decorated functions.
+    """``printf`` that can be called from Numba jit-decorated functions.
 
-    Note: printf is available only for CPU target.
+    .. note::
+        ``printf`` is available only for CPU target.
     """
 
     if isinstance(format_type, nb_types.StringLiteral):

@@ -11,10 +11,11 @@ from llvmlite import ir
 
 @extending.intrinsic
 def set_output_row_size(typingctx, set_output_row_size):
-    """set_output_row_size sets the row size of output Columns and
+    """``set_output_row_size`` sets the row size of output Columns and
     allocates the corresponding column buffers
-
-    Note: set_output_row_size is available only for CPU target and OmniSciDB v5.7 or newer
+    
+    .. note::
+        ``set_output_row_size`` is available only for CPU target and OmniSciDB v5.7 or newer
     """
     # void is declared as 'none' in Numba and 'none' is converted to a void* (int8*). See:
     # https://github.com/numba/numba/blob/6881dfe3883d1344014ea16185ed87de4b75b9a1/numba/core/types/__init__.py#L95
