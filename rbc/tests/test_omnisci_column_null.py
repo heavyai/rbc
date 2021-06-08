@@ -65,7 +65,6 @@ def test_null_value(omnisci, col):
         f'from {omnisci.table_name}null), 1));')
     result, = zip(*list(result))
 
-    print(expected, result)
     assert result == expected, (result, expected, data)
 
 
