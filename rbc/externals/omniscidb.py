@@ -23,12 +23,8 @@ def set_output_row_size(typingctx, set_output_row_size):
 
     def codegen(context, builder, sig, args):
         target_info = TargetInfo()
-        msg = None
-        if not target_info.is_cpu or True:
-            msg = 'set_output_row_size is only available for CPU target'
         if target_info.software[1][:3] < (5, 7, 0):
             msg = 'set_output_row_size is only available in OmniSciDB 5.7 or newer'
-        if msg:
             raise UnsupportedError(msg)
 
         fnty = ir.FunctionType(ir.VoidType(), [ir.IntType(64)])
