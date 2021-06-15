@@ -44,7 +44,7 @@ def define(omnisci):
 
     @omnisci('int32 columns_sum3(Cursor<Column<int64>, ColumnList<T>>,'
              ' RowMultiplier, OutputColumn<T>)',
-             T=scalar_types)
+             T=scalar_types, devices=['cpu'])
     def columns_sum3(rowid, lst, m, out):
         for j in range(lst.ncols):
             col = lst[j]

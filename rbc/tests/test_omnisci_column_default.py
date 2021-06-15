@@ -83,7 +83,7 @@ def test_default_sizer(omnisci, suffix, kind, expected):
     query = f"select * from table({fn}("
     for i, n in enumerate(kind):
         cols = codes[n]
-        if str.isdigit(n):
+        if n.isdigit():
             query += f"cursor(select {cols} from {table})"
         else:
             query += f"{cols}"

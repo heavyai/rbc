@@ -8,6 +8,7 @@ libdevicefuncs = pytest.importorskip("numba.cuda.libdevicefuncs")
 
 funcs = []
 for fname, (retty, args) in libdevicefuncs.functions.items():
+    assert fname.startswith('__nv_'), fname
     argtys = tuple(map(lambda x: str(x.ty), args))
     arity = len(argtys)
     has_ptr_arg = reduce(lambda x, y: x or y.is_ptr, args, False)
@@ -68,37 +69,6 @@ cols_dict = {
     "fname,retty,argtys,has_ptr_arg", funcs, ids=[item[0] for item in funcs]
 )
 def test_externals_libdevice(omnisci, fname, retty, argtys, has_ptr_arg):
-    if fname[5:] in (
-        "cos",
-        "cosf",
-        "j0",
-        "j0f",
-        "j1",
-        "j1f",
-        "jn",
-        "jnf",
-        "lgamma",
-        "lgammaf",
-        "pow",
-        "powf",
-        "sin",
-        "sinf",
-        "tan",
-        "tanf",
-        "tgamma",
-        "tgammaf",
-        "y0",
-        "y0f",
-        "y1",
-        "y1f",
-        "yn",
-        "ynf",
-    ):
-        pytest.skip(
-            f'Omniscidb server raises an error for {fname}: ' +
-            '"Exception: Function test_cos(DOUBLE) not supported."'
-        )
-
     if has_ptr_arg:
         pytest.skip(f"{fname} has a pointer argument")
 

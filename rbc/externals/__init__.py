@@ -52,13 +52,11 @@ def register_external(
         key = _key
 
         def generic(self, args, kws):
-            argtys_ = tuple(map(lambda x: x.ty, argtys))
-            # get the correct signature and function name for the current device
-            t = Type.fromstring(f"{retty} {fname}({', '.join(argtys_)})")
+            retty_ = Type.fromobject(retty).tonumba()
+            argtys_ = tuple(map(lambda x: Type.fromobject(x.ty).tonumba(), argtys))
             codegen = gen_codegen(fname)
-            lowering_registry.lower(_key, *t.tonumba().args)(codegen)
-
-            return t.tonumba()
+            lowering_registry.lower(_key, *argtys_)(codegen)
+            return retty_(*argtys_)
 
     module_globals[fname] = _key
     _key.__module__ = module_name
