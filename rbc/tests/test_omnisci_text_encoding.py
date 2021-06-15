@@ -33,7 +33,7 @@ def define(omnisci):
                 z[i] = y[i]
         return m * sz
 
-    @omnisci("int32(ColumnList<TextEncodingDict>, RowMultiplier, OutputColumn<int32_t>)")
+    @omnisci("int32(ColumnList<TextEncodingDict>, RowMultiplier, OutputColumn<int32_t>)", devices=['cpu'])
     def test_copy_column_list(lst, m, y):
         for j in range(len(y)):
             y[j] = 0
@@ -63,6 +63,8 @@ def create_columns(omnisci):
         other = f"other_{size}"
         derived = f"derived_{size}"
 
+        omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name};")
+
         omnisci.sql_execute(
             f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
@@ -70,8 +72,7 @@ def create_columns(omnisci):
                 {other} TEXT ENCODING DICT({size}),
                 {derived} TEXT,
                 SHARED DICTIONARY ({derived}) REFERENCES {table_name}({base})
-            );
-        """
+            );"""
         )
 
         data = {
