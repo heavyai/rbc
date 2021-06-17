@@ -45,14 +45,6 @@ def define(omnisci):
                 y[j] += col[j]
         return lst.nrows
 
-    @omnisci("int32(Column<T>, RowMultiplier, OutputColumn<bool>)",
-             T=["TextEncodingDict", "int32"])
-    def test_shared_dict_is_dict_encoded(x, m, y):
-        sz = len(x)
-        for i in range(sz):
-            y[i] = x.is_dict_encoded()
-        return m * sz
-
 
 @pytest.fixture(scope="function")
 def create_columns(omnisci):
@@ -99,7 +91,6 @@ def test_text_encoding_shared_dict(omnisci, size):
 
     fn = "test_shared_dict_copy"
     table = f"{omnisci.base_name}_{size}"
-
     base = f"base_{size}"
 
     query = f"SELECT * FROM table({fn}(cursor(SELECT {base} FROM {table}), 1))"
@@ -130,7 +121,6 @@ def test_text_encoding_shared_dict2(omnisci, select, size):
 
     fn = "test_shared_dict_copy2"
     table = f"{omnisci.base_name}_{size}"
-
     base = f"base_{size}"
     other = f"other_{size}"
 
@@ -173,28 +163,11 @@ def test_text_encoding_column_list(omnisci, size, num_column_list):
 @skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
-def test_text_encoding_is_shared_dict(omnisci, size):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
-
-    fn = "test_shared_dict_is_dict_encoded"
-    table = f"{omnisci.base_name}_{size}"
-    base = f"base_{size}"
-
-    query = f"SELECT * FROM table({fn}(cursor(SELECT {base} FROM {table}), 1));"
-    _, result = omnisci.sql_execute(query)
-
-    assert all(list(map(lambda x: x[0], result)))
-
-
-@skip_on_ci
-@pytest.mark.usefixtures("create_columns")
-@pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_count(omnisci, size):
     omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
 
     fn = "test_shared_dict_copy"
     table = f"{omnisci.base_name}_{size}"
-
     base = f"base_{size}"
 
     query = f"SELECT COUNT(out0) FROM table({fn}(cursor(SELECT {base} FROM {table}), 1))"
@@ -211,7 +184,6 @@ def test_text_encoding_order_by(omnisci, size):
 
     fn = "test_shared_dict_copy"
     table = f"{omnisci.base_name}_{size}"
-
     base = f"base_{size}"
 
     query = (
@@ -231,13 +203,22 @@ def test_text_encoding_order_by(omnisci, size):
 
 
 @skip_on_ci
-def test_text_encoding_is_not_shared_dict(omnisci):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
+@pytest.mark.usefixtures("create_columns")
+@pytest.mark.parametrize("size", (8, 16, 32,))
+def test_ct_binding_dict_encoded1(omnisci, size):
 
-    fn = "test_shared_dict_is_dict_encoded"
-    query = (
-        f"SELECT * FROM table({fn}(cursor(SELECT i4 FROM {omnisci.table_name}), 1));"
-    )
+    fn = 'ct_binding_dict_encoded1'
+    table = f"{omnisci.base_name}_{size}"
+    base = f"base_{size}"
+
+    query = f"SELECT * FROM table({fn}(cursor(SELECT {base} FROM {table}), 1));"
     _, result = omnisci.sql_execute(query)
-
-    assert all(list(map(lambda x: x[0], result))) == False  # noqa: E712
+    assert list(result) == [
+        ("hello",),
+        ("foo",),
+        ("foofoo",),
+        ("world",),
+        ("bar",),
+        ("foo",),
+        ("foofoo",),
+    ]
