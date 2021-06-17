@@ -1001,6 +1001,18 @@ class Type(tuple, metaclass=MetaType):
             else:
                 name = rtype._params.pop('name', '')
             return cls(rtype, atypes, name=name)
+        if '|' in s:
+            s, a = s.rsplit('|', 1)
+            t = cls._fromstring(s.rstrip())
+            if '=' in a:
+                n, v = a.split('=', 1)
+            else:
+                n, v = a, ''
+            n = n.strip()
+            v = v.strip()
+            if n or v:
+                t.annotation(**{n: v})
+            return t
         if s.endswith('>') and not s.startswith('<'):  # custom
             i = s.index('<')
             name = s[:i]
@@ -1015,18 +1027,6 @@ class Type(tuple, metaclass=MetaType):
             return r
         if s == 'void' or s == 'none' or not s:  # void
             return cls()
-        if '|' in s:
-            s, a = s.rsplit('|', 1)
-            t = cls._fromstring(s.rstrip())
-            if '=' in a:
-                n, v = a.split('=', 1)
-            else:
-                n, v = a, ''
-            n = n.strip()
-            v = v.strip()
-            if n or v:
-                t.annotation(**{n: v})
-            return t
         m = _type_name_match(s)
         if m is not None:
             name = m.group(2)
@@ -1289,12 +1289,12 @@ class Type(tuple, metaclass=MetaType):
                 tuple(t._normalize() for t in self[1]),
                 **params)
         if self.is_custom:
-            params = []
+            inner = []
             for a in self[0]:
                 if isinstance(a, Type):
                     a = a._normalize()
-                params.append(a)
-            return type(self)(tuple(params))
+                inner.append(a)
+            return type(self)(tuple(inner), **params)
         raise NotImplementedError(repr(self))
 
     def mangle(self):

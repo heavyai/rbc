@@ -86,5 +86,6 @@ struct TUserDefinedTableFunction {
   3: i32 sizerArgPos,
   4: list<TExtArgumentType> inputArgTypes,
   5: list<TExtArgumentType> outputArgTypes,
-  6: list<TExtArgumentType> sqlArgTypes
+  6: list<TExtArgumentType> sqlArgTypes,
+  7: list<map<string, string>> annotations
 }
