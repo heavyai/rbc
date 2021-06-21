@@ -1,0 +1,7 @@
+numba>=0.52
+llvmlite>=0.29
+tblib
+thriftpy2
+six
+netifaces
+sphinx_autodoc_typehints

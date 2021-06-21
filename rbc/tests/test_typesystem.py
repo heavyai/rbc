@@ -23,6 +23,10 @@ from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
 
+if nb is not None:
+    from rbc.typesystem import boolean1, boolean8
+
+
 def test_dummy():
     with pytest.raises(
             RuntimeError,
@@ -245,6 +249,10 @@ def test_normalize(target_info):
     assert tostr('bool') == 'bool'
     assert tostr('b') == 'bool'
     assert tostr('_Bool') == 'bool'
+    assert tostr('bool1') == 'bool1'
+    assert tostr('boolean1') == 'bool1'
+    assert tostr('bool8') == 'bool8'
+    assert tostr('boolean8') == 'bool8'
 
     assert tostr('str') == 'string'
     assert tostr('string') == 'string'
@@ -359,7 +367,9 @@ def test_tonumba(target_info):
         return Type.fromstring(a).tonumba()
 
     assert tonumba('void') == nb.void
-    assert tonumba('bool') == nb.boolean
+    assert tonumba('bool') == boolean1
+    assert tonumba('bool1') == boolean1
+    assert tonumba('bool8') == boolean8
     assert tonumba('int8') == nb.int8
     assert tonumba('int16') == nb.int16
     assert tonumba('int32') == nb.int32
@@ -536,6 +546,30 @@ def test_mangling(target_info):
         check(s+'('+s+',{'+s+'})')
         check(s+'('+s+',{'+s+'},'+s+')')
     check('()')
+
+
+def test_name_mangling(target_info):
+    def check(s):
+        t1 = Type.fromstring(s)
+        m = t1.mangle()
+        try:
+            t2 = Type.demangle(m)
+        except Exception:
+            print('subject: s=`%s`, t1=`%s`, m=`%s`' % (s, t1, m))
+            raise
+        assert t1 == t2, repr((t1, m, t2))
+        assert t1.name == t2.name, repr((t1, m, t2))
+
+    for t in ['int8', 'myint']:
+        check(f'{t} i')
+        check(f'{t} foo()')
+        check(f'foo({t} i)')
+        check(f'foo({t} i, float f)')
+        check(f'{t} ()')
+        check(f'{t}* i')
+        check(f'{{{t} i}}')
+        check(f'{{{t} i, float f}}')
+        check(f'{{{t} i, float f}} s')
 
 
 def test_unspecified(target_info):

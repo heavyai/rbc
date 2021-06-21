@@ -5,17 +5,19 @@ import re
 import warnings
 from contextlib import contextmanager
 from collections import defaultdict
+import types as py_types
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
-from .utils import get_version
 from .errors import UnsupportedError
-from . import libfuncs
+from . import libfuncs, structure_type
+from rbc import externals
+from rbc.omnisci_backend import mathimpl
 from numba.core import codegen, cpu, compiler_lock, \
     registry, typing, compiler, sigutils, cgutils, \
-    extending, utils, callconv
-from numba.core import types as nb_types
+    extending
 from numba.core import errors as nb_errors
+
 
 int32_t = ir.IntType(32)
 
@@ -131,9 +133,16 @@ class JITRemoteCallConv(callconv.MinimalCallConv):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        from rbc.externals import math
+        for module in externals.__dict__.values():
+            if not isinstance(module, py_types.ModuleType):
+                continue
 
-        self.install_registry(math.typing_registry)
+            typing_registry = getattr(module, 'typing_registry', None)
+            if typing_registry:
+                self.install_registry(typing_registry)
+
+        self.install_registry(mathimpl.typing_registry)
+        self.install_registry(structure_type.typing_registry)
         super().load_additional_registries()
 
 
@@ -147,9 +156,19 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        from rbc.externals import math
+        for module in externals.__dict__.values():
+            if not isinstance(module, py_types.ModuleType):
+                continue
 
-        self.install_registry(math.lowering_registry)
+            if 'rbc.externals' not in module.__name__:
+                continue
+
+            lowering_registry = getattr(module, 'lowering_registry', None)
+            if lowering_registry:
+                self.install_registry(lowering_registry)
+
+        self.install_registry(mathimpl.lowering_registry)
+        self.install_registry(structure_type.lowering_registry)
         super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):
@@ -229,7 +248,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                cg_fflush(builder)
+                externals.stdio.cg_fflush(builder)
             builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
@@ -246,7 +265,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                cg_fflush(builder)
+                externals.stdio.cg_fflush(builder)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
@@ -265,8 +284,7 @@ def compile_instance(func, sig,
     flags = compiler.Flags()
     flags.set('no_compile')
     flags.set('no_cpython_wrapper')
-    if get_version('numba') >= (0, 49):
-        flags.set('no_cfunc_wrapper')
+    flags.set('no_cfunc_wrapper')
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(
@@ -354,18 +372,11 @@ def compile_to_LLVM(functions_and_signatures,
     """
     target_desc = registry.cpu_target
 
-    if target_info is None:
-        # RemoteJIT
-        target_info = TargetInfo.host()
-        typing_context = target_desc.typing_context
-        target_context = target_desc.target_context
-    else:
-        # OmnisciDB target
-        typing_context = JITRemoteTypingContext()
-        target_context = JITRemoteTargetContext(typing_context)
+    typing_context = JITRemoteTypingContext()
+    target_context = JITRemoteTargetContext(typing_context)
 
-        # Bring over Array overloads (a hack):
-        target_context._defns = target_desc.target_context._defns
+    # Bring over Array overloads (a hack):
+    target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
@@ -478,48 +489,27 @@ def compile_IR(ir):
     return engine
 
 
-def cg_fflush(builder):
-    int8_t = ir.IntType(8)
-    fflush_fnty = ir.FunctionType(int32_t, [int8_t.as_pointer()])
-    fflush_fn = builder.module.get_or_insert_function(
-        fflush_fnty, name='fflush')
-
-    builder.call(fflush_fn, [int8_t.as_pointer()(None)])
+def IS_CPU():
+    pass
 
 
-@extending.intrinsic
-def fflush(typingctx):
-    """fflush that can be called from Numba jit-decorated functions.
-
-    Note: fflush is available only for CPU target.
-    """
-    sig = nb_types.void(nb_types.void)
-
-    def codegen(context, builder, signature, args):
-        target_info = TargetInfo()
-        if target_info.is_cpu:
-            cg_fflush(builder)
-
-    return sig, codegen
-
-
-@extending.intrinsic
-def printf(typingctx, format_type, *args):
-    """printf that can be called from Numba jit-decorated functions.
-
-    Note: printf is available only for CPU target.
-    """
-
-    if isinstance(format_type, nb_types.StringLiteral):
-        sig = nb_types.void(format_type, nb_types.BaseTuple.from_types(args))
-
-        def codegen(context, builder, signature, args):
-            target_info = TargetInfo()
-            if target_info.is_cpu:
-                cgutils.printf(builder, format_type.literal_value, *args[1:])
-                cg_fflush(builder)
-
-        return sig, codegen
-
+@extending.overload(IS_CPU, inline="always")
+def is_cpu_impl():
+    target_info = TargetInfo()
+    if target_info.is_cpu:
+        return lambda: True
     else:
-        raise TypeError(f'expected StringLiteral but got {type(format_type).__name__}')
+        return lambda: False
+
+
+def IS_GPU():
+    pass
+
+
+@extending.overload(IS_GPU, inline="always")
+def is_gpu_impl():
+    target_info = TargetInfo()
+    if target_info.is_gpu:
+        return lambda: True
+    else:
+        return lambda: False

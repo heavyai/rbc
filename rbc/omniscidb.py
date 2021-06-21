@@ -1,3 +1,6 @@
+"""OmniSciDB client config functions
+"""
+
 import ast
 import inspect
 import os
@@ -12,43 +15,13 @@ from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta)
+    BufferMeta, OmnisciColumnListType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version, get_version
+from .utils import parse_version
 from . import ctools
 from . import typesystem
-if get_version('numba') >= (0, 49):
-    from numba.core import extending
-else:
-    from numba import extending
-
-
-def IS_CPU():
-    pass
-
-
-@extending.overload(IS_CPU, inline="always")
-def is_cpu_impl():
-    target_info = TargetInfo()
-    if target_info.is_cpu:
-        return lambda: True
-    else:
-        return lambda: False
-
-
-def IS_GPU():
-    pass
-
-
-@extending.overload(IS_GPU, inline="always")
-def is_gpu_impl():
-    target_info = TargetInfo()
-    if target_info.is_gpu:
-        return lambda: True
-    else:
-        return lambda: False
 
 
 def get_literal_return(func, verbose=False):
@@ -231,8 +204,7 @@ class RemoteOmnisci(RemoteJIT):
 
     """Usage:
 
-    .. highlight:: python
-    .. code-block:: python
+    .. code:: python
 
         omnisci = RemoteOmnisci(host=..., port=...)
 
@@ -247,6 +219,19 @@ class RemoteOmnisci(RemoteJIT):
     """
     multiplexed = False
     mangle_prefix = ''
+
+    typesystem_aliases = dict(
+        bool='bool8',
+        Array='OmnisciArrayType',
+        Bytes='OmnisciBytesType<char8>',
+        Cursor='OmnisciCursorType',
+        Column='OmnisciColumnType',
+        OutputColumn='OmnisciOutputColumnType',
+        RowMultiplier='int32|sizer=RowMultiplier',
+        ConstantParameter='int32|sizer=ConstantParameter',
+        Constant='int32|sizer=Constant',
+        ColumnList='OmnisciColumnListType',
+    )
 
     def __init__(self,
                  user='admin',
@@ -652,14 +637,25 @@ class RemoteOmnisci(RemoteJIT):
             'Text<8>': typemap['TExtArgumentType'].get('TextEncodingDict8'),
             'Text<16>': typemap['TExtArgumentType'].get('TextEncodingDict16'),
             'Text<32>': typemap['TExtArgumentType'].get('TextEncodingDict32'),
+            'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
+            'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
+            'ColumnList<int16_t>': typemap['TExtArgumentType'].get('ColumnListInt16'),
+            'ColumnList<int32_t>': typemap['TExtArgumentType'].get('ColumnListInt32'),
+            'ColumnList<int64_t>': typemap['TExtArgumentType'].get('ColumnListInt64'),
+            'ColumnList<float>': typemap['TExtArgumentType'].get('ColumnListFloat'),
+            'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
+
         }
 
         if self.version[:2] < (5, 4):
             ext_arguments_map['Array<bool>'] = typemap[
                 'TExtArgumentType']['ArrayInt8']
 
+        ext_arguments_map['bool8'] = ext_arguments_map['bool']
+
         for ptr_type, T in [
                 ('bool', 'bool'),
+                ('bool8', 'bool'),
                 ('int8', 'int8_t'),
                 ('int16', 'int16_t'),
                 ('int32', 'int32_t'),
@@ -673,6 +669,10 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['OmnisciOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
+            ext_arguments_map['OmnisciColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            ext_arguments_map['OmnisciOutputColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
 
         ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
 
@@ -740,6 +740,15 @@ class RemoteOmnisci(RemoteJIT):
         if messages:
             warnings.warn('\n  '.join([''] + messages))
 
+        type_sizeof = device_params.get('type_sizeof')
+        type_sizeof_dict = dict()
+        if type_sizeof is not None:
+            for type_size in type_sizeof.split(';'):
+                if not type_size:
+                    continue
+                dtype, size = type_size.split(':')
+                type_sizeof_dict[dtype] = int(size)
+
         null_values = device_params.get('null_values')
         null_values_asint = dict()
         null_values_astype = dict()
@@ -788,6 +797,9 @@ class RemoteOmnisci(RemoteJIT):
             llvm_version = device_params.get('llvm_version')
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
+
+            if type_sizeof_dict is not None:
+                target_info.type_sizeof.update(type_sizeof_dict)
 
             target_info.set('null_values', null_values_asint)
         return targets
@@ -852,7 +864,7 @@ class RemoteOmnisci(RemoteJIT):
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
-                    if isinstance(a, OmnisciColumnType):
+                    if isinstance(a, (OmnisciColumnType, OmnisciColumnListType)):
                         sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:
@@ -932,6 +944,10 @@ class RemoteOmnisci(RemoteJIT):
             atypes, rtype)
 
     def register(self):
+        with typesystem.Type.alias(**self.typesystem_aliases):
+            return self._register()
+
+    def _register(self):
         if self.have_last_compile:
             return
 

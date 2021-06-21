@@ -3,8 +3,8 @@ import sys
 import builtins
 import versioneer
 
-if sys.version_info[:2] < (3, 4):
-    raise RuntimeError("Python version >= 3.4 required.")
+if sys.version_info[:2] < (3, 7):
+    raise RuntimeError("Python version >= 3.7 required.")
 
 builtins.__RBC_SETUP__ = True
 
@@ -63,9 +63,9 @@ def setup_package():
             "Intended Audience :: Developers",
             "License :: OSI Approved :: BSD License",
             'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: 3.9',
             "Operating System :: OS Independent",
             "Topic :: Software Development",
         ],

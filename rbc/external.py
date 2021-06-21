@@ -1,3 +1,6 @@
+"""Low-level intrinsics to expose external functions
+"""
+
 # This code has heavily inspired in the numba.extending.intrisic code
 from typing import Dict, List, Union
 from collections import defaultdict
@@ -8,23 +11,18 @@ from rbc.targetinfo import TargetInfo
 
 class External:
     @classmethod
-    def fromobject(cls, *args, typing=True, lowering=True):
+    def external(cls, *args):
         """
         Parameters
         ----------
         signature : object (str, ctypes function, python callable, numba function)
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
-        typing : bool
-            Indicates if External should do typing or not. Default is True
-        lowering: bool
-            Indicates if External should do lowering or not. Default is True. Except for
-            very specific cases, typing and lowering should be True
         """
-        # Make inner function for the actual work
         ts = defaultdict(list)
         key = None
         for signature in args:
-            t = Type.fromobject(signature)
+            with TargetInfo.dummy():
+                t = Type.fromobject(signature)
             if not t.is_function:
                 raise ValueError("signature must represent a function type")
 
@@ -46,14 +44,14 @@ class External:
             ]:
                 ts[device].append(signature)
 
-        return cls(key, ts, typing=typing, lowering=lowering)
+        obj = cls(key, ts)
+        obj.register()
+        return obj
 
     def __init__(
         self,
         key: str,
         signatures: Dict[str, List[Union[str, types.FunctionType, Type]]],
-        typing=True,
-        lowering=True,
     ):
         """
         Parameters
@@ -62,18 +60,9 @@ class External:
             The key of the external function for typing
         signatures : List of function signatures
             A list of function type signature. i.e. 'int64 fn(int64, float64)'
-        typing : bool
-            Indicates if External should do typing or not. Default is True
-        lowering: bool
-            Indicates if External should do lowering or not. Default is True. Except for
-            very specific cases, typing and lowering should be True
         """
         self._signatures = signatures
         self.key = key
-        self.typing = typing
-        self.lowering = lowering
-        if self.typing:
-            self.register()
 
     def __str__(self):
         a = []
@@ -128,10 +117,10 @@ class External:
                 # get the correct signature and function name for the current device
                 atypes = tuple(map(Type.fromobject, args))
                 t = self.obj.match_signature(atypes)
+                TargetInfo().add_external(t.name)
 
-                if self.obj.lowering:
-                    codegen = self.obj.get_codegen()
-                    extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
+                codegen = self.obj.get_codegen()
+                extending.lower_builtin(self.key, *t.tonumba().args)(codegen)
                 return t.tonumba()
 
         typing.templates.infer(ExternalTemplate)
@@ -145,4 +134,4 @@ class External:
         raise NotImplementedError(msg)
 
 
-external = External.fromobject
+external = External.external

@@ -1,11 +1,12 @@
-# Author: Pearu Peterson
-# Created: February 2019
+"""RemoteJIT client/server config functions
+"""
 
 __all__ = ['RemoteJIT', 'Signature', 'Caller']
 
 import os
 import inspect
 import warnings
+import ctypes
 from . import irtools
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
@@ -399,7 +400,7 @@ class RemoteJIT(object):
 
     thrift_content = None
 
-    def __init__(self, host='localhost', port=11530,
+    def __init__(self, host='localhost', port=11532,
                  local=False, debug=False):
         """Construct remote JIT function decorator.
 
@@ -431,13 +432,13 @@ class RemoteJIT(object):
         self._targets = None
 
         if local:
-            self._client = LocalClient()
+            self._client = LocalClient(debug=debug)
         else:
             self._client = None
 
     @property
     def local(self):
-        localjit = type(self)(local=True)
+        localjit = type(self)(local=True, debug=self.debug)
         localjit._callers.extend(self._callers)
         return localjit
 
@@ -481,7 +482,8 @@ class RemoteJIT(object):
           Compile data can be any Python object. When None, it is
           interpreted as no compile data is available.
 
-        Usage
+
+        Notes
         -----
 
         The have/discard/set_last_compile methods provide a way to
@@ -489,13 +491,15 @@ class RemoteJIT(object):
         registration of compiled functions. The corresponding
         `register` method is expected to use the following pattern:
 
-        ```
-          def register(self):
-              if self.have_last_compile:
-                  return
-              <compile defined functions>
-              self.set_last_compile(<compilation results>)
-        ```
+
+        .. code-block:: python
+
+           def register(self):
+               if self.have_last_compile:
+                   return
+               <compile defined functions>
+               self.set_last_compile(<compilation results>)
+
 
         The `discard_last_compile()` method is called when the compile
         data becomes obsolete or needs to be discarded. For instance,
@@ -582,7 +586,6 @@ class RemoteJIT(object):
                                    'remotejit.thrift')
         print('staring rpc.thrift server: %s' % (thrift_file), end='',
               flush=True)
-
         if self.debug:
             print(flush=True)
             dispatcher = DebugDispatcherRJIT
@@ -590,11 +593,13 @@ class RemoteJIT(object):
             dispatcher = DispatcherRJIT
         if background:
             ps = Server.run_bg(dispatcher, thrift_file,
-                               dict(host=self.host, port=self.port))
+                               dict(host=self.host, port=self.port,
+                                    debug=self.debug))
             self.server_process = ps
         else:
             Server.run(dispatcher, thrift_file,
-                       dict(host=self.host, port=self.port))
+                       dict(host=self.host, port=self.port,
+                            debug=self.debug))
             print('... rpc.thrift server stopped', flush=True)
 
     def stop_server(self):
@@ -628,6 +633,8 @@ class RemoteJIT(object):
         Return the corresponding LLVM IR module instance which may be
         useful for debugging.
         """
+        if self.debug:
+            print(f'remote_compile({func}, {ftype})')
         llvm_module, succesful_fids = irtools.compile_to_LLVM(
             [(func, {0: ftype})], target_info, debug=self.debug)
         ir = str(llvm_module)
@@ -645,9 +652,17 @@ class RemoteJIT(object):
         function (see `remote_compile` method) is applied to the
         arguments, and the result is returned to local process.
         """
+        if self.debug:
+            print(f'remote_call({func}, {ftype}, {arguments})')
         fullname = func.__name__ + ftype.mangle()
         response = self.client(remotejit=dict(call=(fullname, arguments)))
         return response['remotejit']['call']
+
+    def python(self, statement):
+        """Execute Python statement remotely.
+        """
+        response = self.client(remotejit=dict(python=(statement,)))
+        return response['remotejit']['python']
 
     def preprocess_callable(self, func):
         """Preprocess func to be used as a remotejit function definition.
@@ -668,12 +683,12 @@ class DispatcherRJIT(Dispatcher):
     """Implements remotejit service methods.
     """
 
-    debug = False
-
-    def __init__(self, server):
-        Dispatcher.__init__(self, server)
+    def __init__(self, server, debug=False):
+        super().__init__(server, debug=debug)
         self.compiled_functions = dict()
         self.engines = dict()
+        self.python_globals = dict()
+        self.python_locals = dict()
 
     @dispatchermethod
     def targets(self) -> dict:
@@ -705,12 +720,21 @@ class DispatcherRJIT(Dispatcher):
         engine = irtools.compile_IR(ir)
         for msig in signatures.split(';'):
             sig = Type.demangle(msig)
+            ctypes_sig = sig.toctypes()
+            assert sig.is_function
+            if sig[0].is_aggregate:
+                raise RuntimeError(
+                    f'Functions with aggregate return type values are not supported,'
+                    f' got function `{name}` with `{sig}` signature')
             fullname = name + msig
             addr = engine.get_function_address(fullname)
             if self.debug:
                 print(f'compile({name}, {sig}) -> {hex(addr)}')
             # storing engine as the owner of function addresses
-            self.compiled_functions[fullname] = engine, sig.toctypes()(addr)
+            if addr:
+                self.compiled_functions[fullname] = engine, ctypes_sig(addr), sig, ctypes_sig
+            else:
+                warnings.warn('No compilation result for {name}|{sig=}')
         return True
 
     @dispatchermethod
@@ -723,17 +747,57 @@ class DispatcherRJIT(Dispatcher):
           Specify the full name of the function that is in form
           "<name><mangled signature>"
         arguments : tuple
-          Speficy the arguments to the function.
+          Specify the arguments to the function.
         """
         if self.debug:
             print(f'call({fullname}, {arguments})')
         ef = self.compiled_functions.get(fullname)
         if ef is None:
-            raise RuntimeError('no such compiled function `%s`' % (fullname))
-        r = ef[1](*arguments)
+            raise RuntimeError(
+                f'no such compiled function `{fullname}`. Available functions:\n'
+                f'  {"; ".join(list(self.compiled_functions))}\n.')
+        sig = ef[2]
+        ctypes_sig = ef[3]
+        if len(arguments) == 0:
+            assert sig.arity == 1 and sig[1][0].is_void, sig
+        else:
+            assert len(arguments) == sig.arity, (len(arguments), sig.arity)
+        ctypes_arguments = []
+        for typ, ctypes_typ, value in zip(sig[1], ctypes_sig._argtypes_, arguments):
+            if typ.is_custom:
+                typ = typ.get_struct_type()
+            if typ.is_struct:
+                if isinstance(value, tuple):
+                    member_values = [t.toctypes()(value[i]) for i, t in enumerate(typ)]
+                else:
+                    member_values = [t.toctypes()(getattr(value, t.name)) for t in typ]
+                ctypes_arguments.extend(member_values)
+            elif typ.is_pointer:
+                if isinstance(value, ctypes.c_void_p):
+                    value = ctypes.cast(value, ctypes_typ)
+                else:
+                    value = ctypes.cast(value, ctypes_typ)
+                ctypes_arguments.append(value)
+            else:
+                ctypes_arguments.append(value)
+        r = ef[1](*ctypes_arguments)
+        if sig[0].is_pointer and sig[0][0].is_void and isinstance(r, int):
+            r = ctypes.c_void_p(r)
+        if self.debug:
+            print(f'-> {r}')
         if hasattr(r, 'topython'):
             return r.topython()
         return r
+
+    @dispatchermethod
+    def python(self, statement: str) -> int:
+        """Execute Python statement.
+        """
+        if self.debug:
+            print(f'python({statement!r})')
+
+        exec(statement, self.python_globals, self.python_locals)
+        return True
 
 
 class DebugDispatcherRJIT(DispatcherRJIT):
@@ -749,8 +813,8 @@ class LocalClient(object):
     All calls will be made in a local process. Useful for debbuging.
     """
 
-    def __init__(self):
-        self.dispatcher = DispatcherRJIT(None)
+    def __init__(self, debug=False):
+        self.dispatcher = DispatcherRJIT(None, debug=debug)
 
     def __call__(self, **services):
         results = {}

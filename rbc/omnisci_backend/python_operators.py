@@ -2,11 +2,7 @@ import operator
 from llvmlite import ir
 from .omnisci_array import ArrayPointer, Array
 from rbc import typesystem
-from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types
-else:
-    from numba import extending, types
+from numba.core import extending, types
 
 
 int8_t = ir.IntType(8)

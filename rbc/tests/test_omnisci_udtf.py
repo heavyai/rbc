@@ -1,49 +1,142 @@
 import pytest
-
-
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
-if available_version and available_version >= (5, 4):
-    reason = ('Old-style UDTFs are available for omniscidb 5.3 or older, '
-              'currently connected to omniscidb '
-              + '.'.join(map(str, available_version)))
-    available_version = ()
-pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+from rbc.tests import omnisci_fixture
+import numpy as np
 
 
 @pytest.fixture(scope='module')
 def omnisci():
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci_udtf'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    for o in omnisci_fixture(globals()):
+        define(o)
+        yield o
 
-    sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
-                'BOOLEAN']
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-    table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
 
-    def row_value(row, col, colname):
-        if colname == 'b':
-            return ("'true'" if row % 2 == 0 else "'false'")
-        return row
+def define(omnisci):
 
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(
-            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
-    m.table_name = table_name
-    yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    T = ['int64', 'int32', 'int16', 'int8', 'float64', 'float32']
+
+    if omnisci.version >= (5, 6):
+
+        @omnisci('int32(Cursor<int64, T>, T, RowMultiplier,'
+                 ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+        def sqlmultiply(rowid, col, alpha, row_multiplier, rowid_out, out):
+            for i in range(len(col)):
+                j = rowid[i]
+                out[j] = col[i] * alpha
+                rowid_out[j] = i
+            return len(col)
+
+        @omnisci('int32(Cursor<int64, T>, T, RowMultiplier,'
+                 ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+        def sqladd(rowid, col, alpha, row_multiplier, rowid_out, out):
+            for i in range(len(col)):
+                j = rowid[i]
+                out[j] = col[i] + alpha
+                rowid_out[j] = i
+            return len(col)
+
+        @omnisci('int32(Cursor<int64, T>, Cursor<int64, T>, RowMultiplier,'
+                 ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+        def sqladd2(rowid1, col1, rowid2, col2, row_multiplier, rowid_out, out):
+            for i1 in range(len(col1)):
+                j1 = rowid1[i1]
+                for i2 in range(len(col2)):
+                    j2 = rowid2[i2]
+                    if j1 == j2:
+                        out[j1] = col1[i1] + col2[i2]
+                        rowid_out[j1] = i1
+                        break
+            return len(col1)
+
+        @omnisci('int32(Cursor<int64, T>, Cursor<int64, T>, RowMultiplier,'
+                 ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+        def sqlmultiply2(rowid1, col1, rowid2, col2, row_multiplier, rowid_out, out):
+            for i1 in range(len(col1)):
+                j1 = rowid1[i1]
+                for i2 in range(len(col2)):
+                    j2 = rowid2[i2]
+                    if j1 == j2:
+                        out[j1] = col1[i1] * col2[i2]
+                        rowid_out[j1] = i1
+                        break
+            return len(col1)
+
+
+@pytest.mark.parametrize("kind", ['i8', 'i4', 'i2', 'i1', 'f8', 'f4'])
+def test_composition(omnisci, kind):
+    omnisci.require_version((5, 6), 'Requires omniscidb-internal PR 5440', date=20210401)
+
+    def tonp(query):
+        _, result = omnisci.sql_execute(query)
+        return tuple(np.array(a) for a in zip(*list(result)))
+
+    sqltyp = dict(i8='BIGINT', i4='INT', i2='SMALLINT', i1='TINYINT',
+                  f8='DOUBLE', f4='FLOAT')[kind]
+
+    class Algebra:
+
+        def __init__(self, arr, select):
+            self.arr = arr
+            self.select = select
+
+        def __add__(self, other):
+            if isinstance(other, (int, float)):
+                return type(self)(
+                    self.arr + other,
+                    'select out0, out1 from table(sqladd(cursor('
+                    f'{self.select}), cast({other} as {sqltyp}), 1))')
+            elif isinstance(other, type(self)):
+                return type(self)(
+                    self.arr + other.arr,
+                    'select out0, out1 from table(sqladd2(cursor('
+                    f'{self.select}), cursor({other.select}), 1))')
+            return NotImplemented
+
+        def __mul__(self, other):
+            if isinstance(other, (int, float)):
+                return type(self)(
+                    self.arr * other,
+                    'select out0, out1 from table(sqlmultiply(cursor('
+                    f'{self.select}), cast({other} as {sqltyp}), 1))')
+            elif isinstance(other, type(self)):
+                return type(self)(
+                    self.arr * other.arr,
+                    'select out0, out1 from table(sqlmultiply2(cursor('
+                    f'{self.select}), cursor({other.select}), 1))')
+            return NotImplemented
+
+        def isok(self):
+            return (tonp(self.select)[1] == self.arr).all()
+
+        def __repr__(self):
+            return f'{type(self).__name__}({self.arr!r}, {self.select!r})'
+
+    select0 = f'select rowid, {kind} from {omnisci.table_name}'
+    arr0 = tonp(select0)[1]
+
+    a = Algebra(arr0, select0)
+
+    assert a.isok()
+
+    assert (a + 2).isok()
+    assert ((a + 2) + 3).isok()
+
+    assert (a * 2).isok()
+    assert ((a * 2) + 3).isok()
+
+    assert (a + a).isok()
+    assert (a * a).isok()
+
+    assert ((a + 2) * a).isok()
+    assert ((a + 2) * a + 3).isok()
 
 
 def test_simple(omnisci):
+    if omnisci.version >= (5, 4):
+        reason = ('Old-style UDTFs are available for omniscidb 5.3 or older, '
+                  'currently connected to omniscidb '
+                  + '.'.join(map(str, omnisci.version)))
+        pytest.skip(reason)
+
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL

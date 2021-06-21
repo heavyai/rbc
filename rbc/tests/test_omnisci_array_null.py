@@ -31,7 +31,10 @@ colnames = ['b', 'i1', 'i2', 'i4', 'i8', 'f4', 'f8']
 def test_array_null(omnisci, col):
     omnisci.require_version((5, 5),
                             'Requires omniscidb-internal PR 5104 [rbc issue 240]')
-
+    if col in ['i2', 'i8', 'f8']:
+        omnisci.require_version((5, 7, 0),
+                                'Requires omniscidb-internal PR 5465 [rbc PR 330]',
+                                hash='4777a06b01')
     # skipping bool test since NULL is converted to true - rbc issue #245
     if col == 'b':
         pytest.skip('Skipping Array<boolean> test [RBC issue 240]')
@@ -46,11 +49,11 @@ def test_array_null(omnisci, col):
 
     expected = {
         'i1': [(0,), (1,), (0,), (2,), (0,)],
-        'i2': [(2,), (2,), (2,), (0,), (2,)],
+        'i2': [(2,), (0,), (2,), (0,), (2,)],
         'i4': [(0,), (2,), (0,), (2,), (0,)],
-        'i8': [(2,), (2,), (2,), (0,), (1,)],
+        'i8': [(2,), (0,), (2,), (0,), (1,)],
         'f4': [(0,), (2,), (0,), (1,), (0,)],
-        'f8': [(1,), (1,), (1,), (0,), (2,)],
+        'f8': [(1,), (0,), (1,), (0,), (2,)],
     }
 
     assert list(result) == expected[col]

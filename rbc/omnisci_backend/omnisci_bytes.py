@@ -11,15 +11,10 @@ Omnisci Bytes represents the following structure:
 __all__ = ['BytesPointer', 'Bytes', 'OmnisciBytesType']
 
 from rbc import typesystem
-from rbc.utils import get_version
 from .omnisci_buffer import (
     BufferPointer, Buffer, OmnisciBufferType,
     omnisci_buffer_constructor)
-
-if get_version('numba') >= (0, 49):
-    from numba.core import types, extending
-else:
-    from numba import types, extending
+from numba.core import types, extending
 
 
 class OmnisciBytesType(OmnisciBufferType):
@@ -29,9 +24,6 @@ class OmnisciBytesType(OmnisciBufferType):
     @property
     def buffer_extra_members(self):
         return ('bool is_null',)
-
-
-typesystem.Type.alias(Bytes='OmnisciBytesType<char8>')
 
 
 BytesPointer = BufferPointer

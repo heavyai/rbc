@@ -32,7 +32,7 @@ def omnisci():
     for _i in range(1, 6):
         a = str((_i % 3) == 0).lower()
         b = str((_i % 2) == 0).lower()
-        x = 0.1 + _i/10.0
+        x = 0.123 + _i/10.0
         y = _i/6.0
         z = _i + 1.23
         i = _i
@@ -116,10 +116,18 @@ math_functions = [
 ]
 
 
+devices = ('cpu', 'gpu')
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
-                         ids=[item[0] for item in math_functions])
-def test_math_function(omnisci, nb_version, fn_name, signature):
+                         ids=["math." + item[0] for item in math_functions])
+def test_math_function(omnisci, device, nb_version, fn_name, signature):
     omnisci.reset()
+
+    if not omnisci.has_cuda and device == 'gpu':
+        pytest.skip('test requires CUDA-enabled omniscidb server')
 
     math_func = getattr(math, fn_name, None)
     if math_func is None:
@@ -170,7 +178,7 @@ def test_math_function(omnisci, nb_version, fn_name, signature):
 
     fn.__name__ = fprefix + fn.__name__
 
-    omnisci(signature)(fn)
+    omnisci(signature, devices=[device])(fn)
 
     omnisci.register()
 
@@ -324,10 +332,15 @@ if np is not None:
                 print(f'TODO: ADD {n} TEST TO {__file__}')
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
-                         ids=[item[0] for item in numpy_functions])
-def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
+                         ids=["np." + item[0] for item in numpy_functions])
+def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func):
     omnisci.reset()
+
+    if not omnisci.has_cuda and device == 'gpu':
+        pytest.skip('Test requires CUDA-enabled omniscidb server')
 
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')
@@ -350,11 +363,11 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
         # give lambda function a name
         fn.__name__ = fn_name
 
-    if available_version[:2] < (5, 4) and fn_name in \
+    if omnisci.version[:2] < (5, 4) and fn_name in \
             ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
         pytest.skip(
             f"using boolean arguments requires omniscidb v 5.4 or newer"
-            f" (got {available_version}) [issue 108]")
+            f" (got {omnisci.version}) [issue 108]")
 
     if fn_name in ['positive', 'divmod0', 'frexp0']:
         try:
@@ -399,7 +412,10 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
         # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
         pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
-    omnisci(signature)(fn)
+    if device == 'gpu' and fn_name in ['floor_divide', 'around', 'round2', 'round_']:
+        pytest.skip(f'Missing libdevice bindigs for {fn_name}')
+
+    omnisci(signature, devices=[device])(fn)
 
     omnisci.register()
 
@@ -425,6 +441,6 @@ def test_numpy_function(omnisci, nb_version, fn_name, signature, np_func):
         result = args[-1]
         expected = np_func(*args[:-1])
         if np.isnan(expected):
-            assert np.isnan(result)
+            assert np.isnan(result), fn_name
         else:
-            assert(np.isclose(expected, result))
+            assert(np.isclose(expected, result)), fn_name

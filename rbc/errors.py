@@ -3,12 +3,7 @@ rbc-specific errors and warnings.
 """
 
 import numba
-from .utils import get_version
-
-if get_version('numba') >= (0, 49):
-    numba_errors = numba.core.errors
-else:
-    numba_errors = numba.errors
+numba_errors = numba.core.errors
 
 
 class OmnisciServerError(Exception):
@@ -16,6 +11,7 @@ class OmnisciServerError(Exception):
     Launch when OmnisciDB server raises a runtime error that RBC knows
     how to interpret.
     """
+    pass
 
 
 class UnsupportedError(numba_errors.UnsupportedError):
@@ -23,6 +19,7 @@ class UnsupportedError(numba_errors.UnsupportedError):
     Launch when an attempt is to use a feature that is not supported
     for a given target.
     """
+    pass
 
 
 class ForbiddenNameError(Exception):

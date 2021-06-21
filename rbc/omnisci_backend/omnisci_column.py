@@ -10,12 +10,9 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
 from llvmlite import ir
 from rbc import typesystem
 from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
+from .column_list import OmnisciColumnListType
 from rbc.targetinfo import TargetInfo
-from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types
-else:
-    from numba import extending, types
+from numba.core import extending, types
 
 
 int32_t = ir.IntType(32)
@@ -123,7 +120,7 @@ class OmnisciCursorType(typesystem.Type):
         assert len(args) == 1
         params = []
         for p in args[0]:
-            if not isinstance(p, OmnisciColumnType):
+            if not isinstance(p, (OmnisciColumnType, OmnisciColumnListType)):
                 p = OmnisciColumnType((p,))
             params.append(p)
         return (tuple(params),)
@@ -131,12 +128,3 @@ class OmnisciCursorType(typesystem.Type):
     @property
     def as_consumed_args(self):
         return self[0]
-
-
-typesystem.Type.alias(
-    Cursor='OmnisciCursorType',
-    Column='OmnisciColumnType',
-    OutputColumn='OmnisciOutputColumnType',
-    RowMultiplier='int32|sizer=RowMultiplier',
-    ConstantParameter='int32|sizer=ConstantParameter',
-    Constant='int32|sizer=Constant')
