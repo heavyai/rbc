@@ -61,7 +61,7 @@ def test_table_load(mth, suffix):
                           ([1.0], None, [None], None, [1], None, [0]),
                           (None, [None, 3.0], None, [2, None], None, [2, 3], None),
                           ([None, 4.0, 5.0], None, [3, None, 5], None, [3, 4, None],
-                           None, [1, 1, 0]),
+                           None, [None, 1, 0]),
                           (None, [4.0, None, 6.0, 7.0], None, [4, 5, None, 7], None,
                            [None, 5, 6, None], None)]
     else:
