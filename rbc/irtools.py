@@ -11,19 +11,11 @@ from .targetinfo import TargetInfo
 from .utils import get_version
 from .errors import UnsupportedError
 from . import libfuncs
-if get_version('numba') >= (0, 49):
-    from numba.core import codegen, cpu, compiler_lock, \
-        registry, typing, compiler, sigutils, cgutils, \
-        extending, utils, callconv
-    from numba.core import types as nb_types
-    from numba.core import errors as nb_errors
-else:
-    from numba.targets import codegen, cpu, registry
-    from numba import compiler_lock, typing, compiler, \
-        sigutils, cgutils, extending, utils, \
-        callconv
-    from numba import types as nb_types
-    from numba import errors as nb_errors
+from numba.core import codegen, cpu, compiler_lock, \
+    registry, typing, compiler, sigutils, cgutils, \
+    extending, utils, callconv
+from numba.core import types as nb_types
+from numba.core import errors as nb_errors
 
 int32_t = ir.IntType(32)
 
@@ -398,44 +390,44 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
-        # main_library._optimize_final_module()
+        main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
-        # used_symbols = defaultdict(set)
-        # for fname in function_names:
-        #     for k, v in get_called_functions(main_library, fname).items():
-        #         used_symbols[k].update(v)
+        used_symbols = defaultdict(set)
+        for fname in function_names:
+            for k, v in get_called_functions(main_library, fname).items():
+                used_symbols[k].update(v)
 
-        # all_symbols = get_called_functions(main_library)
+        all_symbols = get_called_functions(main_library)
 
-        # unused_symbols = defaultdict(set)
-        # for k, lst in all_symbols.items():
-        #     if k == 'libraries':
-        #         continue
-        #     for fn in lst:
-        #         if fn not in used_symbols[k]:
-        #             unused_symbols[k].add(fn)
+        unused_symbols = defaultdict(set)
+        for k, lst in all_symbols.items():
+            if k == 'libraries':
+                continue
+            for fn in lst:
+                if fn not in used_symbols[k]:
+                    unused_symbols[k].add(fn)
 
-        # changed = False
-        # for f in main_module.functions:
-        #     fn = f.name
-        #     if fn.startswith('llvm.'):
-        #         if f.name in unused_symbols['intrinsics']:
-        #             f.linkage = llvm.Linkage.external
-        #             changed = True
-        #     elif f.is_declaration:
-        #         if f.name in unused_symbols['declarations']:
-        #             f.linkage = llvm.Linkage.external
-        #             changed = True
-        #     else:
-        #         if f.name in unused_symbols['defined']:
-        #             f.linkage = llvm.Linkage.private
-        #             changed = True
+        changed = False
+        for f in main_module.functions:
+            fn = f.name
+            if fn.startswith('llvm.'):
+                if f.name in unused_symbols['intrinsics']:
+                    f.linkage = llvm.Linkage.external
+                    changed = True
+            elif f.is_declaration:
+                if f.name in unused_symbols['declarations']:
+                    f.linkage = llvm.Linkage.external
+                    changed = True
+            else:
+                if f.name in unused_symbols['defined']:
+                    f.linkage = llvm.Linkage.private
+                    changed = True
 
         # TODO: determine unused global_variables and struct_types
 
-        # if changed:
-        #     main_library._optimize_final_module()
+        if changed:
+            main_library._optimize_final_module()
 
         main_module.verify()
         main_library._finalized = True

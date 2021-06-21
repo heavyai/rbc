@@ -714,34 +714,3 @@ def test_truncate_issue(omnisci):
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
-
-
-def test_fx(omnisci):
-
-    import rbc.omnisci_backend as omni
-    from rbc.omnisci_backend import Array
-    import numba.types as nb_types
-
-    # @omnisci('int64[](int64, int64, int64)')
-    # def fx(start, stop, step):
-    #     return omni.arange(start, stop, step, dtype=nb_types.int64)
-
-    # @omnisci('int64[](int64)')
-    # def fx(a):
-    #     return omni.Array(a, dtype=nb_types.int64)
-
-    # @omnisci('int64[](int64)')
-    # def fx(sz):
-    #     a = Array(sz, dtype=nb_types.int64)
-    #     for i in range(sz):
-    #         a[i] = i
-    #     return a
-
-    @omnisci('int32(int32[])')
-    def fx(a):
-        return a[0]
-
-    print(fx)
-    # _, result = omnisci.sql_execute('select fx(2, 5, 1);')
-    # _, result = omnisci.sql_execute('select fx(ARRAY[1, 2, 3]);')
-    # print(list(result))
