@@ -157,3 +157,10 @@ def test_black_scholes_udtf(omnisci):
 
     for r, o in zip(result, oprice):
         assert math.isclose(o[0], r[0], abs_tol=0.0001)
+
+
+def test_fx(omnisci):
+
+    @omnisci('double(double)')
+    def foo(a):
+        return np.sin(a)

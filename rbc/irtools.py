@@ -15,7 +15,7 @@ from rbc import externals
 from rbc.omnisci_backend import mathimpl
 from numba.core import codegen, cpu, compiler_lock, \
     registry, typing, compiler, sigutils, cgutils, \
-    extending
+    extending, utils, callconv
 from numba.core import errors as nb_errors
 
 
@@ -128,8 +128,79 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
         return None
 
 
-class JITRemoteCallConv(callconv.MinimalCallConv):
-    pass
+class JITRemoteCallConv(callconv.BaseCallConv):
+
+    def get_return_type(self, ty):
+        """
+        Get the actual type of the return argument for Numba type *ty*.
+        """
+        restype = self.context.data_model_manager[ty].get_return_type()
+        return restype
+
+    def decorate_function(self, fn, args, fe_argtypes, noalias=False):
+        """
+        Set names and attributes of function arguments.
+        """
+        assert not noalias
+        arginfo = self._get_arg_packer(fe_argtypes)
+        arginfo.assign_names(self.get_arguments(fn),
+                             ['arg.' + a for a in args])
+        return fn
+
+    # def __build_dummy_status(self):
+    #     """
+    #     Given a return *code*, get a Status instance.
+    #     """
+    #     zero = ir.IntType(1)(0)
+    #     status = callconv.Status(code=callconv.RETCODE_OK,
+    #                              is_ok=zero,
+    #                              is_error=zero,
+    #                              is_python_exc=zero,
+    #                              is_none=zero,
+    #                              is_user_exc=zero,
+    #                              is_stop_iteration=zero,
+    #                              excinfoptr=None)
+    #     return status
+
+    def return_status_propagate(self, builder, status):
+        pass
+
+    def get_arguments(self, func):
+        """
+        Get the Python-level arguments of LLVM *func*.
+        """
+        return func.args
+
+    def _make_call_helper(self, builder):
+        return None
+
+    def return_value(self, builder, retval):
+        builder.ret(retval)
+
+    def call_function(self, builder, callee, resty, argtys, args):
+        """
+        Call the Numba-compiled *callee*.
+        """
+        arginfo = self._get_arg_packer(argtys)
+        args = arginfo.as_arguments(builder, args)
+        retval = builder.call(callee, args)
+        return None, retval
+
+    def return_user_exc(self, builder, exc, exc_args=None, loc=None,
+                        func_name=None):
+        pass
+
+
+    def get_function_type(self, restype, argtypes):
+        """
+        Get the implemented Function type for *restype* and *argtypes*.
+        """
+        arginfo = self._get_arg_packer(argtypes)
+        argtypes = list(arginfo.argument_types)
+        restype = self.get_return_type(restype)
+        fnty = ir.FunctionType(restype, argtypes)
+        return fnty
+
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
@@ -176,6 +247,14 @@ class JITRemoteTargetContext(cpu.CPUContext):
 
     def post_lowering(self, mod, library):
         pass
+
+    def call_internal(self, builder, fndesc, sig, args):
+        """
+        Given the function descriptor of an internally compiled function,
+        emit a call to that function with the given arguments.
+        """
+        _, res = self.call_internal_no_propagate(builder, fndesc, sig, args)
+        return res
 
     @utils.cached_property
     def call_conv(self):
@@ -342,6 +421,7 @@ def compile_instance(func, sig,
         main_module.link_in(
             lib._get_module_for_linking(), preserve=True,
         )
+    # print(main_module)
 
     return fname
 
