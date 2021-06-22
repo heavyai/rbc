@@ -5,7 +5,6 @@ import os
 import pytest
 import warnings
 from collections import defaultdict
-from rbc.utils import version_date, version_hash
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
@@ -34,7 +33,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
 
     f'{omnisci.table_name}null' - contains columns f8, f4, i8, i4, i2,
                                   i1, b with row size 5, contains null
-                                  values.
+                                  values
 
     f'{omnisci.table_name}array' - contains arrays f8, f4, i8, i4, i2,
                                    i1, b with row size 5
@@ -46,43 +45,91 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
 
-    def require_version(version, message=None, date=None, hash=None):
-        # version date is the build data while version hash determines
-        # the merge date of a feature, see rbc issue 332
-        hash_date_map = {
-            '6e53f97319': 20210621,    # PR 5492
-            '4777a06b01': 20210429.5,  # PR 5465
-            '758cf7a61a': 20210429,    # v5.7.0dev-20210429
-            '9dbd553c44': 20210329,    # v5.5.2
-            '5b4ddfcdcd': 20210112,    # v5.4.1
-        }
+    def require_version(version, message=None, level=0):
+        """Execute pytest.skip(...) if version is older than available_version.
+
+        When versions match, then the kw argument level and the
+        environment variable RBC_TEST_LEVEL will be used: if the
+        specified level is greater than RBC_TEST_LEVEL,
+        pytest.skip(...) is executed. Tests needs to specify the level
+        argument only when the test is performed against the
+        development version of omniscidb. If omniscidb is released
+        with the used feature, the level argument ought to be removed.
+        """
+        # The available version (of the omniscidb server) has date and
+        # hash bits, however, these are useless for determining the
+        # version ordering (in the case of available_version[:3] ==
+        # version) because the date corresponds to the date of
+        # building the server and the hash corresponds to some commit
+        # of some repository (omniscidb or omniscidb-internal) and it
+        # does not provide easy date information.
+        #
+        # The condition available_version[:3] == version can appear in
+        # the following cases (given in the order of from newer to
+        # older):
+        # 1. omniscidb is built against a omniscidb-internal PR branch
+        # (assuming it is rebased against master) [RBC_TEST_LEVEL == 10]
+        # 2. omniscidb is built against omniscidb-internal master branch
+        # 3. omniscidb is built against omniscidb master branch
+        # 4. omniscidb is built against omniscidb dev docker  [RBC_TEST_LEVEL == 1]
+        # 5. omniscidb is built against omniscidb/omniscidb-internal release tag
+        #
+        # rbc testing suite may use features that exists in the head
+        # of the above list but not in the tail of it. So we have a
+        # problem of deciding if a particular test should be disabled
+        # or not for a given case while there is no reliable way to
+        # tell from omniscidb version if the server has the particular
+        # feature or not.
+        #
+        # Rbc testing suites are typically run:
+        #
+        # A. locally against the cases 1-5
+        # B. from rbc CI against the cases 4-5
+        #
+        # We shall use the following policy for a test that uses
+        # require_version functionality:
+        #
+        # if version < available_version[:3] then
+        #   test will be run
+        # elif version > available_version[:3] then
+        #   test will be skipped
+        # elif version < current_development_version then
+        #   test will be run
+        # elif version > current_development_version then
+        #   submit a warning about out-of-date current development version
+        #   test will be run
+        # elif level >= os.environ.get('RBC_TEST_LEVEL', 0)
+        #   test will be run
+        # else
+        #   test will be skipped
+
         if not available_version:
             pytest.skip(reason)
+
+        # Requires update when omniscidb-internal bumps up version number:
+        current_development_version = (5, 7, 0)
+        if available_version[:3] > current_development_version:
+            warnings.warn(f'{available_version}) is newer than development version'
+                          f' ({current_development_version}), please update the latter!')
+
         assert isinstance(version, tuple)
-        if available_version < version:
+        if version > available_version[:3]:
             _reason = f'test requires version {version} or newer, got {available_version}'
             if message is not None:
                 _reason += f': {message}'
             pytest.skip(_reason)
-        available_hash = version_hash(available_version)
-        available_date = hash_date_map.get(available_hash)
-        if hash is not None:
-            date = hash_date_map.get(hash, date)
-        if date is not None:
-            assert isinstance(date, (int, float))
-            if available_date is None:
-                available_date = version_date(available_version)
-            if not available_date:
-                warnings.warn('could not determine date of {available_version}')
-                return
-            if available_date < date:
-                required_version = f'{".".join(map(str, version))}-{date or "*"}-{hash or "*"}'
-                current_version = (f'{".".join(map(str, available_version[:3]))}'
-                                   f'-{available_date or "*"}-{available_hash or "*"}')
-                _reason = f'version {required_version} or newer required, got {current_version}'
-                if message is not None:
-                    _reason += f': {message}'
-                pytest.skip(_reason)
+
+        test_level = int(os.environ.get('RBC_TEST_LEVEL', 0))
+        if current_development_version == available_version[:3] and level > test_level:
+            _reason = f'development test level ({level}) larger than RBC_TEST_LEVEL ({test_level})'
+            if message is not None:
+                _reason += f': {message}'
+            pytest.skip(_reason)
+
+        if version < current_development_version and level > 0:
+            warnings.warn(f'detected development test level ({level}) that is out-of-date for '
+                          f'development version {current_development_version}.'
+                          ' Please reset test level to 0.')
 
     # Throw an error on Travis CI if the server is not available
     if "TRAVIS" in os.environ and not available_version:

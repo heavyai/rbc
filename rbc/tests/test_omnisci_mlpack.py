@@ -15,8 +15,7 @@ def omnisci():
 def test_mlpack(omnisci, func):
     omnisci.require_version(
         (5, 6),
-        'Requires omniscidb-internal PR 5430 and omniscidb built with -DENABLE_MLPACK',
-        date=20210401)
+        'Requires omniscidb-internal PR 5430 and omniscidb built with -DENABLE_MLPACK')
 
     extra_args = dict(dbscan='cast(1 as float), 1',
                       kmeans='1')[func]
