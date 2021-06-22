@@ -119,7 +119,8 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                 _reason += f': {message}'
             pytest.skip(_reason)
 
-        test_level = int(os.environ.get('RBC_TEST_LEVEL', 0))
+        test_level = os.environ.get('RBC_TEST_LEVEL', '0').lower()
+        test_level = int(dict(false=0, true=1).get(test_level, test_level))
         if current_development_version == available_version[:3] and level > test_level:
             _reason = f'development test level ({level}) larger than RBC_TEST_LEVEL ({test_level})'
             if message is not None:
