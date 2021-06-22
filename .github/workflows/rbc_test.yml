@@ -191,7 +191,7 @@ jobs:
       - name: Run rbc tests
         shell: bash -l {0}
         env:
-          RBC_TEST_LEVEL: ${{ int(str(omniscidb-version) == 'dev') }}
+          RBC_TEST_LEVEL: ${{ matrix.omniscidb-version == 'dev' }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
         run: |
