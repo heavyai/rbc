@@ -200,7 +200,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
         run: |
-          test -f omniscidb.pid && ps -F --pid `cat omniscidb.pid`  # to check if server is still alive
+          mamba run -n docker docker-compose ps  # to check if server is still alive
           mamba run -n docker docker-compose logs --no-color -f -t --tail=10000 \> omniscidb-docker.log
           cat omniscidb-docker.log
 
