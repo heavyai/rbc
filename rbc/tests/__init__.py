@@ -50,6 +50,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
         # version date is the build data while version hash determines
         # the merge date of a feature, see rbc issue 332
         hash_date_map = {
+            '6e53f97319': 20210421,    # PR 5492
             '4777a06b01': 20210429.5,  # PR 5465
             '758cf7a61a': 20210429,    # v5.7.0dev-20210429
             '9dbd553c44': 20210329,    # v5.5.2
