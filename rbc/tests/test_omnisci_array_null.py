@@ -34,10 +34,11 @@ def test_array_null(omnisci, col):
     if col in ['i2', 'i8', 'f8']:
         omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5465 [rbc PR 330]',
-                                hash='4777a06b01')
-    # skipping bool test since NULL is converted to true - rbc issue #245
+                                label='docker-dev')
     if col == 'b':
-        pytest.skip('Skipping Array<boolean> test [RBC issue 240]')
+        omnisci.require_version((5, 7, 0),
+                                'Requires omniscidb-internal PR 5492 [rbc issue 245]',
+                                label='master')
 
     # Query null value
     _, result = omnisci.sql_execute(f'''
@@ -46,14 +47,23 @@ def test_array_null(omnisci, col):
         FROM
             {omnisci.table_name}arraynull
     ''')
+    result = list(result)
 
     expected = {
-        'i1': [(0,), (1,), (0,), (2,), (0,)],
-        'i2': [(2,), (0,), (2,), (0,), (2,)],
-        'i4': [(0,), (2,), (0,), (2,), (0,)],
-        'i8': [(2,), (0,), (2,), (0,), (1,)],
-        'f4': [(0,), (2,), (0,), (1,), (0,)],
-        'f8': [(1,), (0,), (1,), (0,), (2,)],
+        'b':  [(ARRAY_NULL,), (ARRAY_NOT_NULL,), (ARRAY_NULL,),
+               (ARRAY_NOT_NULL,), (ARRAY_NULL,)],
+        'i1': [(ARRAY_NULL,), (ARRAY_IDX_IS_NULL,), (ARRAY_NULL,),
+               (ARRAY_NOT_NULL,), (ARRAY_NULL,)],
+        'i2': [(ARRAY_NOT_NULL,), (ARRAY_NULL,), (ARRAY_NOT_NULL,),
+               (ARRAY_NULL,), (ARRAY_NOT_NULL,)],
+        'i4': [(ARRAY_NULL,), (ARRAY_NOT_NULL,), (ARRAY_NULL,),
+               (ARRAY_NOT_NULL,), (ARRAY_NULL,)],
+        'i8': [(ARRAY_NOT_NULL,), (ARRAY_NULL,), (ARRAY_NOT_NULL,),
+               (ARRAY_NULL,), (ARRAY_IDX_IS_NULL,)],
+        'f4': [(ARRAY_NULL,), (ARRAY_NOT_NULL,), (ARRAY_NULL,),
+               (ARRAY_IDX_IS_NULL,), (ARRAY_NULL,)],
+        'f8': [(ARRAY_IDX_IS_NULL,), (ARRAY_NULL,), (ARRAY_IDX_IS_NULL,),
+               (ARRAY_NULL,), (ARRAY_NOT_NULL,)],
     }
 
-    assert list(result) == expected[col]
+    assert result == expected[col]

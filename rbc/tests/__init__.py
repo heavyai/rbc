@@ -5,7 +5,6 @@ import os
 import pytest
 import warnings
 from collections import defaultdict
-from rbc.utils import version_date, version_hash
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
@@ -34,7 +33,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
 
     f'{omnisci.table_name}null' - contains columns f8, f4, i8, i4, i2,
                                   i1, b with row size 5, contains null
-                                  values.
+                                  values
 
     f'{omnisci.table_name}array' - contains arrays f8, f4, i8, i4, i2,
                                    i1, b with row size 5
@@ -46,42 +45,89 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
 
-    def require_version(version, message=None, date=None, hash=None):
-        # version date is the build data while version hash determines
-        # the merge date of a feature, see rbc issue 332
-        hash_date_map = {
-            '4777a06b01': 20210429.5,  # PR 5465
-            '758cf7a61a': 20210429,    # v5.7.0dev-20210429
-            '9dbd553c44': 20210329,    # v5.5.2
-            '5b4ddfcdcd': 20210112,    # v5.4.1
-        }
+    def require_version(version, message=None, label=None):
+        """Execute pytest.skip(...) if version is older than available_version.
+
+        Some tests can be run only when using omniscidb server built
+        from a particular branch of omniscidb.  So, when the specified
+        version and the omniscidb version match exactly and these
+        correspond to the current development version, if the
+        specified label does not match with the value of envrinment
+        variable OMNISCIDB_DEV_LABEL, then the corresponing test will
+        be skipped. Use label 'docker-dev' when using omniscidb dev
+        docker image.
+
+        """
+        # The available version (of the omniscidb server) has date and
+        # hash bits, however, these are useless for determining the
+        # version ordering (in the case of available_version[:3] ==
+        # version) because the date corresponds to the date of
+        # building the server and the hash corresponds to some commit
+        # of some repository (omniscidb or omniscidb-internal) and it
+        # does not provide easy date information.
+        #
+        # The condition available_version[:3] == version can appear in
+        # the following cases (given in the order of from newer to
+        # older):
+        # 1. omniscidb is built against a omniscidb-internal PR branch
+        # (assuming it is rebased against master)
+        # 2. omniscidb is built against omniscidb-internal master branch
+        # 3. omniscidb is built against omniscidb master branch
+        # 4. omniscidb is built against omniscidb dev docker
+        # 5. omniscidb is built against omniscidb/omniscidb-internal release tag
+        #
+        # rbc testing suite may use features that exists in the head
+        # of the above list but not in the tail of it. So we have a
+        # problem of deciding if a particular test should be disabled
+        # or not for a given case while there is no reliable way to
+        # tell from omniscidb version if the server has the particular
+        # feature or not. To resolve this, we use label concept as
+        # explained in the doc-string.
+        #
+
         if not available_version:
             pytest.skip(reason)
+
+        # Requires update when omniscidb-internal bumps up version number:
+        current_development_version = (5, 7, 0)
+        if available_version[:3] > current_development_version:
+            warnings.warn(f'{available_version}) is newer than development version'
+                          f' ({current_development_version}), please update the latter!')
+
         assert isinstance(version, tuple)
-        if available_version < version:
+        if version > available_version[:3]:
             _reason = f'test requires version {version} or newer, got {available_version}'
             if message is not None:
                 _reason += f': {message}'
             pytest.skip(_reason)
-        available_hash = version_hash(available_version)
-        available_date = hash_date_map.get(available_hash)
-        if hash is not None:
-            date = hash_date_map.get(hash, date)
-        if date is not None:
-            assert isinstance(date, (int, float))
-            if available_date is None:
-                available_date = version_date(available_version)
-            if not available_date:
-                warnings.warn('could not determine date of {available_version}')
-                return
-            if available_date < date:
-                required_version = f'{".".join(map(str, version))}-{date or "*"}-{hash or "*"}'
-                current_version = (f'{".".join(map(str, available_version[:3]))}'
-                                   f'-{available_date or "*"}-{available_hash or "*"}')
-                _reason = f'version {required_version} or newer required, got {current_version}'
+
+        if label is not None:
+            env_label = os.environ.get('OMNISCIDB_DEV_LABEL')
+            if env_label == 'master' and label == 'docker-dev':
+                # docker-dev is some older master, so it must work
+                # with the current master as well.
+                label = 'master'
+            if label == 'master' and env_label and env_label != 'docker-dev':
+                # assuming that the branch given in the label is
+                # up-to-date with respect to master branch. If it is
+                # not, one should rebase the branch against the
+                # master.
+                label = env_label
+            if env_label is None:
+                warnings.warn('Environment does not specify label (OMNISCIDB_DEV_LABEL is unset).'
+                              ' Tests with development labels will not be run.')
+            if env_label != label:
+                _reason = (f'test requires version {version} with label {label},'
+                           f' got {available_version} with label {env_label}')
                 if message is not None:
                     _reason += f': {message}'
                 pytest.skip(_reason)
+
+            if version < available_version[:3]:
+                # in the case the branch given in the label was never
+                # merged, consider removing the corresponding test
+                warnings.warn(f'detected test requiring {version} with out-of-date label {label}.'
+                              ' Please reset test label to None.')
 
     # Throw an error on Travis CI if the server is not available
     if "TRAVIS" in os.environ and not available_version:
