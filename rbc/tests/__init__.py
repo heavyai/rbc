@@ -45,16 +45,18 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     rbc_omnisci = pytest.importorskip('rbc.omniscidb')
     available_version, reason = rbc_omnisci.is_available()
 
-    def require_version(version, message=None, level=0):
+    def require_version(version, message=None, label=None):
         """Execute pytest.skip(...) if version is older than available_version.
 
-        When versions match, then the kw argument level and the
-        environment variable RBC_TEST_LEVEL will be used: if the
-        specified level is greater than RBC_TEST_LEVEL,
-        pytest.skip(...) is executed. Tests needs to specify the level
-        argument only when the test is performed against the
-        development version of omniscidb. If omniscidb is released
-        with the used feature, the level argument ought to be removed.
+        Some tests can be run only when using omniscidb server built
+        from a particular branch of omniscidb.  So, when the specified
+        version and the omniscidb version match exactly and these
+        correspond to the current development version, if the
+        specified label does not match with the value of envrinment
+        variable OMNISCIDB_DEV_LABEL, then the corresponing test will
+        be skipped. Use label 'docker-dev' when using omniscidb dev
+        docker image.
+
         """
         # The available version (of the omniscidb server) has date and
         # hash bits, however, these are useless for determining the
@@ -68,10 +70,10 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
         # the following cases (given in the order of from newer to
         # older):
         # 1. omniscidb is built against a omniscidb-internal PR branch
-        # (assuming it is rebased against master) [RBC_TEST_LEVEL == 10]
+        # (assuming it is rebased against master)
         # 2. omniscidb is built against omniscidb-internal master branch
         # 3. omniscidb is built against omniscidb master branch
-        # 4. omniscidb is built against omniscidb dev docker  [RBC_TEST_LEVEL == 1]
+        # 4. omniscidb is built against omniscidb dev docker
         # 5. omniscidb is built against omniscidb/omniscidb-internal release tag
         #
         # rbc testing suite may use features that exists in the head
@@ -79,29 +81,9 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
         # problem of deciding if a particular test should be disabled
         # or not for a given case while there is no reliable way to
         # tell from omniscidb version if the server has the particular
-        # feature or not.
+        # feature or not. To resolve this, we use label concept as
+        # explained in the doc-string.
         #
-        # Rbc testing suites are typically run:
-        #
-        # A. locally against the cases 1-5
-        # B. from rbc CI against the cases 4-5
-        #
-        # We shall use the following policy for a test that uses
-        # require_version functionality:
-        #
-        # if version < available_version[:3] then
-        #   test will be run
-        # elif version > available_version[:3] then
-        #   test will be skipped
-        # elif version < current_development_version then
-        #   test will be run
-        # elif version > current_development_version then
-        #   submit a warning about out-of-date current development version
-        #   test will be run
-        # elif level >= os.environ.get('RBC_TEST_LEVEL', 0)
-        #   test will be run
-        # else
-        #   test will be skipped
 
         if not available_version:
             pytest.skip(reason)
@@ -119,18 +101,33 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                 _reason += f': {message}'
             pytest.skip(_reason)
 
-        test_level = os.environ.get('RBC_TEST_LEVEL', '0').lower()
-        test_level = int(dict(false=0, true=1).get(test_level, test_level))
-        if current_development_version == available_version[:3] and level > test_level:
-            _reason = f'development test level ({level}) larger than RBC_TEST_LEVEL ({test_level})'
-            if message is not None:
-                _reason += f': {message}'
-            pytest.skip(_reason)
+        if label is not None:
+            env_label = os.environ.get('OMNISCIDB_DEV_LABEL')
+            if env_label == 'master' and label == 'docker-dev':
+                # docker-dev is some older master, so it must work
+                # with the current master as well.
+                label = 'master'
+            if label == 'master' and env_label and env_label != 'docker-dev':
+                # assuming that the branch given in the label is
+                # up-to-date with respect to master branch. If it is
+                # not, one should rebase the branch against the
+                # master.
+                label = env_label
+            if env_label is None:
+                warnings.warn('Environment does not specify label (OMNISCIDB_DEV_LABEL is unset).'
+                              ' Tests with development labels will not be run.')
+            if env_label != label:
+                _reason = (f'test requires version {version} with label {label},'
+                           f' got {available_version} with label {env_label}')
+                if message is not None:
+                    _reason += f': {message}'
+                pytest.skip(_reason)
 
-        if version < current_development_version and level > 0:
-            warnings.warn(f'detected development test level ({level}) that is out-of-date for '
-                          f'development version {current_development_version}.'
-                          ' Please reset test level to 0.')
+            if version < available_version[:3]:
+                # in the case the branch given in the label was never
+                # merged, consider removing the corresponding test
+                warnings.warn(f'detected test requiring {version} with out-of-date label {label}.'
+                              ' Please reset test label to None.')
 
     # Throw an error on Travis CI if the server is not available
     if "TRAVIS" in os.environ and not available_version:

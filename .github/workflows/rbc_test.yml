@@ -188,10 +188,20 @@ jobs:
         run: |
           mamba run -n rbc python setup.py develop
 
+      - name: Run rbc tests [docker]
+        shell: bash -l {0}
+        if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
+        env:
+          OMNISCIDB_DEV_LABEL: 'docker-dev'
+          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
+          EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
+        run: |
+          mamba run -n rbc pytest -sv -r A rbc/ -x
+
       - name: Run rbc tests
         shell: bash -l {0}
+        if: ! ( matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' )
         env:
-          RBC_TEST_LEVEL: ${{ matrix.omniscidb-version == 'dev' }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
         run: |

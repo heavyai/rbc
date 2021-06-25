@@ -34,11 +34,11 @@ def test_array_null(omnisci, col):
     if col in ['i2', 'i8', 'f8']:
         omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5465 [rbc PR 330]',
-                                level=1)
+                                label='docker-dev')
     if col == 'b':
         omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5492 [rbc issue 245]',
-                                level=10)
+                                label='master')
 
     # Query null value
     _, result = omnisci.sql_execute(f'''
