@@ -192,7 +192,7 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
         env:
-          OMNISCIDB_DEV_LABEL: 'docker-dev'
+          OMNISCIDB_DEV_LABEL: ${{ 'docker-dev' }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
         run: |
@@ -209,7 +209,7 @@ jobs:
 
       - name: Show Omniscidb docker logs on failure [docker]
         shell: bash -l {0}
-        if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
+        if: failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
         run: |
           mamba run -n docker docker-compose top  # to check if server is still alive
           mamba run -n docker docker-compose exec -T ls
