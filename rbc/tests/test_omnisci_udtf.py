@@ -63,7 +63,7 @@ def define(omnisci):
 
 @pytest.mark.parametrize("kind", ['i8', 'i4', 'i2', 'i1', 'f8', 'f4'])
 def test_composition(omnisci, kind):
-    omnisci.require_version((5, 6), 'Requires omniscidb-internal PR 5440', date=20210401)
+    omnisci.require_version((5, 6), 'Requires omniscidb-internal PR 5440')
 
     def tonp(query):
         _, result = omnisci.sql_execute(query)

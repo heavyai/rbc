@@ -17,7 +17,7 @@ def define(omnisci):
 
 
 def test_python_fn_with_default_sizer(omnisci):
-    omnisci.require_version((5, 6), "Requires omniscidb-internal PR 5403", date=20210531)
+    omnisci.require_version((5, 6), "Requires omniscidb-internal PR 5403")
 
     table = omnisci.table_name
     fn = "rbc_udtf_default_sizer_1"
@@ -66,7 +66,7 @@ typs = (
 
 @pytest.mark.parametrize("suffix,kind,expected", typs)
 def test_default_sizer(omnisci, suffix, kind, expected):
-    omnisci.require_version((5, 6), "Requires omniscidb-internal PR 5403", date=20210531)
+    omnisci.require_version((5, 6), "Requires omniscidb-internal PR 5403")
 
     codes = {
         "1": "i4",
