@@ -7,9 +7,6 @@ import warnings
 from collections import defaultdict
 
 
-skip_on_ci = pytest.mark.skipif('CI' in os.environ, reason='Skip test on CI')
-
-
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                     suffices=['', '10', 'null', 'array', 'arraynull'],
                     load_columnar=True, debug=False):

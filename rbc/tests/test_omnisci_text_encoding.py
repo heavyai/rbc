@@ -1,7 +1,7 @@
 import os
 import pytest
 import itertools
-from rbc.tests import omnisci_fixture, skip_on_ci
+from rbc.tests import omnisci_fixture
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +84,6 @@ def create_columns(omnisci):
         omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name}")
 
 
-@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_text_encoding_shared_dict(omnisci, size):
@@ -109,7 +108,6 @@ def test_text_encoding_shared_dict(omnisci, size):
     ]
 
 
-@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 @pytest.mark.parametrize("select", (0, 1))
@@ -138,7 +136,6 @@ def test_text_encoding_shared_dict2(omnisci, select, size):
     assert list(result) == [("a1",), ("b2",), ("c3",), ("d4",), ("e5",), ("f6",), ("g7",)]
 
 
-@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("num_column_list", (1, 2, 3))
@@ -164,7 +161,6 @@ def test_text_encoding_column_list(omnisci, size, num_column_list):
         list(itertools.chain.from_iterable(result))
 
 
-@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_count(omnisci, size):
@@ -181,7 +177,6 @@ def test_text_encoding_count(omnisci, size):
     assert list(result) == [(7,)]
 
 
-@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_order_by(omnisci, size):
@@ -208,7 +203,6 @@ def test_text_encoding_order_by(omnisci, size):
     ]
 
 
-@skip_on_ci
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_ct_binding_dict_encoded1(omnisci, size):
