@@ -48,8 +48,7 @@ def define(omnisci):
 
 @pytest.fixture(scope="function")
 def create_columns(omnisci):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     for size in (8, 16, 32):
         table_name = f"{omnisci.base_name}_{size}"
@@ -87,8 +86,7 @@ def create_columns(omnisci):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_text_encoding_shared_dict(omnisci, size):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     fn = "test_shared_dict_copy"
     table = f"{omnisci.base_name}_{size}"
@@ -112,8 +110,7 @@ def test_text_encoding_shared_dict(omnisci, size):
 @pytest.mark.parametrize("size", (8, 16, 32))
 @pytest.mark.parametrize("select", (0, 1))
 def test_text_encoding_shared_dict2(omnisci, select, size):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     if select == 1:
         pytest.xfail(
@@ -140,8 +137,7 @@ def test_text_encoding_shared_dict2(omnisci, select, size):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("num_column_list", (1, 2, 3))
 def test_text_encoding_column_list(omnisci, size, num_column_list):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     fn = "test_copy_column_list"
     table = f"{omnisci.base_name}_{size}"
@@ -164,8 +160,7 @@ def test_text_encoding_column_list(omnisci, size, num_column_list):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_count(omnisci, size):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     fn = "test_shared_dict_copy"
     table = f"{omnisci.base_name}_{size}"
@@ -180,8 +175,7 @@ def test_text_encoding_count(omnisci, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_order_by(omnisci, size):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     fn = "test_shared_dict_copy"
     table = f"{omnisci.base_name}_{size}"
@@ -206,8 +200,7 @@ def test_text_encoding_order_by(omnisci, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_ct_binding_dict_encoded1(omnisci, size):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492",
-                            label='dict_encoded_string_type')
+    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
     fn = 'ct_binding_dict_encoded1'
     table = f"{omnisci.base_name}_{size}"
