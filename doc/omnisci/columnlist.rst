@@ -14,15 +14,18 @@ ColumnList
             int64_t size;    // the size of columns
         }
  
-    
+
     .. rubric:: Methods
 
-    .. py:method:: ncols(self) -> int
+    .. py:method:: __getitem__(self, idx: int) -> Column
+
+
+    .. rubric:: Attributes
+
+    .. py:attribute:: ncols -> int
 
         Returns :py:`ColumnList.length`
 
-    .. py:method:: nrows(self) -> int
+    .. py:attribute:: nrows -> int
 
         Returns :py:`ColumnList.size`
-    
-    .. py:method:: __getitem__(self, idx: int) -> Column

@@ -79,7 +79,7 @@ class TargetInfo(object):
         obj._init(*args, **kwargs)
         return obj
 
-    def _init(self, name, strict=False, nested=False):
+    def _init(self, name: str, strict: bool = False, nested: bool = False):
         """
         Parameters
         ----------

@@ -325,18 +325,19 @@ class Caller(object):
         lst = ['']
         fid = 0
         for device, target_info in self.remotejit.targets.items():
-            with target_info:
-                lst.append(f'{device:-^80}')
-                signatures = self.get_signatures()
-                signatures_map = {}
-                for sig in signatures:
-                    fid += 1
-                    signatures_map[fid] = sig
-                llvm_module, succesful_fids = irtools.compile_to_LLVM(
-                    [(self.func, signatures_map)],
-                    target_info,
-                    debug=self.remotejit.debug)
-                lst.append(str(llvm_module))
+            with Type.alias(**self.remotejit.typesystem_aliases):
+                with target_info:
+                    lst.append(f'{device:-^80}')
+                    signatures = self.get_signatures()
+                    signatures_map = {}
+                    for sig in signatures:
+                        fid += 1
+                        signatures_map[fid] = sig
+                    llvm_module, succesful_fids = irtools.compile_to_LLVM(
+                        [(self.func, signatures_map)],
+                        target_info,
+                        debug=self.remotejit.debug)
+                    lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
         return '\n'.join(lst)
 
