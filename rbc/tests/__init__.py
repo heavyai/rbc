@@ -103,9 +103,9 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
 
         if label is not None:
             env_label = os.environ.get('OMNISCIDB_DEV_LABEL')
-            if env_label == 'master' and label == 'docker-dev':
+            if env_label and label == 'docker-dev':
                 # docker-dev is some older master, so it must work
-                # with the current master as well.
+                # with the current master as well as with branches based on the current master.
                 label = 'master'
             if label == 'master' and env_label and env_label != 'docker-dev':
                 # assuming that the branch given in the label is
