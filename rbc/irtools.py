@@ -21,6 +21,7 @@ from numba.core import errors as nb_errors
 
 
 int32_t = ir.IntType(32)
+int1_t = ir.IntType(1)
 
 
 def get_called_functions(library, funcname=None):
@@ -345,6 +346,22 @@ def compile_instance(func, sig,
     return fname
 
 
+def get_or_insert_named_metadata(module, name):
+    try:
+        return module.get_named_metadata(name)
+    except KeyError:
+        return module.add_named_metadata(name)
+
+
+def add_byval_metadata(main_library):
+    module = ir.Module()
+    mflags = get_or_insert_named_metadata(module, 'llvm.module.flags')
+    override_flag = int32_t(4)
+    flag = module.add_metadata([override_flag, "byval", int1_t(0)])
+    mflags.add(flag)
+    main_library.add_ir_module(module)
+
+
 def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
@@ -400,6 +417,7 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
+        add_byval_metadata(main_library)
         main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
