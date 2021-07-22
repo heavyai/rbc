@@ -23,7 +23,7 @@ jobs:
       - name: Install flake8
         run: |
           pip install flake8
-      
+
       - name: Lint:flake8
         run: |
           flake8 .
@@ -107,6 +107,12 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.8
             omniscidb-version: dev
+            docker-image: omnisci/core-os-cpu-dev:latest
+            omniscidb-from: docker
+          - os: ubuntu-latest
+            python-version: 3.8
+            omniscidb-version: 5.6.4
+            docker-image: omnisci/core-os-cpu:v5.6.4
             omniscidb-from: docker
 
     needs: lint
@@ -140,6 +146,8 @@ jobs:
 
       - name: Build Omniscidb docker image and run it [docker]
         shell: bash -l {0}
+        env:
+          OMNISCIDB_DOCKER_IMAGE: ${{ matrix.docker-image }}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
         run: |
           # force docker-compose installation
@@ -225,6 +233,7 @@ jobs:
 
       - name: Show Omniscidb docker logs on failure [docker]
         shell: bash -l {0}
+        timeout-minutes: 3
         if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
         run: |
           mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> omniscidb-docker.log

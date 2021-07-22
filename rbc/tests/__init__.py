@@ -89,7 +89,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
             pytest.skip(reason)
 
         # Requires update when omniscidb-internal bumps up version number:
-        current_development_version = (5, 7, 0)
+        current_development_version = (5, 8, 0)
         if available_version[:3] > current_development_version:
             warnings.warn(f'{available_version}) is newer than development version'
                           f' ({current_development_version}), please update the latter!')
