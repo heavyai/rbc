@@ -355,9 +355,10 @@ def get_or_insert_named_metadata(module, name):
 
 def add_byval_metadata(main_library):
     module = ir.Module()
+    flag_name = "pass_column_arguments_by_value"
     mflags = get_or_insert_named_metadata(module, 'llvm.module.flags')
     override_flag = int32_t(4)
-    flag = module.add_metadata([override_flag, "byval", int1_t(0)])
+    flag = module.add_metadata([override_flag, flag_name, int1_t(0)])
     mflags.add(flag)
     main_library.add_ir_module(module)
 

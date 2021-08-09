@@ -3,6 +3,7 @@
 
 
 import functools
+from rbc import irutils
 from rbc.errors import UnsupportedError
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types as nb_types
@@ -28,7 +29,8 @@ def set_output_row_size(typingctx, set_output_row_size):
             raise UnsupportedError(msg)
 
         fnty = ir.FunctionType(ir.VoidType(), [ir.IntType(64)])
-        fn = builder.module.get_or_insert_function(fnty, name="set_output_row_size")
+        fn = irutils.module.get_or_insert_function(builder.module, fnty,
+                                                   name="set_output_row_size")
         assert fn.is_declaration
         builder.call(fn, args)  # don't return anything
 

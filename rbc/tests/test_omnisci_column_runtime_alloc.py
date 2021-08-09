@@ -28,11 +28,11 @@ def define(omnisci):
 
     @omnisci('int32(ColumnList<T>, OutputColumn<T>)', T=['int32'], devices=['cpu'])
     def columnlist_set_output_row_size(lst, out):
-        set_output_row_size(lst.ncols())
-        for j in range(lst.ncols()):
+        set_output_row_size(lst.ncols)
+        for j in range(lst.ncols):
             col = lst[j]
             out[j] = 0
-            for i in range(lst.nrows()):
+            for i in range(lst.nrows):
                 out[j] += col[i]
         return len(out)
 
