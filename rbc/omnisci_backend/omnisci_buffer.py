@@ -28,7 +28,7 @@ from collections import defaultdict
 from .omnisci_metatype import OmnisciMetaType
 from llvmlite import ir
 import numpy as np
-from rbc import typesystem
+from rbc import typesystem, irutils
 from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 from numba.core import datamodel, cgutils, extending, types
@@ -164,8 +164,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
 
-    alloc_fn = builder.module.get_or_insert_function(
-        alloc_fnty, name="allocate_varlen_buffer")
+    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, "allocate_varlen_buffer")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     # remember possible temporary allocations so that when leaving a
     # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.
@@ -196,7 +195,7 @@ def free_omnisci_buffer(typingctx, ret):
         # TODO: using stdlib `free` that works only for CPU. For CUDA
         # devices, we need to use omniscidb provided deallocator.
         free_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
-        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
+        free_fn = irutils.get_or_insert_function(builder.module, free_fnty, "free")
 
         # We skip the ret pointer iff we're returning a Buffer
         # otherwise, we free everything
@@ -302,10 +301,7 @@ def omnisci_buffer_len_(typingctx, data):
 
     def codegen(context, builder, signature, args):
         data, = args
-        assert data.opname == 'load'
-        struct = data.operands[0]
-        return builder.load(builder.gep(
-            struct, [int32_t(0), int32_t(1)]))
+        return irutils.get_member_value(builder, data, 1)
 
     return sig, codegen
 
@@ -341,11 +337,7 @@ def omnisci_buffer_getitem_(typingctx, data, index):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(
-            buf, [int32_t(0), int32_t(0)]))
+        ptr = irutils.get_member_value(builder, data, 0)
         res = builder.load(builder.gep(ptr, [index]))
 
         return res
@@ -416,14 +408,8 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
     nb_value = value
 
     def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
         data, index, value = args
-
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
+        ptr = irutils.get_member_value(builder, data, 0)
         value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
 
         builder.store(value, builder.gep(ptr, [index]))

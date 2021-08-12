@@ -6,6 +6,7 @@
 
 name: rbc
 channels:
+  - numba
   - conda-forge
   - defaults
 dependencies:
