@@ -493,6 +493,37 @@ def test_casting(omnisci):
     @omnisci('f64(f64)')  # noqa: F811
     def ffoo(x): return x + 8.5  # noqa: F811
 
+    rows = []
+    for itype, ivalue in [('tinyint', 'i_8(0)'),
+                          ('smallint', 'i_16(0)'),
+                          ('int', 'i32(0)'),
+                          ('bigint', 'i64(0)'),
+                          ('float', 'f_32(0.0)'),
+                          ('double', 'f64(0.0)')]:
+        row = [f'{itype:8}']
+        cols = [f'{"itype":8}']
+        for atype, func in [('tinyint', 'i8'),
+                            ('smallint', 'i16'),
+                            ('int', 'i32'),
+                            ('bigint', 'i64'),
+                            ('float', 'f32'),
+                            ('double', 'f64')]:
+            cols.append(f'{func:4}')
+            try:
+                descr, result = omnisci.sql_execute(
+                    f'select {func}({ivalue}) from {omnisci.table_name} limit 1')
+                status = 'OK'
+            except Exception:
+                status = 'FAIL'
+            row.append(f'{status:4}')
+        if not rows:
+            rows.append(' | '.join(cols))
+            rows.append('+'.join([f'{"":-^9}'] + [f'{"":-^6}'] * (len(cols)-1)))
+        rows.append(' | '.join(row))
+
+    print('\n\nSUPPORTED CASTING RULES FOR SCALAR ARGUMENTS:\n')
+    print('\n'.join(rows))
+
     descr, result = omnisci.sql_execute(
         'select i_8(0),i_16(0),i32(0),i64(0) from {omnisci.table_name} limit 1'
         .format(**locals()))
@@ -631,12 +662,23 @@ def test_casting(omnisci):
                 (r'SMALLINT', 'i2', (8.5,)),
                 (r'TINYINT', 'i1', (8.5,)),
         ]:
+            if available_version[:2] >= (5, 8):
+                # omniscidb-internal PR 5814 changes the casting table
+                if f == r'f32':
+                    r = r[0] - 4,
+                descr, result = omnisci.sql_execute(
+                    'select '+f+'('+av+') from {omnisci.table_name} limit 1'
+                    .format(**locals()))
+                assert list(result)[0] == r, (f, at, av, r)
+                continue
+
             if f == r'f64':  # temporary: allow integers as double arguments
                 descr, result = omnisci.sql_execute(
                     'select '+f+'('+av+') from {omnisci.table_name} limit 1'
                     .format(**locals()))
                 assert list(result)[0] == r
                 continue
+
             with pytest.raises(
                     Exception,
                     match=(r".*(Function "+f+r"\("+at+r"\) not supported"
