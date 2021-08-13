@@ -845,6 +845,7 @@ class RemoteOmnisci(RemoteJIT):
         inputArgTypes = []
         outputArgTypes = []
         sqlArgTypes = []
+        annotations = []
         sizer = None
         sizer_index = -1
 
@@ -864,6 +865,8 @@ class RemoteOmnisci(RemoteJIT):
                 assert sizer_index == -1
                 sizer_index = consumed_index + 1
                 sizer = _sizer
+
+            annotations.append(annot)
 
             if isinstance(a, OmnisciCursorType):
                 sqlArgTypes.append(self.type_to_extarg('Cursor'))
@@ -905,7 +908,8 @@ class RemoteOmnisci(RemoteJIT):
         return thrift.TUserDefinedTableFunction(
             name + sig.mangling(),
             sizer_type, sizer_index,
-            inputArgTypes, outputArgTypes, sqlArgTypes)
+            inputArgTypes, outputArgTypes, sqlArgTypes,
+            annotations)
 
     def _make_udtf_old(self, caller, orig_sig, sig):
         # old style UDTF for omniscidb <= 5.3, to be deprecated

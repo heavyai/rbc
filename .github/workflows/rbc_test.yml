@@ -221,8 +221,6 @@ jobs:
         run: |
           mamba run -n docker docker-compose top  # to check if server is still alive
           mamba run -n docker docker-compose exec -T ls
-          #mamba run -n docker docker-compose logs --no-color -f -t --tail=100 \> omniscidb-docker.log
-          #cat omniscidb-docker.log
 
       - name: Stop Omniscidb server [conda]
         shell: bash -l {0}
@@ -233,7 +231,7 @@ jobs:
 
       - name: Show Omniscidb docker logs on failure [docker]
         shell: bash -l {0}
-        timeout-minutes: 3
+        timeout-minutes: 2
         if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
         run: |
           mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> omniscidb-docker.log
