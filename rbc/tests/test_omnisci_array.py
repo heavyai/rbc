@@ -1,5 +1,7 @@
 import os
 from collections import defaultdict
+from rbc.omnisci_backend import Array
+from numba import types as nb_types
 import pytest
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -537,3 +539,16 @@ def test_issue197_bool(omnisci):
     column, ret = list(result)[0]
     for x, y in zip(column, ret):
         assert bool(x) == bool(y)
+
+
+def test_issue109(omnisci):
+
+    @omnisci('double[](int32)')
+    def foo(size):
+        a = Array(5, 'double')
+        for i in range(5):
+            a[i] = nb_types.double(i)
+        return a
+
+    _, result = omnisci.sql_execute('select foo(3);')
+    assert list(result) == [([0.0, 1.0, 2.0, 3.0, 4.0],)]
