@@ -7,6 +7,7 @@
 name: rbc
 channels:
   - conda-forge
+  - numba
   - defaults
 dependencies:
   - python>=3.7

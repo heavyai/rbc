@@ -9,6 +9,12 @@ on:
   pull_request:
     branches:
       - master
+  # workflow_dispatch:
+  #   inputs:
+  #     debug_enabled:
+  #       description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+  #       required: false
+  #       default: false
 
 jobs:
   lint:
@@ -32,16 +38,13 @@ jobs:
     name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Numba v${{ matrix.numba-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [3.9, 3.8, 3.7]
-        numba-version: [0.53, 0.52]
-        exclude:
-          - python-version: 3.9
-            numba-version: 0.52
+        numba-version: [0.54, 0.53]
 
-    needs: lint
+    needs: [lint, omniscidb]
 
     steps:
       - name: Checkout code
@@ -94,18 +97,27 @@ jobs:
           mamba run -n rbc pytest -sv -r A rbc/ -x
 
   omniscidb:
-    name: OmnisciDB ${{ matrix.omniscidb-version }} - ${{ matrix.os }} - Python v${{ matrix.python-version }} [${{ matrix.omniscidb-from }}]
+    name: OmnisciDB ${{ matrix.omniscidb-version }} - ${{ matrix.os }} - Numba v${{matrix.numba-version}} - Python v${{ matrix.python-version }} [${{ matrix.omniscidb-from }}]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
         python-version: [3.9, 3.8, 3.7]
+        numba-version: [0.54, 0.53]
         omniscidb-version: [5.5, 5.4, 5.2]
         omniscidb-from: [conda]
         include:
           - os: ubuntu-latest
             python-version: 3.8
+            numba-version: 0.53
+            omniscidb-version: dev
+            docker-image: omnisci/core-os-cpu-dev:latest
+            omniscidb-from: docker
+          - os: ubuntu-latest
+            python-version: 3.8
+            numba-version: 0.54
             omniscidb-version: dev
             docker-image: omnisci/core-os-cpu-dev:latest
             omniscidb-from: docker
@@ -178,6 +190,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cat .conda/environment.yml > rbc_test.yaml
+          echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
 
@@ -196,6 +209,10 @@ jobs:
         run: |
           mamba run -n rbc python setup.py develop
 
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
+
       - name: Run rbc tests [docker]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
@@ -203,8 +220,9 @@ jobs:
           OMNISCIDB_DEV_LABEL: ${{ 'docker-dev' }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
+          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/ -x
+          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
 
       - name: Run rbc tests
         shell: bash -l {0}
@@ -212,8 +230,9 @@ jobs:
         env:
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
+          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/ -x
+          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
 
       - name: Show Omniscidb docker logs on failure [docker]
         shell: bash -l {0}

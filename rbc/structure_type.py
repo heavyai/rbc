@@ -2,6 +2,7 @@
 __all__ = ['StructureNumbaType', 'StructureNumbaPointerType', 'make_numba_struct']
 
 import operator
+from rbc.irutils import get_member_value
 from llvmlite import ir
 from numba.core import datamodel, extending, types, imputils, typing, cgutils, typeconv
 
@@ -130,11 +131,8 @@ def make_numba_struct(name, members, origin=None, _cache={}):
 @lowering_registry.lower_getattr_generic(StructureNumbaType)
 def StructureNumbaType_getattr_impl(context, builder, sig, struct, attr):
     model = datamodel.default_manager.lookup(sig)
-    assert struct.opname == 'load'
     index = model.get_field_position(attr)
-
-    ptr = builder.gep(struct.operands[0], [int32_t(0), int32_t(0)])
-    return builder.load(builder.gep(ptr, [int32_t(index)]))
+    return get_member_value(builder, struct, index)
 
 
 @lowering_registry.lower_setattr_generic(StructureNumbaType)
@@ -142,7 +140,6 @@ def StructureNumbaType_setattr_impl(context, builder, sig, args, attr):
     typ = sig.args[0]
     struct, value = args
     model = datamodel.default_manager.lookup(typ)
-    assert struct.opname == 'load'
     index = model.get_field_position(attr)
     ptr = builder.gep(struct.operands[0], [int32_t(0), int32_t(index)])
     return builder.store(value, ptr)
@@ -152,7 +149,6 @@ def StructureNumbaType_setattr_impl(context, builder, sig, args, attr):
 def StructureNumbaPointerType_getattr_impl(context, builder, sig, struct, attr):
     typ = sig.dtype
     model = datamodel.default_manager.lookup(typ)
-    assert struct.opname == 'load'
     index = model.get_field_position(attr)
     rawptr = cgutils.alloca_once_value(builder, value=struct)
     struct = builder.load(builder.gep(rawptr, [int32_t(0)]))
@@ -165,7 +161,6 @@ def StructureNumbaPointerType_setattr_impl(context, builder, sig, args, attr):
     typ = sig.args[0].dtype
     struct, value = args
     model = datamodel.default_manager.lookup(typ)
-    assert struct.opname == 'load'
     index = model.get_field_position(attr)
     rawptr = cgutils.alloca_once_value(builder, value=struct)
     ptr = builder.load(rawptr)

@@ -8,7 +8,7 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
            'OmnisciCursorType']
 
 from llvmlite import ir
-from rbc import typesystem
+from rbc import typesystem, irutils
 from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
 from .column_list import OmnisciColumnListType
 from rbc.targetinfo import TargetInfo
@@ -55,14 +55,8 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
     null_value = target_info.null_values[str(T)]
 
     def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
         data, index = args
-
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
+        ptr = irutils.get_member_value(builder, data, 0)
 
         ty = ptr.type.pointee
         nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
@@ -90,12 +84,8 @@ def omnisci_column_is_null_(typingctx, col_var, row_idx):
     nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
 
     def codegen(context, builder, signature, args):
-        zero = int32_t(0)
         data, index = args
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
+        ptr = irutils.get_member_value(builder, data, 0)
         res = builder.load(builder.gep(ptr, [index]))
 
         if isinstance(T, types.Float):
