@@ -51,6 +51,10 @@ def create_columns(omnisci):
 @pytest.mark.parametrize("size", (32,))
 def test_template_text(omnisci, size):
 
+    if omnisci.has_cuda:
+        omnisci.require_version(
+            (5, 8), "Requires omniscidb-internal PR 5809", label='PR5809')
+
     fn = "ct_binding_template"
     table = f"{omnisci.base_name}_{size}"
     base = f"base_{size}"
@@ -70,6 +74,10 @@ def test_template_text(omnisci, size):
 
 @pytest.mark.parametrize("col", ("i4", "f4"))
 def test_template_number(omnisci, col):
+
+    if omnisci.has_cuda:
+        omnisci.require_version(
+            (5, 8), "Requires omniscidb-internal PR 5809", label='PR5809')
 
     fn = "ct_binding_template"
     table = omnisci.table_name
@@ -106,7 +114,7 @@ def test_template_columnlist_number(omnisci, col, out):
 
 @pytest.mark.parametrize("col,out", zip(("i4", "f4"), (10, 20)))
 def test_template_column_number(omnisci, col, out):
-    omnisci.require_version((5, 8), "Requires omniscidb-internal PR #5770", label="PR5770")
+    omnisci.require_version((5, 8), "Requires omniscidb-internal PR #5770")
 
     fn = "ct_binding_column"
     table = omnisci.table_name
