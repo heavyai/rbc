@@ -210,7 +210,7 @@ jobs:
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
 
-      - name: Run rbc tests [conda]
+      - name: Run rbc tests
         shell: bash -l {0}
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' ) }}
         env:
@@ -247,11 +247,3 @@ jobs:
         run: |
           mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> omniscidb-docker.log
           cat omniscidb-docker.log
-
-      - name: Stop Omniscidb server [docker]
-        shell: bash -l {0}
-        timeout-minutes: 1
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker' }}
-        run: |
-          mamba run -n docker docker-compose stop
-          sleep 10
