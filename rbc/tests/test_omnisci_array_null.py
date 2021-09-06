@@ -51,7 +51,7 @@ def test_array_null(omnisci, col):
 
     expected = {
         'b':  [(ARRAY_NULL,), (ARRAY_NOT_NULL,), (ARRAY_NULL,),
-               (ARRAY_NOT_NULL,), (ARRAY_NULL,)],
+               (ARRAY_IDX_IS_NULL,), (ARRAY_NULL,)],
         'i1': [(ARRAY_NULL,), (ARRAY_IDX_IS_NULL,), (ARRAY_NULL,),
                (ARRAY_NOT_NULL,), (ARRAY_NULL,)],
         'i2': [(ARRAY_NOT_NULL,), (ARRAY_NULL,), (ARRAY_NOT_NULL,),
