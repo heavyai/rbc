@@ -508,7 +508,7 @@ def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
         fnop = context.typing_context.resolve_value_type(omnisci_buffer_ptr_setitem_)
         setitem_sig = types.none(arr, row_idx, T)
         # register the intrinsic in the typing ctx
-        fnop.get_call_type(context, setitem_sig.args, {})
+        fnop.get_call_type(context.typing_context, setitem_sig.args, {})
         intrinsic = context.get_function(fnop, setitem_sig)
 
         data, index = args
