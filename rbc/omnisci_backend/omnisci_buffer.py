@@ -491,7 +491,7 @@ def omnisci_buffer_is_null(x, row_idx=None):
 
 
 @extending.intrinsic
-def omnisci_array_set_null_(typingctx, arr, row_idx):
+def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
     T = arr.eltype
     sig = types.none(arr, row_idx)
 
@@ -530,6 +530,6 @@ def omnisci_buffer_set_null(x, row_idx=None):
                 return omnisci_buffer_set_null_(x)
         else:
             def impl(x, row_idx=None):
-                return omnisci_array_set_null_(x, row_idx)
+                return omnisci_buffer_idx_set_null(x, row_idx)
             return impl
         return impl
