@@ -347,16 +347,13 @@ def compile_instance(func, sig,
 
 
 def get_or_insert_named_metadata(module, name):
-    try:
-        return module.get_named_metadata(name)
-    except KeyError:
-        return module.add_named_metadata(name)
+    return module.add_named_metadata(name)
 
 
 def add_byval_metadata(main_library):
     module = ir.Module()
     flag_name = "pass_column_arguments_by_value"
-    mflags = get_or_insert_named_metadata(module, 'llvm.module.flags')
+    mflags = module.add_named_metadata('llvm.module.flags')
     override_flag = int32_t(4)
     flag = module.add_metadata([override_flag, flag_name, int1_t(0)])
     mflags.add(flag)
