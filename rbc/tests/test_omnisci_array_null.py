@@ -38,7 +38,7 @@ def test_array_null(omnisci, col):
     if col == 'b':
         omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5492 [rbc issue 245]',
-                                label='docker-dev')
+                                label='master')
 
     # Query null value
     _, result = omnisci.sql_execute(f'''

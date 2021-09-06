@@ -346,10 +346,6 @@ def compile_instance(func, sig,
     return fname
 
 
-def get_or_insert_named_metadata(module, name):
-    return module.add_named_metadata(name)
-
-
 def add_byval_metadata(main_library):
     module = ir.Module()
     flag_name = "pass_column_arguments_by_value"
