@@ -1,8 +1,10 @@
 name: Upload RBC to Pypi
 
 on:
-  release:
-    types: [published]
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
   pypi-release:
@@ -14,7 +16,7 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: 3.8
-    
+
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: 3.8
@@ -26,7 +28,7 @@ jobs:
       - name: Build distribution
         shell: bash -l {0}
         run: python setup.py sdist bdist_wheel
-  
+
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@master
         with:
