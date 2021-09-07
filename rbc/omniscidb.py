@@ -839,7 +839,8 @@ class RemoteOmnisci(RemoteJIT):
         sizer_map = dict(
             ConstantParameter='kUserSpecifiedConstantParameter',
             RowMultiplier='kUserSpecifiedRowMultiplier',
-            Constant='kConstant')
+            Constant='kConstant',
+            SpecifiedParameter='kTableFunctionSpecifiedParameter')
 
         unspecified = object()
         inputArgTypes = []
@@ -889,20 +890,16 @@ class RemoteOmnisci(RemoteJIT):
                         inputArgTypes.append(atype)
                 consumed_index += 1
         if sizer is None:
-            sizer = 'kConstant'
-        if sizer == 'kConstant':
-            sizer_index = get_literal_return(
-                caller.func, verbose=self.debug)
+            sizer_index = get_literal_return(caller.func, verbose=self.debug)
             if sizer_index is None:
-                raise TypeError(
-                    f'Table function `{caller.func.__name__}`'
-                    ' has no sizing parameter nor has'
-                    ' it `return <literal value>` statement')
-        if sizer_index < 0:
-            raise ValueError(
-                f'Table function `{caller.func.__name__}`'
-                ' sizing parameter must be non-negative'
-                f' integer (got {sizer_index})')
+                sizer = 'kTableFunctionSpecifiedParameter'
+            else:
+                sizer = 'kConstant'
+                if sizer_index < 0:
+                    raise ValueError(
+                        f'Table function `{caller.func.__name__}`'
+                        ' sizing parameter must be non-negative'
+                        f' integer (got {sizer_index})')
         sizer_type = (thrift.TOutputBufferSizeType
                       ._NAMES_TO_VALUES[sizer])
         return thrift.TUserDefinedTableFunction(

@@ -59,7 +59,8 @@ values. Same comments apply as for TExtArgumentType in above. */
 enum TOutputBufferSizeType {
   kConstant,
   kUserSpecifiedConstantParameter,
-  kUserSpecifiedRowMultiplier
+  kUserSpecifiedRowMultiplier,
+  kTableFunctionSpecifiedParameter
 }
 
 struct TUserDefinedFunction {

@@ -51,7 +51,7 @@ class OmnisciDB(Library):
     name = 'omniscidb'
 
     _function_names = list('''
-    allocate_varlen_buffer
+    allocate_varlen_buffer set_output_row_size
     '''.strip().split())
 
 

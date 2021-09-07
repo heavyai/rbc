@@ -544,11 +544,11 @@ def test_issue197_bool(omnisci):
 def test_issue109(omnisci):
 
     @omnisci('double[](int32)')
-    def foo(size):
+    def issue109(size):
         a = Array(5, 'double')
         for i in range(5):
             a[i] = nb_types.double(i)
         return a
 
-    _, result = omnisci.sql_execute('select foo(3);')
+    _, result = omnisci.sql_execute('select issue109(3);')
     assert list(result) == [([0.0, 1.0, 2.0, 3.0, 4.0],)]
