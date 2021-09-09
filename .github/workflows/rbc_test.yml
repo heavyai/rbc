@@ -96,7 +96,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: [3.9, 3.8, 3.7]
         numba-version: [0.54, 0.53]
-        omniscidb-version: [5.5, 5.4, 5.2]
+        omniscidb-version: [5.7, 5.6, 5.5]
         omniscidb-from: [conda]
         include:
           - os: ubuntu-latest
@@ -113,8 +113,8 @@ jobs:
             omniscidb-from: docker
           - os: ubuntu-latest
             python-version: 3.8
-            omniscidb-version: 5.6.4
-            docker-image: omnisci/core-os-cpu:v5.6.4
+            omniscidb-version: 5.7.0
+            docker-image: omnisci/core-os-cpu:v5.7.0
             omniscidb-from: docker
 
     needs: lint
