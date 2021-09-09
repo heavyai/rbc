@@ -24,7 +24,7 @@ class OmnisciColumnType(OmnisciBufferType):
     @property
     def pass_by_value(self):
         omnisci_version = TargetInfo().software[1][:3]
-        return omnisci_version < (5, 7, 0)
+        return omnisci_version <= (5, 7, 0)
 
 
 class OmnisciOutputColumnType(OmnisciColumnType):
