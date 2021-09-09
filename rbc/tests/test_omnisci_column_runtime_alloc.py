@@ -11,7 +11,7 @@ table_columns_map = dict(int64='i8', int32='i4', int16='i2', int8='i1',
 @pytest.fixture(scope='module')
 def omnisci():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 7)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 7, 1)):
         define(o)
         yield o
 
