@@ -32,13 +32,17 @@ def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_black_scholes'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    def sql_execute(sql):
+        return m.sql_execute(sql, register=False)
+
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
     sqltypes = ['DOUBLE', 'DOUBLE', 'DOUBLE', 'DOUBLE', 'DOUBLE', 'DOUBLE']
     colnames = ['S', 'X', 'T', 'sigma', 'r', 'oprice']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
+    sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
         .format(**locals()))
 
@@ -54,11 +58,11 @@ def omnisci():
         oprice = df['OPRICE'][i]
 
         table_row = f'{S}, {X}, {T}, {sigma}, {r}, {oprice}'
-        m.sql_execute(
+        sql_execute(
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
 @njit
@@ -153,7 +157,7 @@ def test_black_scholes_udtf(omnisci):
         ' 1));'
         .format(**locals()))
 
-    _, oprice = omnisci.sql_execute(f'select OPRICE from {omnisci.table_name}')
+    _, oprice = omnisci.sql_execute(f'select OPRICE from {omnisci.table_name}', register=False)
 
     for r, o in zip(result, oprice):
         assert math.isclose(o[0], r[0], abs_tol=0.0001)

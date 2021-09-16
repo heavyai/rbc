@@ -98,7 +98,8 @@ def test_copy(omnisci, use_default, inputs):
             colnames = colnames[7:-1]
         result = group_results.get(colnames)
         if result is None:
-            _, result = omnisci.sql_execute(f'select {colnames} from {table_name}')
+            _, result = omnisci.sql_execute(f'select {colnames} from {table_name}',
+                                            register=False)
             result = group_results[colnames] = list(result)
         expected = [row1 + row2 for row1, row2 in zip(expected, result)]
         args.append(f'cursor(select {colnames} from {table_name})')

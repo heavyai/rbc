@@ -20,14 +20,18 @@ def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    def sql_execute(sql):
+        return m.sql_execute(sql, register=False)
+
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN', 'DOUBLE']
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
+    sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
         .format(**locals()))
 
@@ -44,7 +48,7 @@ def omnisci():
     m.load_table_columnar(table_name, **data)
     m.table_name = table_name
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
 def test_sizer_row_multiplier_orig(omnisci):
@@ -397,7 +401,7 @@ def test_issue173(omnisci, variant):
         return len(x)
 
     descr, result = omnisci.sql_execute(
-        f'select f8, b from {omnisci.table_name}')
+        f'select f8, b from {omnisci.table_name}', register=False)
     f8, b = zip(*list(result))
 
     # remove after resolving rbc issue 175:
@@ -447,7 +451,7 @@ def test_redefine(omnisci):
     omnisci.register()
 
     descr, result = omnisci.sql_execute(
-        f'select f8, i4 from {omnisci.table_name}')
+        f'select f8, i4 from {omnisci.table_name}', register=False)
 
     f8, i4 = zip(*result)
 
@@ -586,7 +590,7 @@ def test_overload_uniform(omnisci):
 
     for colname in ['f8', 'f4', 'i8', 'i4', 'i2', 'i1', 'b']:
         sql_query = (f'select {colname} from {omnisci.table_name}')
-        descr, result = omnisci.sql_execute(sql_query)
+        descr, result = omnisci.sql_execute(sql_query, register=False)
         expected = list(result)
         sql_query = ('select * from table(mycopy(cursor('
                      f'select {colname} from {omnisci.table_name}), 1))')
@@ -641,7 +645,7 @@ def test_column_aggregate(omnisci, prop, oper):
             return 1
 
         sql_query = (f'select f8 from {omnisci.table_name}')
-        descr, result = omnisci.sql_execute(sql_query)
+        descr, result = omnisci.sql_execute(sql_query, register=False)
         result = list(result)
         expected_result = result[-1:]
 
@@ -869,7 +873,8 @@ def test_create_as(omnisci):
          f'SELECT f8 FROM {omnisci.table_name}), 1))'),
         f'SELECT * FROM {omnisci.table_name}_f8']
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = omnisci.sql_execute(sql_query_expected,
+                                                 register=False)
     result_expected = list(result_expected)
 
     for sql_query in sql_queries:
@@ -881,19 +886,23 @@ def test_create_as(omnisci):
 
 @pytest.fixture(scope='function')
 def create_columns(omnisci):
+
+    def sql_execute(sql):
+        return omnisci.sql_execute(sql, register=False)
+
     # delete tables
-    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
-    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    sql_execute('DROP TABLE IF EXISTS datatable;')
+    sql_execute('DROP TABLE IF EXISTS kerneltable;')
     # create tables
-    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
-    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
+    sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
+    sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
     # add data
     omnisci.load_table_columnar('datatable', **{'x': [1.0, 2.0, 3.0, 4.0, 5.0]})
     omnisci.load_table_columnar('kerneltable', **{'kernel': [10.0, 20.0, 30.0]})
     yield omnisci
     # delete tables
-    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
-    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    sql_execute('DROP TABLE IF EXISTS datatable;')
+    sql_execute('DROP TABLE IF EXISTS kerneltable;')
 
 
 @pytest.mark.skipif(

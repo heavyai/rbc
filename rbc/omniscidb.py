@@ -281,7 +281,7 @@ class RemoteOmnisci(RemoteJIT):
     def version(self):
         if self._version is None:
             version = self.thrift_call('get_version')
-            return parse_version(version)
+            self._version = parse_version(version)
         return self._version
 
     @property
@@ -456,7 +456,7 @@ class RemoteOmnisci(RemoteJIT):
             for row in rows:
                 table_row = ', '.join(map(str, row))
                 self.sql_execute(
-                    f'INSERT INTO {table_name} VALUES ({table_row})')
+                    f'INSERT INTO {table_name} VALUES ({table_row})', register=False)
             return
 
         columns = []
@@ -563,15 +563,22 @@ class RemoteOmnisci(RemoteJIT):
             for i in range(nrows):
                 yield tuple(columns[j][i] for j in range(ncols))
 
-    def sql_execute(self, query):
+    def sql_execute(self, query, register=True):
         """Execute SQL query in OmnisciDB server.
 
         Parameters
         ----------
         query : str
-
           SQL query string containing exactly one query. Multiple
           queries are not supported.
+
+        register: bool
+
+          When True, register new UDF/UDTF implementations to the
+          omniscidb server. Disabling registration is adviced when
+          running queries that do not involve new UDF/UDTF functions,
+          otherwise, registration may lock server query compilations
+          unnecessarily.
 
         Returns
         -------
@@ -579,8 +586,10 @@ class RemoteOmnisci(RemoteJIT):
           Row description object
         results : iterator
           Iterator over rows.
+
         """
-        self.register()
+        if register:
+            self.register()
         columnar = True
         if self.debug:
             print('  %s;' % (query))

@@ -60,7 +60,7 @@ def test_columns_sum(omnisci, T, variant):
     c = sql_type_map[T]
 
     query = f'select rowid, ({v} + {v} + 1) from {omnisci.table_name} ORDER BY rowid'
-    _, result = omnisci.sql_execute(query)
+    _, result = omnisci.sql_execute(query, register=False)
     expected = list(zip(*result))[1]
 
     # using `.. ORDER BY rowid LIMIT ALL` will crash omniscidb server

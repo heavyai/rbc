@@ -154,12 +154,17 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     arrtable_defn = ',\n'.join('%s %s' % (n, t)
                                for t, n in zip(arrsqltypes, colnames))
 
+    m.register()  # TODO: eliminate register side-effects
+
+    def sql_execute(sql):
+        return m.sql_execute(sql, register=False)
+
     for suffix in suffices:
-        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
+        sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
         if 'array' in suffix:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({arrtable_defn});')
+            sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({arrtable_defn});')
         else:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({table_defn});')
+            sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({table_defn});')
 
     if load_columnar:
         # fast method using load_table_columnar thrift endpoint, use for large tables
@@ -214,13 +219,13 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                                               for j, n in enumerate(colnames))
                     else:
                         continue
-                    m.sql_execute(f'INSERT INTO {table_name}{suffix} VALUES ({table_row})')
+                    sql_execute(f'INSERT INTO {table_name}{suffix} VALUES ({table_row})')
             if i < 10 and '10' in suffices:
                 table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
-                m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
+                sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
 
     m.table_name = table_name
     m.require_version = require_version
     yield m
     for suffix in suffices:
-        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
+        sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')

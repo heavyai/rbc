@@ -18,7 +18,8 @@ def test_table_load(mth, suffix):
                                     'Requires omniscidb-internal PR 5492 [rbc issue 245]',
                                     label='master')
         count += 1
-        descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}')
+        descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}',
+                                            register=False)
         result = list(result)
         colnames = [d.name for d in descr]
 

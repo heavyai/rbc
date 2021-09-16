@@ -13,7 +13,11 @@ def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_omnisci_array'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    def sql_execute(sql):
+        return m.sql_execute(sql, register=False)
+
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
                 'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
                 'BOOLEAN[]', 'BIGINT[]']
@@ -24,7 +28,7 @@ def omnisci():
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'u8']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
+    sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
         .format(**locals()))
 
@@ -46,12 +50,12 @@ def omnisci():
     for i in range(rows):
         table_row = ', '.join(str(row_value(i, j, n))
                               for j, n in enumerate(colnames))
-        m.sql_execute(
+        sql_execute(
             'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
     m.table_name = table_name
     yield m
     try:
-        m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+        sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
     except Exception as msg:
         print('%s in deardown' % (type(msg)))
 

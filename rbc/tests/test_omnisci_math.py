@@ -21,9 +21,13 @@ def omnisci():
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_omnisci_math'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
-    m.sql_execute(
+    def sql_execute(sql):
+        return m.sql_execute(sql, register=False)
+
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    sql_execute(
         'CREATE TABLE IF NOT EXISTS {table_name}'
         ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z DOUBLE, i INT, '
         'j INT, t INT[], td DOUBLE[], te INT[]);'
@@ -40,7 +44,7 @@ def omnisci():
         t = 'ARRAY[%s]' % (', '.join(str(j + i) for i in range(-i, i+1)))
         td = 'ARRAY[%s]' % (', '.join(str(j + i/1.0) for i in range(-i, i+1)))
         te = 'Array[]'
-        m.sql_execute(
+        sql_execute(
             'insert into {table_name} values (\'{a}\', \'{b}\', {x}, {y},'
             ' {z}, {i}, {j}, {t}, {td}, {te})'
             .format(**locals()))
@@ -48,7 +52,7 @@ def omnisci():
     m.table_name = table_name
     yield m
 
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
 
 
 math_functions = [
