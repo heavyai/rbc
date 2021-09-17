@@ -29,16 +29,13 @@ def boston_house_prices(omnisci):
             medv0.append(row[-1])
     table_name = f'{omnisci.table_name}bhp'
 
-    def sql_execute(sql):
-        return omnisci.sql_execute(sql, register=False)
-
-    sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} (data FLOAT[], medv FLOAT);')
+    omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+    omnisci.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} (data FLOAT[], medv FLOAT);')
     omnisci.load_table_columnar(table_name, data=data0, medv=medv0)
 
     yield omnisci
 
-    sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+    omnisci.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
 
 def test_boston_house_prices(omnisci, boston_house_prices):
@@ -55,11 +52,8 @@ def test_boston_house_prices(omnisci, boston_house_prices):
     # Get training data from server:
     table_name = f'{omnisci.table_name}bhp'
 
-    def sql_execute(sql):
-        return omnisci.sql_execute(sql, register=False)
-
-    descr, result = sql_execute('SELECT rowid, data, medv FROM '
-                                f'{table_name} ORDER BY rowid LIMIT 50')
+    descr, result = omnisci.sql_execute(
+        f'SELECT rowid, data, medv FROM {table_name} ORDER BY rowid LIMIT 50')
     result = list(result)
     medv = np.array([medv for _, data, medv in result])
     data = np.array([data for _, data, medv in result])

@@ -82,14 +82,26 @@ def get_literal_return(func, verbose=False):
                 print(source)
 
 
+def _global_omnisci():
+    """Implements singleton of a global RemoteOmnisci instance.
+    """
+    config = get_client_config()
+    omnisci = RemoteOmnisci(**config)
+    while True:
+        yield omnisci
+
+
+global_omnisci_singleton = _global_omnisci()  # generator object
+
+
 def is_available(_cache={}):
     """Return version tuple and None if OmnisciDB server is accessible or
     recent enough. Otherwise return None and the reason about
     unavailability.
     """
+
     if not _cache:
-        config = get_client_config()
-        omnisci = RemoteOmnisci(**config)
+        omnisci = next(global_omnisci_singleton)
         try:
             version = omnisci.version
         except Exception as msg:
@@ -378,6 +390,9 @@ class RemoteOmnisci(RemoteJIT):
           The table must have the specified columns defined.
 
         """
+        if not self._null_values:
+            self.retrieve_targets()  # initializes null values
+
         int_col_types = ['TINYINT', 'SMALLINT', 'INT', 'BIGINT', 'BOOL',
                          'DECIMAL', 'TIME', 'TIMESTAMP', 'DATE']
         real_col_types = ['FLOAT', 'DOUBLE']
@@ -456,7 +471,7 @@ class RemoteOmnisci(RemoteJIT):
             for row in rows:
                 table_row = ', '.join(map(str, row))
                 self.sql_execute(
-                    f'INSERT INTO {table_name} VALUES ({table_row})', register=False)
+                    f'INSERT INTO {table_name} VALUES ({table_row})')
             return
 
         columns = []
@@ -563,7 +578,13 @@ class RemoteOmnisci(RemoteJIT):
             for i in range(nrows):
                 yield tuple(columns[j][i] for j in range(ncols))
 
-    def sql_execute(self, query, register=True):
+    def query_requires_register(self, query):
+        """Check if given query requires registration step.
+        """
+        names = '|'.join(self.get_pending_names())
+        return names and re.search(r'\b(' + names + r')\b', query, re.I) is not None
+
+    def sql_execute(self, query):
         """Execute SQL query in OmnisciDB server.
 
         Parameters
@@ -571,14 +592,6 @@ class RemoteOmnisci(RemoteJIT):
         query : str
           SQL query string containing exactly one query. Multiple
           queries are not supported.
-
-        register: bool
-
-          When True, register new UDF/UDTF implementations to the
-          omniscidb server. Disabling registration is adviced when
-          running queries that do not involve new UDF/UDTF functions,
-          otherwise, registration may lock server query compilations
-          unnecessarily.
 
         Returns
         -------
@@ -588,7 +601,7 @@ class RemoteOmnisci(RemoteJIT):
           Iterator over rows.
 
         """
-        if register:
+        if self.query_requires_register(query):
             self.register()
         columnar = True
         if self.debug:

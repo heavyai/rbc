@@ -51,15 +51,13 @@ def test_null_value(omnisci, col):
     if typ == 'bool':
         prefix = '_bool'
         descr, expected = omnisci.sql_execute(
-            f'select {col}, not {col} from {omnisci.table_name}null',
-            register=False)
+            f'select {col}, not {col} from {omnisci.table_name}null')
         data, expected = zip(*list(expected))
 
     else:
         prefix = ''
         descr, expected = omnisci.sql_execute(
-            f'select {col}, {col} + {col} from {omnisci.table_name}null',
-            register=False)
+            f'select {col}, {col} + {col} from {omnisci.table_name}null')
         data, expected = zip(*list(expected))
 
     descr, result = omnisci.sql_execute(
@@ -75,8 +73,7 @@ def test_row_adder(omnisci):
                             'Requires omniscidb-internal PR 5104 [rbc issue 188]')
 
     descr, expected = omnisci.sql_execute(
-        f'select f8, f8 + f8 from {omnisci.table_name}null',
-        register=False)
+        f'select f8, f8 + f8 from {omnisci.table_name}null')
     data, expected = zip(*list(expected))
 
     descr, result = omnisci.sql_execute(

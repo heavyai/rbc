@@ -72,9 +72,6 @@ def define(omnisci):
 def create_columns(omnisci):
     omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492", label='master')
 
-    def sql_execute(sql):
-        return omnisci.sql_execute(sql, register=False)
-
     for size in (8, 16, 32):
         table_name = f"{omnisci.base_name}_{size}"
         base = f"base_{size}"
@@ -82,9 +79,9 @@ def create_columns(omnisci):
         derived = f"derived_{size}"
         another = f"another_{size}"
 
-        sql_execute(f"DROP TABLE IF EXISTS {table_name};")
+        omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name};")
 
-        sql_execute(
+        omnisci.sql_execute(
             f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
                 {base} TEXT ENCODING DICT({size}),
@@ -108,7 +105,7 @@ def create_columns(omnisci):
 
     for size in (8, 16, 32):
         table_name = f"{omnisci.base_name}_{size}"
-        sql_execute(f"DROP TABLE IF EXISTS {table_name}")
+        omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name}")
 
 
 @pytest.mark.usefixtures("create_columns")
@@ -146,7 +143,7 @@ def test_text_encoding_shared_dict2(omnisci, size):
     another = f"another_{size}"
 
     ans_query = (f"SELECT {other}, {base}, {another} FROM {table};")
-    _, ans = omnisci.sql_execute(ans_query, register=False)
+    _, ans = omnisci.sql_execute(ans_query)
 
     query = (f"SELECT * FROM table({fn}("
              f"cursor(SELECT {base} FROM {table}), "

@@ -14,18 +14,15 @@ def omnisci():
 def create_columns(omnisci):
     omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5492")
 
-    def sql_execute(sql):
-        return omnisci.sql_execute(sql, register=False)
-
     for size in (8, 16, 32):
         table_name = f"{omnisci.base_name}_{size}"
         base = f"base_{size}"
         other = f"other_{size}"
         derived = f"derived_{size}"
 
-        sql_execute(f"DROP TABLE IF EXISTS {table_name};")
+        omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name};")
 
-        sql_execute(
+        omnisci.sql_execute(
             f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
                 {base} TEXT ENCODING DICT({size}),
@@ -47,7 +44,7 @@ def create_columns(omnisci):
 
     for size in (8, 16, 32):
         table_name = f"{omnisci.base_name}_{size}"
-        sql_execute(f"DROP TABLE IF EXISTS {table_name}")
+        omnisci.sql_execute(f"DROP TABLE IF EXISTS {table_name}")
 
 
 @pytest.mark.usefixtures("create_columns")

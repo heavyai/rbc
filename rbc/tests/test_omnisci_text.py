@@ -14,23 +14,19 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
+    # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
 
-    def sql_execute(sql):
-        return m.sql_execute(sql, register=False)
-
-    sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     sqltypes = ['TEXT ENCODING DICT', 'TEXT ENCODING DICT(16)', 'TEXT ENCODING DICT(8)',
                 'TEXT[] ENCODING DICT(32)', 'TEXT ENCODING NONE', 'TEXT ENCODING NONE', 'INT[]']
     colnames = ['t4', 't2', 't1', 's', 'n', 'n2', 'i4']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
 
     data = defaultdict(list)
     for i in range(5):
@@ -51,7 +47,7 @@ def omnisci():
     m.table_name = table_name
     yield m
     try:
-        sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     except Exception as msg:
         print('%s in deardown' % (type(msg)))
 
@@ -60,8 +56,7 @@ def test_table_data(omnisci):
     omnisci.reset()
 
     descr, result = omnisci.sql_execute(
-        'select t4, t2, t1, s, n from {omnisci.table_name}'.format(**locals()),
-        register=False)
+        f'select t4, t2, t1, s, n from {omnisci.table_name}')
     result = list(result)
 
     assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun'),
@@ -81,7 +76,7 @@ def test_bytes_len(omnisci):
     sql_query_expected = f"select length(n) * 100 + length(n2) from {omnisci.table_name}"
     sql_query = f"select mystrlen(n, n2) from {omnisci.table_name}"
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected, register=False)
+    descr, result_expected = omnisci.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
@@ -97,7 +92,7 @@ def test_bytes_ord(omnisci):
         return s[i] if i < len(s) else 0
 
     sql_query_data = f"select n from {omnisci.table_name}"
-    descr, data = omnisci.sql_execute(sql_query_data, register=False)
+    descr, data = omnisci.sql_execute(sql_query_data)
     data = list(data)
 
     for i in range(5):

@@ -1,5 +1,5 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import omnisci_fixture, sql_execute
 import numpy as np
 
 
@@ -233,9 +233,6 @@ def test_parallel_execution(omnisci, sleep, mode):
     omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5901',
                             label='qe-99')
     from multiprocessing import Process, Array
-
-    def sql_execute(sql):
-        return omnisci.sql_execute(sql, register=False)
 
     def func(seconds, mode, a):
         try:
