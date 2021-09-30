@@ -10,6 +10,7 @@ method `thrift_content`).
 import os
 import tempfile
 import warnings
+from threading import Lock
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import thriftpy2 as thr
@@ -17,6 +18,10 @@ with warnings.catch_warnings():
 import pickle
 import six
 from . import types
+
+
+# lock to prevent more than one thread from initializing the thrift client
+lock = Lock()
 
 
 def from_thrift(thrift, spec, result):
@@ -72,7 +77,8 @@ class Client(object):
         self.thrift_content_service = options.pop(
             'thrift_content_service', 'info')
         self.options = options
-        self._update_thrift()
+        with lock:
+            self._update_thrift()
 
     def _update_thrift(self):
         """Update client thrift configuration from server.
