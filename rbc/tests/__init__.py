@@ -1,10 +1,20 @@
-__all__ = ['omnisci_fixture']
+__all__ = ['omnisci_fixture', 'sql_execute']
 
 
 import os
 import pytest
 import warnings
 from collections import defaultdict
+
+
+def sql_execute(query):
+    """Execute a SQL statement to omniscidb server using global instance.
+
+    Use when the query does not require registration of new UDF/UDTFs.
+    """
+    rbc_omnisci = pytest.importorskip('rbc.omniscidb')
+    omnisci = next(rbc_omnisci.global_omnisci_singleton)
+    return omnisci.sql_execute(query)
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
