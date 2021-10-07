@@ -23,6 +23,32 @@ from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
 
+if nb is not None:
+    from rbc.typesystem import boolean1, boolean8
+
+
+def test_dummy():
+    with pytest.raises(
+            RuntimeError,
+            match=r'Target not specified.'):
+        Type.fromobject('int')
+
+    with TargetInfo.dummy():
+        t = Type.fromobject('int')
+        assert str(t) == 'int'
+
+        t = Type.fromobject('int(int)')
+        assert t.is_function
+
+        t = Type.fromobject('foo(bar)')
+        assert t.is_function
+
+    with pytest.raises(
+            RuntimeError,
+            match=r'Target not specified.'):
+        Type.fromobject('foo(bar)')
+
+
 @pytest.fixture(scope='module')
 def target_info():
 
@@ -63,16 +89,16 @@ def test_fromstring(target_info):
     assert Type.fromstring('none') == Type()
     assert Type.fromstring('i') == Type('int32')
     assert Type.fromstring('i*') == Type(Type('int32'), '*')
-    assert Type.fromstring('*') == Type(Type(), '*')
+    assert Type.fromstring('(*)') == Type(Type(), (Type('*', ),), name='')
     assert Type.fromstring('void*') == Type(Type(), '*')
     assert Type.fromstring('{i,j}') == Type(Type('int32'), Type('j'))
-    assert Type.fromstring('i(j)') == Type(Type('int32'), (Type('j'), ))
+    assert Type.fromstring('i(j)') == Type(Type('int32'), (Type('j'), ), name='i')
     assert Type.fromstring('i(j , k)') == Type(Type('int32'),
-                                               (Type('j'), Type('k')))
+                                               (Type('j'), Type('k')), name='i')
     assert Type.fromstring('  (j , k) ') == Type(Type(),
-                                                 (Type('j'), Type('k')))
+                                                 (Type('j'), Type('k')), name='')
     assert Type.fromstring('void(j,k)') == Type(Type(),
-                                                (Type('j'), Type('k')))
+                                                (Type('j'), Type('k')), name='')
 
     assert Type.fromstring('i a') == Type('int32', name='a')
     assert Type.fromstring('i* a') == Type(Type('int32'), '*', name='a')
@@ -115,15 +141,29 @@ def test_is_properties(target_info):
     t = Type.fromstring('i  *')
     assert t._is_ok and t.is_pointer
     t = Type.fromstring('*')
-    assert t._is_ok and t.is_pointer
+    assert t._is_ok and t.is_atomic  # !
+    t = Type.fromstring('*i')
+    assert t._is_ok and t.is_atomic  # !
     t = Type.fromstring('i* * ')
     assert t._is_ok and t.is_pointer
     t = Type.fromstring('i(j)')
-    assert t._is_ok and t.is_function
+    assert t._is_ok and t.is_function and t.name == ''
     t = Type.fromstring('(j)')
-    assert t._is_ok and t.is_function
+    assert t._is_ok and t.is_function and t.name == ''
     t = Type.fromstring('()')
-    assert t._is_ok and t.is_function
+    assert t._is_ok and t.is_function and t.name == ''
+    t = Type.fromstring('i f(j)')
+    assert t._is_ok and t.is_function and t.name == 'f'
+    t = Type.fromstring('void f(j)')
+    assert t._is_ok and t.is_function and t.name == 'f'
+    t = Type.fromstring('void f()')
+    assert t._is_ok and t.is_function and t.name == 'f'
+    t = Type.fromstring('i(j) f')
+    assert t._is_ok and t.is_function and t.name == 'f'
+    t = Type.fromstring('(j) f')
+    assert t._is_ok and t.is_function and t.name == 'f'
+    t = Type.fromstring('() f')
+    assert t._is_ok and t.is_function and t.name == 'f'
     t = Type.fromstring('{i, j}')
     assert t._is_ok and t.is_struct
     t = Type.fromstring('A<i>')
@@ -142,7 +182,6 @@ def test_tostring(target_info):
     assert tostr('a') == 'a'
     assert tostr('()') == 'void(void)'
     assert tostr('(a,b,c)') == 'void(a, bool, complex64)'
-    assert tostr('f  (   )') == 'float32(void)'
     assert tostr('f[a,c]  (   )') == 'f[a,c](void)'
     assert tostr(' f,g ()') == 'f,g(void)'
     assert tostr('a * ') == 'a*'
@@ -150,10 +189,27 @@ def test_tostring(target_info):
     assert tostr('{a}') == '{a}'
     assert tostr('{a  ,b}') == '{a, bool}'
     assert tostr('{{a,c} ,b}') == '{{a, complex64}, bool}'
-    assert tostr('*') == 'void*'
+    assert tostr('*') == '*'
     assert tostr('void *') == 'void*'
-    assert tostr('*(*,{*,*})') == 'void*(void*, {void*, void*})'
     assert tostr('A<a>') == 'A<a>'
+
+    # Support C function declatations:
+    assert tostr('f  (   )') == 'float32(void)'
+    assert tostr('f  f(   )') == 'float32 f(void)'
+    assert tostr('f  (*f)(   )') == 'float32 f(void)'
+    assert tostr('f  (**f)(   )') == 'float32 f(void)'
+    assert tostr('f  (* *   * f)(   )') == 'float32 f(void)'
+    assert (tostr('void (*signal(int, void(*)(int)))(int)')
+            == 'void(int32) signal(int32, void(int32))')
+    assert tostr('void (*(int, void(*)(int)))(int)') == 'void(int32)(int32, void(int32))'
+    # Typesystem function types are more straightforward:
+    assert tostr('void(int) signal(int, void(int))') == 'void(int32) signal(int32, void(int32))'
+    assert tostr('void(int)(int, void(int)) signal') == 'void(int32) signal(int32, void(int32))'
+    assert tostr('void(int)(int, void(int))') == 'void(int32)(int32, void(int32))'
+    # But be careful with asterisks:
+    assert tostr('f  (f)(   )') == 'float32(float32)(void)'
+    assert tostr('f  (f)(   )  fun') == 'float32(float32) fun(void)'
+    assert tostr('(*) f') == 'void f(*)'  # !
 
 
 def test_normalize(target_info):
@@ -193,6 +249,10 @@ def test_normalize(target_info):
     assert tostr('bool') == 'bool'
     assert tostr('b') == 'bool'
     assert tostr('_Bool') == 'bool'
+    assert tostr('bool1') == 'bool1'
+    assert tostr('boolean1') == 'bool1'
+    assert tostr('bool8') == 'bool8'
+    assert tostr('boolean8') == 'bool8'
 
     assert tostr('str') == 'string'
     assert tostr('string') == 'string'
@@ -264,7 +324,6 @@ def test_toctypes(target_info):
     assert toctypes('char*') == ctypes.c_char_p
     assert toctypes('wchar') == ctypes.c_wchar
     assert toctypes('wchar*') == ctypes.c_wchar_p
-    assert toctypes('*') == ctypes.c_void_p
     assert toctypes('void*') == ctypes.c_void_p
     assert toctypes('void') is None
     assert toctypes('i(i, double)') \
@@ -290,7 +349,7 @@ def test_fromctypes(target_info):
     assert fromctypes(ctypes.c_uint64) == fromstr('u64')
     assert fromctypes(ctypes.c_float) == fromstr('f32')
     assert fromctypes(ctypes.c_double) == fromstr('double')
-    assert fromctypes(ctypes.c_void_p) == fromstr('*')
+    assert fromctypes(ctypes.c_void_p) == fromstr('void*')
     assert fromctypes(None) == fromstr('void')
 
     class mystruct(ctypes.Structure):
@@ -308,7 +367,9 @@ def test_tonumba(target_info):
         return Type.fromstring(a).tonumba()
 
     assert tonumba('void') == nb.void
-    assert tonumba('bool') == nb.boolean
+    assert tonumba('bool') == boolean1
+    assert tonumba('bool1') == boolean1
+    assert tonumba('bool8') == boolean8
     assert tonumba('int8') == nb.int8
     assert tonumba('int16') == nb.int16
     assert tonumba('int32') == nb.int32
@@ -487,6 +548,30 @@ def test_mangling(target_info):
     check('()')
 
 
+def test_name_mangling(target_info):
+    def check(s):
+        t1 = Type.fromstring(s)
+        m = t1.mangle()
+        try:
+            t2 = Type.demangle(m)
+        except Exception:
+            print('subject: s=`%s`, t1=`%s`, m=`%s`' % (s, t1, m))
+            raise
+        assert t1 == t2, repr((t1, m, t2))
+        assert t1.name == t2.name, repr((t1, m, t2))
+
+    for t in ['int8', 'myint']:
+        check(f'{t} i')
+        check(f'{t} foo()')
+        check(f'foo({t} i)')
+        check(f'foo({t} i, float f)')
+        check(f'{t} ()')
+        check(f'{t}* i')
+        check(f'{{{t} i}}')
+        check(f'{{{t} i, float f}}')
+        check(f'{{{t} i, float f}} s')
+
+
 def test_unspecified(target_info):
     assert str(Type.fromstring('unknown(_0,_1)')) == 'unknown(_0, _1)'
 
@@ -511,6 +596,12 @@ def test_annotation(target_info):
     assert tostr('int foo|') == 'int32 foo'
     assert tostr('int foo|a') == 'int32 foo | a'
     assert tostr('int foo|=1') == 'int32 foo | =1'
+
+    # custom params
+    assert tostr('Column<int> | a') == 'Column<int32> | a'
+    assert tostr('Column<T> | input_id=args<0>') == 'Column<T> | input_id=args<0>'
+    assert tostr('Column<T> | input_id=args<0> | name = foo ') == \
+        'Column<T> | input_id=args<0> | name=foo'
 
     t = Type.fromstring('int')
     assert (t | 'a').tostring() == 'int32 | a'

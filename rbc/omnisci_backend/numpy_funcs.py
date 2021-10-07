@@ -1,15 +1,10 @@
 import numpy as np
-from rbc.irtools import printf
+from rbc.externals.stdio import printf
 from rbc import typesystem
 from .omnisci_array import Array, ArrayPointer
-from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types, \
-        errors
-    from numba.np import numpy_support
-else:
-    from numba import extending, types, \
-        errors, numpy_support
+from numba import njit
+from numba.core import extending, types, errors
+from numba.np import numpy_support
 
 
 def expose_and_overload(func):
@@ -58,6 +53,21 @@ def omnisci_np_full_like(a, fill_value, dtype=None):
         return impl
 
 
+@expose_and_overload(np.empty_like)
+def omnisci_np_empty_like(a, dtype=None):
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+
+        def impl(a, dtype=None):
+            other = Array(0, nb_dtype)
+            other.set_null()
+            return other
+        return impl
+
+
 @expose_and_overload(np.empty)
 def omnisci_np_empty(shape, dtype=None):
 
@@ -67,7 +77,9 @@ def omnisci_np_empty(shape, dtype=None):
         nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
     def impl(shape, dtype=None):
-        return Array(shape, nb_dtype)
+        arr = Array(shape, nb_dtype)
+        arr.set_null()
+        return arr
     return impl
 
 
@@ -128,6 +140,33 @@ def omnisci_np_ones_like(a, dtype=None):
 
         def impl(a, dtype=None):
             return full_like(a, fill_value, nb_dtype)  # noqa: F821
+        return impl
+
+
+@expose_and_overload(np.array)
+def omnisci_np_array(a, dtype=None):
+
+    @njit
+    def omnisci_array_non_empty_copy(a, nb_dtype):
+        """Implement this here rather than inside "impl".
+        LLVM DCE pass removes everything if we implement stuff inside "impl"
+        """
+        other = Array(len(a), nb_dtype)
+        for i in range(len(a)):
+            other[i] = a[i]
+        return other
+
+    if isinstance(a, ArrayPointer):
+        if dtype is None:
+            nb_dtype = a.eltype
+        else:
+            nb_dtype = dtype
+
+        def impl(a, dtype=None):
+            if a.is_null():
+                return empty_like(a)  # noqa: F821
+            else:
+                return omnisci_array_non_empty_copy(a, nb_dtype)
         return impl
 
 

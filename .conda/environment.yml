@@ -7,18 +7,18 @@
 name: rbc
 channels:
   - conda-forge
+  - numba
   - defaults
 dependencies:
-  - python>=3
-  #- c-compiler
+  - python>=3.7
   - setuptools
-  #- pip
-  - numba
+  - numba>=0.52
   - llvmlite
   - pytest
   - tblib
-  - pymapd
   - thriftpy2
   - netifaces
-  - flake8
+  - clang=10
+  - clangxx=10
+  - six
   # - cudatoolkit-dev   # disable temporary

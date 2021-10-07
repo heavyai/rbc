@@ -1,5 +1,7 @@
 import os
 from collections import defaultdict
+from rbc.omnisci_backend import Array
+from numba import types as nb_types
 import pytest
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -9,10 +11,12 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
+    # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
                 'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
                 'BOOLEAN[]']
@@ -23,9 +27,7 @@ def omnisci():
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
 
     data = defaultdict(list)
     for i in range(5):
@@ -41,7 +43,7 @@ def omnisci():
     m.table_name = table_name
     yield m
     try:
-        m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     except Exception as msg:
         print('%s in deardown' % (type(msg)))
 
@@ -80,7 +82,7 @@ define dso_local i32 @array_sz_int32(%struct.Array* byval align 8) {
     ast_signatures = "array_sz_int32 'int32_t(Array<int32_t>)'"
 
     device_ir_map = dict()
-    device_ir_map['cpu'] = '''\
+    device_ir_map['cpu'] = f'''\
 target datalayout = "{cpu_target_datalayout}"
 target triple = "{cpu_target_triple}"
 
@@ -89,17 +91,80 @@ target triple = "{cpu_target_triple}"
 {Array_getSize_i32_ir}
 
 {array_sz_i32_ir}
-'''.format(**locals())
+'''
 
     omnisci.thrift_call('register_runtime_udf',
                         omnisci.session_id,
                         ast_signatures, device_ir_map)
 
     desrc, result = omnisci.sql_execute(
-        'select i4, array_sz_int32(i4) from {omnisci.table_name}'
-        .format(**locals()))
+        f'select i4, array_sz_int32(i4) from {omnisci.table_name}')
     for a, sz in result:
         assert len(a) == sz
+
+
+@pytest.mark.skipif(available_version[:2] < (5, 2),
+                    reason="test requires 5.2 or newer (got %s)" % (
+                        available_version,))
+@pytest.mark.parametrize('c_name', ['int8_t i1', 'int16_t i2', 'int32_t i4', 'int64_t i8',
+                                    'float f4', 'double f8'])
+@pytest.mark.parametrize('device', ['cpu', 'gpu'])
+def test_ptr(omnisci, c_name, device):
+    omnisci.reset()
+    if not omnisci.has_cuda and device == 'gpu':
+        pytest.skip('test requires CUDA-enabled omniscidb server')
+    from rbc.external import external
+
+    if omnisci.compiler is None:
+        pytest.skip('test requires clang C/C++ compiler')
+
+    ctype, cname = c_name.split()
+
+    c_code = f'''
+#include <stdint.h>
+#ifdef __cplusplus
+extern "C" {{
+#endif
+{ctype} mysum_impl({ctype}* x, int n) {{
+    {ctype} r = 0;
+    for (int i=0; i < n; i++) {{
+      r += x[i];
+    }}
+    return r;
+}}
+
+{ctype} myval_impl({ctype}* x) {{
+    return *x;
+}}
+#ifdef __cplusplus
+}}
+#endif
+    '''
+    omnisci.user_defined_llvm_ir[device] = omnisci.compiler(c_code)
+    mysum_impl = external(f'{ctype} mysum_impl({ctype}*, int32_t)')
+    myval_impl = external(f'{ctype} myval_impl({ctype}*)')
+
+    @omnisci(f'{ctype}({ctype}[])', devices=[device])
+    def mysum_ptr(x):
+        return mysum_impl(x.ptr(), len(x))
+
+    @omnisci(f'{ctype}({ctype}[], int32_t)', devices=[device])
+    def myval_ptr(x, i):
+        return myval_impl(x.ptr(i))
+
+    desrc, result = omnisci.sql_execute(
+        f'select {cname}, mysum_ptr({cname}) from {omnisci.table_name}')
+    for a, r in result:
+        if cname == 'i1':
+            assert sum(a) % 256 == r % 256
+        else:
+            assert sum(a) == r
+
+    desrc, result = omnisci.sql_execute(
+        f'select {cname}, myval_ptr({cname}, 0), myval_ptr({cname}, 2) from {omnisci.table_name}')
+    for a, r0, r2 in result:
+        assert a[0] == r0
+        assert a[2] == r2
 
 
 def test_len_i32(omnisci):
@@ -109,8 +174,7 @@ def test_len_i32(omnisci):
     def array_sz_int32(x):
         return len(x)
     desrc, result = omnisci.sql_execute(
-        'select i4, array_sz_int32(i4) from {omnisci.table_name}'
-        .format(**locals()))
+        f'select i4, array_sz_int32(i4) from {omnisci.table_name}')
     for a, sz in result:
         assert len(a) == sz
 
@@ -123,8 +187,7 @@ def test_len_f64(omnisci):
         return len(x)
 
     desrc, result = omnisci.sql_execute(
-        'select f8, array_sz_double(f8) from {omnisci.table_name}'
-        .format(**locals()))
+        f'select f8, array_sz_double(f8) from {omnisci.table_name}')
     for a, sz in result:
         assert len(a) == sz
 
@@ -139,8 +202,7 @@ def test_getitem_bool(omnisci):
     def array_getitem_bool(x, i):
         return x[i]
 
-    query = ('select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select b, array_getitem_bool(b, 2) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
@@ -153,8 +215,7 @@ def test_getitem_i8(omnisci):
     def array_getitem_int8(x, i):
         return x[i]
 
-    query = ('select i1, array_getitem_int8(i1, 2) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select i1, array_getitem_int8(i1, 2) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
@@ -167,8 +228,7 @@ def test_getitem_i32(omnisci):
     def array_getitem_int32(x, i):
         return x[i]
 
-    query = ('select i4, array_getitem_int32(i4, 2) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select i4, array_getitem_int32(i4, 2) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
@@ -181,8 +241,7 @@ def test_getitem_i64(omnisci):
     def array_getitem_int64(x, i):
         return x[i]
 
-    query = ('select i8, array_getitem_int64(i8, 2) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select i8, array_getitem_int64(i8, 2) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
@@ -195,8 +254,7 @@ def test_getitem_float(omnisci):
     def array_getitem_double(x, i):
         return x[i]
 
-    query = ('select f8, array_getitem_double(f8, 2) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select f8, array_getitem_double(f8, 2) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
@@ -206,8 +264,7 @@ def test_getitem_float(omnisci):
     def array_getitem_float(x, i):
         return x[i]
 
-    query = ('select f4, array_getitem_float(f4, 2) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select f4, array_getitem_float(f4, 2) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, item in result:
         assert a[2] == item
@@ -225,8 +282,7 @@ def test_sum(omnisci):
             r = r + x[i]
         return r
 
-    query = ('select i4, array_sum_int32(i4) from {omnisci.table_name}'
-             .format(**locals()))
+    query = f'select i4, array_sum_int32(i4) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for a, s in result:
         assert sum(a) == s
@@ -247,9 +303,7 @@ def test_even_sum(omnisci):
                 r = r + x[i]
         return r
 
-    query = (
-        'select b, i4, array_even_sum_int32(b, i4) from {omnisci.table_name}'
-        .format(**locals()))
+    query = f'select b, i4, array_even_sum_int32(b, i4) from {omnisci.table_name}'
     desrc, result = omnisci.sql_execute(query)
     for b, i4, s in result:
         assert sum([i_ for b_, i_ in zip(b, i4) if b_]) == s
@@ -272,9 +326,7 @@ def test_array_setitem(omnisci):
             b[i] = b[i] / c
         return s
 
-    query = (
-        'select f8, array_setitem_sum(f8, 4) from {omnisci.table_name}'
-        .format(**locals()))
+    query = f'select f8, array_setitem_sum(f8, 4) from {omnisci.table_name}'
     _, result = omnisci.sql_execute(query)
 
     for f8, s in result:
@@ -303,11 +355,7 @@ def test_array_constructor_noreturn(omnisci):
             s += a[i] + b[i] + c[i] - a[i] * b[i]
         return s
 
-    query = (
-        'select array_noreturn(10)'
-        .format(**locals())
-    )
-
+    query = 'select array_noreturn(10)'
     _, result = omnisci.sql_execute(query)
     r = list(result)[0]
     assert (r == (-420.0,))
@@ -322,7 +370,7 @@ def test_array_constructor_return(omnisci):
 
     from rbc.omnisci_backend import Array
     from numba import types
-    from rbc.irtools import printf
+    from rbc.externals.stdio import printf
 
     @omnisci('float64[](int32)')
     def array_return(size):
@@ -339,9 +387,7 @@ def test_array_constructor_return(omnisci):
         printf("returning array with length %i\n", len(c))
         return c
 
-    query = (
-        'select array_return(9), array_return(10)'
-        .format(**locals()))
+    query = 'select array_return(9), array_return(10)'
     _, result = omnisci.sql_execute(query)
 
     r = list(result)[0]
@@ -360,9 +406,7 @@ def test_array_constructor_len(omnisci):
         a = Array(size, types.float64)
         return len(a)
 
-    query = (
-        'select array_len(30)'
-        .format(**locals()))
+    query = 'select array_len(30)'
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (30,)
@@ -385,9 +429,7 @@ def test_array_constructor_getitem(omnisci):
             a[i] = i + 0.0
         return a[pos]
 
-    query = (
-        'select array_ptr(5, 3)'
-        .format(**locals()))
+    query = 'select array_ptr(5, 3)'
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (3.0,)
@@ -403,9 +445,7 @@ def test_array_constructor_is_null(omnisci):
         a = Array(size, 'double')
         return a.is_null()
 
-    query = (
-        'select array_is_null(3);'
-        .format(**locals()))
+    query = 'select array_is_null(3);'
     _, result = omnisci.sql_execute(query)
 
     assert list(result)[0] == (0,)
@@ -473,3 +513,16 @@ def test_issue197_bool(omnisci):
     column, ret = list(result)[0]
     for x, y in zip(column, ret):
         assert bool(x) == bool(y)
+
+
+def test_issue109(omnisci):
+
+    @omnisci('double[](int32)')
+    def issue109(size):
+        a = Array(5, 'double')
+        for i in range(5):
+            a[i] = nb_types.double(i)
+        return a
+
+    _, result = omnisci.sql_execute('select issue109(3);')
+    assert list(result) == [([0.0, 1.0, 2.0, 3.0, 4.0],)]

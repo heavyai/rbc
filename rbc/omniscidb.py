@@ -1,9 +1,13 @@
+"""OmniSciDB client config functions
+"""
+
 import ast
 import inspect
 import os
 import re
 import warnings
 import configparser
+import numpy
 from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT
 from .thrift.utils import resolve_includes
@@ -11,11 +15,12 @@ from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta)
+    BufferMeta, OmnisciColumnListType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
+from . import ctools
 from . import typesystem
 
 
@@ -77,14 +82,26 @@ def get_literal_return(func, verbose=False):
                 print(source)
 
 
+def _global_omnisci():
+    """Implements singleton of a global RemoteOmnisci instance.
+    """
+    config = get_client_config()
+    omnisci = RemoteOmnisci(**config)
+    while True:
+        yield omnisci
+
+
+global_omnisci_singleton = _global_omnisci()  # generator object
+
+
 def is_available(_cache={}):
     """Return version tuple and None if OmnisciDB server is accessible or
     recent enough. Otherwise return None and the reason about
     unavailability.
     """
+
     if not _cache:
-        config = get_client_config()
-        omnisci = RemoteOmnisci(**config)
+        omnisci = next(global_omnisci_singleton)
         try:
             version = omnisci.version
         except Exception as msg:
@@ -199,8 +216,7 @@ class RemoteOmnisci(RemoteJIT):
 
     """Usage:
 
-    .. highlight:: python
-    .. code-block:: python
+    .. code:: python
 
         omnisci = RemoteOmnisci(host=..., port=...)
 
@@ -215,6 +231,20 @@ class RemoteOmnisci(RemoteJIT):
     """
     multiplexed = False
     mangle_prefix = ''
+
+    typesystem_aliases = dict(
+        bool='bool8',
+        Array='OmnisciArrayType',
+        Bytes='OmnisciBytesType<char8>',
+        Cursor='OmnisciCursorType',
+        Column='OmnisciColumnType',
+        OutputColumn='OmnisciOutputColumnType',
+        RowMultiplier='int32|sizer=RowMultiplier',
+        ConstantParameter='int32|sizer=ConstantParameter',
+        Constant='int32|sizer=Constant',
+        ColumnList='OmnisciColumnListType',
+        TextEncodingDict='OmnisciTextEncodingDictType',
+    )
 
     def __init__(self,
                  user='admin',
@@ -245,6 +275,10 @@ class RemoteOmnisci(RemoteJIT):
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
         self.has_cuda = None
+        self._null_values = dict()
+
+        # An user-defined device-LLVM IR mapping.
+        self.user_defined_llvm_ir = {}
 
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.
@@ -259,7 +293,7 @@ class RemoteOmnisci(RemoteJIT):
     def version(self):
         if self._version is None:
             version = self.thrift_call('get_version')
-            return parse_version(version)
+            self._version = parse_version(version)
         return self._version
 
     @property
@@ -322,6 +356,9 @@ class RemoteOmnisci(RemoteJIT):
             m = re.match(r'.*Exception: (.*)', msg.error_msg)
             if m:
                 raise OmnisciServerError(f'{m.group(1)}')
+            m = re.match(r'.*SQL Error: (.*)', msg.error_msg)
+            if m:
+                raise OmnisciServerError(f'{m.group(1)}')
             # TODO: catch more known server failures here.
             raise
 
@@ -353,15 +390,52 @@ class RemoteOmnisci(RemoteJIT):
           The table must have the specified columns defined.
 
         """
+        if not self._null_values:
+            self.retrieve_targets()  # initializes null values
+
         int_col_types = ['TINYINT', 'SMALLINT', 'INT', 'BIGINT', 'BOOL',
                          'DECIMAL', 'TIME', 'TIMESTAMP', 'DATE']
         real_col_types = ['FLOAT', 'DOUBLE']
         str_col_types = ['STR', 'POINT', 'LINESTRING', 'POLYGON',
                          'MULTIPOLYGON']
 
+        datumtype_map = {
+            'BOOL': 'boolean8',
+            'TINYINT': 'int8',
+            'SMALLINT': 'int16',
+            'INT': 'int32',
+            'BIGINT': 'int64',
+            'FLOAT': 'float32',
+            'DOUBLE': 'float64',
+            'BOOL[]': 'Array<boolean8>',
+            'TINYINT[]': 'Array<int8>',
+            'SMALLINT[]': 'Array<int16>',
+            'INT[]': 'Array<int32>',
+            'BIGINT[]': 'Array<int64>',
+            'FLOAT[]': 'Array<float32>',
+            'DOUBLE[]': 'Array<float64>',
+        }
+
         thrift = self.thrift_client.thrift
         table_details = self.get_table_details(table_name)
-        if self.version[:2] < (5, 3):
+        use_sql = self.version[:2] < (5, 3)
+        if not use_sql and self.version[:2] < (5, 5):
+            for column_data in columnar_data.values():
+                for v in column_data:
+                    if v is None:
+                        break
+                    elif isinstance(v, (tuple, list)):
+                        for _v in v:
+                            if _v is None:
+                                break
+                        else:
+                            continue
+                        break
+                else:
+                    continue
+                use_sql = True
+                break
+        if use_sql:
             rows = None
             for column_name, column_data in columnar_data.items():
                 if rows is None:
@@ -378,10 +452,16 @@ class RemoteOmnisci(RemoteJIT):
                         break
                 assert col_index is not None
                 for i, v in enumerate(column_data):
-                    if is_array:
+                    if v is None:
+                        v = "NULL"
+                    elif is_array:
                         if datumtype == 'BOOL':
-                            v = ["'true'" if v_ else "'false'" for v_ in v]
-                        v = ', '.join(map(str, v))
+                            v = ["'true'" if v_ else ("'false'"
+                                                      if v_ is not None else "NULL")
+                                 for v_ in v]
+                        else:
+                            v = [(str(v_) if v_ is not None else "NULL") for v_ in v]
+                        v = ', '.join(v)
                         v = f'ARRAY[{v}]'
                     else:
                         if datumtype == 'BOOL':
@@ -405,32 +485,43 @@ class RemoteOmnisci(RemoteJIT):
                 raise ValueError(
                     f'OmnisciDB `{table_name}` has no column `{column_name}`')
             datumtype = thrift.TDatumType._VALUES_TO_NAMES[typeinfo.type]
+            nulls = [v is None for v in column_data]
             if typeinfo.is_array:
-                rows = []
-                for row in column_data:
+                arrays = []
+                for arr in column_data:
+                    if arr is None:
+                        arr_nulls = None
+                    else:
+                        arr_nulls = [v is None for v in arr]
+                        if True in arr_nulls:
+                            # TODO: null support for text
+                            null_value = self._null_values[datumtype_map[datumtype]]
+                            arr = [(null_value if v is None else v) for v in arr]
                     if datumtype in int_col_types:
-                        row_data = thrift.TColumnData(int_col=row)
+                        arr_data = thrift.TColumnData(int_col=arr)
                     elif datumtype in real_col_types:
-                        row_data = thrift.TColumnData(real_col=row)
+                        arr_data = thrift.TColumnData(real_col=arr)
                     elif datumtype in str_col_types:
-                        row_data = thrift.TColumnData(str_col=row)
+                        arr_data = thrift.TColumnData(str_col=arr)
                     else:
                         raise NotImplementedError(
                             f'loading {datumtype} array data')
-                    rows.append(thrift.TColumn(
-                        data=row_data,
-                        nulls=[False] * len(row)))
-                col_data = thrift.TColumnData(arr_col=rows)
-            elif datumtype in int_col_types:
-                col_data = thrift.TColumnData(int_col=column_data)
-            elif datumtype in real_col_types:
-                col_data = thrift.TColumnData(real_col=column_data)
-            elif datumtype in str_col_types:
-                col_data = thrift.TColumnData(str_col=column_data)
+                    arrays.append(thrift.TColumn(data=arr_data, nulls=arr_nulls))
+                col_data = thrift.TColumnData(arr_col=arrays)
             else:
-                raise NotImplementedError(f'loading {datumtype} data')
-            columns.append(thrift.TColumn(
-                data=col_data, nulls=[False] * len(column_data)))
+                if True in nulls:
+                    # TODO: null support for text
+                    null_value = self._null_values[datumtype_map[datumtype]]
+                    column_data = [(null_value if v is None else v) for v in column_data]
+                if datumtype in int_col_types:
+                    col_data = thrift.TColumnData(int_col=column_data)
+                elif datumtype in real_col_types:
+                    col_data = thrift.TColumnData(real_col=column_data)
+                elif datumtype in str_col_types:
+                    col_data = thrift.TColumnData(str_col=column_data)
+                else:
+                    raise NotImplementedError(f'loading {datumtype} data')
+            columns.append(thrift.TColumn(data=col_data, nulls=nulls))
 
         self.thrift_call('load_table_binary_columnar',
                          self.session_id, table_name, columns)
@@ -464,10 +555,12 @@ class RemoteOmnisci(RemoteJIT):
         def extract_col_vals(desc, val):
             typename = thrift.TDatumType._VALUES_TO_NAMES[desc.col_type.type]
             nulls = val.nulls
-
             if hasattr(val.data, 'arr_col') and val.data.arr_col:
                 vals = [
-                    None if null else getattr(v.data, _typeattr[typename] + '_col')
+                    None if null else [
+                        None if _n else _v
+                        for _n, _v in zip(
+                                v.nulls, getattr(v.data, _typeattr[typename] + '_col'))]
                     for null, v in zip(nulls, val.data.arr_col)
                 ]
             else:
@@ -485,13 +578,18 @@ class RemoteOmnisci(RemoteJIT):
             for i in range(nrows):
                 yield tuple(columns[j][i] for j in range(ncols))
 
+    def query_requires_register(self, query):
+        """Check if given query requires registration step.
+        """
+        names = '|'.join(self.get_pending_names())
+        return names and re.search(r'\b(' + names + r')\b', query, re.I) is not None
+
     def sql_execute(self, query):
         """Execute SQL query in OmnisciDB server.
 
         Parameters
         ----------
         query : str
-
           SQL query string containing exactly one query. Multiple
           queries are not supported.
 
@@ -501,8 +599,10 @@ class RemoteOmnisci(RemoteJIT):
           Row description object
         results : iterator
           Iterator over rows.
+
         """
-        self.register()
+        if self.query_requires_register(query):
+            self.register()
         columnar = True
         if self.debug:
             print('  %s;' % (query))
@@ -552,6 +652,8 @@ class RemoteOmnisci(RemoteJIT):
             'Column<int64_t>': typemap['TExtArgumentType'].get('ColumnInt64'),
             'Column<float>': typemap['TExtArgumentType'].get('ColumnFloat'),
             'Column<double>': typemap['TExtArgumentType'].get('ColumnDouble'),
+            'Column<TextEncodingDict>': typemap['TExtArgumentType'].get(
+                'ColumnTextEncodingDict'),
             'Cursor': typemap['TExtArgumentType']['Cursor'],
             'void': typemap['TExtArgumentType']['Void'],
             'GeoPoint': typemap['TExtArgumentType'].get('GeoPoint'),
@@ -560,17 +662,27 @@ class RemoteOmnisci(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
             'Bytes': typemap['TExtArgumentType'].get('TextEncodingNone'),
-            'Text<8>': typemap['TExtArgumentType'].get('TextEncodingDict8'),
-            'Text<16>': typemap['TExtArgumentType'].get('TextEncodingDict16'),
-            'Text<32>': typemap['TExtArgumentType'].get('TextEncodingDict32'),
+            'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
+            'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
+            'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
+            'ColumnList<int16_t>': typemap['TExtArgumentType'].get('ColumnListInt16'),
+            'ColumnList<int32_t>': typemap['TExtArgumentType'].get('ColumnListInt32'),
+            'ColumnList<int64_t>': typemap['TExtArgumentType'].get('ColumnListInt64'),
+            'ColumnList<float>': typemap['TExtArgumentType'].get('ColumnListFloat'),
+            'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
+            'ColumnList<TextEncodingDict>': typemap['TExtArgumentType'].get(
+                'ColumnListTextEncodingDict'),
         }
 
         if self.version[:2] < (5, 4):
             ext_arguments_map['Array<bool>'] = typemap[
                 'TExtArgumentType']['ArrayInt8']
 
+        ext_arguments_map['bool8'] = ext_arguments_map['bool']
+
         for ptr_type, T in [
                 ('bool', 'bool'),
+                ('bool8', 'bool'),
                 ('int8', 'int8_t'),
                 ('int16', 'int16_t'),
                 ('int32', 'int32_t'),
@@ -584,8 +696,21 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['OmnisciOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
+            ext_arguments_map['OmnisciColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            ext_arguments_map['OmnisciOutputColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
 
         ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
+
+        ext_arguments_map['OmnisciColumnType<TextEncodingDict>'] \
+            = ext_arguments_map.get('Column<TextEncodingDict>')
+        ext_arguments_map['OmnisciOutputColumnType<TextEncodingDict>'] \
+            = ext_arguments_map.get('Column<TextEncodingDict>')
+        ext_arguments_map['OmnisciColumnListType<TextEncodingDict>'] \
+            = ext_arguments_map.get('ColumnList<TextEncodingDict>')
+        # ext_arguments_map['OmnisciOutputColumnListType<%s>' % size] \
+        #     = ext_arguments_map.get('ColumnList<%s>' % size)
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
@@ -651,6 +776,34 @@ class RemoteOmnisci(RemoteJIT):
         if messages:
             warnings.warn('\n  '.join([''] + messages))
 
+        type_sizeof = device_params.get('type_sizeof')
+        type_sizeof_dict = dict()
+        if type_sizeof is not None:
+            for type_size in type_sizeof.split(';'):
+                if not type_size:
+                    continue
+                dtype, size = type_size.split(':')
+                type_sizeof_dict[dtype] = int(size)
+
+        null_values = device_params.get('null_values')
+        null_values_asint = dict()
+        null_values_astype = dict()
+        if null_values is not None:
+            for tname_value in null_values.split(';'):
+                if not tname_value:
+                    continue
+                tname, value = tname_value.split(':')
+                null_values_asint[tname] = int(value)
+                dtype = tname
+                if dtype.startswith('Array<'):
+                    dtype = dtype[6:-1]
+                bitwidth = int(''.join(filter(str.isdigit, dtype)))
+                if bitwidth > 1:
+                    null_value = numpy.dtype(f'uint{bitwidth}').type(int(value)).view(
+                        'int8' if dtype == 'boolean8' else dtype)
+                    null_values_astype[tname] = null_value
+        self._null_values = null_values_astype
+
         targets = {}
         for device, target in device_target_map.items():
             target_info = TargetInfo(name=device)
@@ -681,15 +834,10 @@ class RemoteOmnisci(RemoteJIT):
             if llvm_version is not None:
                 target_info.set('llvm_version', tuple(map(int, llvm_version.split('.'))))
 
-            null_values = device_params.get('null_values')
-            if null_values is not None:
-                d = dict()
-                for tname_value in null_values.split(';'):
-                    if not tname_value:
-                        continue
-                    tname, value = tname_value.split(':')
-                    d[tname] = int(value)
-                target_info.set('null_values', d)
+            if type_sizeof_dict is not None:
+                target_info.type_sizeof.update(type_sizeof_dict)
+
+            target_info.set('null_values', null_values_asint)
         return targets
 
     @property
@@ -713,12 +861,14 @@ class RemoteOmnisci(RemoteJIT):
         sizer_map = dict(
             ConstantParameter='kUserSpecifiedConstantParameter',
             RowMultiplier='kUserSpecifiedRowMultiplier',
-            Constant='kConstant')
+            Constant='kConstant',
+            SpecifiedParameter='kTableFunctionSpecifiedParameter')
 
         unspecified = object()
         inputArgTypes = []
         outputArgTypes = []
         sqlArgTypes = []
+        annotations = []
         sizer = None
         sizer_index = -1
 
@@ -739,6 +889,8 @@ class RemoteOmnisci(RemoteJIT):
                 sizer_index = consumed_index + 1
                 sizer = _sizer
 
+            annotations.append(annot)
+
             if isinstance(a, OmnisciCursorType):
                 sqlArgTypes.append(self.type_to_extarg('Cursor'))
                 for a_ in a.as_consumed_args:
@@ -752,7 +904,7 @@ class RemoteOmnisci(RemoteJIT):
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
-                    if isinstance(a, OmnisciColumnType):
+                    if isinstance(a, (OmnisciColumnType, OmnisciColumnListType)):
                         sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:
@@ -760,26 +912,23 @@ class RemoteOmnisci(RemoteJIT):
                         inputArgTypes.append(atype)
                 consumed_index += 1
         if sizer is None:
-            sizer = 'kConstant'
-        if sizer == 'kConstant':
-            sizer_index = get_literal_return(
-                caller.func, verbose=self.debug)
+            sizer_index = get_literal_return(caller.func, verbose=self.debug)
             if sizer_index is None:
-                raise TypeError(
-                    f'Table function `{caller.func.__name__}`'
-                    ' has no sizing parameter nor has'
-                    ' it `return <literal value>` statement')
-        if sizer_index < 0:
-            raise ValueError(
-                f'Table function `{caller.func.__name__}`'
-                ' sizing parameter must be non-negative'
-                f' integer (got {sizer_index})')
+                sizer = 'kTableFunctionSpecifiedParameter'
+            else:
+                sizer = 'kConstant'
+                if sizer_index < 0:
+                    raise ValueError(
+                        f'Table function `{caller.func.__name__}`'
+                        ' sizing parameter must be non-negative'
+                        f' integer (got {sizer_index})')
         sizer_type = (thrift.TOutputBufferSizeType
                       ._NAMES_TO_VALUES[sizer])
         return thrift.TUserDefinedTableFunction(
             name + sig.mangling(),
             sizer_type, sizer_index,
-            inputArgTypes, outputArgTypes, sqlArgTypes)
+            inputArgTypes, outputArgTypes, sqlArgTypes,
+            annotations)
 
     def _make_udtf_old(self, caller, orig_sig, sig):
         # old style UDTF for omniscidb <= 5.3, to be deprecated
@@ -832,6 +981,10 @@ class RemoteOmnisci(RemoteJIT):
             atypes, rtype)
 
     def register(self):
+        with typesystem.Type.alias(**self.typesystem_aliases):
+            return self._register()
+
+    def _register(self):
         if self.have_last_compile:
             return
 
@@ -875,7 +1028,7 @@ class RemoteOmnisci(RemoteJIT):
                             continue
                         fid += 1
                         orig_sig = sig
-                        sig = sig[0](*sig.argument_types)
+                        sig = sig[0](*sig.argument_types, **dict(name=name))
                         function_signatures[name].append(sig)
                         sig_is_udtf = is_udtf(sig)
                         is_old_udtf = 'table' in sig[0].annotation()
@@ -904,6 +1057,7 @@ class RemoteOmnisci(RemoteJIT):
                     functions_and_signatures,
                     target_info,
                     pipeline_class=OmnisciCompilerPipeline,
+                    user_defined_llvm_ir=self.user_defined_llvm_ir.get(device),
                     debug=self.debug)
 
                 assert llvm_module.triple == target_info.triple
@@ -954,3 +1108,18 @@ class RemoteOmnisci(RemoteJIT):
                         ' to remove this warning.')
                     func.__globals__[symbol] = omnisci_backend.__dict__.get(symbol)
         return func
+
+    _compiler = None
+
+    @property
+    def compiler(self):
+        """Return a C++/C to LLVM IR compiler instance.
+        """
+        if self._compiler is None:
+            compiler = ctools.Compiler.get(std='c++14')
+            if compiler is None:  # clang++ not available, try clang..
+                compiler = ctools.Compiler.get(std='c')
+            if self.debug:
+                print(f'compiler={compiler}')
+            self._compiler = compiler
+        return self._compiler

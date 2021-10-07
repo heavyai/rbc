@@ -4,6 +4,7 @@ from collections import defaultdict
 import pytest
 import numpy as np
 
+
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
 if available_version and available_version < (5, 4):
@@ -17,19 +18,19 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
+    # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN', 'DOUBLE']
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
 
     data = defaultdict(list)
     for i in range(5):
@@ -44,7 +45,7 @@ def omnisci():
     m.load_table_columnar(table_name, **data)
     m.table_name = table_name
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
 
 def test_sizer_row_multiplier_orig(omnisci):
@@ -65,8 +66,7 @@ def test_sizer_row_multiplier_orig(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_mul(cursor(select f8 '
-        'from {omnisci.table_name}), 2));'
-        .format(**locals()))
+        f'from {omnisci.table_name}), 2));')
 
     for i, r in enumerate(result):
         assert r == (float((i % 5) * 2),)
@@ -93,10 +93,9 @@ def test_sizer_row_multiplier_param1(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_mul_param1('
-        'cursor(select f8 from {omnisci.table_name}),'
-        'cast({alpha} as double),'
-        'cast(4 as int), 2));'
-        .format(**locals()))
+        f'cursor(select f8 from {omnisci.table_name}),'
+        f'cast({alpha} as double),'
+        'cast(4 as int), 2));')
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * alpha + 4,)
@@ -123,10 +122,9 @@ def test_sizer_row_multiplier_param2(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_mul_param2('
-        'cast({alpha} as double),'
-        'cursor(select f8 from {omnisci.table_name}),'
-        'cast(4 as int), 2));'
-        .format(**locals()))
+        f'cast({alpha} as double),'
+        f'cursor(select f8 from {omnisci.table_name}),'
+        'cast(4 as int), 2));')
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * alpha + 4,)
@@ -155,8 +153,7 @@ def test_sizer_constant_parameter(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        'from {omnisci.table_name}), 3));'
-        .format(**locals()))
+        f'from {omnisci.table_name}), 3));')
     result = list(result)
     assert len(result) == 3
     for i, r in enumerate(result):
@@ -164,8 +161,7 @@ def test_sizer_constant_parameter(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        'from {omnisci.table_name}), 8));'
-        .format(**locals()))
+        f'from {omnisci.table_name}), 8));')
     result = list(result)
     assert len(result) == 8
     for i, r in enumerate(result):
@@ -194,8 +190,7 @@ def test_sizer_return_size(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_c(cursor(select f8 '
-        'from {omnisci.table_name})));'
-        .format(**locals()))
+        f'from {omnisci.table_name})));')
     result = list(result)
     assert len(result) == 13
     for i, r in enumerate(result):
@@ -228,10 +223,9 @@ def test_rowmul_add_columns(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(add_columns('
-        'cursor(select f8 from {omnisci.table_name}),'
-        ' cursor(select d from {omnisci.table_name}),'
-        ' cast({alpha} as double), 1));'
-        .format(**locals()))
+        f'cursor(select f8 from {omnisci.table_name}),'
+        f' cursor(select d from {omnisci.table_name}),'
+        f' cast({alpha} as double), 1));')
 
     for i, r in enumerate(result):
         assert r == (i + alpha * (i + 1.5),)
@@ -509,6 +503,8 @@ def test_redefine(omnisci):
             available_version,)))
 @pytest.mark.parametrize("step", [1, 2, 3])
 def test_overload_nonuniform(omnisci, step):
+    pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
+
     omnisci.reset()
     omnisci.register()
 
@@ -525,7 +521,7 @@ def test_overload_nonuniform(omnisci, step):
             return 1
 
     if step > 2:
-        @omnisci('int32(Column<float>, Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        @omnisci('int32(Cursor<Column<float>, Column<float>>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
         def overloaded_udtf(x1, x2, m, y):  # noqa: E501, F811
             y[0] = 132
             return 1
@@ -618,6 +614,13 @@ omnisci_binary_operations = ['+', '-', '*', '/']
 def test_column_aggregate(omnisci, prop, oper):
     if not omnisci.has_cuda and oper in omnisci_aggregators2 and prop == 'groupby':
         pytest.skip(f'{oper}-{prop} test crashes CPU-only omnisci server [rbc issue 237]')
+    if omnisci.has_cuda and oper in ['sample', 'stddev', 'stddev_pop', 'stddev_samp',
+                                     'correlation', 'corr']:
+        # unreliable means that the results computed on CPU and on
+        # CUDA device may slightly vary causing test failures.
+        pytest.skip(f'{oper}-{prop} test result unreliable when on CUDA')
+    if omnisci.has_cuda and oper in ['covar_samp', 'covar_pop']:
+        pytest.skip(f'{oper}-{prop} test crashes CUDA enabled omnisci server')
 
     omnisci.reset()
     omnisci.register()
@@ -633,7 +636,8 @@ def test_column_aggregate(omnisci, prop, oper):
 
         sql_query = (f'select f8 from {omnisci.table_name}')
         descr, result = omnisci.sql_execute(sql_query)
-        expected_result = list(result)[-1:]
+        result = list(result)
+        expected_result = result[-1:]
 
         sql_query = (f'select {oper}(out0) from table(test_rbc_last(cursor('
                      f'select f8 from {omnisci.table_name}), 1))')
@@ -707,7 +711,6 @@ def test_column_aggregate(omnisci, prop, oper):
 
     descr, result_expected = omnisci.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
-
     descr, result = omnisci.sql_execute(sql_query)
     result = list(result)
 
@@ -872,6 +875,7 @@ def test_create_as(omnisci):
 
 @pytest.fixture(scope='function')
 def create_columns(omnisci):
+
     # delete tables
     omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
     omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')

@@ -36,7 +36,14 @@ class Library:
         """
         Return True if library contains a function with given name.
         """
-        return fname in self._function_names
+        if fname in self._function_names:
+            return True
+
+        for func in self._function_names:
+            if func.endswith('.*') and fname.startswith(func[:-2]):
+                return True
+
+        return False
 
 
 class OmnisciDB(Library):
@@ -44,7 +51,7 @@ class OmnisciDB(Library):
     name = 'omniscidb'
 
     _function_names = list('''
-    allocate_varlen_buffer
+    allocate_varlen_buffer set_output_row_size
     '''.strip().split())
 
 
@@ -120,7 +127,8 @@ class Mlib(Library):
     totalorderf totalorderl totalordermag totalorderf totalorderl fmin
     fminf fminl fmax fmaxf fmaxl fminmag fminmagf fminmagl fmaxmag
     fmaxmagf fmaxmagl fdim fdimf fdiml fma fmaf fmal fadd faddf faddl
-    fsub fsubf fsubl fmul fmulf fmull fdiv fdivf fdivl '''.strip().split())
+    fsub fsubf fsubl fmul fmulf fmull fdiv fdivf fdivl llrint llrintf
+    llrintl'''.strip().split())
 
 
 def drop_suffix(f):
@@ -195,6 +203,15 @@ class LLVMIntrinsics(Library):
     experimental.constrained.floor experimental.constrained.round
     experimental.constrained.roundeven experimental.constrained.lround
     experimental.constrained.llround experimental.constrained.trunc
+    experimental.gc.statepoint experimental.gc.result experimental.gc.relocate
+    experimental.gc.get.pointer.base experimental.gc.get.pointer.offset
+    experimental.vector.reduce.add.* experimental.vector.reduce.fadd.*
+    experimental.vector.reduce.mul.* experimental.vector.reduce.fmul.*
+    experimental.vector.reduce.and.* experimental.vector.reduce.or.*
+    experimental.vector.reduce.xor.* experimental.vector.reduce.smax.*
+    experimental.vector.reduce.smin.* experimental.vector.reduce.umax.*
+    experimental.vector.reduce.umin.* experimental.vector.reduce.fmax.*
+    experimental.vector.reduce.fmin.*
     flt.rounds var.annotation ptr.annotation annotation
     codeview.annotation trap debugtrap stackprotector stackguard
     objectsize expect expect.with.probability assume ssa_copy
@@ -210,7 +227,8 @@ class LLVMIntrinsics(Library):
     objc.retainAutoreleaseReturnValue
     objc.retainAutoreleasedReturnValue objc.retainBlock
     objc.storeStrong objc.storeWeak preserve.array.access.index
-    preserve.union.access.index preserve.struct.access.index '''.strip().split())
+    preserve.union.access.index preserve.struct.access.index
+    masked.store.* '''.strip().split())
 
 
 class NVVMIntrinsics(Library):

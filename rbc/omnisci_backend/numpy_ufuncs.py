@@ -1,11 +1,7 @@
 import numpy as np
 from .omnisci_array import Array, ArrayPointer
-from rbc.utils import get_version
 from .. import typesystem
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types
-else:
-    from numba import extending, types
+from numba.core import extending, types
 
 
 def determine_dtype(a, dtype):

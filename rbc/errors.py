@@ -2,32 +2,26 @@
 rbc-specific errors and warnings.
 """
 
-import numba
-from .utils import get_version
-
-if get_version('numba') >= (0, 49):
-    numba_errors = numba.core.errors
-else:
-    numba_errors = numba.errors
-
 
 class OmnisciServerError(Exception):
     """
-    Launch when OmnisciDB server raises a runtime error that RBC knows
+    Raised when OmnisciDB server raises a runtime error that RBC knows
     how to interpret.
     """
+    pass
 
 
-class UnsupportedError(numba_errors.UnsupportedError):
+class UnsupportedError(Exception):
     """
-    Launch when an attempt is to use a feature that is not supported
+    Raised when an attempt to use a feature that is not supported
     for a given target.
     """
+    pass
 
 
 class ForbiddenNameError(Exception):
     """
-    Launch when the user defines a function with name
+    Raised when the user defines a function with name
     in a blacklist. For more info, see:
     https://github.com/xnd-project/rbc/issues/32
     """

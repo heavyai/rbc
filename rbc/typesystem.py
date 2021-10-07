@@ -6,28 +6,47 @@
 
 import re
 import ctypes
+import _ctypes
 import inspect
-from .utils import get_version
-from .targetinfo import TargetInfo
-try:
-    import numba as nb
-    if get_version('numba') >= (0, 49):
-        from numba.core import typing, datamodel, extending
-        from numba.core.imputils import lower_cast
-    else:
-        from numba import typing, datamodel, extending
-        from numba.targets.imputils import lower_cast
-    nb_NA_message = None
-except ImportError as msg:
-    nb = None
-    nb_NA_message = str(msg)
+from llvmlite import ir
+import warnings
 
-try:
-    import numpy as np
-    np_NA_message = None
-except ImportError as msg:
-    np = None
-    np_NA_message = str(msg)
+from .targetinfo import TargetInfo
+from .utils import check_returns_none
+import numba as nb
+import numpy as np
+from numba.core import typing, datamodel, extending, typeconv
+from numba.core.imputils import lower_cast
+
+
+class TypeSystemManager:
+    """Manages context specific aliases.
+
+    Usage:
+
+    .. code-block:: python
+
+        with Type.alias(A='Array', bool='bool8', ...):
+            # Type.fromstring('A a') will be replaced with Type.fromstring('Array a')
+
+    """
+
+    def alias(self, aliases):
+        self.aliases = aliases
+        return self
+
+    def __enter__(self):
+        self.old_aliases = Type.aliases.copy()
+        new_aliases = self.old_aliases.copy()
+        new_aliases.update(self.aliases)
+        Type.aliases.clear()
+        Type.aliases.update(new_aliases)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        Type.aliases.clear()
+        Type.aliases.update(self.old_aliases)
+        if exc_type is None:
+            return True
 
 
 class TypeParseError(Exception):
@@ -81,6 +100,7 @@ def _commasplit(s):
     raise TypeParseError('failed to comma-split `%s`' % s)
 
 
+_booln_match = re.compile(r'\A(boolean|bool|b)(1|8)\Z').match
 _charn_match = re.compile(r'\A(char)(32|16|8)(_t|)\Z').match
 _intn_match = re.compile(r'\A(signed\s*int|int|i)(\d+)(_t|)\Z').match
 _uintn_match = re.compile(r'\A(unsigned\s*int|uint|u)(\d+)(_t|)\Z').match
@@ -88,7 +108,7 @@ _floatn_match = re.compile(r'\A(float|f)(16|32|64|128|256)(_t|)\Z').match
 _complexn_match = re.compile(
     r'\A(complex|c)(16|32|64|128|256|512)(_t|)\Z').match
 
-_bool_match = re.compile(r'\A(boolean\d?|bool|_Bool|b)\Z').match
+_bool_match = re.compile(r'\A(boolean|bool|_Bool|b)\Z').match
 _string_match = re.compile(r'\A(string|str)\Z').match
 
 _char_match = re.compile(r'\A(char)\Z').match
@@ -200,38 +220,37 @@ for _k, _m, _lst in [
                 _m[_b] = _t
             _ctypes_imap[_t] = _k + str(_b)
 
-if nb is not None:
-    _numba_imap = {nb.void: 'void', nb.boolean: 'bool'}
-    _numba_char_map = {}
-    _numba_int_map = {}
-    _numba_uint_map = {}
-    _numba_float_map = {}
-    _numba_complex_map = {}
-    for _k, _m, _lst in [
-            ('int', _numba_int_map,
-             ['int8', 'int16', 'int32', 'int64', 'intc', 'int_', 'intp',
-              'long_', 'longlong', 'short', 'char']),
-            ('uint', _numba_uint_map,
-             ['uint8', 'uint16', 'uint32', 'uint64', 'uintc', 'uint',
-              'uintp', 'ulong', 'ulonglong', 'ushort']),
-            ('float', _numba_float_map,
-             ['float32', 'float64', 'float_', 'double']),
-            ('complex', _numba_complex_map, ['complex64', 'complex128']),
-    ]:
-        for _n in _lst:
-            _t = getattr(nb, _n, None)
-            if _t is not None:
-                _b = _t.bitwidth
-                if _b not in _m:
-                    _m[_b] = _t
-                _numba_imap[_t] = _k + str(_b)
+_numba_imap = {nb.void: 'void', nb.boolean: 'bool'}
+_numba_char_map = {}
+_numba_bool_map = {}
+_numba_int_map = {}
+_numba_uint_map = {}
+_numba_float_map = {}
+_numba_complex_map = {}
+for _k, _m, _lst in [
+        ('int', _numba_int_map,
+            ['int8', 'int16', 'int32', 'int64', 'intc', 'int_', 'intp',
+             'long_', 'longlong', 'short', 'char']),
+        ('uint', _numba_uint_map,
+            ['uint8', 'uint16', 'uint32', 'uint64', 'uintc', 'uint',
+             'uintp', 'ulong', 'ulonglong', 'ushort']),
+        ('float', _numba_float_map,
+            ['float32', 'float64', 'float_', 'double']),
+        ('complex', _numba_complex_map, ['complex64', 'complex128']),
+]:
+    for _n in _lst:
+        _t = getattr(nb, _n, None)
+        if _t is not None:
+            _b = _t.bitwidth
+            if _b not in _m:
+                _m[_b] = _t
+            _numba_imap[_t] = _k + str(_b)
 
 # numpy mapping
 _numpy_imap = {}
-if np is not None:
-    for v in set(np.typeDict.values()):
-        name = np.dtype(v).name
-        _numpy_imap[v] = name
+for v in set(np.typeDict.values()):
+    name = np.dtype(v).name
+    _numpy_imap[v] = name
 
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
@@ -239,7 +258,7 @@ _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
-_mangling_suffices = '_V'
+_mangling_suffices = '_VW'
 _mangling_prefixes = 'PKaAMrR'
 _mangling_map = dict(
     void='v', bool='b',
@@ -266,6 +285,9 @@ class MetaType(type):
     custom_types = dict()
     aliases = dict()
 
+    # ctypes generated types need to be cached to be usable
+    ctypes_types = dict()
+
     def __new__(cls, name, bases, dct):
         cls = super().__new__(cls, name, bases, dct)
         if name != 'Type':
@@ -274,15 +296,16 @@ class MetaType(type):
 
     def alias(cls, **aliases):
         """
-        Define type aliases. For instance, defining
+        Define type aliases context. For instance,
 
-          Type.alias(myint='int64')
+          with Type.alias(myint='int64'):
+              ...
 
-        will ensure that
+        will ensure under the with block we have
 
           Type.fromstring('myint') == Type.fromstring('int64')
         """
-        cls.aliases.update(aliases)
+        return TypeSystemManager().alias(aliases)
 
 
 class Type(tuple, metaclass=MetaType):
@@ -290,16 +313,17 @@ class Type(tuple, metaclass=MetaType):
 
     There are six kinds of a types:
 
-      ==========    ==============================
-      Type          Description
-      ==========    ==============================
-      void          a "no type"
-      atomic        e.g. ``int32``
-      pointer       e.g. ``int32*``
-      struct        e.g. ``{int32, int32}``
-      function      e.g. ``int32(int32, int32)``
-      custom        e.g. ``MyClass<int32, int32>``
-      ==========    ==============================
+      ==========    ==============================    ==============================
+      Type          Description                       Internal structure
+      ==========    ==============================    ==============================
+      void          a "no type"                       Type()
+      atomic        e.g. ``int32``                    Type(<str>,)
+      pointer       e.g. ``int32*``                   Type(<Type instance>, '*')
+      struct        e.g. ``{int32, int32}``           Type(<Type instances>, <Type instances>, ...)
+      function      e.g. ``int32(int32, int32)``      Type(<Type instance>, ..., name='')
+      custom        e.g. ``MyClass<int32, int32>``    Type((<object>,))
+      undefined     e.g. ``fromcallable(foo)``        Type(None)
+      ==========    ==============================    ==============================
 
     Atomic types are types with names (Type contains a single
     string). All other types (except "no type") are certain
@@ -317,6 +341,8 @@ class Type(tuple, metaclass=MetaType):
 
       no type:                    void, none
       bool:                       bool, boolean, _Bool, b
+      1-bit bool:                 bool1, boolean1, b1
+      8-bit bool:                 bool8, boolean8, b8
       8-bit char:                 char8, char
       16-bit char:                char16
       32-bit char:                char32, wchar
@@ -377,11 +403,13 @@ class Type(tuple, metaclass=MetaType):
     def __new__(cls, *args, **params):
         args = cls.preprocess_args(args)
         obj = tuple.__new__(cls, args)
+        obj._params = params
         if not obj._is_ok:
+            if obj._is_function:
+                raise ValueError('cannot create named function type from `%s`' % (args,))
             raise ValueError(
                 'attempt to create an invalid Type object from `%s`' % (args,))
-        obj._params = params
-        return obj
+        return obj.postprocess_type()
 
     @classmethod
     def preprocess_args(cls, args):
@@ -391,6 +419,11 @@ class Type(tuple, metaclass=MetaType):
         for processing its parameters.
         """
         return args
+
+    def postprocess_type(self):
+        """Postprocess Type construction. Must return Type instance.
+        """
+        return self
 
     def annotation(self, **annotations):
         """Set and get annotations.
@@ -418,6 +451,8 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(other, Type):
             self.annotation().update(other.annotation())
             for a, b in zip(self, other):
+                if b is None:
+                    continue
                 if isinstance(a, str):
                     pass
                 elif isinstance(a, Type):
@@ -431,6 +466,23 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     raise NotImplementedError('inherit_annotations: %s'
                                               % ((a, type(a)),))
+
+    def params(self, other=None, **params):
+        """In-place update of parameters from other or/and dictionary and return self.
+        """
+        if other is not None:
+            return self.params(None, **other._params).params(None, **params)
+        for k, v in params.items():
+            if k == 'annotation':
+                self.annotation().update(v)
+            else:
+                orig_v = self._params.get(k)
+                if orig_v is not None and orig_v != v:
+                    warnings.warn(
+                        f'{type(self).__name__}.params: overwriting '
+                        f'existing parameter {k} with {v} (original value is {orig_v})')
+                self._params[k] = v
+        return self
 
     def set_mangling(self, mangling):
         """Set mangling string of the type.
@@ -449,6 +501,10 @@ class Type(tuple, metaclass=MetaType):
     @property
     def is_atomic(self):
         return len(self) == 1 and isinstance(self[0], str)
+
+    @property
+    def is_undefined(self):
+        return len(self) == 1 and self[0] is None
 
     @property
     def is_int(self):
@@ -472,11 +528,16 @@ class Type(tuple, metaclass=MetaType):
 
     @property
     def is_bool(self):
-        return self.is_atomic and self[0] == 'bool'
+        return self.is_atomic and self[0].startswith('bool')
 
     @property
     def is_char(self):
         return self.is_atomic and self[0].startswith('char')
+
+    @property
+    def is_aggregate(self):
+        # ref: https://llvm.org/docs/LangRef.html#aggregate-types
+        return self.is_struct
 
     @property
     def is_pointer(self):
@@ -488,10 +549,14 @@ class Type(tuple, metaclass=MetaType):
         return len(self) > 0 and all(isinstance(s, Type) for s in self)
 
     @property
-    def is_function(self):
+    def _is_function(self):
         return len(self) == 2 and isinstance(self[0], Type) and \
             isinstance(self[1], tuple) and not isinstance(self[1], Type) \
             and all([isinstance(p, Type) for p in self[1]])
+
+    @property
+    def is_function(self):
+        return self._is_function and 'name' in self._params
 
     @property
     def is_custom(self):
@@ -531,6 +596,8 @@ class Type(tuple, metaclass=MetaType):
             for a in self[0]:
                 if isinstance(a, Type) and not a.is_complete:
                     return False
+        elif self.is_undefined:
+            return False
         else:
             raise NotImplementedError(repr(self))
         return True
@@ -561,6 +628,8 @@ class Type(tuple, metaclass=MetaType):
             for a in self[0]:
                 if isinstance(a, Type) and not a.is_concrete:
                     return False
+        elif self.is_undefined:
+            return False
         else:
             raise NotImplementedError(repr(self))
         return True
@@ -570,12 +639,15 @@ class Type(tuple, metaclass=MetaType):
         return self.is_void or self.is_atomic or self.is_pointer \
             or self.is_struct \
             or (self.is_function and len(self[1]) > 0) \
-            or self.is_custom
+            or self.is_custom or self.is_undefined
 
     def __repr__(self):
-        if self._params:
-            return '%s%s|%s' % (type(self).__name__,
-                                tuple.__repr__(self), self._params)
+        d = {}
+        for k, v in self._params.items():
+            if v:
+                d[k] = v
+        if d:
+            return '%s%s|%s' % (type(self).__name__, tuple.__repr__(self), d)
         return '%s%s' % (type(self).__name__, tuple.__repr__(self))
 
     @property
@@ -619,6 +691,28 @@ class Type(tuple, metaclass=MetaType):
             atypes.extend(t.as_consumed_args)
         return atypes
 
+    @property
+    def name(self):
+        """Return declarator name.
+
+        Function types always define a name: when not specified then
+        the name value will be an empty string.
+
+        For other types the name is optional: when not specified then
+        the name value will be None.
+        """
+        return self._params.get('name')
+
+    def get_field_position(self, name):
+        """Return the index of a structure member with name.
+
+        Returns None when no match with member names is found.
+        """
+        assert self.is_struct
+        for i, m in enumerate(self):
+            if m.name == name:
+                return i
+
     def __str__(self):
         if self._is_ok:
             return self.tostring()
@@ -640,6 +734,18 @@ class Type(tuple, metaclass=MetaType):
         if self.is_void:
             return 'void'
         name = self._params.get('name')
+        if self.is_function:
+            if use_typename:
+                typename = self._params.get('typename')
+                if typename is not None:
+                    return typename
+            if name:
+                name = ' ' + name
+            return (self[0].tostring(use_typename=use_typename)
+                    + name + '(' + ', '.join(
+                        a.tostring(use_typename=use_typename)
+                        for a in self[1]) + ')')
+
         if name is not None:
             suffix = ' ' + name
         else:
@@ -660,11 +766,7 @@ class Type(tuple, metaclass=MetaType):
                      for t in self]) + '>' + suffix
             return '{' + ', '.join([t.tostring(use_typename=use_typename)
                                     for t in self]) + '}' + suffix
-        if self.is_function:
-            return (self[0].tostring(use_typename=use_typename)
-                    + '(' + ', '.join(
-                        a.tostring(use_typename=use_typename)
-                        for a in self[1]) + ')' + suffix)
+
         if self.is_custom:
             params = self[0]
             if type(self) is Type:
@@ -738,11 +840,16 @@ class Type(tuple, metaclass=MetaType):
             return _numba_complex_map.get(int(self[0][7:]))
         if self.is_bool:
             if bool_is_int8 is None:
-                return nb.boolean
+                return _numba_bool_map.get(self.bits, nb.boolean)
             return boolean8 if bool_is_int8 else boolean1
         if self.is_pointer:
-            return nb.types.CPointer(
-                self[0].tonumba(bool_is_int8=bool_is_int8))
+            if self[0].is_void:
+                return nb.types.voidptr
+            if self[0].is_struct:
+                ptr_type = self._params.get('NumbaType', structure_type.StructureNumbaPointerType)
+            else:
+                ptr_type = self._params.get('NumbaType', nb.types.CPointer)
+            return ptr_type(self[0].tonumba(bool_is_int8=bool_is_int8))
         if self.is_struct:
             struct_name = self._params.get('name')
             if struct_name is None:
@@ -752,10 +859,7 @@ class Type(tuple, metaclass=MetaType):
                 name = member._params.get('name', '_%s' % (i+1))
                 members.append((name,
                                 member.tonumba(bool_is_int8=bool_is_int8)))
-            base = self._params.get('numba.Type')
-            if base is not None:
-                return make_numba_struct(struct_name, members, base=base)
-            return make_numba_struct(struct_name, members)
+            return structure_type.make_numba_struct(struct_name, members, origin=self)
         if self.is_function:
             rtype = self[0].tonumba(bool_is_int8=bool_is_int8)
             atypes = [t.tonumba(bool_is_int8=bool_is_int8)
@@ -769,7 +873,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_atomic:
             return nb.types.Type(self[0])
         if self.is_custom:
-            raise NotImplementedError(f'{type(self).__name__}.tonumba(bool_is_int8=None)')
+            return self.__typesystem_type__.tonumba(bool_is_int8=bool_is_int8)
         raise NotImplementedError(repr(self))
 
     def toctypes(self):
@@ -798,24 +902,66 @@ class Type(tuple, metaclass=MetaType):
                                    int(self[0][0][4:])).__name__ + '_p')
             return ctypes.POINTER(self[0].toctypes())
         if self.is_struct:
-            fields = [('f%s' % i, t.toctypes()) for i, t in enumerate(self)]
-            return type('struct%s' % (id(self)),
-                        (ctypes.Structure, ),
-                        dict(_fields_=fields))
+            ctypes_type_name = 'rbc_typesystem_struct_%s' % (self.mangle())
+            typ = type(self).ctypes_types.get(ctypes_type_name)
+            if typ is None:
+                fields = [((t.name if t.name else 'f%s' % i), t.toctypes())
+                          for i, t in enumerate(self)]
+                typ = type(ctypes_type_name,
+                           (ctypes.Structure, ),
+                           dict(_fields_=fields))
+                type(self).ctypes_types[ctypes_type_name] = typ
+            return typ
         if self.is_function:
-            rtype = self[0].toctypes()
-            atypes = [t.toctypes() for t in self[1] if not t.is_void]
-            return ctypes.CFUNCTYPE(rtype, *atypes)
+            ctypes_type_name = 'rbc_typesystem_function_%s' % (self.mangle())
+            typ = type(self).ctypes_types.get(ctypes_type_name)
+            if typ is None:
+                rtype = self[0].toctypes()
+                atypes = []
+                for t in self[1]:
+                    if t.is_struct:
+                        # LLVM struct argument (as an aggregate type)
+                        # is mapped to struct member arguments:
+                        atypes.extend([m.toctypes() for m in t])
+                    elif t.is_void:
+                        pass
+                    else:
+                        atypes.append(t.toctypes())
+                typ = ctypes.CFUNCTYPE(rtype, *atypes)
+                type(self).ctypes_types[ctypes_type_name] = typ
+            return typ
         if self.is_string:
             return ctypes.c_wchar_p
         if self.is_custom:
-            raise NotImplementedError(f'{type(self).__name__}.toctypes()')
+            raise NotImplementedError(f'{type(self).__name__}.toctypes()|self={self}')
         raise NotImplementedError(repr((self, self.is_string)))
+
+    def tollvmir(self, bool_is_int8=None):
+        if self.is_int:
+            return ir.IntType(self.bits)
+        if self.is_float:
+            return {32: ir.FloatType, 64: ir.DoubleType}[self.bits]()
+        if self.is_bool:
+            if bool_is_int8:
+                return ir.IntType(8)
+            return ir.IntType(self.bits)
+        if self.is_pointer:
+            if self[0].is_void:
+                # mapping void* to int8*
+                return ir.IntType(8).as_pointer()
+            return self[0].tollvmir(bool_is_int8=bool_is_int8).as_pointer()
+        if self.is_void:
+            # Used only as the return type of a function without a return value.
+            # TODO: ensure that void is used only as function return type or a pointer dtype.
+            return ir.VoidType()
+        if self.is_struct:
+            return ir.LiteralStructType([m.tollvmir(bool_is_int8=bool_is_int8) for m in self])
+        raise NotImplementedError(f'{type(self).__name__}.tollvmir()|self={self}')
 
     @classmethod
     def _fromstring(cls, s):
         s = s.strip()
-        if s.endswith('*'):       # pointer
+        if len(s) > 1 and s.endswith('*'):       # pointer
             return cls(cls._fromstring(s[:-1]), '*')
         if s.endswith('}'):       # struct
             if not s.startswith('{'):
@@ -827,23 +973,34 @@ class Type(tuple, metaclass=MetaType):
             i = _findparen(s)
             if i < 0:
                 raise TypeParseError('mismatching parenthesis in `%s`' % (s))
-            rtype = cls._fromstring(s[:i])
             atypes = tuple(map(cls._fromstring,
                                _commasplit(s[i+1:-1].strip())))
-            return cls(rtype, atypes)
-        if s.endswith('>') and not s.startswith('<'):  # custom
-            i = s.index('<')
-            name = s[:i]
-            params = tuple(map(cls._fromstring,
-                               _commasplit(s[i+1:-1].strip())))
-            name = cls.aliases.get(name, name)
-            if name in cls.custom_types:
-                cls = cls.custom_types[name]
-                return cls(params)
+            r = s[:i].strip()
+            if r.endswith(')'):
+                j = _findparen(r)
+                if j < 0:
+                    raise TypeParseError('mismatching parenthesis in `%s`' % (r))
+                rtype = cls._fromstring(r[:j])
+                d = r[j+1:-1].strip()
+                if d.startswith('*'):
+                    while d.startswith('*'):
+                        d = d[1:].lstrip()
+                    if d.endswith(')'):
+                        k = _findparen(d)
+                        name = d[:k]
+                        rtype = cls(rtype, atypes, name='')
+                        atypes = tuple(map(cls._fromstring,
+                                           _commasplit(d[k+1:-1].strip())))
+                        return cls(rtype, atypes, name=name)
+                    name = d
+                    return cls(rtype, atypes, name=name)
+            rtype = cls._fromstring(r)
+            if rtype.is_function:
+                name = rtype._params['name']
+                rtype._params['name'] = ''
             else:
-                return cls((name,) + params)
-        if s == 'void' or s == 'none' or not s:  # void
-            return cls()
+                name = rtype._params.pop('name', '')
+            return cls(rtype, atypes, name=name)
         if '|' in s:
             s, a = s.rsplit('|', 1)
             t = cls._fromstring(s.rstrip())
@@ -856,6 +1013,20 @@ class Type(tuple, metaclass=MetaType):
             if n or v:
                 t.annotation(**{n: v})
             return t
+        if s.endswith('>') and not s.startswith('<'):  # custom
+            i = s.index('<')
+            name = s[:i]
+            params = _commasplit(s[i+1:-1].strip())
+            params = tuple(map(cls._fromstring, params)) if params else ()
+            name = cls.aliases.get(name, name)
+            if name in cls.custom_types:
+                cls = cls.custom_types[name]
+                r = cls(params)
+            else:
+                r = cls((name,) + params)
+            return r
+        if s == 'void' or s == 'none' or not s:  # void
+            return cls()
         m = _type_name_match(s)
         if m is not None:
             name = m.group(2)
@@ -865,6 +1036,8 @@ class Type(tuple, metaclass=MetaType):
                 t._params['name'] = name
                 return t
         # atomic
+        if s in cls.custom_types:
+            return cls.custom_types[s](())
         return cls(s)
 
     @classmethod
@@ -884,9 +1057,6 @@ class Type(tuple, metaclass=MetaType):
     def fromnumpy(cls, t):
         """Return new Type instance from numpy type object.
         """
-        if np is None:
-            raise RuntimeError('importing numpy failed: %s' % (np_NA_message))
-
         n = _numpy_imap.get(t)
         if n is not None:
             return cls.fromstring(n)
@@ -897,15 +1067,15 @@ class Type(tuple, metaclass=MetaType):
     def fromnumba(cls, t):
         """Return new Type instance from numba type object.
         """
-        if nb is None:
-            raise RuntimeError('importing numba failed: %s' % (nb_NA_message))
+        if hasattr(t, "__typesystem_type__") or hasattr(type(t), "__typesystem_type__"):
+            return t.__typesystem_type__
         n = _numba_imap.get(t)
         if n is not None:
             return cls.fromstring(n)
         if isinstance(t, typing.templates.Signature):
             atypes = (cls.fromnumba(a) for a in t.args)
             rtype = cls.fromnumba(t.return_type)
-            return cls(rtype, tuple(atypes) or (Type(),))
+            return cls(rtype, tuple(atypes) or (Type(),), name='')
         if isinstance(t, nb.types.misc.CPointer):
             return cls(cls.fromnumba(t.dtype), '*')
         if isinstance(t, nb.types.NumberClass):
@@ -913,7 +1083,11 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(t, nb.types.Boolean):
             # boolean1 and boolean8 map both to bool
             return cls.fromstring('bool')
-        raise NotImplementedError(repr(t))
+        if isinstance(t, nb.types.misc.RawPointer):
+            if t == nb.types.voidptr:
+                return cls(cls(), '*')
+
+        raise NotImplementedError(repr((t, type(t).__bases__)))
 
     @classmethod
     def fromctypes(cls, t):
@@ -929,7 +1103,7 @@ class Type(tuple, metaclass=MetaType):
             return cls(cls.fromctypes(t._type_), '*')
         if issubclass(t, ctypes._CFuncPtr):
             atypes = tuple(cls.fromctypes(a) for a in t._argtypes_)
-            return cls(cls.fromctypes(t._restype_), atypes or (Type(),))
+            return cls(cls.fromctypes(t._restype_), atypes or (Type(),), name='')
         raise NotImplementedError(repr(t))
 
     @classmethod
@@ -939,6 +1113,10 @@ class Type(tuple, metaclass=MetaType):
         The callable object must use annotations for specifying the
         types of arguments and return value.
         """
+        if not hasattr(func, '__name__'):
+            raise ValueError(
+                'constructing Type instance from a callable without `__name__`'
+                f' is not supported, got {func}|{type(func).__bases__}')
         if func.__name__ == '<lambda>':
             # lambda function cannot carry annotations, hence:
             raise ValueError('constructing Type instance from '
@@ -948,8 +1126,10 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(annot, dict):
             rtype = cls() | annot  # void
         elif annot == sig.empty:
-            rtype = cls()  # void
-            # TODO: check that function does not return other than None
+            if check_returns_none(func):
+                rtype = cls()  # void
+            else:
+                rtype = cls(None)   # cannot deterimine return value type
         else:
             rtype = cls.fromobject(annot)
         atypes = []
@@ -970,7 +1150,8 @@ class Type(tuple, metaclass=MetaType):
                 atypes.append(cls('<type of %s>' % n))
             else:
                 atypes.append(cls.fromobject(annot))
-        return cls(rtype, tuple(atypes) or (Type(),))
+
+        return cls(rtype, tuple(atypes) or (Type(),), name=func.__name__)
 
     @classmethod
     def fromvalue(cls, obj):
@@ -980,8 +1161,15 @@ class Type(tuple, metaclass=MetaType):
             n = mapping.get(type(obj))
             if n is not None:
                 return cls.fromstring(n)
-        raise NotImplementedError('%s.fromvalue(%r)'
-                                  % (cls.__name__, obj))
+        if isinstance(obj, _ctypes._Pointer):
+            return cls.fromctypes(obj._type_).pointer()
+        if isinstance(obj, ctypes.c_void_p):
+            return cls(cls(), '*')
+        if hasattr(obj, '__typesystem_type__'):
+            return cls.fromobject(obj.__typesystem_type__)
+
+        raise NotImplementedError('%s.fromvalue(%r|%s)'
+                                  % (cls.__name__, obj, type(obj)))
 
     @classmethod
     def fromobject(cls, obj):
@@ -998,6 +1186,8 @@ class Type(tuple, metaclass=MetaType):
         n = _python_imap.get(obj)
         if n is not None:
             return cls.fromstring(n)
+        if hasattr(obj, "__typesystem_type__") or hasattr(type(obj), "__typesystem_type__"):
+            return obj.__typesystem_type__
         if hasattr(obj, '__module__'):
             if obj.__module__.startswith('numba'):
                 return cls.fromnumba(obj)
@@ -1011,7 +1201,7 @@ class Type(tuple, metaclass=MetaType):
             return cls.fromstring(obj.__name__)
         if callable(obj):
             return cls.fromcallable(obj)
-        raise NotImplementedError(repr(type(obj)))
+        raise NotImplementedError(repr((type(obj))))
 
     def _normalize(self):
         """Return new Type instance with atomic types normalized.
@@ -1023,14 +1213,12 @@ class Type(tuple, metaclass=MetaType):
             s = self[0]
             a = type(self).aliases.get(s)
             if a is not None:
-                return Type.fromobject(a)._normalize()
-            m = _bool_match(s)
-            if m is not None:
-                return Type('bool', **params)
+                return Type.fromobject(a).params(self)._normalize()
             m = _string_match(s)
             if m is not None:
                 return Type('string', **params)
             for match, ntype in [
+                    (_booln_match, 'bool'),
                     (_charn_match, 'char'),
                     (_intn_match, 'int'),
                     (_uintn_match, 'uint'),
@@ -1043,13 +1231,21 @@ class Type(tuple, metaclass=MetaType):
                     return Type(ntype + bits, **params)
             if s.endswith('[]'):
                 return Type.fromstring(f'Array<{s[:-2]}>')._normalize()
+            m = _bool_match(s)
+            if m is not None:
+                return Type('bool', **params)
+            if _char_match(s):
+                return Type('char8', **params)    # IEC 9899 defines sizeof(char)==1
+            if _float_match(s):
+                return Type('float32', **params)  # IEC 60559 defines sizeof(float)==4
+            if _double_match(s):
+                return Type('float64', **params)  # IEC 60559 defines sizeof(double)==8
             target_info = TargetInfo()
             for match, otype, ntype in [
-                    (_char_match, 'char', 'char'),
                     (_wchar_match, 'wchar', 'char'),
 
-                    (_uchar_match, 'uchar', 'uint'),
                     (_schar_match, 'char', 'int'),
+                    (_uchar_match, 'uchar', 'uint'),
 
                     (_byte_match, 'byte', 'int'),
                     (_ubyte_match, 'ubyte', 'uint'),
@@ -1069,14 +1265,15 @@ class Type(tuple, metaclass=MetaType):
                     (_size_t_match, 'size_t', 'uint'),
                     (_ssize_t_match, 'ssize_t', 'int'),
 
-                    (_float_match, 'float', 'float'),
-                    (_double_match, 'double', 'float'),
                     (_longdouble_match, 'longdouble', 'float'),
                     (_complex_match, 'complex', 'complex'),
             ]:
                 if match(s) is not None:
-                    bits = str(target_info.sizeof(otype) * 8)
-                    return Type(ntype + bits, **params)
+                    sz = target_info.sizeof(otype)
+                    if sz is not None:
+                        bits = str(sz * 8)
+                        return Type(ntype + bits, **params)
+                    break
             if target_info.strict:
                 raise ValueError('%s is not concrete' % (self))
             return self
@@ -1092,12 +1289,12 @@ class Type(tuple, metaclass=MetaType):
                 tuple(t._normalize() for t in self[1]),
                 **params)
         if self.is_custom:
-            params = []
+            inner = []
             for a in self[0]:
                 if isinstance(a, Type):
                     a = a._normalize()
-                params.append(a)
-            return type(self)(tuple(params))
+                inner.append(a)
+            return type(self)(tuple(inner), **params)
         raise NotImplementedError(repr(self))
 
     def mangle(self):
@@ -1106,18 +1303,22 @@ class Type(tuple, metaclass=MetaType):
         Mangled type string is a string representation of the type
         that can be used for extending the function name.
         """
-
+        name_suffix = ''
+        name = self.name
+        if name:
+            name_suffix = 'W' + str(len(name)) + 'W' + name
         if self.is_void:
+            assert name_suffix == '', name_suffix
             return 'v'
         if self.is_pointer:
-            return '_' + self[0].mangle() + 'P'
+            return '_' + self[0].mangle() + 'P' + name_suffix
         if self.is_struct:
             return '_' + ''.join(m.mangle()
-                                 for m in self) + 'K'
+                                 for m in self) + 'K' + name_suffix
         if self.is_function:
             r = self[0].mangle()
             a = ''.join([a.mangle() for a in self[1]])
-            return '_' + r + 'a' + a + 'A'
+            return '_' + r + 'a' + a + 'A' + name_suffix
         if self.is_custom:
             params = self[0]
             if type(self) is Type:
@@ -1129,13 +1330,13 @@ class Type(tuple, metaclass=MetaType):
             n = name if n is None else n
             r = 'V' + str(len(n)) + 'V' + n
             a = ''.join([a.mangle() for a in params])
-            return '_' + r + 'r' + a + 'R'
+            return '_' + r + 'r' + a + 'R' + name_suffix
         if self.is_atomic:
             n = _mangling_map.get(self[0])
             if n is not None:
-                return n
+                return n + name_suffix
             n = self[0]
-            return 'V' + str(len(n)) + 'V' + n
+            return 'V' + str(len(n)) + 'V' + n + name_suffix
         raise NotImplementedError(repr(self))
 
     @classmethod
@@ -1150,7 +1351,7 @@ class Type(tuple, metaclass=MetaType):
         if self.is_void:
             return 0
         if self.is_bool:
-            return 1
+            return int(self[0][4:] or 1)
         if self.is_int:
             return int(self[0][3:])
         if self.is_uint or self.is_char:
@@ -1161,6 +1362,8 @@ class Type(tuple, metaclass=MetaType):
             return int(self[0][7:])
         if self.is_struct:
             return sum([m.bits for m in self])
+        if self.is_pointer:
+            return TargetInfo().sizeof('voidptr')*8 or 64
         return NotImplemented
 
     def match(self, other):
@@ -1188,11 +1391,15 @@ class Type(tuple, metaclass=MetaType):
             elif other.is_pointer:
                 if not self.is_pointer:
                     return
+                if self[0].is_void or other[0].is_void:
+                    return 0
                 penalty = self[0].match(other)
                 if penalty is None:
                     if self[0].is_void:
                         penalty = 1
                 return penalty
+            elif self.is_pointer:
+                return
             elif other.is_struct:
                 if not self.is_struct:
                     return
@@ -1205,6 +1412,8 @@ class Type(tuple, metaclass=MetaType):
                         return
                     penalty = penalty + p
                 return penalty
+            elif self.is_struct:
+                return
             elif other.is_function:
                 if not self.is_function:
                     return
@@ -1219,8 +1428,11 @@ class Type(tuple, metaclass=MetaType):
                         return
                     penalty = penalty + p
                 return penalty
-            if (
+            elif self.is_function:
+                return
+            elif (
                     (other.is_int and self.is_int)
+                    or (other.is_bool and self.is_bool)
                     or (other.is_float and self.is_float)
                     or (other.is_uint and self.is_uint)
                     or (other.is_char and self.is_char)
@@ -1228,18 +1440,44 @@ class Type(tuple, metaclass=MetaType):
                 if self.bits >= other.bits:
                     return 0
                 return other.bits - self.bits
-            if self.is_complex and (other.is_float
-                                    or other.is_int or other.is_uint):
+            elif (
+                    (other.is_int and self.is_uint)
+                    or (other.is_uint and self.is_int)):
+                if self.bits >= other.bits:
+                    return 10
+                return 10 + other.bits - self.bits
+            elif self.is_complex and (other.is_float
+                                      or other.is_int or other.is_uint):
                 return 1000
-            if self.is_float and (other.is_int or other.is_uint):
+            elif self.is_float and (other.is_int or other.is_uint):
                 return 1000
+            elif (self.is_float or self.is_complex) and other.is_bool:
+                return
+            elif (self.is_int or self.is_uint) and other.is_bool:
+                if self.bits >= other.bits:
+                    return 0
+                return other.bits - self.bits
+            elif self.is_bool and (other.is_int or other.is_uint):
+                if self.bits >= other.bits:
+                    return 0
+                return other.bits - self.bits
+            elif ((self.is_int or self.is_uint or self.is_bool)
+                  and (other.is_float or other.is_complex)):
+                return
+            elif self.is_float and other.is_complex:
+                return
+            elif self.is_pointer and (other.is_int or other.is_uint):
+                if self.bits == other.bits:
+                    return 1
+                return
             # TODO: lots of
-            return None
             raise NotImplementedError(repr((self, other)))
         elif isinstance(other, tuple):
             if not self.is_function:
                 return
             atypes = self[1]
+            if len(other) == 0 and len(atypes) == 1 and atypes[0].is_void:
+                return 0
             if len(atypes) != len(other):
                 return
             penalty = 0
@@ -1255,6 +1493,9 @@ class Type(tuple, metaclass=MetaType):
         return Type(self, atypes, **params)
 
     def pointer(self):
+        numba_ptr_type = self._params.get('NumbaPointerType')
+        if numba_ptr_type is not None:
+            return Type(self, '*').params(NumbaType=numba_ptr_type)
         return Type(self, '*')
 
     def apply_templates(self, templates):
@@ -1310,7 +1551,7 @@ class Type(tuple, metaclass=MetaType):
             rtype, atypes = self
             if not rtype.is_concrete:
                 for rt in rtype.apply_templates(templates):
-                    yield from Type(rt, atypes).apply_templates(templates)
+                    yield from Type(rt, atypes, **self._params).apply_templates(templates)
                 return
             for i, t in enumerate(atypes):
                 if not t.is_concrete:
@@ -1338,10 +1579,10 @@ class Type(tuple, metaclass=MetaType):
                         cls = cname
                         cname = cls.__name__
                     if cls is Type:
-                        yield from cls((cname,) + params,
-                                       **self._params).apply_templates(templates)
+                        typ = cls((cname,) + params)
                     else:
-                        yield from cls(params, **self._params).apply_templates(templates)
+                        typ = cls(params)
+                    yield from typ.params(self).apply_templates(templates)
                 return
             for i, t in enumerate(params):
                 if not isinstance(t, Type):
@@ -1362,6 +1603,16 @@ class Type(tuple, metaclass=MetaType):
             raise NotImplementedError(f'apply_templates: {self} {templates}')
 
 
+def _demangle_name(s, suffix='W'):
+    if s and s[0] == suffix:
+        i = s.find(suffix, 1)
+        assert i != -1, repr(s)
+        ln = int(s[1:i])
+        rest = s[i+ln+1:]
+        return s[i+1:i+ln+1], rest
+    return None, s
+
+
 def _demangle(s):
     """Helper function to demangle the string of mangled Type.
 
@@ -1372,11 +1623,8 @@ def _demangle(s):
     if not s:
         return (Type(),), ''
     if s[0] == 'V':
-        i = s.find('V', 1)
-        assert i != -1, repr(s)
-        ln = int(s[1:i])
-        rest = s[i+ln+1:]
-        typ = Type(s[i+1:i+ln+1])
+        name, rest = _demangle_name(s, suffix='V')
+        typ = Type(name)
     elif s[0] == '_':
         block, rest = _demangle(s[1:])
         kind, rest = rest[0], rest[1:]
@@ -1386,11 +1634,11 @@ def _demangle(s):
             typ = Type(block[0], '*')
         elif kind == 'K':
             typ = Type(*block)
-        elif kind == 'a':
+        elif kind == 'a':  # function
             assert len(block) == 1, repr(block)
             rtype = block[0]
             atypes, rest = _demangle('_' + rest)
-            typ = Type(rtype, atypes)
+            typ = Type(rtype, atypes, name='')
         elif kind in 'AR':
             return block, rest
         elif kind == 'r':  # custom
@@ -1398,7 +1646,11 @@ def _demangle(s):
             name = block[0]
             assert name.is_atomic, name
             name = name[0]
-            atypes, rest = _demangle('_' + rest)
+            if rest and rest[0] == 'R':
+                atypes = ()
+                rest = rest[1:]
+            else:
+                atypes, rest = _demangle('_' + rest)
             if name in Type.custom_types:
                 typ = Type.custom_types[name](atypes)
             else:
@@ -1412,6 +1664,9 @@ def _demangle(s):
             typ = Type()
         else:
             typ = Type(t)
+    vname, rest = _demangle_name(rest)
+    if vname is not None:
+        typ._params['name'] = vname
     result = [typ]
     if rest and rest[0] not in _mangling_prefixes:
         r, rest = _demangle(rest)
@@ -1419,72 +1674,79 @@ def _demangle(s):
     return tuple(result), rest
 
 
-if nb is not None:
-    class Boolean1(nb.types.Boolean):
+# TODO: move numba boolean support to rbc/boolean_type.py
 
-        def can_convert_from(self, typingctx, other):
-            return isinstance(other, nb.types.Boolean)
+class Boolean1(nb.types.Boolean):
 
-    @datamodel.register_default(Boolean1)
-    class Boolean1Model(datamodel.models.BooleanModel):
-
-        def get_data_type(self):
-            return self._bit_type
-
-    class Boolean8(nb.types.Boolean):
-
-        bitwidth = 8
-
-        def can_convert_to(self, typingctx, other):
-            return isinstance(other, nb.types.Boolean)
-
-        def can_convert_from(self, typingctx, other):
-            return isinstance(other, nb.types.Boolean)
-
-    @datamodel.register_default(Boolean8)
-    class Boolean8Model(datamodel.models.BooleanModel):
-
-        def get_value_type(self):
-            return self._byte_type
-
-    boolean1 = Boolean1('boolean1')
-    boolean8 = Boolean8('boolean8')
-
-    @lower_cast(Boolean1, nb.types.Boolean)
-    @lower_cast(Boolean8, nb.types.Boolean)
-    def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
-        return builder.icmp_signed('!=', val, val.type(0))
-
-    @lower_cast(nb.types.Boolean, Boolean1)
-    @lower_cast(nb.types.Boolean, Boolean8)
-    def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
-        llty = context.get_value_type(toty)
-        return builder.zext(val, llty)
-
-    @extending.lower_builtin(bool, Boolean8)
-    def boolean8_to_bool(context, builder, sig, args):
-        [val] = args
-        return builder.icmp_signed('!=', val, val.type(0))
+    def can_convert_from(self, typingctx, other):
+        return isinstance(other, nb.types.Boolean)
 
 
-def make_numba_struct(name, members, base=nb.types.Type, _cache={}):
-    """Create numba struct type instance.
-    """
-    t = _cache.get(name)
-    if t is None:
-        assert issubclass(base, nb.types.Type)
+@datamodel.register_default(Boolean1)
+class Boolean1Model(datamodel.models.BooleanModel):
 
-        def model__init__(self, dmm, fe_type):
-            datamodel.StructModel.__init__(self, dmm, fe_type, members)
+    def get_data_type(self):
+        return self._bit_type
 
-        struct_model = type(name+'Model',
-                            (datamodel.StructModel,),
-                            dict(__init__=model__init__))
-        struct_type = type(name+'Type', (base,),
-                           dict(members=[t for n, t in members]))
-        datamodel.registry.register_default(struct_type)(struct_model)
-        _cache[name] = t = struct_type(name)
-    return t
+
+class Boolean8(nb.types.Boolean):
+
+    bitwidth = 8
+
+    def can_convert_to(self, typingctx, other):
+        return isinstance(other, nb.types.Boolean)
+
+    def can_convert_from(self, typingctx, other):
+        return isinstance(other, nb.types.Boolean)
+
+
+@datamodel.register_default(Boolean8)
+class Boolean8Model(datamodel.models.BooleanModel):
+
+    def get_value_type(self):
+        return self._byte_type
+
+
+boolean1 = Boolean1('boolean1')
+boolean8 = Boolean8('boolean8')
+
+
+@lower_cast(Boolean1, nb.types.Boolean)
+@lower_cast(Boolean8, nb.types.Boolean)
+def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
+    return builder.icmp_signed('!=', val, val.type(0))
+
+
+@lower_cast(nb.types.Boolean, Boolean1)
+@lower_cast(nb.types.Boolean, Boolean8)
+def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
+    llty = context.get_value_type(toty)
+    return builder.zext(val, llty)
+
+
+@extending.lower_builtin(bool, Boolean8)
+def boolean8_to_bool(context, builder, sig, args):
+    [val] = args
+    return builder.icmp_signed('!=', val, val.type(0))
+
+
+_numba_bool_map[1] = boolean1
+_numba_bool_map[8] = boolean8
+_numba_imap[boolean1] = 'bool1'
+_numba_imap[boolean8] = 'bool8'
+
+boolean8ptr = nb.types.CPointer(boolean8)
+boolean8ptr2 = nb.types.CPointer(boolean8ptr)
+
+_pointer_types = [boolean8ptr, boolean8ptr2, nb.types.intp, nb.types.voidptr]
+for _i, _p1 in enumerate(_pointer_types[:2]):
+    for _j, _p2 in enumerate(_pointer_types):
+        if _p1 == _p2 or _i > _j:
+            continue
+        typeconv.rules.default_type_manager.set_compatible(
+            _p1, _p2, typeconv.Conversion.safe)
+        typeconv.rules.default_type_manager.set_compatible(
+            _p2, _p1, typeconv.Conversion.safe)
 
 
 _ufunc_pos_args_match = re.compile(
@@ -1497,61 +1759,66 @@ _annot_match = re.compile(
 def get_signature(obj):
     if inspect.isfunction(obj):
         return inspect.signature(obj)
-    if np is not None:
-        if isinstance(obj, np.ufunc):
-            parameters = dict()
-            returns = dict()
+    if isinstance(obj, np.ufunc):
+        parameters = dict()
+        returns = dict()
 
-            sigline = obj.__doc__.lstrip().splitlines(1)[0]
-            m = _ufunc_pos_args_match(sigline)
-            name = m['name']
-            assert name == obj.__name__, (name, obj.__name__)
+        sigline = obj.__doc__.lstrip().splitlines(1)[0]
+        m = _ufunc_pos_args_match(sigline)
+        name = m['name']
+        assert name == obj.__name__, (name, obj.__name__)
 
-            # positional arguments
-            m = _req_opt_args_match(m['pos_args'])
-            req_pos_names, opt_pos_names = [], []
-            for n in m.group('req_args').split(','):
-                n = n.strip()
-                if n:
-                    req_pos_names.append(n)
-                    parameters[n] = inspect.Parameter(
-                        n, inspect.Parameter.POSITIONAL_ONLY)
-            for n in (m.group('opt_args').replace('[', '')
-                      .replace(']', '').split(',')):
-                n = n.strip()
-                if n:
-                    opt_pos_names.append(n)
-                    parameters[n] = inspect.Parameter(
-                        n, inspect.Parameter.POSITIONAL_ONLY, default=None)
-            # TODO: process non-positional arguments in `m['rest']`
+        # positional arguments
+        m = _req_opt_args_match(m['pos_args'])
+        req_pos_names, opt_pos_names = [], []
+        for n in m.group('req_args').split(','):
+            n = n.strip()
+            if n:
+                req_pos_names.append(n)
+                parameters[n] = inspect.Parameter(
+                    n, inspect.Parameter.POSITIONAL_ONLY)
+        for n in (m.group('opt_args').replace('[', '')
+                   .replace(']', '').split(',')):
+            n = n.strip()
+            if n:
+                opt_pos_names.append(n)
+                parameters[n] = inspect.Parameter(
+                    n, inspect.Parameter.POSITIONAL_ONLY, default=None)
+        # TODO: process non-positional arguments in `m['rest']`
 
-            # scan for annotations and determine returns
-            mode = 'none'
-            for line in obj.__doc__.splitlines():
-                if line in ['Parameters', 'Returns', 'Notes', 'See Also',
-                            'Examples']:
-                    mode = line
-                    continue
-                if mode == 'Parameters':
-                    m = _annot_match(line)
-                    if m is not None:
-                        n = m['name']
-                        if n in parameters:
-                            annot = m['annotation'].strip()
-                            parameters[n] = parameters[n].replace(
-                                annotation=annot)
-                if mode == 'Returns':
-                    m = _annot_match(line)
-                    if m is not None:
-                        n = m['name']
+        # scan for annotations and determine returns
+        mode = 'none'
+        for line in obj.__doc__.splitlines():
+            if line in ['Parameters', 'Returns', 'Notes', 'See Also',
+                        'Examples']:
+                mode = line
+                continue
+            if mode == 'Parameters':
+                m = _annot_match(line)
+                if m is not None:
+                    n = m['name']
+                    if n in parameters:
                         annot = m['annotation'].strip()
-                        returns[n] = annot
+                        parameters[n] = parameters[n].replace(
+                            annotation=annot)
+            if mode == 'Returns':
+                m = _annot_match(line)
+                if m is not None:
+                    n = m['name']
+                    annot = m['annotation'].strip()
+                    returns[n] = annot
 
-            sig = inspect.Signature(parameters=parameters.values())
-            if len(returns) == 1:
-                sig = sig.replace(return_annotation=list(returns.values())[0])
-            elif returns:
-                sig = sig.replace(return_annotation=returns)
-            return sig
+        sig = inspect.Signature(parameters=parameters.values())
+        if len(returns) == 1:
+            sig = sig.replace(return_annotation=list(returns.values())[0])
+        elif returns:
+            sig = sig.replace(return_annotation=returns)
+        return sig
 
     raise NotImplementedError(obj)
+
+
+# Import numba support
+
+if 1:  # to avoid flake E402
+    from . import structure_type

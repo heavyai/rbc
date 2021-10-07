@@ -25,14 +25,13 @@ Omnisci buffer objects from UDF/UDTFs.
 
 import operator
 from collections import defaultdict
+from .omnisci_metatype import OmnisciMetaType
 from llvmlite import ir
-from rbc import typesystem
-from rbc.utils import get_version
+import numpy as np
+from rbc import typesystem, irutils
+from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
-if get_version('numba') >= (0, 49):
-    from numba.core import datamodel, cgutils, extending, types
-else:
-    from numba import datamodel, cgutils, extending, types
+from numba.core import datamodel, cgutils, extending, types
 
 
 int8_t = ir.IntType(8)
@@ -48,7 +47,9 @@ class OmnisciBufferType(typesystem.Type):
     """
     # When True, buffer type arguments are passed by value to
     # functions [not recommended].
-    pass_by_value = False
+    @property
+    def pass_by_value(self):
+        return False
 
     @classmethod
     def preprocess_args(cls, args):
@@ -76,13 +77,12 @@ class OmnisciBufferType(typesystem.Type):
             size_t,
             *extra_members
         )
-        buffer_type._params['numba.Type'] = BufferType
+        buffer_type._params['NumbaType'] = BufferType
+        buffer_type._params['NumbaPointerType'] = BufferPointer
         numba_type = buffer_type.tonumba(bool_is_int8=True)
         if self.pass_by_value:
             return numba_type
-        numba_eltype = self.element_type.tonumba(bool_is_int8=True)
-        numba_type_ptr = BufferPointer(numba_type, numba_eltype)
-        return numba_type_ptr
+        return BufferPointer(numba_type)
 
 
 class BufferType(types.Type):
@@ -106,10 +106,10 @@ class BufferPointer(types.Type):
     mutable = True
     return_as_first_argument = True
 
-    def __init__(self, dtype, eltype):
+    def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
-        self.eltype = eltype  # buffer element dtype
-        name = "(%s)*" % dtype
+        self.eltype = dtype.eltype  # buffer element dtype
+        name = "%s[%s]*" % (type(self).__name__, dtype)
         super().__init__(name)
 
     @property
@@ -117,12 +117,8 @@ class BufferPointer(types.Type):
         return self.dtype
 
 
-class BufferMeta(type):
-
-    class_names = set()
-
-    def __init__(cls, name, bases, dct):
-        type(cls).class_names.add(name)
+class BufferMeta(OmnisciMetaType):
+    pass
 
 
 class Buffer(object, metaclass=BufferMeta):
@@ -170,9 +166,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
 
-    # TODO: use omnisci alloc function instead of calloc, see rbc issue 87
-    alloc_fn = builder.module.get_or_insert_function(
-        alloc_fnty, name="calloc")
+    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, "allocate_varlen_buffer")
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     # remember possible temporary allocations so that when leaving a
     # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.
@@ -183,7 +177,12 @@ def omnisci_buffer_constructor(context, builder, sig, args):
     fa.ptr = ptr                  # T*
     fa.sz = element_count         # size_t
     if null_type is not None:
-        is_null = context.get_value_type(null_type)(0)
+        is_zero = builder.icmp_signed('==', element_count, int64_t(0))
+        with builder.if_else(is_zero) as (then, orelse):
+            with then:
+                is_null = context.get_value_type(null_type)(1)
+            with orelse:
+                is_null = context.get_value_type(null_type)(0)
         fa.is_null = is_null      # int8_t
     return fa._getpointer()
 
@@ -198,7 +197,7 @@ def free_omnisci_buffer(typingctx, ret):
         # TODO: using stdlib `free` that works only for CPU. For CUDA
         # devices, we need to use omniscidb provided deallocator.
         free_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
-        free_fn = builder.module.get_or_insert_function(free_fnty, name="free")
+        free_fn = irutils.get_or_insert_function(builder.module, free_fnty, "free")
 
         # We skip the ret pointer iff we're returning a Buffer
         # otherwise, we free everything
@@ -216,6 +215,72 @@ def free_omnisci_buffer(typingctx, ret):
         del builder_buffers[builder]
 
     return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_ptr_get_ptr_(typingctx, data):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data)
+
+    def codegen(context, builder, signature, args):
+        data,  = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        struct = builder.load(builder.gep(rawptr,
+                                          [int32_t(0)]))
+        return builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_get_ptr_(typingctx, data):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data)
+
+    def codegen(context, builder, signature, args):
+        data, = args
+        assert data.opname == 'load'
+        struct = data.operands[0]
+        return builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_ptr_item_get_ptr_(typingctx, data, index):
+    eltype = data.eltype
+    ptrtype = types.CPointer(eltype)
+    sig = ptrtype(data, index)
+
+    def codegen(context, builder, signature, args):
+        data, index = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        struct = builder.load(builder.gep(rawptr, [int32_t(0)]))
+        ptr = builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+        return builder.gep(ptr, [index])
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferPointer, 'ptr')
+def omnisci_buffer_get_ptr(x, index=None):
+    if isinstance(x, BufferPointer):
+        if cgutils.is_nonelike(index):
+            def impl(x, index=None):
+                return omnisci_buffer_ptr_get_ptr_(x)
+        else:
+            def impl(x, index=None):
+                return omnisci_buffer_ptr_item_get_ptr_(x, index)
+        return impl
+    if isinstance(x, BufferType):
+        if cgutils.is_nonelike(index):
+            def impl(x, index=None):
+                return omnisci_buffer_get_ptr_(x)
+        else:
+            raise NotImplementedError(f'omnisci_buffer_item_get_ptr_({x}, {index})')
+        return impl
 
 
 @extending.intrinsic
@@ -238,10 +303,7 @@ def omnisci_buffer_len_(typingctx, data):
 
     def codegen(context, builder, signature, args):
         data, = args
-        assert data.opname == 'load'
-        struct = data.operands[0]
-        return builder.load(builder.gep(
-            struct, [int32_t(0), int32_t(1)]))
+        return irutils.get_member_value(builder, data, 1)
 
     return sig, codegen
 
@@ -277,11 +339,7 @@ def omnisci_buffer_getitem_(typingctx, data, index):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(
-            buf, [int32_t(0), int32_t(0)]))
+        ptr = irutils.get_member_value(builder, data, 0)
         res = builder.load(builder.gep(ptr, [index]))
 
         return res
@@ -352,14 +410,8 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
     nb_value = value
 
     def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
         data, index, value = args
-
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
+        ptr = irutils.get_member_value(builder, data, 0)
         value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
 
         builder.store(value, builder.gep(ptr, [index]))
@@ -387,12 +439,97 @@ def omnisci_buffer_is_null_(typingctx, data):
     return sig, codegen
 
 
+@extending.intrinsic
+def omnisci_buffer_set_null_(typingctx, data):
+    sig = types.none(data)
+
+    def codegen(context, builder, sig, args):
+        rawptr = cgutils.alloca_once_value(builder, value=args[0])
+        ptr = builder.load(rawptr)
+        builder.store(int8_t(1), builder.gep(ptr, [int32_t(0), int32_t(2)]))
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def omnisci_buffer_idx_is_null_(typingctx, col_var, row_idx):
+    T = col_var.eltype
+    sig = types.boolean(col_var, row_idx)
+
+    target_info = TargetInfo()
+    null_value = target_info.null_values[str(T)]
+    # The server sends numbers as unsigned values rather than signed ones.
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
+    nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
+
+    def codegen(context, builder, signature, args):
+        ptr, index = args
+        data = builder.extract_value(builder.load(ptr), [0])
+        res = builder.load(builder.gep(data, [index]))
+
+        if isinstance(T, types.Float):
+            res = builder.bitcast(res, nv.type)
+
+        return builder.icmp_signed('==', res, nv)
+
+    return sig, codegen
+
+
 # "BufferPointer.is_null" checks if a given array or column is null
 # as opposed to "BufferType.is_null" that checks if an index in a
 # column is null
 @extending.overload_method(BufferPointer, 'is_null')
-def omnisci_buffer_is_null(x):
+def omnisci_buffer_is_null(x, row_idx=None):
     if isinstance(x, BufferPointer):
-        def impl(x):
-            return omnisci_buffer_is_null_(x)
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_is_null_(x)
+        else:
+            def impl(x, row_idx=None):
+                return omnisci_buffer_idx_is_null_(x, row_idx)
+        return impl
+
+
+@extending.intrinsic
+def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
+    T = arr.eltype
+    sig = types.none(arr, row_idx)
+
+    target_info = TargetInfo()
+    null_value = target_info.null_values[f'{T}']
+
+    # The server sends numbers as unsigned values rather than signed ones.
+    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
+    bitwidth = T.bitwidth
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
+
+    def codegen(context, builder, signature, args):
+        # get the operator.setitem intrinsic
+        fnop = context.typing_context.resolve_value_type(omnisci_buffer_ptr_setitem_)
+        setitem_sig = types.none(arr, row_idx, T)
+        # register the intrinsic in the typing ctx
+        fnop.get_call_type(context.typing_context, setitem_sig.args, {})
+        intrinsic = context.get_function(fnop, setitem_sig)
+
+        data, index = args
+        # data = {T*, i64, i8}*
+        ty = data.type.pointee.elements[0].pointee
+        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
+        if isinstance(T, types.Float):
+            nv = builder.bitcast(nv, ty)
+        intrinsic(builder, (data, index, nv,))
+
+    return sig, codegen
+
+
+@extending.overload_method(BufferPointer, 'set_null')
+def omnisci_buffer_set_null(x, row_idx=None):
+    if isinstance(x, BufferPointer):
+        if cgutils.is_nonelike(row_idx):
+            def impl(x, row_idx=None):
+                return omnisci_buffer_set_null_(x)
+        else:
+            def impl(x, row_idx=None):
+                return omnisci_buffer_idx_set_null(x, row_idx)
+            return impl
         return impl

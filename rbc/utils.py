@@ -1,11 +1,17 @@
+"""Collection of helper functions
+"""
+
+import dis
 import socket
 import subprocess
+import inspect
 import ipaddress
 import netifaces
 import re
 import uuid
 import ctypes
 import llvmlite.binding as llvm
+import warnings
 
 
 def get_version(package):
@@ -13,9 +19,31 @@ def get_version(package):
     """
     if package == 'numba':
         import numba
-        v = numba.__version__.replace('rc', '.').replace('dev', '.').split('.')
+        v = numba.__version__.replace('rc', '.').replace('dev', '.').replace('+', '.').split('.')
         return tuple(map(int, v[:3]))
     raise NotImplementedError(f'get version of package {package}')
+
+
+def version_date(version):
+    """Return date from version dev part as an integer containing digits
+    `yyyymmdd`. Return 0 if date information is not available.
+    """
+    if version and isinstance(version[-1], str):
+        m = re.match(r'.*([12]\d\d\d[01]\d[0123]\d)', version[-1])
+        if m is not None:
+            return int(m.groups()[0])
+    return 0
+
+
+def version_hash(version):
+    """Return hash from version dev part as string. Return None if hash
+    information is not available.
+    """
+    if version and isinstance(version[-1], str):
+        m = re.match(r'.*([12]\d\d\d[01]\d[0123]\d)[-](\w{10,10}\b)', version[-1])
+        if m is not None:
+            return m.groups()[1]
+    return None
 
 
 def parse_version(version):
@@ -159,3 +187,51 @@ def triple_matches(triple, other):
     if os1 == os2 == 'linux':
         return (arch1, env1) == (arch2, env2)
     return (arch1, vendor1, os1, env1) == (arch2, vendor2, os2, env2)
+
+
+def get_function_source(func):
+    """Get function source code with intent fixes.
+
+    Warning: not all function objects have source code available.
+    """
+    source = ''
+    intent = None
+    for line in inspect.getsourcelines(func)[0]:
+        if intent is None:
+            intent = len(line) - len(line.lstrip())
+        source += line[intent:]
+    return source
+
+
+def check_returns_none(func):
+    """Return True if function return value is always None.
+
+    Warning: the result of the check may be false-negative. For instance:
+
+    .. code-block:: python
+
+        def foo():
+            a = None
+            return a
+
+        check_returns_none(foo) == false
+
+    """
+    last_instr = None
+    for instr in dis.Bytecode(func):
+        if instr.opname == 'RETURN_VALUE':
+            if last_instr.opname in ['LOAD_CONST', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_GLOBAL']:
+                if last_instr.argval is None:
+                    continue
+                return False
+            else:
+                if any(map(last_instr.opname.startswith,
+                           ['UNARY_', 'BINARY_', 'CALL_', 'COMPARE_'])):
+                    return False
+                warnings.warn(
+                    'check_returns_none: assuming non-None return'
+                    f' from last_instr={last_instr} (FIXME)')
+                return False
+        last_instr = instr
+
+    return True

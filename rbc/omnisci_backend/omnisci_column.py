@@ -8,14 +8,11 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
            'OmnisciCursorType']
 
 from llvmlite import ir
-from rbc import typesystem
+from rbc import typesystem, irutils
 from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
+from .column_list import OmnisciColumnListType
 from rbc.targetinfo import TargetInfo
-from rbc.utils import get_version
-if get_version('numba') >= (0, 49):
-    from numba.core import extending, types
-else:
-    from numba import extending, types
+from numba.core import extending, types
 
 
 int32_t = ir.IntType(32)
@@ -24,7 +21,10 @@ int32_t = ir.IntType(32)
 class OmnisciColumnType(OmnisciBufferType):
     """Omnisci Column type for RBC typesystem.
     """
-    pass_by_value = True
+    @property
+    def pass_by_value(self):
+        omnisci_version = TargetInfo().software[1][:3]
+        return omnisci_version <= (5, 7, 0)
 
 
 class OmnisciOutputColumnType(OmnisciColumnType):
@@ -58,14 +58,8 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
     null_value = target_info.null_values[str(T)]
 
     def codegen(context, builder, signature, args):
-        zero = int32_t(0)
-
         data, index = args
-
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
+        ptr = irutils.get_member_value(builder, data, 0)
 
         ty = ptr.type.pointee
         nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
@@ -93,12 +87,8 @@ def omnisci_column_is_null_(typingctx, col_var, row_idx):
     nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
 
     def codegen(context, builder, signature, args):
-        zero = int32_t(0)
         data, index = args
-        assert data.opname == 'load'
-        buf = data.operands[0]
-
-        ptr = builder.load(builder.gep(buf, [zero, zero]))
+        ptr = irutils.get_member_value(builder, data, 0)
         res = builder.load(builder.gep(ptr, [index]))
 
         if isinstance(T, types.Float):
@@ -123,7 +113,7 @@ class OmnisciCursorType(typesystem.Type):
         assert len(args) == 1
         params = []
         for p in args[0]:
-            if not isinstance(p, OmnisciColumnType):
+            if not isinstance(p, (OmnisciColumnType, OmnisciColumnListType)):
                 p = OmnisciColumnType((p,))
             params.append(p)
         return (tuple(params),)
@@ -131,12 +121,3 @@ class OmnisciCursorType(typesystem.Type):
     @property
     def as_consumed_args(self):
         return self[0]
-
-
-typesystem.Type.alias(
-    Cursor='OmnisciCursorType',
-    Column='OmnisciColumnType',
-    OutputColumn='OmnisciOutputColumnType',
-    RowMultiplier='int32|sizer=RowMultiplier',
-    ConstantParameter='int32|sizer=ConstantParameter',
-    Constant='int32|sizer=Constant')
