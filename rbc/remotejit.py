@@ -401,6 +401,8 @@ class RemoteJIT(object):
 
     thrift_content = None
 
+    typesystem_aliases = dict()
+
     def __init__(self, host='localhost', port=11532,
                  local=False, debug=False):
         """Construct remote JIT function decorator.

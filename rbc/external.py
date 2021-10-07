@@ -71,6 +71,10 @@ class External:
                 a.append(str(t))
         return ", ".join(a)
 
+    @property
+    def name(self):
+        return self.key
+
     def match_signature(self, atypes):
         # Code here is the same found in remotejit.py::Signature::best_match
         device = "CPU" if TargetInfo().is_cpu else "GPU"
