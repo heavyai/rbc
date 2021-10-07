@@ -34,6 +34,7 @@ jobs:
         run: |
           mamba install omniscidb -c conda-forge
           pip install nbval ibis-omniscidb matplotlib
+          pip uninstall rbc -y
 
       - name: Start omniscidb server
         shell: bash -l {0}
