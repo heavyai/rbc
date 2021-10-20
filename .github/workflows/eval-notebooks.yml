@@ -32,7 +32,7 @@ jobs:
       - name: Install additional packages
         shell: bash -l {0}
         run: |
-          mamba install -c conda-forge omniscidb nbval ibis-omniscidb matplotlib
+          mamba install -c conda-forge omniscidb nbval ibis-omniscidb matplotlib pandas
           mamba uninstall rbc -y
 
       - name: Start omniscidb server
