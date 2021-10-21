@@ -39,10 +39,13 @@ def set_output_row_size(typingctx, set_output_row_size):
 
 @extending.intrinsic
 def table_function_error(typingctx, message):
-    #cchar = nb_types.RawPointer('const char*')
-    if message != nb_types.int64:
-        # XXX: message should be a cchar, not an int64
-        return None
+    """
+    Return an error from a UDTF.
+
+    ``message`` must be a string literal.
+    """
+    if not isinstance(message, nb_types.StringLiteral):
+        raise TypeError(f"expected StringLiteral but got {type(message).__name__}")
 
     def codegen(context, builder, sig, args):
         int8ptr = ir.PointerType(ir.IntType(8))
@@ -51,16 +54,17 @@ def table_function_error(typingctx, message):
                                             name="table_function_error")
         assert fn.is_declaration
         #
-        # WIP: we should pass message, not 'hello world'
-        msg_const = make_bytearray(b'hello world\0')
-        msg_global_var = global_constant(builder.module, "my_message", msg_const)
+        msg_bytes = message.literal_value.encode('utf-8')
+        msg_const = make_bytearray(msg_bytes + b'\0')
+        msg_global_var = global_constant(builder.module, "table_function_error_message",
+                                         msg_const)
         msg_ptr = builder.bitcast(msg_global_var, int8ptr)
         return builder.call(fn, [msg_ptr])
 
-    sig = nb_types.int32(nb_types.int64) # XXX, use cchar
+    sig = nb_types.int32(message)
     return sig, codegen
 
 
 # fix docstring for intrinsics
-for __func in (set_output_row_size,):
+for __func in (set_output_row_size, table_function_error):
     functools.update_wrapper(__func, __func._defn)

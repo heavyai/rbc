@@ -299,8 +299,7 @@ def test_table_function_error(omnisci):
     @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
     def my_divide(column, k, row_multiplier, out):
         if k == 0:
-            #return table_function_error('division by zero')
-            return table_function_error(1234)
+            return table_function_error('division by zero')
         for i in range(len(column)):
             out[i] = column[i] / k
         return len(column)
