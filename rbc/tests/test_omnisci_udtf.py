@@ -1,5 +1,6 @@
 import pytest
 from rbc.tests import omnisci_fixture, sql_execute
+from rbc.externals.omniscidb import table_function_error
 import numpy as np
 
 
@@ -297,6 +298,9 @@ def test_table_function_error(omnisci):
 
     @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
     def my_divide(column, k, row_multiplier, out):
+        if k == 0:
+            #return table_function_error('division by zero')
+            return table_function_error(1234)
         for i in range(len(column)):
             out[i] = column[i] / k
         return len(column)

@@ -7,6 +7,7 @@ from rbc import irutils
 from rbc.errors import UnsupportedError
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types as nb_types
+from numba.core.cgutils import make_bytearray, global_constant
 from llvmlite import ir
 
 
@@ -33,6 +34,30 @@ def set_output_row_size(typingctx, set_output_row_size):
         assert fn.is_declaration
         builder.call(fn, args)  # don't return anything
 
+    return sig, codegen
+
+
+@extending.intrinsic
+def table_function_error(typingctx, message):
+    #cchar = nb_types.RawPointer('const char*')
+    if message != nb_types.int64:
+        # XXX: message should be a cchar, not an int64
+        return None
+
+    def codegen(context, builder, sig, args):
+        int8ptr = ir.PointerType(ir.IntType(8))
+        fntype = ir.FunctionType(ir.IntType(32), [int8ptr])
+        fn = irutils.get_or_insert_function(builder.module, fntype,
+                                            name="table_function_error")
+        assert fn.is_declaration
+        #
+        # WIP: we should pass message, not 'hello world'
+        msg_const = make_bytearray(b'hello world\0')
+        msg_global_var = global_constant(builder.module, "my_message", msg_const)
+        msg_ptr = builder.bitcast(msg_global_var, int8ptr)
+        return builder.call(fn, [msg_ptr])
+
+    sig = nb_types.int32(nb_types.int64) # XXX, use cchar
     return sig, codegen
 
 
