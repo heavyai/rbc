@@ -314,7 +314,6 @@ def compile_instance(func, sig,
         raise
 
     result = get_called_functions(cres.library, cres.fndesc.llvm_func_name)
-    #print(cres.library._final_module.get_function(cres.fndesc.llvm_func_name))
 
     for f in result['declarations']:
         if target.supports(f):
