@@ -662,6 +662,16 @@ def test_casting(omnisci):
                 (r'TINYINT', 'i1', (8.5,)),
         ]:
             if available_version[:2] >= (5, 8):
+                # omniscidb-internal PR 5915 changes the casting table
+                if f == r'f32' and at == r'BIGINT':
+                    with pytest.raises(
+                            Exception,
+                            match=(r".*(Function "+f+r"\("+at+r"\) not supported"
+                                   r"|Could not bind "+f+r"\("+at+r"\))")):
+                        descr, result = omnisci.sql_execute(
+                            'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
+                    continue
+            if available_version[:2] >= (5, 8):
                 # omniscidb-internal PR 5814 changes the casting table
                 if f == r'f32':
                     r = r[0] - 4,
@@ -724,19 +734,29 @@ def test_truncate_issue(omnisci):
     descr, result = omnisci.sql_execute(
         'select bits(truncate(2016, 1)) from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] in [(16,), (32,)]
+    if available_version[:2] >= (5, 8):
+        # omniscidb-internal PR 5915 changes the casting table
+        assert list(result)[0] in [(64,)]
+    else:
+        assert list(result)[0] in [(16,), (32,)]
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as smallint), 1))'
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (16,)
+    if available_version[:2] >= (5, 8):
+        assert list(result)[0] == (64,)
+    else:
+        assert list(result)[0] == (16,)
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as int), 1))'
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (32,)
+    if available_version[:2] >= (5, 8):
+        assert list(result)[0] == (64,)
+    else:
+        assert list(result)[0] == (32,)
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as bigint), 1))'
@@ -748,7 +768,10 @@ def test_truncate_issue(omnisci):
         'select bits(truncate(cast(2016.0 as float), 1))'
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (32,)
+    if available_version[:2] >= (5, 8):
+        assert list(result)[0] == (64,)
+    else:
+        assert list(result)[0] == (32,)
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as double), 1))'
