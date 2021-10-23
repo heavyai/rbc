@@ -23,8 +23,8 @@ from numba.core import types as nb_types
 from rbc.typesystem import Type
 
 
-typing_registry = typing.templates.Registry()
-lowering_registry = imputils.Registry()
+typing_registry = typing.templates.builtin_registry
+lowering_registry = imputils.builtin_registry
 
 
 @extending.intrinsic

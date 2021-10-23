@@ -3,16 +3,9 @@
 
 
 from collections import namedtuple
-from . import register_external
-from numba.core import imputils, typing
+from . import make_intrinsic
 
 arg = namedtuple("arg", ("name", "ty"))
-
-# Typing
-typing_registry = typing.templates.Registry()
-
-# Lowering
-lowering_registry = imputils.Registry()
 
 cmath = {
     # Trigonometric
@@ -109,16 +102,16 @@ cmath = {
     "truncf": ("float", [arg(name="x", ty="float")]),
     "round": ("double", [arg(name="x", ty="double")]),
     "roundf": ("float", [arg(name="x", ty="float")]),
-    "lround": ("long int", [arg(name="x", ty="double")]),
-    "lroundf": ("long int", [arg(name="x", ty="float")]),
-    "llround": ("long long int", [arg(name="x", ty="double")]),
-    "llroundf": ("long long int", [arg(name="x", ty="float")]),
+    "lround": ("long_", [arg(name="x", ty="double")]),
+    "lroundf": ("long_", [arg(name="x", ty="float")]),
+    "llround": ("longlong", [arg(name="x", ty="double")]),
+    "llroundf": ("longlong", [arg(name="x", ty="float")]),
     "rint": ("double", [arg(name="x", ty="double")]),
     "rintf": ("float", [arg(name="x", ty="float")]),
-    "lrint": ("long int", [arg(name="x", ty="double")]),
-    "lrintf": ("long int", [arg(name="x", ty="float")]),
-    "llrint": ("long long int", [arg(name="x", ty="double")]),
-    "llrintf": ("long long int", [arg(name="x", ty="float")]),
+    "lrint": ("long_", [arg(name="x", ty="double")]),
+    "lrintf": ("long_", [arg(name="x", ty="float")]),
+    "llrint": ("longlong", [arg(name="x", ty="double")]),
+    "llrintf": ("longlong", [arg(name="x", ty="float")]),
     "nearbyint": ("double", [arg(name="x", ty="double")]),
     "nearbyintf": ("float", [arg(name="x", ty="float")]),
     "remainder": (
@@ -166,7 +159,7 @@ cmath = {
     # Other functions
     "fabs": ("double", [arg(name="x", ty="double")]),
     "fabsf": ("float", [arg(name="x", ty="float")]),
-    "abs": ("long long", [arg(name="x", ty="double")]),
+    "abs": ("longlong", [arg(name="x", ty="double")]),
     "absf": ("long", [arg(name="x", ty="float")]),
     "fma": (
         "double",
@@ -188,7 +181,6 @@ cmath = {
 
 
 for fname, (retty, args) in cmath.items():
+    argnames = [arg.name for arg in args]
     doc = f"C math function {fname}"
-    register_external(
-        fname, retty, args, __name__, globals(), typing_registry, lowering_registry, doc
-    )
+    fn = make_intrinsic(fname, retty, argnames, __name__, globals(), doc)
