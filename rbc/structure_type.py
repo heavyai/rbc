@@ -9,8 +9,8 @@ from numba.core import datamodel, extending, types, imputils, typing, cgutils, t
 
 """ TODO: use local registries, currently blocked by overloading
 operator.getitem that should use rbc pipeline class.  """
-typing_registry = typing.templates.builtin_registry  # TODO: Registry()
-lowering_registry = imputils.builtin_registry        # TODO: Registry()
+typing_registry = typing.templates.builtin_registry
+lowering_registry = imputils.builtin_registry
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)

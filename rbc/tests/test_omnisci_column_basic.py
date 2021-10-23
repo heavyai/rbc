@@ -4,6 +4,7 @@ from collections import defaultdict
 import pytest
 import numpy as np
 
+
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
 if available_version and available_version < (5, 4):
@@ -17,19 +18,19 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def omnisci():
+    # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN', 'DOUBLE']
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
 
     data = defaultdict(list)
     for i in range(5):
@@ -44,7 +45,7 @@ def omnisci():
     m.load_table_columnar(table_name, **data)
     m.table_name = table_name
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
 
 def test_sizer_row_multiplier_orig(omnisci):
@@ -65,8 +66,7 @@ def test_sizer_row_multiplier_orig(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_mul(cursor(select f8 '
-        'from {omnisci.table_name}), 2));'
-        .format(**locals()))
+        f'from {omnisci.table_name}), 2));')
 
     for i, r in enumerate(result):
         assert r == (float((i % 5) * 2),)
@@ -93,10 +93,9 @@ def test_sizer_row_multiplier_param1(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_mul_param1('
-        'cursor(select f8 from {omnisci.table_name}),'
-        'cast({alpha} as double),'
-        'cast(4 as int), 2));'
-        .format(**locals()))
+        f'cursor(select f8 from {omnisci.table_name}),'
+        f'cast({alpha} as double),'
+        'cast(4 as int), 2));')
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * alpha + 4,)
@@ -123,10 +122,9 @@ def test_sizer_row_multiplier_param2(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_mul_param2('
-        'cast({alpha} as double),'
-        'cursor(select f8 from {omnisci.table_name}),'
-        'cast(4 as int), 2));'
-        .format(**locals()))
+        f'cast({alpha} as double),'
+        f'cursor(select f8 from {omnisci.table_name}),'
+        'cast(4 as int), 2));')
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * alpha + 4,)
@@ -155,8 +153,7 @@ def test_sizer_constant_parameter(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        'from {omnisci.table_name}), 3));'
-        .format(**locals()))
+        f'from {omnisci.table_name}), 3));')
     result = list(result)
     assert len(result) == 3
     for i, r in enumerate(result):
@@ -164,8 +161,7 @@ def test_sizer_constant_parameter(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        'from {omnisci.table_name}), 8));'
-        .format(**locals()))
+        f'from {omnisci.table_name}), 8));')
     result = list(result)
     assert len(result) == 8
     for i, r in enumerate(result):
@@ -194,8 +190,7 @@ def test_sizer_return_size(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(my_row_copier_c(cursor(select f8 '
-        'from {omnisci.table_name})));'
-        .format(**locals()))
+        f'from {omnisci.table_name})));')
     result = list(result)
     assert len(result) == 13
     for i, r in enumerate(result):
@@ -228,10 +223,9 @@ def test_rowmul_add_columns(omnisci):
 
     descr, result = omnisci.sql_execute(
         'select * from table(add_columns('
-        'cursor(select f8 from {omnisci.table_name}),'
-        ' cursor(select d from {omnisci.table_name}),'
-        ' cast({alpha} as double), 1));'
-        .format(**locals()))
+        f'cursor(select f8 from {omnisci.table_name}),'
+        f' cursor(select d from {omnisci.table_name}),'
+        f' cast({alpha} as double), 1));')
 
     for i, r in enumerate(result):
         assert r == (i + alpha * (i + 1.5),)
@@ -881,6 +875,7 @@ def test_create_as(omnisci):
 
 @pytest.fixture(scope='function')
 def create_columns(omnisci):
+
     # delete tables
     omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
     omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')

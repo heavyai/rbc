@@ -1,8 +1,6 @@
 """External functions defined by the OmniSciDB server
 """
 
-
-import functools
 from rbc import irutils
 from rbc.errors import UnsupportedError
 from rbc.targetinfo import TargetInfo
@@ -34,8 +32,3 @@ def set_output_row_size(typingctx, set_output_row_size):
         builder.call(fn, args)  # don't return anything
 
     return sig, codegen
-
-
-# fix docstring for intrinsics
-for __func in (set_output_row_size,):
-    functools.update_wrapper(__func, __func._defn)

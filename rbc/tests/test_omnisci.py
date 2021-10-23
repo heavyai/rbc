@@ -1,8 +1,9 @@
 import os
 from rbc import errors
+import itertools
 import numpy as np
 import pytest
-
+from rbc.tests import omnisci_fixture
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -60,37 +61,8 @@ def nb_version():
 
 @pytest.fixture(scope='module')
 def omnisci():
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
-    sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
-                'BOOLEAN']
-    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
-    # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
-    # MULTIPOLYGON, See
-    # https://www.omnisci.com/docs/latest/5_datatypes.html
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-    table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
-
-    def row_value(row, col, colname):
-        if colname == 'b':
-            return ("'true'" if row % 2 == 0 else "'false'")
-        return row
-
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(
-            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
-    m.table_name = table_name
-    yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    for o in omnisci_fixture(globals()):
+        yield o
 
 
 def test_redefine(omnisci):
@@ -101,7 +73,7 @@ def test_redefine(omnisci):
         return x + 1
 
     desrc, result = omnisci.sql_execute(
-        'select i4, incr(i4) from {omnisci.table_name}'.format(**locals()))
+        f'select i4, incr(i4) from {omnisci.table_name}')
     for x, x1 in result:
         assert x1 == x + 1
 
@@ -111,7 +83,7 @@ def test_redefine(omnisci):
         return x + 2
 
     desrc, result = omnisci.sql_execute(
-        'select i4, incr(i4) from {omnisci.table_name}'.format(**locals()))
+        f'select i4, incr(i4) from {omnisci.table_name}')
     for x, x1 in result:
         assert x1 == x + 2
 
@@ -423,15 +395,145 @@ def test_castop(omnisci):
     assert list(result)[0] == (5,)
 
 
+def test_binding(omnisci):
+    omnisci.reset()
+    full = os.environ.get('RBC_TESTS_FULL', 'FALSE').lower() in ['1', 'true', 'on']
+
+    if full:
+        argument_types = ['i8', 'i16', 'i32', 'i64', 'f32', 'f64']
+        literals = ['0', '0.0', 'cast(0 as tinyint)', 'cast(0 as smallint)', 'cast(0 as int)',
+                    'cast(0 as bigint)', 'cast(0 as float)', 'cast(0 as double)']
+        literals_types = ['i32', 'f32'] + argument_types
+        column_vars = ['cast(i8 as tinyint)', 'cast(i8 as smallint)', 'cast(i8 as int)',
+                       'cast(i8 as bigint)', 'cast(i8 as float)', 'cast(i8 as double)']
+        column_vars_types = argument_types
+    else:
+        # skip smallint and int
+        argument_types = ['i8', 'i64', 'f32', 'f64']
+        literals = ['0', '0.0', 'cast(0 as tinyint)', 'cast(0 as bigint)',
+                    'cast(0 as float)', 'cast(0 as double)']
+        literals_types = ['i32', 'f32'] + argument_types
+        column_vars = ['cast(i8 as tinyint)', 'cast(i8 as bigint)',
+                       'cast(i8 as float)', 'cast(i8 as double)']
+        column_vars_types = argument_types
+
+    if available_version[:2] >= (5, 9):
+        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6003', label='docker-dev')
+
+        def get_result(overload_types, input_type, is_literal):
+            overload_types_ = overload_types[::-1 if is_literal else 1]
+            for overload_type in overload_types_:
+                if input_type[0] == overload_type[0]:
+                    if int(input_type[1:]) <= int(overload_type[1:]):
+                        return overload_type
+            if input_type[0] == 'i':
+                for overload_type in reversed(overload_types):
+                    if overload_type[0] == 'f':
+                        return overload_type
+            return 'NO BINDING FOUND'
+
+    elif available_version[:2] == (5, 8):
+
+        def get_result(overload_types, input_type, is_literal):
+            overload_types_ = overload_types[::-1 if is_literal else 1]
+            for overload_type in overload_types_:
+                if input_type[0] == overload_type[0]:
+                    if int(input_type[1:]) <= int(overload_type[1:]):
+                        return overload_type
+            if input_type[0] == 'i':
+                for overload_type in overload_types_:
+                    if overload_type[0] == 'f' and int(input_type[1:]) <= int(overload_type[1:]):
+                        return overload_type
+            return 'NO BINDING FOUND'
+
+    else:
+        # typeless literal expressions not support as arguments
+        literals = literals[2:]
+        literals_types = literals_types[2:]
+
+        def get_result(overload_types, input_type, is_literal):
+            for overload_type in overload_types:
+                if input_type[0] == overload_type[0]:
+                    if int(input_type[1:]) <= int(overload_type[1:]):
+                        return overload_type
+                elif overload_type == 'f64':
+                    return overload_type
+            return 'NO BINDING FOUND'
+
+    assert len(literals) == len(literals_types)
+    assert len(column_vars) == len(column_vars_types)
+
+    omnisci.reset()
+    functions = []
+    for r in range(1, len(argument_types) + 1):
+        if not full and r not in [1, 2, len(argument_types)]:
+            continue
+        for p in itertools.combinations(range(len(argument_types)), r=r):
+            fname = 'rt_binding_' + '_'.join(map(argument_types.__getitem__, p))
+            for i in p:
+                foo = eval(f'lambda x: {i}')
+                foo.__name__ = fname
+                omnisci(f'i8({argument_types[i]})')(foo)
+            functions.append(fname)
+    omnisci.register()
+
+    for fname in functions:
+        for input, input_type in zip(literals, literals_types):
+            try:
+                descr, result = omnisci.sql_execute(f'select {fname}({input})')
+                result = list(result)
+                result = argument_types[result[0][0]]
+            except Exception:
+                result = 'NO BINDING FOUND'
+            expected = get_result(fname[len('rt_binding_'):].split('_'), input_type, True)
+            assert result == expected, (fname, input, input_type, result, expected)
+
+        for input, input_type in zip(column_vars, column_vars_types):
+            try:
+                descr, result = omnisci.sql_execute(
+                    f'select {fname}({input}) from {omnisci.table_name} limit 1')
+                result = list(result)
+                result = argument_types[result[0][0]]
+            except Exception:
+                result = 'NO BINDING FOUND'
+            expected = get_result(fname[len('rt_binding_'):].split('_'), input_type, False)
+            assert result == expected, (fname, input, input_type, result, expected)
+
+
 def test_casting(omnisci):
-    """
-    Define UDFs:
+    """Define UDFs:
       i8(<tinyint>), i16(<smallint>), i32(<int>), i64(<bigint>)
       f32(<float>), f64(<double>)
 
     The following table defines the behavior of applying these UDFs to
     values with different types:
 
+    OmnisciDB version 5.9+
+    ----------------------
+             | Functions applied to <itype value>
+    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
+    ---------+------+------+------+------+------+------+
+    tinyint  | OK   | OK   | OK   | OK   | OK   | OK   |
+    smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
+    int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
+    bigint   | FAIL | FAIL | FAIL | OK   | OK   | OK   |
+    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
+    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
+
+    OmnisciDB version 5.8
+    ----------------------
+             | Functions applied to <itype value>
+    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
+    ---------+------+------+------+------+------+------+
+    tinyint  | OK   | OK   | OK   | OK   | OK   | OK   |
+    smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
+    int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
+    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | OK   |
+    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
+    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
+
+    OmnisciDB version 5.7 and older
+    -------------------------------
              | Functions applied to <itype value>
     itype    | i8   | i16  | i32  | i64  | f32  | f64  |
     ---------+------+------+------+------+------+------+
@@ -441,6 +543,9 @@ def test_casting(omnisci):
     bigint   | FAIL | FAIL | FAIL | OK   | FAIL | FAIL |
     float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
+
+    test_binding is superior test with respect to successful UDF
+    executions but it does not check exception messages.
     """
     omnisci.reset()
 
@@ -642,8 +747,7 @@ def test_casting(omnisci):
             ('f64(0)', r'f32', r'DOUBLE'),
             ('f8', r'f32', r'DOUBLE'),
     ]:
-        q = ('select '+f+'('+v+') from {omnisci.table_name} limit 1'
-             .format(**locals()))
+        q = f'select {f}({v}) from {omnisci.table_name} limit 1'
         match = (r".*(Function "+f+r"\("+t+r"\) not supported"
                  r"|Could not bind "+f+r"\("+t+r"\))")
         with pytest.raises(Exception, match=match):
@@ -662,30 +766,42 @@ def test_casting(omnisci):
                 (r'SMALLINT', 'i2', (8.5,)),
                 (r'TINYINT', 'i1', (8.5,)),
         ]:
-            if available_version[:2] >= (5, 8):
-                # omniscidb-internal PR 5814 changes the casting table
+            if available_version[:2] >= (5, 9):
+                # omniscidb-internal PR 6003 changed the casting table
                 if f == r'f32':
                     r = r[0] - 4,
                 descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+') from {omnisci.table_name} limit 1'
-                    .format(**locals()))
+                    f'select {f}({av}) from {omnisci.table_name} limit 1')
                 assert list(result)[0] == r, (f, at, av, r)
-                continue
 
-            if f == r'f64':  # temporary: allow integers as double arguments
+            elif available_version[:2] == (5, 8):
+                # omniscidb-internal PR 5814 changed the casting table
+                if f == r'f32' and at == r'BIGINT':
+                    with pytest.raises(
+                            Exception,
+                            match=(r".*(Function "+f+r"\("+at+r"\) not supported"
+                                   r"|Could not bind "+f+r"\("+at+r"\))")):
+                        descr, result = omnisci.sql_execute(
+                            f'select {f}({av}) from {omnisci.table_name} limit 1')
+                else:
+                    if f == r'f32':
+                        r = r[0] - 4,
+                    descr, result = omnisci.sql_execute(
+                        f'select {f}({av}) from {omnisci.table_name} limit 1')
+                    assert list(result)[0] == r, (f, at, av, r)
+
+            elif f == r'f64':  # temporary: allow integers as double arguments
                 descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+') from {omnisci.table_name} limit 1'
-                    .format(**locals()))
+                    f'select {f}({av}) from {omnisci.table_name} limit 1')
                 assert list(result)[0] == r
-                continue
 
-            with pytest.raises(
-                    Exception,
-                    match=(r".*(Function "+f+r"\("+at+r"\) not supported"
-                           r"|Could not bind "+f+r"\("+at+r"\))")):
-                descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+') from {omnisci.table_name} limit 1'
-                    .format(**locals()))
+            else:
+                with pytest.raises(
+                        Exception,
+                        match=(r".*(Function "+f+r"\("+at+r"\) not supported"
+                               r"|Could not bind "+f+r"\("+at+r"\))")):
+                    descr, result = omnisci.sql_execute(
+                        'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
 
     for f in [r'i64', r'i32', r'i16', r'i8']:
         for at, av in [
@@ -699,8 +815,7 @@ def test_casting(omnisci):
                     match=(r".*(Function "+f+r"\("+at+r"\) not supported"
                            r"|Could not bind "+f+r"\("+at+r"\))")):
                 descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+') from {omnisci.table_name} limit 1'
-                    .format(**locals()))
+                    f'select {f}({av}) from {omnisci.table_name} limit 1')
 
 
 def test_truncate_issue(omnisci):
@@ -725,19 +840,29 @@ def test_truncate_issue(omnisci):
     descr, result = omnisci.sql_execute(
         'select bits(truncate(2016, 1)) from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] in [(16,), (32,)]
+    if available_version[:2] >= (5, 8):
+        # omniscidb-internal PR 5915 changes the casting table
+        assert list(result)[0] in [(64,)]
+    else:
+        assert list(result)[0] in [(16,), (32,)]
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as smallint), 1))'
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (16,)
+    if available_version[:2] >= (5, 8):
+        assert list(result)[0] == (64,)
+    else:
+        assert list(result)[0] == (16,)
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as int), 1))'
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (32,)
+    if available_version[:2] >= (5, 8):
+        assert list(result)[0] == (64,)
+    else:
+        assert list(result)[0] == (32,)
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as bigint), 1))'
@@ -749,7 +874,10 @@ def test_truncate_issue(omnisci):
         'select bits(truncate(cast(2016.0 as float), 1))'
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
-    assert list(result)[0] == (32,)
+    if available_version[:2] >= (5, 8):
+        assert list(result)[0] == (64,)
+    else:
+        assert list(result)[0] == (32,)
 
     descr, result = omnisci.sql_execute(
         'select bits(truncate(cast(2016.0 as double), 1))'

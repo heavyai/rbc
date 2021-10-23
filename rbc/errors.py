@@ -3,6 +3,10 @@ rbc-specific errors and warnings.
 """
 
 
+from rbc.utils import get_version
+from numba.core.errors import TypingError
+
+
 class OmnisciServerError(Exception):
     """
     Raised when OmnisciDB server raises a runtime error that RBC knows
@@ -35,3 +39,13 @@ class ForbiddenIntrinsicError(Exception):
     https://github.com/xnd-project/rbc/issues/207
     """
     pass
+
+
+if get_version('numba') < (0, 55):
+    class NumbaTypeError(TypingError):
+        pass
+
+    class NumbaNotImplementedError(TypingError):
+        pass
+else:
+    from numba.core.errors import NumbaTypeError, NumbaNotImplementedError  # noqa: F401

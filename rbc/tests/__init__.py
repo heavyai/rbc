@@ -1,10 +1,20 @@
-__all__ = ['omnisci_fixture']
+__all__ = ['omnisci_fixture', 'sql_execute']
 
 
 import os
 import pytest
 import warnings
 from collections import defaultdict
+
+
+def sql_execute(query):
+    """Execute a SQL statement to omniscidb server using global instance.
+
+    Use when the query does not require registration of new UDF/UDTFs.
+    """
+    rbc_omnisci = pytest.importorskip('rbc.omniscidb')
+    omnisci = next(rbc_omnisci.global_omnisci_singleton)
+    return omnisci.sql_execute(query)
 
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
@@ -89,7 +99,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
             pytest.skip(reason)
 
         # Requires update when omniscidb-internal bumps up version number:
-        current_development_version = (5, 8, 0)
+        current_development_version = (5, 9, 0)
         if available_version[:3] > current_development_version:
             warnings.warn(f'{available_version}) is newer than development version'
                           f' ({current_development_version}), please update the latter!')

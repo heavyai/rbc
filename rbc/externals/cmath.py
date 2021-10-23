@@ -3,16 +3,9 @@
 
 
 from collections import namedtuple
-from . import register_external
-from numba.core import imputils, typing
+from . import make_intrinsic
 
 arg = namedtuple("arg", ("name", "ty"))
-
-# Typing
-typing_registry = typing.templates.Registry()
-
-# Lowering
-lowering_registry = imputils.Registry()
 
 cmath = {
     # Trigonometric
@@ -166,7 +159,7 @@ cmath = {
     # Other functions
     "fabs": ("double", [arg(name="x", ty="double")]),
     "fabsf": ("float", [arg(name="x", ty="float")]),
-    "abs": ("long long", [arg(name="x", ty="double")]),
+    "abs": ("long long int", [arg(name="x", ty="double")]),
     "absf": ("long", [arg(name="x", ty="float")]),
     "fma": (
         "double",
@@ -188,7 +181,6 @@ cmath = {
 
 
 for fname, (retty, args) in cmath.items():
+    argnames = [arg.name for arg in args]
     doc = f"C math function {fname}"
-    register_external(
-        fname, retty, args, __name__, globals(), typing_registry, lowering_registry, doc
-    )
+    fn = make_intrinsic(fname, retty, argnames, __name__, globals(), doc)

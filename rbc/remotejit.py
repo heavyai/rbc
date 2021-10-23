@@ -401,6 +401,8 @@ class RemoteJIT(object):
 
     thrift_content = None
 
+    typesystem_aliases = dict()
+
     def __init__(self, host='localhost', port=11532,
                  local=False, debug=False):
         """Construct remote JIT function decorator.
@@ -512,6 +514,16 @@ class RemoteJIT(object):
         """
         assert self._last_compile is None
         self._last_compile = compile_data
+
+    def get_pending_names(self):
+        """Return the names of functions that have not been registered to the
+        remote server.
+        """
+        names = set()
+        if not self.have_last_compile:
+            for caller in reversed(self.get_callers()):
+                names.add(caller.func.__name__)
+        return names
 
     def retrieve_targets(self):
         """Retrieve target device information from remote client.

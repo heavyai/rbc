@@ -3,7 +3,7 @@
 
 __all__ = ['ArrayPointer', 'Array', 'OmnisciArrayType']
 
-from rbc import typesystem
+from rbc import typesystem, errors
 from .omnisci_buffer import (BufferPointer, Buffer,
                              OmnisciBufferType,
                              omnisci_buffer_constructor)
@@ -48,6 +48,6 @@ def type_omnisci_array(context):
         elif isinstance(dtype, types.NumberClass):
             element_type = typesystem.Type.fromobject(dtype)
         else:
-            raise NotImplementedError(repr(dtype))
+            raise errors.NumbaNotImplementedError(repr(dtype))
         return OmnisciArrayType((element_type,)).tonumba()
     return typer

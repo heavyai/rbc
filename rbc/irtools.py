@@ -5,18 +5,16 @@ import re
 import warnings
 from contextlib import contextmanager
 from collections import defaultdict
-import types as py_types
 from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .errors import UnsupportedError
 from .utils import get_version
-from . import libfuncs, structure_type
+from . import libfuncs
 from rbc import externals
-from rbc.omnisci_backend import mathimpl
 from numba.core import codegen, cpu, compiler_lock, \
     registry, typing, compiler, sigutils, cgutils, \
-    extending
+    extending, imputils
 from numba.core import errors as nb_errors
 
 
@@ -132,16 +130,7 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 class JITRemoteTypingContext(typing.Context):
     def load_additional_registries(self):
-        for module in externals.__dict__.values():
-            if not isinstance(module, py_types.ModuleType):
-                continue
-
-            typing_registry = getattr(module, 'typing_registry', None)
-            if typing_registry:
-                self.install_registry(typing_registry)
-
-        self.install_registry(mathimpl.typing_registry)
-        self.install_registry(structure_type.typing_registry)
+        self.install_registry(typing.templates.builtin_registry)
         super().load_additional_registries()
 
 
@@ -155,19 +144,7 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
 
     def load_additional_registries(self):
-        for module in externals.__dict__.values():
-            if not isinstance(module, py_types.ModuleType):
-                continue
-
-            if 'rbc.externals' not in module.__name__:
-                continue
-
-            lowering_registry = getattr(module, 'lowering_registry', None)
-            if lowering_registry:
-                self.install_registry(lowering_registry)
-
-        self.install_registry(mathimpl.lowering_registry)
-        self.install_registry(structure_type.lowering_registry)
+        self.install_registry(imputils.builtin_registry)
         super().load_additional_registries()
 
     def get_executable(self, library, fndesc, env):
