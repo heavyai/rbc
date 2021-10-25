@@ -7,6 +7,7 @@ from llvmlite import ir
 from rbc.targetinfo import TargetInfo
 from numba.core import cgutils, extending
 from numba.core import types as nb_types
+from rbc.errors import NumbaTypeError  # some errors are available for Numba >= 0.55
 
 int32_t = ir.IntType(32)
 
@@ -56,7 +57,7 @@ def printf(typingctx, format_type, *args):
         return sig, codegen
 
     else:
-        raise TypeError(f"expected StringLiteral but got {type(format_type).__name__}")
+        raise NumbaTypeError(f"expected StringLiteral but got {type(format_type).__name__}")
 
 
 # fix docstring for intrinsics
