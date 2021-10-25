@@ -446,6 +446,7 @@ def test_binding(omnisci):
         column_vars_types = argument_types
 
     if available_version[:2] >= (5, 9):
+        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 5901', label='master')
 
         def get_result(overload_types, input_type, is_literal):
             overload_types_ = overload_types[::-1 if is_literal else 1]
@@ -767,19 +768,35 @@ def test_casting(omnisci):
                 (r'SMALLINT', 'i2', (8.5,)),
                 (r'TINYINT', 'i1', (8.5,)),
         ]:
-            if available_version[:2] >= (5, 8):
-                # omniscidb-internal PR 5814 and 6003 change the casting table
+            if available_version[:2] >= (5, 9):
+                # omniscidb-internal PR 6003 changed the casting table
                 if f == r'f32':
                     r = r[0] - 4,
                 descr, result = omnisci.sql_execute(
                     'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
                 assert list(result)[0] == r, (f, at, av, r)
 
+            elif available_version[:2] == (5, 8):
+                # omniscidb-internal PR 5814 changed the casting table
+                if f == r'f32' and at == r'BIGINT':
+                    with pytest.raises(
+                            Exception,
+                            match=(r".*(Function "+f+r"\("+at+r"\) not supported"
+                                   r"|Could not bind "+f+r"\("+at+r"\))")):
+                        descr, result = omnisci.sql_execute(
+                            'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
+                else:
+                    if f == r'f32':
+                        r = r[0] - 4,
+                    descr, result = omnisci.sql_execute(
+                        'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
+                    assert list(result)[0] == r, (f, at, av, r)
+
             elif f == r'f64':  # temporary: allow integers as double arguments
                 descr, result = omnisci.sql_execute(
                     'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
                 assert list(result)[0] == r
-                continue
+
             else:
                 with pytest.raises(
                         Exception,
