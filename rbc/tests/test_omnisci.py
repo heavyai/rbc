@@ -3,7 +3,7 @@ from rbc import errors
 import itertools
 import numpy as np
 import pytest
-
+from rbc.tests import omnisci_fixture
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -61,36 +61,8 @@ def nb_version():
 
 @pytest.fixture(scope='module')
 def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci'
-
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
-                'BOOLEAN']
-    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
-    # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
-    # MULTIPOLYGON, See
-    # https://www.omnisci.com/docs/latest/5_datatypes.html
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-    table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
-    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
-
-    def row_value(row, col, colname):
-        if colname == 'b':
-            return ("'true'" if row % 2 == 0 else "'false'")
-        return row
-
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(f'INSERT INTO {table_name} VALUES ({table_row})')
-    m.table_name = table_name
-    yield m
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+    for o in omnisci_fixture(globals()):
+        yield o
 
 
 def test_redefine(omnisci):
@@ -446,7 +418,7 @@ def test_binding(omnisci):
         column_vars_types = argument_types
 
     if available_version[:2] >= (5, 9):
-        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 5901', label='master')
+        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6003', label='master')
 
         def get_result(overload_types, input_type, is_literal):
             overload_types_ = overload_types[::-1 if is_literal else 1]
