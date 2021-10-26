@@ -1,8 +1,6 @@
 """External functions defined by the OmniSciDB server
 """
 
-
-import functools
 from rbc import irutils
 from rbc.errors import UnsupportedError
 from rbc.targetinfo import TargetInfo

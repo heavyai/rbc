@@ -1,7 +1,6 @@
 """https://en.cppreference.com/w/c/io
 """
 
-import functools
 from rbc import irutils
 from llvmlite import ir
 from rbc.targetinfo import TargetInfo
@@ -58,8 +57,3 @@ def printf(typingctx, format_type, *args):
 
     else:
         raise NumbaTypeError(f"expected StringLiteral but got {type(format_type).__name__}")
-
-
-# fix docstring for intrinsics
-for __func in (printf, fflush):
-    functools.update_wrapper(__func, __func._defn)
