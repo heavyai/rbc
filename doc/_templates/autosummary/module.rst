@@ -13,7 +13,7 @@
     {% endfor %}
 {% endif %}
 
-{% if module == "rbc.externals.libdevice" %}
+{% if fullname == "rbc.externals.libdevice" %}
 .. rubric:: Functions
 .. autosummary::
     :toctree:
