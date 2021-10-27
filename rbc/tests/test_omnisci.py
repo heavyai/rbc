@@ -397,7 +397,7 @@ def test_castop(omnisci):
 
 def test_binding(omnisci):
     omnisci.reset()
-    full = False
+    full = os.environ.get('RBC_TESTS_FULL', 'FALSE').lower() in ['1', 'true', 'on']
 
     if full:
         argument_types = ['i8', 'i16', 'i32', 'i64', 'f32', 'f64']
@@ -418,7 +418,7 @@ def test_binding(omnisci):
         column_vars_types = argument_types
 
     if available_version[:2] >= (5, 9):
-        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6003', label='master')
+        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6003', label='docker-dev')
 
         def get_result(overload_types, input_type, is_literal):
             overload_types_ = overload_types[::-1 if is_literal else 1]
@@ -508,6 +508,8 @@ def test_casting(omnisci):
     The following table defines the behavior of applying these UDFs to
     values with different types:
 
+    OmnisciDB version 5.9+
+    ----------------------
              | Functions applied to <itype value>
     itype    | i8   | i16  | i32  | i64  | f32  | f64  |
     ---------+------+------+------+------+------+------+
@@ -515,6 +517,30 @@ def test_casting(omnisci):
     smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
     int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
     bigint   | FAIL | FAIL | FAIL | OK   | OK   | OK   |
+    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
+    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
+
+    OmnisciDB version 5.8
+    ----------------------
+             | Functions applied to <itype value>
+    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
+    ---------+------+------+------+------+------+------+
+    tinyint  | OK   | OK   | OK   | OK   | OK   | OK   |
+    smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
+    int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
+    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | OK   |
+    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
+    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
+
+    OmnisciDB version 5.7 and older
+    -------------------------------
+             | Functions applied to <itype value>
+    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
+    ---------+------+------+------+------+------+------+
+    tinyint  | OK   | OK   | OK   | OK   | FAIL | FAIL |
+    smallint | FAIL | OK   | OK   | OK   | FAIL | FAIL |
+    int      | FAIL | FAIL | OK   | OK   | FAIL | FAIL |
+    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | FAIL |
     float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
 
