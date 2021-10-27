@@ -745,7 +745,7 @@ def test_casting(omnisci):
                 if f == r'f32':
                     r = r[0] - 4,
                 descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
+                    f'select {f}({av}) from {omnisci.table_name} limit 1')
                 assert list(result)[0] == r, (f, at, av, r)
 
             elif available_version[:2] == (5, 8):
