@@ -721,7 +721,7 @@ def test_casting(omnisci):
             ('f64(0)', r'f32', r'DOUBLE'),
             ('f8', r'f32', r'DOUBLE'),
     ]:
-        q = ('select '+f+'('+v+f') from {omnisci.table_name} limit 1')
+        q = f'select {f}({v}) from {omnisci.table_name} limit 1'
         match = (r".*(Function "+f+r"\("+t+r"\) not supported"
                  r"|Could not bind "+f+r"\("+t+r"\))")
         with pytest.raises(Exception, match=match):
