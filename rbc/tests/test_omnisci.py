@@ -789,7 +789,7 @@ def test_casting(omnisci):
                     match=(r".*(Function "+f+r"\("+at+r"\) not supported"
                            r"|Could not bind "+f+r"\("+at+r"\))")):
                 descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
+                    f'select {f}({av}) from {omnisci.table_name} limit 1')
 
 
 def test_truncate_issue(omnisci):
