@@ -766,7 +766,7 @@ def test_casting(omnisci):
 
             elif f == r'f64':  # temporary: allow integers as double arguments
                 descr, result = omnisci.sql_execute(
-                    'select '+f+'('+av+f') from {omnisci.table_name} limit 1')
+                    f'select {f}({av}) from {omnisci.table_name} limit 1')
                 assert list(result)[0] == r
 
             else:
