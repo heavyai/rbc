@@ -30,23 +30,22 @@ def sanitize(name):
 def make_intrinsic(fname, retty, argnames, module_name, module_globals, doc):
     argnames = tuple(map(lambda x: sanitize(x), argnames))
     fn_str = (
-        f'from numba.core import funcdesc\n'
         f'from numba.core.extending import intrinsic\n'
-        f'from rbc.typesystem import Type\n'
-        f'from rbc.targetinfo import TargetInfo\n'
         f'@intrinsic\n'
         f'def {fname}(typingctx, {", ".join(argnames)}):\n'
+        f'    from rbc.typesystem import Type\n'
         f'    retty_ = Type.fromobject("{retty}").tonumba()\n'
         f'    argnames_ = tuple(map(lambda x: Type.fromobject(x).tonumba(), [{", ".join(argnames)}]))\n'  # noqa: E501
         f'    signature = retty_(*argnames_)\n'
         f'    def codegen(context, builder, sig, args):\n'
+        f'        from numba.core import funcdesc\n'
         f'        fndesc = funcdesc.ExternalFunctionDescriptor("{fname}", sig.return_type, sig.args)\n'  # noqa: E501
         f'        func = context.declare_external_function(builder.module, fndesc)\n'
         f'        return builder.call(func, args)\n'
         f'    return signature, codegen'
     )
 
-    exec(fn_str, globals(), locals())
+    exec(fn_str)
     fn = locals()[fname]
     fn.__module__ = module_name
     fn.__doc__ = doc
