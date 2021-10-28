@@ -207,6 +207,7 @@ jobs:
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
+          RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
 
@@ -217,6 +218,7 @@ jobs:
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_OMNISCIDB_VERSION: ${{ matrix.omniscidb-version }}
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
+          RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
 
