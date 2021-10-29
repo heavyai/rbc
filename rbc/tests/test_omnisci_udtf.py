@@ -294,6 +294,7 @@ def test_parallel_execution(omnisci, sleep, mode):
 
 
 def test_table_function_error(omnisci):
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
     omnisci.reset()
 
     @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
