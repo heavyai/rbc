@@ -30,6 +30,8 @@ def test_omniscidb_version(omnisci):
     varname = 'EXPECTED_OMNISCIDB_VERSION'
     current = omnisci.version
     expected = os.environ.get(varname)
+    if 'CI' in os.environ and expected is None:
+        pytest.fail("OmniSciDB server is not running")
     if expected is None:
         pytest.skip(
             f'Undefined environment variable {varname},'
