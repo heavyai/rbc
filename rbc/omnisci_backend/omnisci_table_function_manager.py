@@ -4,7 +4,7 @@ __all__ = ['OmnisciTableFunctionManagerType']
 from numba.core import extending, types
 from numba.core.cgutils import make_bytearray, global_constant
 from rbc import structure_type, irutils
-from rbc.errors import UnsupportedError, NumbaTypeError
+from rbc.errors import UnsupportedError
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
 from llvmlite import ir
@@ -32,7 +32,7 @@ class OmnisciTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerT
     pass
 
 
-error_msg = 'TableFunctionManager is only available in OmniSciDB 5.8 or newer'
+error_msg = 'TableFunctionManager is only available in OmniSciDB 5.8 or newer (got %s)'
 i8p = ir.IntType(8).as_pointer()
 i32 = ir.IntType(32)
 i64 = ir.IntType(64)
@@ -44,10 +44,10 @@ def omnisci_udtfmanager_error_message_(typingctx, mgr, msg):
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (5, 8, 0):
-        raise UnsupportedError(error_msg)
+        raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     if not isinstance(msg, types.StringLiteral):
-        raise NumbaTypeError(f"expected StringLiteral but got {type(msg).__name__}")
+        raise TypeError(f"expected StringLiteral but got {type(msg).__name__}")
 
     def codegen(context, builder, signature, args):
         mgr_ptr = args[0]
@@ -84,7 +84,7 @@ def omnisci_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (5, 8, 0):
-        raise UnsupportedError(error_msg)
+        raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     def codegen(context, builder, sig, args):
         mgr_ptr, num_rows_arg = args

@@ -870,7 +870,7 @@ class RemoteOmnisci(RemoteJIT):
         outputArgTypes = []
         sqlArgTypes = []
         annotations = []
-        uses_manager = False
+        function_annotations = dict() # TODO: retrieve function annotations from orig_sig
         sizer = None
         sizer_index = -1
 
@@ -902,7 +902,7 @@ class RemoteOmnisci(RemoteJIT):
                     consumed_index += 1
 
             elif isinstance(a, OmnisciTableFunctionManagerType):
-                uses_manager = True
+                function_annotations['uses_manager'] = 'True'
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     atype = self.type_to_extarg(a)
@@ -929,11 +929,12 @@ class RemoteOmnisci(RemoteJIT):
                         f' integer (got {sizer_index})')
         sizer_type = (thrift.TOutputBufferSizeType
                       ._NAMES_TO_VALUES[sizer])
+        annotations.append(function_annotations)
         return thrift.TUserDefinedTableFunction(
             name + sig.mangling(),
             sizer_type, sizer_index,
             inputArgTypes, outputArgTypes, sqlArgTypes,
-            annotations, uses_manager)
+            annotations)
 
     def _make_udtf_old(self, caller, orig_sig, sig):
         # old style UDTF for omniscidb <= 5.3, to be deprecated
