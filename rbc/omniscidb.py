@@ -870,7 +870,7 @@ class RemoteOmnisci(RemoteJIT):
         outputArgTypes = []
         sqlArgTypes = []
         annotations = []
-        function_annotations = dict() # TODO: retrieve function annotations from orig_sig
+        function_annotations = dict()  # TODO: retrieve function annotations from orig_sig
         sizer = None
         sizer_index = -1
 

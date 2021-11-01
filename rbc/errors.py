@@ -1,6 +1,3 @@
-
-from rbc.utils import get_version
-
 """
 rbc-specific errors and warnings.
 """
