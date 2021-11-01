@@ -1,3 +1,6 @@
+
+from rbc.utils import get_version
+
 """
 rbc-specific errors and warnings.
 """
@@ -36,7 +39,7 @@ class ForbiddenIntrinsicError(Exception):
     """
     pass
 
-from rbc.utils import get_version
+
 if get_version('numba') < (0, 55):
     class NumbaTypeError(TypeError):
         pass
