@@ -238,16 +238,14 @@ def test_table_function_manager(omnisci):
 
     with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
         omnisci.sql_execute(
-            f'''select out0 from table(
-                my_manager_error(cursor(select f8 from {omnisci.table_name}
-                )));''')
+            f'select out0 from table(my_manager_error('
+            f'cursor(select f8 from {omnisci.table_name})));')
 
     assert exc.match('Error executing table function: TableFunctionManager error_message!')
 
     _, result = omnisci.sql_execute(
-        f'''select out0 from table(my_manager_row_size(
-            cursor(select f8 from {omnisci.table_name}
-            )));''')
+        f'select out0 from table(my_manager_row_size('
+        f'cursor(select f8 from {omnisci.table_name})));')
 
     expected = [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
     assert(list(result) == expected)

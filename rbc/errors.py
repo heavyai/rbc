@@ -35,3 +35,10 @@ class ForbiddenIntrinsicError(Exception):
     https://github.com/xnd-project/rbc/issues/207
     """
     pass
+
+from rbc.utils import get_version
+if get_version('numba') < (0, 55):
+    class NumbaTypeError(TypeError):
+        pass
+else:
+    from numba.core.errors import NumbaTypeError  # noqa: F401
