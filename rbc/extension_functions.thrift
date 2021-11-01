@@ -89,4 +89,5 @@ struct TUserDefinedTableFunction {
   5: list<TExtArgumentType> outputArgTypes,
   6: list<TExtArgumentType> sqlArgTypes,
   7: list<map<string, string>> annotations
+  8: bool uses_manager
 }

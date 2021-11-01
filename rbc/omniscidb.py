@@ -15,7 +15,7 @@ from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta, OmnisciColumnListType)
+    BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
@@ -244,6 +244,7 @@ class RemoteOmnisci(RemoteJIT):
         Constant='int32|sizer=Constant',
         ColumnList='OmnisciColumnListType',
         TextEncodingDict='OmnisciTextEncodingDictType',
+        TableFunctionManager='OmnisciTableFunctionManagerType<>',
     )
 
     def __init__(self,
@@ -869,6 +870,7 @@ class RemoteOmnisci(RemoteJIT):
         outputArgTypes = []
         sqlArgTypes = []
         annotations = []
+        uses_manager = False
         sizer = None
         sizer_index = -1
 
@@ -898,6 +900,9 @@ class RemoteOmnisci(RemoteJIT):
                         a_, OmnisciOutputColumnType), (a_)
                     inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
+
+            elif isinstance(a, OmnisciTableFunctionManagerType):
+                uses_manager = True
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     atype = self.type_to_extarg(a)
@@ -928,7 +933,7 @@ class RemoteOmnisci(RemoteJIT):
             name + sig.mangling(),
             sizer_type, sizer_index,
             inputArgTypes, outputArgTypes, sqlArgTypes,
-            annotations)
+            annotations, uses_manager)
 
     def _make_udtf_old(self, caller, orig_sig, sig):
         # old style UDTF for omniscidb <= 5.3, to be deprecated
