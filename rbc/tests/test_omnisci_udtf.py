@@ -222,7 +222,7 @@ def test_simple(omnisci):
 
 
 def test_table_function_manager(omnisci):
-    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 6035')
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 6035', label='master')
 
     @omnisci('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
     def my_manager_error(mgr, col, out):
