@@ -891,6 +891,12 @@ class RemoteOmnisci(RemoteJIT):
                 sizer_index = consumed_index + 1
                 sizer = _sizer
 
+            # process function annotations first to avoid appending annotations twice
+            if isinstance(a, OmnisciTableFunctionManagerType):
+                function_annotations['uses_manager'] = 'True'
+                consumed_index += 1
+                continue
+
             annotations.append(annot)
 
             if isinstance(a, OmnisciCursorType):
@@ -901,8 +907,6 @@ class RemoteOmnisci(RemoteJIT):
                     inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
 
-            elif isinstance(a, OmnisciTableFunctionManagerType):
-                function_annotations['uses_manager'] = 'True'
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     atype = self.type_to_extarg(a)
