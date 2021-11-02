@@ -32,7 +32,7 @@ class OmnisciTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerT
     pass
 
 
-error_msg = 'TableFunctionManager is only available in OmniSciDB 5.8 or newer (got %s)'
+error_msg = 'TableFunctionManager is only available in OmniSciDB 5.9 or newer (got %s)'
 i8p = ir.IntType(8).as_pointer()
 i32 = ir.IntType(32)
 i64 = ir.IntType(64)
@@ -43,7 +43,7 @@ def omnisci_udtfmanager_error_message_(typingctx, mgr, msg):
     sig = types.int32(mgr, msg)
 
     target_info = TargetInfo()
-    if target_info.software[1][:3] < (5, 8, 0):
+    if target_info.software[1][:3] < (5, 9, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     if not isinstance(msg, types.StringLiteral):
@@ -83,7 +83,7 @@ def omnisci_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
     sig = types.void(mgr, num_rows)
 
     target_info = TargetInfo()
-    if target_info.software[1][:3] < (5, 8, 0):
+    if target_info.software[1][:3] < (5, 9, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     def codegen(context, builder, sig, args):
