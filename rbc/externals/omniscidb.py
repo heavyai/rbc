@@ -7,6 +7,7 @@ from rbc import irutils
 from rbc.errors import UnsupportedError
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types as nb_types
+from numba.core.cgutils import make_bytearray, global_constant
 from llvmlite import ir
 
 
@@ -36,6 +37,34 @@ def set_output_row_size(typingctx, set_output_row_size):
     return sig, codegen
 
 
+@extending.intrinsic
+def table_function_error(typingctx, message):
+    """
+    Return an error from a UDTF.
+
+    ``message`` must be a string literal.
+    """
+    if not isinstance(message, nb_types.StringLiteral):
+        raise TypeError(f"expected StringLiteral but got {type(message).__name__}")
+
+    def codegen(context, builder, sig, args):
+        int8ptr = ir.PointerType(ir.IntType(8))
+        fntype = ir.FunctionType(ir.IntType(32), [int8ptr])
+        fn = irutils.get_or_insert_function(builder.module, fntype,
+                                            name="table_function_error")
+        assert fn.is_declaration
+        #
+        msg_bytes = message.literal_value.encode('utf-8')
+        msg_const = make_bytearray(msg_bytes + b'\0')
+        msg_global_var = global_constant(builder.module, "table_function_error_message",
+                                         msg_const)
+        msg_ptr = builder.bitcast(msg_global_var, int8ptr)
+        return builder.call(fn, [msg_ptr])
+
+    sig = nb_types.int32(message)
+    return sig, codegen
+
+
 # fix docstring for intrinsics
-for __func in (set_output_row_size,):
+for __func in (set_output_row_size, table_function_error):
     functools.update_wrapper(__func, __func._defn)

@@ -1,5 +1,6 @@
 import pytest
 from rbc.tests import omnisci_fixture, sql_execute
+from rbc.externals.omniscidb import table_function_error
 import numpy as np
 
 
@@ -320,3 +321,33 @@ def test_parallel_execution(omnisci, sleep, mode):
         for start, end, thread_id in outputs:
             print(f'{thread_id:8x} :' + ' ' * ((start - origin) // 100)
                   + '*' * ((end - start) // 100))
+
+
+def test_table_function_error(omnisci):
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
+    omnisci.reset()
+
+    @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
+    def my_divide(column, k, row_multiplier, out):
+        if k == 0:
+            return table_function_error('division by zero')
+        for i in range(len(column)):
+            out[i] = column[i] / k
+        return len(column)
+
+    descr, result = omnisci.sql_execute(f"""
+        select *
+        from table(
+            my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 2)
+        );
+    """)
+    assert list(result) == [(0.0,), (0.5,), (1.0,), (1.5,), (2.0,)]
+
+    with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
+        omnisci.sql_execute(f"""
+            select *
+            from table(
+                my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 0)
+            );
+        """)
+    assert exc.match('Error executing table function: division by zero')
