@@ -10,7 +10,7 @@ __all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnTy
 from llvmlite import ir
 from rbc import typesystem, irutils
 from .omnisci_buffer import Buffer, OmnisciBufferType, BufferType
-from .column_list import OmnisciColumnListType
+from .omnisci_column_list import OmnisciColumnListType
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types
 
