@@ -313,6 +313,7 @@ class RemoteOmnisci(RemoteJIT):
         return self._thrift_client
 
     def thrift_call(self, name, *args, **kwargs):
+        print(name)
         client = kwargs.get('client')
         if client is None:
             client = self.thrift_client
