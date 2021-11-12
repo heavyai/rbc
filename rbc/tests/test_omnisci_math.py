@@ -18,16 +18,17 @@ def nb_version():
 
 @pytest.fixture(scope='module')
 def omnisci():
+    # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_omnisci_math'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name}'
+        f'CREATE TABLE IF NOT EXISTS {table_name}'
         ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z DOUBLE, i INT, '
-        'j INT, t INT[], td DOUBLE[], te INT[]);'
-        .format(**locals()))
+        'j INT, t INT[], td DOUBLE[], te INT[]);')
 
     for _i in range(1, 6):
         a = str((_i % 3) == 0).lower()
@@ -41,14 +42,13 @@ def omnisci():
         td = 'ARRAY[%s]' % (', '.join(str(j + i/1.0) for i in range(-i, i+1)))
         te = 'Array[]'
         m.sql_execute(
-            'insert into {table_name} values (\'{a}\', \'{b}\', {x}, {y},'
-            ' {z}, {i}, {j}, {t}, {td}, {te})'
-            .format(**locals()))
+            f'insert into {table_name} values (\'{a}\', \'{b}\', {x}, {y},'
+            f' {z}, {i}, {j}, {t}, {td}, {te})')
 
     m.table_name = table_name
     yield m
 
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
 
 math_functions = [

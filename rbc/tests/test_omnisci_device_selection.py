@@ -58,11 +58,16 @@ def get_single_result(omnisci, kind, func):
     raise NotImplementedError(repr((kind, func)))
 
 
-def get_pair_result(omnisci, kind1, func1, kind2, func2):
+def get_pair_result(omnisci, ext, kind1, func1, kind2, func2,
+                    allow_query_step_cpu_retry=False):
     r1 = get_single_result(omnisci, kind1, func1)
     r2 = get_single_result(omnisci, kind2, func2)
     if r1 == err_device_code or r2 == err_device_code:
         return err_device_code
+    if allow_query_step_cpu_retry and ext in {'udtf/udf', 'udf/udtf'}:
+        # with --allow-query-step-cpu-retry=1, UDTF and UDF execution
+        # targets are independent
+        return r1, r2
     if func1 == 'cpu' and func2 == 'gpu':
         return err_device_code
     if func1 == 'gpu' and func2 == 'cpu':
@@ -105,8 +110,10 @@ def get_worker1(omnisci, ext, kind, func):
     raise NotImplementedError(repr((ext, kind, func)))
 
 
-def get_worker2(omnisci, ext, kind1, func1, kind2, func2):
-    expected = get_pair_result(omnisci, kind1, func1, kind2, func2)
+def get_worker2(omnisci, ext, kind1, func1, kind2, func2,
+                allow_query_step_cpu_retry=False):
+    expected = get_pair_result(omnisci, ext, kind1, func1, kind2, func2,
+                               allow_query_step_cpu_retry=allow_query_step_cpu_retry)
     if isinstance(expected, tuple):
         expected = tuple(map(decode, expected))
     else:
@@ -207,7 +214,14 @@ def test_device_selection_pair(omnisci, func12, ext, kind2, kind1):
     if 'udtf' in ext and kind1 == 'lt':
         pytest.skip('Load-time UDTFs not supported')
 
-    execute, query, expected = get_worker2(omnisci, ext, kind1, func1, kind2, func2)
+    # Omniscidb server option --allow-query-step-cpu-retry=1 was
+    # introduced in omniscidb-internal PR 5798, here assuming the
+    # default value.
+    allow_query_step_cpu_retry = omnisci.version[:2] >= (5, 8)
+
+    execute, query, expected = get_worker2(
+        omnisci, ext, kind1, func1, kind2, func2,
+        allow_query_step_cpu_retry=allow_query_step_cpu_retry)
     result = execute(omnisci, query)
     if isinstance(result, Exception):
         assert expected == decode(err_device_code), str(result)

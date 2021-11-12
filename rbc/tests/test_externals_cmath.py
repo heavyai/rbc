@@ -17,12 +17,14 @@ def rjit(request):
         rjit.start_server(background=True)
         request.addfinalizer(rjit.stop_server)
         atexit.register(rjit.stop_server)
+    define(rjit)
     return rjit
 
 
 @pytest.fixture(scope="module")
 def ljit(request):
     ljit = RemoteJIT(debug=not True, local=True)
+    define(ljit)
     return ljit
 
 
@@ -30,6 +32,7 @@ def ljit(request):
 def omnisci():
 
     for o in omnisci_fixture(globals()):
+        define(o)
         yield o
 
 
@@ -101,9 +104,19 @@ cmath_funcs = (
 )
 
 
-def define(jit, fn_name, fname, signature):
-    def inner(fname, signature):
-        cmath_fn = getattr(cmath, fname)
+funcs = {}
+
+
+def _get_query_func(fname):
+    PREFIX = "test_cmath"
+    return f"{PREFIX}_{fname}"
+
+
+def define(jit):
+    global funcs
+
+    def inner(cmath_func, query_func, signature):
+        cmath_fn = getattr(cmath, cmath_func)
         t = Type.fromstring(signature)
         retty = str(t[0])
         argtypes = tuple(map(str, t[1]))
@@ -122,11 +135,17 @@ def define(jit, fn_name, fname, signature):
             def fn(a, b, c):
                 return cmath_fn(a, b, c)
 
-        fn.__name__ = fn_name
+        fn.__name__ = query_func
         fn = jit(f"{retty}({', '.join(argtypes)})", devices=["cpu"])(fn)
         return fn
 
-    return inner(fname, signature)
+    blocklist = ("frexp", "nan")
+
+    for fname, signature in cmath_funcs:
+        if fname not in blocklist:
+            query_func = _get_query_func(fname)
+            fn = inner(fname, query_func, signature)
+            funcs[(jit, query_func)] = fn
 
 
 def _get_pyfunc(fname):
@@ -174,14 +193,13 @@ def test_external_cmath_omnisci(omnisci, fname, sig):
         pytest.xfail(f"cmath.{fname} wrong output!")
 
     table = omnisci.table_name
-    cmath_func = f"{table}_{fname}"
-    fn = define(omnisci, cmath_func, fname, sig)
+    query_func = _get_query_func(fname)
     pyfunc = _get_pyfunc(fname)
 
     if fname in ["acos", "asin", "atan"]:
-        query = f"SELECT f8/10.0, {cmath_func}(f8/10.0) from {table}"
+        query = f"SELECT f8/10.0, {query_func}(f8/10.0) from {table}"
     elif fname in ["atan2"]:
-        query = f"SELECT f8/10.0, f8/8.0, {cmath_func}(f8/10.0, f8/8.0) FROM {table}"
+        query = f"SELECT f8/10.0, f8/8.0, {query_func}(f8/10.0, f8/8.0) FROM {table}"
     elif fname in [
         "pow",
         "hypot",
@@ -193,27 +211,27 @@ def test_external_cmath_omnisci(omnisci, fname, sig):
         "fmax",
         "fmin",
     ]:
-        query = f"SELECT f8+10.0, f8+1.0, {cmath_func}(f8+10.0, f8+1.0) FROM {table}"
+        query = f"SELECT f8+10.0, f8+1.0, {query_func}(f8+10.0, f8+1.0) FROM {table}"
     elif fname == "copysign":
-        query = f"SELECT f8, -1*f8, {cmath_func}(f8, -1*f8) FROM {table}"
+        query = f"SELECT f8, -1*f8, {query_func}(f8, -1*f8) FROM {table}"
     elif fname == "fma":
-        query = f"SELECT f8, f8, f8, {cmath_func}(f8, f8, f8) FROM {table}"
+        query = f"SELECT f8, f8, f8, {query_func}(f8, f8, f8) FROM {table}"
     elif fname == "ldexp":
-        query = f"SELECT f8+1.0, 2, {cmath_func}(f8+1.0, 2) FROM {table}"
+        query = f"SELECT f8+1.0, 2, {query_func}(f8+1.0, 2) FROM {table}"
     elif fname == "atanh":
-        query = f"SELECT f8/8.0, {cmath_func}(f8/8.0) from {table}"
+        query = f"SELECT f8/8.0, {query_func}(f8/8.0) from {table}"
     elif fname == "abs":
-        query = f"SELECT -1*i8, {cmath_func}(-1*i8) from {table}"
+        query = f"SELECT -1*i8, {query_func}(-1*i8) from {table}"
     else:
-        query = f"SELECT f8+10.0, {cmath_func}(f8+10.0) from {table}"
+        query = f"SELECT f8+10.0, {query_func}(f8+10.0) from {table}"
 
     _, result = omnisci.sql_execute(query)
 
     for values in result:
-        if fn.nargs == 2:
+        if len(values) == 3:
             a, b, r = values
             assert np.isclose(r, pyfunc(a, b)), fname
-        elif fn.nargs == 3:
+        elif len(values) == 4:
             a, b, c, r = values
             assert np.isclose(r, pyfunc(a, b, c)), fname
         else:
@@ -243,9 +261,8 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
         pytest.xfail(f"{fname} fails on {sys.platform}")
 
     jit = rjit if location == 'remote' else ljit
-
-    name = f"{location}_{fname}"
-    fn = define(jit, name, fname, sig)
+    query_func = _get_query_func(fname)
+    fn = funcs.get((jit, query_func))
 
     i8 = input_data['i8']
     f8 = input_data['f8']
@@ -277,10 +294,10 @@ def test_external_cmath_remotejit(input_data, location, ljit, rjit, fname, sig):
     result = list(map(lambda inputs: fn(*inputs), zip(*args)))
 
     for values in zip(*args, result):
-        if fn.nargs == 2:
+        if len(values) == 3:
             a, b, r = values
             assert np.isclose(r, pyfunc(a, b)), fname
-        elif fn.nargs == 3:
+        elif len(values) == 4:
             a, b, c, r = values
             assert np.isclose(r, a * b + c), fname
         else:

@@ -10,6 +10,7 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .errors import UnsupportedError
+from .utils import get_version
 from . import libfuncs, structure_type
 from rbc import externals
 from rbc.omnisci_backend import mathimpl
@@ -20,6 +21,7 @@ from numba.core import errors as nb_errors
 
 
 int32_t = ir.IntType(32)
+int1_t = ir.IntType(1)
 
 
 def get_called_functions(library, funcname=None):
@@ -316,10 +318,10 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
     if return_as_first_argument:
         wrapty = ir.FunctionType(ir.VoidType(),
                                  [ll_return_type] + ll_argtypes)
-        wrapfn = module.add_function(wrapty, fname)
+        wrapfn = ir.Function(module, wrapty, fname)
         builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
         fnty = context.call_conv.get_function_type(rtype, atypes)
-        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+        fn = ir.Function(builder.module, fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args[1:])
         with cgutils.if_unlikely(builder, status.is_error):
@@ -333,10 +335,10 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
         builder.ret_void()
     else:
         wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
-        wrapfn = module.add_function(wrapty, fname)
+        wrapfn = ir.Function(module, wrapty, fname)
         builder = ir.IRBuilder(wrapfn.append_basic_block('entry'))
         fnty = context.call_conv.get_function_type(rtype, atypes)
-        fn = builder.module.add_function(fnty, cres.fndesc.llvm_func_name)
+        fn = ir.Function(builder.module, fnty, cres.fndesc.llvm_func_name)
         status, out = context.call_conv.call_function(
             builder, fn, rtype, atypes, wrapfn.args)
         if verbose and target.is_cpu:
@@ -361,9 +363,14 @@ def compile_instance(func, sig,
     succesful.
     """
     flags = compiler.Flags()
-    flags.set('no_compile')
-    flags.set('no_cpython_wrapper')
-    flags.set('no_cfunc_wrapper')
+    if get_version('numba') >= (0, 54):
+        flags.no_compile = True
+        flags.no_cpython_wrapper = True
+        flags.no_cfunc_wrapper = True
+    else:
+        flags.set('no_compile')
+        flags.set('no_cpython_wrapper')
+        flags.set('no_cfunc_wrapper')
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(
@@ -426,6 +433,16 @@ def compile_instance(func, sig,
     return fname
 
 
+def add_byval_metadata(main_library):
+    module = ir.Module()
+    flag_name = "pass_column_arguments_by_value"
+    mflags = module.add_named_metadata('llvm.module.flags')
+    override_flag = int32_t(4)
+    flag = module.add_metadata([override_flag, flag_name, int1_t(0)])
+    mflags.add(flag)
+    main_library.add_ir_module(module)
+
+
 def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
@@ -481,6 +498,7 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
+        add_byval_metadata(main_library)
         main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
@@ -554,6 +572,10 @@ def compile_IR(ir):
         ir, re.M).group('triple')
 
     # Create execution engine
+    llvm.initialize()
+    llvm.initialize_all_targets()
+    llvm.initialize_all_asmprinters()
+
     target = llvm.Target.from_triple(triple)
     target_machine = target.create_target_machine()
     backing_mod = llvm.parse_assembly("")

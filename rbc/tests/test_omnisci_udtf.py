@@ -1,5 +1,6 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import omnisci_fixture, sql_execute
+from rbc.externals.omniscidb import table_function_error
 import numpy as np
 
 
@@ -63,7 +64,7 @@ def define(omnisci):
 
 @pytest.mark.parametrize("kind", ['i8', 'i4', 'i2', 'i1', 'f8', 'f4'])
 def test_composition(omnisci, kind):
-    omnisci.require_version((5, 6), 'Requires omniscidb-internal PR 5440', date=20210401)
+    omnisci.require_version((5, 6), 'Requires omniscidb-internal PR 5440')
 
     def tonp(query):
         _, result = omnisci.sql_execute(query)
@@ -219,3 +220,134 @@ def test_simple(omnisci):
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2, (i % 5) * 2 + 1)
+
+
+def test_table_function_manager(omnisci):
+    omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6035', label='master')
+
+    @omnisci('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
+    def my_manager_error(mgr, col, out):
+        return mgr.error_message("TableFunctionManager error_message!")
+
+    @omnisci('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
+    def my_manager_row_size(mgr, col, out):
+        size = len(col)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            out[i] = col[i]
+        return size
+
+    with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
+        omnisci.sql_execute(
+            f'select out0 from table(my_manager_error('
+            f'cursor(select f8 from {omnisci.table_name})));')
+
+    assert exc.match('Error executing table function: TableFunctionManager error_message!')
+
+    _, result = omnisci.sql_execute(
+        f'select out0 from table(my_manager_row_size('
+        f'cursor(select f8 from {omnisci.table_name})));')
+
+    expected = [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
+    assert(list(result) == expected)
+
+
+@pytest.mark.parametrize("sleep", ['ct_sleep1', 'ct_sleep2'])
+@pytest.mark.parametrize("mode", [0, 1, 2, 3, 4])
+def test_parallel_execution(omnisci, sleep, mode):
+    """This test is affected by omniscidb server option --num-executors.
+    Here we start a number of identical tasks at the same time and
+    observe if the tasks are run in-parallel (ct_sleep2) or not
+    (ct_sleep1).
+
+    """
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5901',
+                            label='qe-99')
+    from multiprocessing import Process, Array
+
+    def func(seconds, mode, a):
+        try:
+            descr, result = sql_execute(
+                f'select * from table({sleep}({seconds}, {mode}));')
+        except Exception as msg:
+            code = -1  # error code, positive if exception is expected
+            if ((mode == 2 or (mode == 3 and sleep == 'ct_sleep1')
+                 and 'unspecified output columns row size' in str(msg))):
+                code = 2
+            elif mode == 3 and 'uninitialized TableFunctionManager singleton' in str(msg):
+                code = 3
+            elif mode == 4 and 'unexpected mode' in str(msg):
+                code = 4
+            else:
+                print(msg)
+            a[0] = -1    # indicates exception
+            a[1] = code
+            return
+        for i, v in enumerate(result):
+            a[i] = v[0]
+
+    # mode > 1 correspond to exception tests. Increasing nof_jobs for
+    # such tests and rerunning pytest many times may lead to omniscidb
+    # server crash if num-executors>1. This may indicate that
+    # omniscidb error handling is not completely thread-save.
+    nof_jobs = 5 if mode <= 1 else 1
+    sleep_seconds = 1
+
+    # Initialize tasks
+    processes_outputs = []
+    for i in range(nof_jobs):
+        a = Array('i', [0, 0, 0])
+        p = Process(target=func, args=(sleep_seconds, mode, a))
+        processes_outputs.append((p, a))
+
+    # Start tasks
+    for p, _ in processes_outputs:
+        p.start()
+
+    # Collect outputs
+    outputs = []
+    for p, a in processes_outputs:
+        p.join()
+        if a[0] == -1:
+            if a[1] < 0:
+                raise ValueError(f'unexpected failure: code={a[1]}')
+            continue
+        outputs.append(a[:])
+
+    if outputs:
+        outputs = sorted(outputs)
+        origin = outputs[0][0]  # in milliseconds
+        print('\nthread id:---> time, 1 character == 100 ms, `*` marks an UDTF execution')
+        for start, end, thread_id in outputs:
+            print(f'{thread_id:8x} :' + ' ' * ((start - origin) // 100)
+                  + '*' * ((end - start) // 100))
+
+
+def test_table_function_error(omnisci):
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
+    omnisci.reset()
+
+    @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
+    def my_divide(column, k, row_multiplier, out):
+        if k == 0:
+            return table_function_error('division by zero')
+        for i in range(len(column)):
+            out[i] = column[i] / k
+        return len(column)
+
+    descr, result = omnisci.sql_execute(f"""
+        select *
+        from table(
+            my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 2)
+        );
+    """)
+    assert list(result) == [(0.0,), (0.5,), (1.0,), (1.5,), (2.0,)]
+
+    with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
+        omnisci.sql_execute(f"""
+            select *
+            from table(
+                my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 0)
+            );
+        """)
+    assert exc.match('Error executing table function: division by zero')

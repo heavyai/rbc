@@ -15,7 +15,7 @@ from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta, OmnisciColumnListType)
+    BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
@@ -82,14 +82,26 @@ def get_literal_return(func, verbose=False):
                 print(source)
 
 
+def _global_omnisci():
+    """Implements singleton of a global RemoteOmnisci instance.
+    """
+    config = get_client_config()
+    omnisci = RemoteOmnisci(**config)
+    while True:
+        yield omnisci
+
+
+global_omnisci_singleton = _global_omnisci()  # generator object
+
+
 def is_available(_cache={}):
     """Return version tuple and None if OmnisciDB server is accessible or
     recent enough. Otherwise return None and the reason about
     unavailability.
     """
+
     if not _cache:
-        config = get_client_config()
-        omnisci = RemoteOmnisci(**config)
+        omnisci = next(global_omnisci_singleton)
         try:
             version = omnisci.version
         except Exception as msg:
@@ -231,6 +243,8 @@ class RemoteOmnisci(RemoteJIT):
         ConstantParameter='int32|sizer=ConstantParameter',
         Constant='int32|sizer=Constant',
         ColumnList='OmnisciColumnListType',
+        TextEncodingDict='OmnisciTextEncodingDictType',
+        TableFunctionManager='OmnisciTableFunctionManagerType<>',
     )
 
     def __init__(self,
@@ -280,7 +294,7 @@ class RemoteOmnisci(RemoteJIT):
     def version(self):
         if self._version is None:
             version = self.thrift_call('get_version')
-            return parse_version(version)
+            self._version = parse_version(version)
         return self._version
 
     @property
@@ -343,6 +357,9 @@ class RemoteOmnisci(RemoteJIT):
             m = re.match(r'.*Exception: (.*)', msg.error_msg)
             if m:
                 raise OmnisciServerError(f'{m.group(1)}')
+            m = re.match(r'.*SQL Error: (.*)', msg.error_msg)
+            if m:
+                raise OmnisciServerError(f'{m.group(1)}')
             # TODO: catch more known server failures here.
             raise
 
@@ -374,6 +391,9 @@ class RemoteOmnisci(RemoteJIT):
           The table must have the specified columns defined.
 
         """
+        if not self._null_values:
+            self.retrieve_targets()  # initializes null values
+
         int_col_types = ['TINYINT', 'SMALLINT', 'INT', 'BIGINT', 'BOOL',
                          'DECIMAL', 'TIME', 'TIMESTAMP', 'DATE']
         real_col_types = ['FLOAT', 'DOUBLE']
@@ -559,13 +579,18 @@ class RemoteOmnisci(RemoteJIT):
             for i in range(nrows):
                 yield tuple(columns[j][i] for j in range(ncols))
 
+    def query_requires_register(self, query):
+        """Check if given query requires registration step.
+        """
+        names = '|'.join(self.get_pending_names())
+        return names and re.search(r'\b(' + names + r')\b', query, re.I) is not None
+
     def sql_execute(self, query):
         """Execute SQL query in OmnisciDB server.
 
         Parameters
         ----------
         query : str
-
           SQL query string containing exactly one query. Multiple
           queries are not supported.
 
@@ -575,8 +600,10 @@ class RemoteOmnisci(RemoteJIT):
           Row description object
         results : iterator
           Iterator over rows.
+
         """
-        self.register()
+        if self.query_requires_register(query):
+            self.register()
         columnar = True
         if self.debug:
             print('  %s;' % (query))
@@ -626,6 +653,8 @@ class RemoteOmnisci(RemoteJIT):
             'Column<int64_t>': typemap['TExtArgumentType'].get('ColumnInt64'),
             'Column<float>': typemap['TExtArgumentType'].get('ColumnFloat'),
             'Column<double>': typemap['TExtArgumentType'].get('ColumnDouble'),
+            'Column<TextEncodingDict>': typemap['TExtArgumentType'].get(
+                'ColumnTextEncodingDict'),
             'Cursor': typemap['TExtArgumentType']['Cursor'],
             'void': typemap['TExtArgumentType']['Void'],
             'GeoPoint': typemap['TExtArgumentType'].get('GeoPoint'),
@@ -634,9 +663,7 @@ class RemoteOmnisci(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
             'Bytes': typemap['TExtArgumentType'].get('TextEncodingNone'),
-            'Text<8>': typemap['TExtArgumentType'].get('TextEncodingDict8'),
-            'Text<16>': typemap['TExtArgumentType'].get('TextEncodingDict16'),
-            'Text<32>': typemap['TExtArgumentType'].get('TextEncodingDict32'),
+            'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
             'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
             'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
             'ColumnList<int16_t>': typemap['TExtArgumentType'].get('ColumnListInt16'),
@@ -644,7 +671,8 @@ class RemoteOmnisci(RemoteJIT):
             'ColumnList<int64_t>': typemap['TExtArgumentType'].get('ColumnListInt64'),
             'ColumnList<float>': typemap['TExtArgumentType'].get('ColumnListFloat'),
             'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
-
+            'ColumnList<TextEncodingDict>': typemap['TExtArgumentType'].get(
+                'ColumnListTextEncodingDict'),
         }
 
         if self.version[:2] < (5, 4):
@@ -675,6 +703,15 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('ColumnList<%s>' % T)
 
         ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
+
+        ext_arguments_map['OmnisciColumnType<TextEncodingDict>'] \
+            = ext_arguments_map.get('Column<TextEncodingDict>')
+        ext_arguments_map['OmnisciOutputColumnType<TextEncodingDict>'] \
+            = ext_arguments_map.get('Column<TextEncodingDict>')
+        ext_arguments_map['OmnisciColumnListType<TextEncodingDict>'] \
+            = ext_arguments_map.get('ColumnList<TextEncodingDict>')
+        # ext_arguments_map['OmnisciOutputColumnListType<%s>' % size] \
+        #     = ext_arguments_map.get('ColumnList<%s>' % size)
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
@@ -825,12 +862,15 @@ class RemoteOmnisci(RemoteJIT):
         sizer_map = dict(
             ConstantParameter='kUserSpecifiedConstantParameter',
             RowMultiplier='kUserSpecifiedRowMultiplier',
-            Constant='kConstant')
+            Constant='kConstant',
+            SpecifiedParameter='kTableFunctionSpecifiedParameter')
 
         unspecified = object()
         inputArgTypes = []
         outputArgTypes = []
         sqlArgTypes = []
+        annotations = []
+        function_annotations = dict()  # TODO: retrieve function annotations from orig_sig
         sizer = None
         sizer_index = -1
 
@@ -851,6 +891,14 @@ class RemoteOmnisci(RemoteJIT):
                 sizer_index = consumed_index + 1
                 sizer = _sizer
 
+            # process function annotations first to avoid appending annotations twice
+            if isinstance(a, OmnisciTableFunctionManagerType):
+                function_annotations['uses_manager'] = 'True'
+                consumed_index += 1
+                continue
+
+            annotations.append(annot)
+
             if isinstance(a, OmnisciCursorType):
                 sqlArgTypes.append(self.type_to_extarg('Cursor'))
                 for a_ in a.as_consumed_args:
@@ -858,6 +906,7 @@ class RemoteOmnisci(RemoteJIT):
                         a_, OmnisciOutputColumnType), (a_)
                     inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
+
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     atype = self.type_to_extarg(a)
@@ -872,26 +921,24 @@ class RemoteOmnisci(RemoteJIT):
                         inputArgTypes.append(atype)
                 consumed_index += 1
         if sizer is None:
-            sizer = 'kConstant'
-        if sizer == 'kConstant':
-            sizer_index = get_literal_return(
-                caller.func, verbose=self.debug)
+            sizer_index = get_literal_return(caller.func, verbose=self.debug)
             if sizer_index is None:
-                raise TypeError(
-                    f'Table function `{caller.func.__name__}`'
-                    ' has no sizing parameter nor has'
-                    ' it `return <literal value>` statement')
-        if sizer_index < 0:
-            raise ValueError(
-                f'Table function `{caller.func.__name__}`'
-                ' sizing parameter must be non-negative'
-                f' integer (got {sizer_index})')
+                sizer = 'kTableFunctionSpecifiedParameter'
+            else:
+                sizer = 'kConstant'
+                if sizer_index < 0:
+                    raise ValueError(
+                        f'Table function `{caller.func.__name__}`'
+                        ' sizing parameter must be non-negative'
+                        f' integer (got {sizer_index})')
         sizer_type = (thrift.TOutputBufferSizeType
                       ._NAMES_TO_VALUES[sizer])
+        annotations.append(function_annotations)
         return thrift.TUserDefinedTableFunction(
             name + sig.mangling(),
             sizer_type, sizer_index,
-            inputArgTypes, outputArgTypes, sqlArgTypes)
+            inputArgTypes, outputArgTypes, sqlArgTypes,
+            annotations)
 
     def _make_udtf_old(self, caller, orig_sig, sig):
         # old style UDTF for omniscidb <= 5.3, to be deprecated

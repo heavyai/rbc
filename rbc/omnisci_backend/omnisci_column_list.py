@@ -35,14 +35,14 @@ class OmnisciColumnListNumbaType(structure_type.StructureNumbaPointerType):
         return impl
 
 
-@extending.overload_method(OmnisciColumnListNumbaType, 'nrows')
+@extending.overload_attribute(OmnisciColumnListNumbaType, 'nrows')
 def get_nrows(clst):
     def impl(clst):
         return clst.size
     return impl
 
 
-@extending.overload_method(OmnisciColumnListNumbaType, 'ncols')
+@extending.overload_attribute(OmnisciColumnListNumbaType, 'ncols')
 def get_ncols(clst):
     def impl(clst):
         return clst.length

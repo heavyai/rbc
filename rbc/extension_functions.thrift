@@ -41,16 +41,16 @@ enum TExtArgumentType {
   ColumnDouble,
   ColumnBool,
   TextEncodingNone,
-  TextEncodingDict8,
-  TextEncodingDict16,
-  TextEncodingDict32,
+  TextEncodingDict,
   ColumnListInt8,
   ColumnListInt16,
   ColumnListInt32,
   ColumnListInt64,
   ColumnListFloat,
   ColumnListDouble,
-  ColumnListBool
+  ColumnListBool,
+  ColumnTextEncodingDict,
+  ColumnListTextEncodingDict,
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required
@@ -59,7 +59,8 @@ values. Same comments apply as for TExtArgumentType in above. */
 enum TOutputBufferSizeType {
   kConstant,
   kUserSpecifiedConstantParameter,
-  kUserSpecifiedRowMultiplier
+  kUserSpecifiedRowMultiplier,
+  kTableFunctionSpecifiedParameter
 }
 
 struct TUserDefinedFunction {
@@ -86,5 +87,6 @@ struct TUserDefinedTableFunction {
   3: i32 sizerArgPos,
   4: list<TExtArgumentType> inputArgTypes,
   5: list<TExtArgumentType> outputArgTypes,
-  6: list<TExtArgumentType> sqlArgTypes
+  6: list<TExtArgumentType> sqlArgTypes,
+  7: list<map<string, string>> annotations
 }

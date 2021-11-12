@@ -35,6 +35,7 @@ Externals
     externals.cmath
     externals.libdevice
     externals.macros
+    externals.omniscidb
     externals.stdio
 
 

@@ -2,7 +2,7 @@ version: '3'
 services:
 
   omniscidb:
-    image: omnisci/core-os-cpu-dev:latest
+    image: ${OMNISCIDB_DOCKER_IMAGE}
     ports:
       - 6273:6273
       - 6274:6274

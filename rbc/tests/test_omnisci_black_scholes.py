@@ -29,18 +29,18 @@ def read_csv(filename):
 
 @pytest.fixture(scope='module')
 def omnisci():
+    # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
     m = rbc_omnisci.RemoteOmnisci(**config)
     table_name = 'rbc_test_black_scholes'
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
     sqltypes = ['DOUBLE', 'DOUBLE', 'DOUBLE', 'DOUBLE', 'DOUBLE', 'DOUBLE']
     colnames = ['S', 'X', 'T', 'sigma', 'r', 'oprice']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
 
     df = read_csv('./rbc/tests/data_black_scholes.csv')
 
@@ -55,10 +55,10 @@ def omnisci():
 
         table_row = f'{S}, {X}, {T}, {sigma}, {r}, {oprice}'
         m.sql_execute(
-            'INSERT INTO {table_name} VALUES ({table_row})'.format(**locals()))
+            f'INSERT INTO {table_name} VALUES ({table_row})')
     m.table_name = table_name
     yield m
-    m.sql_execute('DROP TABLE IF EXISTS {table_name}'.format(**locals()))
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
 
 @njit

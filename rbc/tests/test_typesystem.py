@@ -597,6 +597,12 @@ def test_annotation(target_info):
     assert tostr('int foo|a') == 'int32 foo | a'
     assert tostr('int foo|=1') == 'int32 foo | =1'
 
+    # custom params
+    assert tostr('Column<int> | a') == 'Column<int32> | a'
+    assert tostr('Column<T> | input_id=args<0>') == 'Column<T> | input_id=args<0>'
+    assert tostr('Column<T> | input_id=args<0> | name = foo ') == \
+        'Column<T> | input_id=args<0> | name=foo'
+
     t = Type.fromstring('int')
     assert (t | 'a').tostring() == 'int32 | a'
     assert (t | dict(b=1, c=2)).tostring() == 'int32 | b=1 | c=2'

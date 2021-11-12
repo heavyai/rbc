@@ -325,18 +325,19 @@ class Caller(object):
         lst = ['']
         fid = 0
         for device, target_info in self.remotejit.targets.items():
-            with target_info:
-                lst.append(f'{device:-^80}')
-                signatures = self.get_signatures()
-                signatures_map = {}
-                for sig in signatures:
-                    fid += 1
-                    signatures_map[fid] = sig
-                llvm_module, succesful_fids = irtools.compile_to_LLVM(
-                    [(self.func, signatures_map)],
-                    target_info,
-                    debug=self.remotejit.debug)
-                lst.append(str(llvm_module))
+            with Type.alias(**self.remotejit.typesystem_aliases):
+                with target_info:
+                    lst.append(f'{device:-^80}')
+                    signatures = self.get_signatures()
+                    signatures_map = {}
+                    for sig in signatures:
+                        fid += 1
+                        signatures_map[fid] = sig
+                    llvm_module, succesful_fids = irtools.compile_to_LLVM(
+                        [(self.func, signatures_map)],
+                        target_info,
+                        debug=self.remotejit.debug)
+                    lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
         return '\n'.join(lst)
 
@@ -399,6 +400,8 @@ class RemoteJIT(object):
     multiplexed = True
 
     thrift_content = None
+
+    typesystem_aliases = dict()
 
     def __init__(self, host='localhost', port=11532,
                  local=False, debug=False):
@@ -511,6 +514,16 @@ class RemoteJIT(object):
         """
         assert self._last_compile is None
         self._last_compile = compile_data
+
+    def get_pending_names(self):
+        """Return the names of functions that have not been registered to the
+        remote server.
+        """
+        names = set()
+        if not self.have_last_compile:
+            for caller in reversed(self.get_callers()):
+                names.add(caller.func.__name__)
+        return names
 
     def retrieve_targets(self):
         """Retrieve target device information from remote client.
