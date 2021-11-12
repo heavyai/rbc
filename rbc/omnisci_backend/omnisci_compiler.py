@@ -88,11 +88,11 @@ class OmnisciTarget(descriptors.TargetDescriptor):
         return self._nested.nested(typing_context, target_context)
 
 # Create a DPU target instance
-dpu_target = OmnisciTarget("omniscidb")
+omniscidb_cpu_target = OmnisciTarget("omniscidb_cpu")
 
 # Declare a dispatcher for the DPU target
 class OmnisciDispatcher(dispatcher.Dispatcher):
-    targetdescr = dpu_target
+    targetdescr = omniscidb_cpu_target
 
 
 # Register a dispatcher for the DPU target, a lot of the code uses this
@@ -178,6 +178,8 @@ class JITRemoteTypingContext(typing.Context):
 
 
 class JITRemoteTargetContext(base.BaseContext):
+    # Whether dynamic globals (CPU runtime addresses) is allowed
+    allow_dynamic_globals = True
 
     def __init__(self, typing_context, target):
         if target not in ('omniscidb_cpu', 'omniscidb_gpu'):
@@ -190,6 +192,7 @@ class JITRemoteTargetContext(base.BaseContext):
         self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
         self._internal_codegen = JITRemoteCodegen("numba.exec")
+        self._target_data = llvm.create_target_data(target_info.datalayout)
 
     def load_additional_registries(self):
         for module in externals.__dict__.values():
@@ -213,6 +216,10 @@ class JITRemoteTargetContext(base.BaseContext):
     @utils.cached_property
     def call_conv(self):
         return callconv.CPUCallConv(self)
+
+    @property
+    def target_data(self):
+        return self._target_data
 
     def create_cpython_wrapper(self,
                                library,
