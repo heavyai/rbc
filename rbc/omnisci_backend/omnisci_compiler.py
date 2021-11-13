@@ -1,33 +1,37 @@
 from contextlib import contextmanager
-import types as py_types
 import llvmlite.binding as llvm
 from rbc.targetinfo import TargetInfo
-from rbc import structure_type
-from rbc import externals
-from rbc.omnisci_backend import mathimpl
+from numba.np import ufunc_db
 from numba.core import (
     codegen, compiler_lock, typing,
-    imputils, base, cpu, descriptors, utils,
-    dispatcher, callconv)
+    base, cpu, descriptors, utils,
+    dispatcher, callconv, imputils)
 from numba.core.target_extension import (
     Generic,
     target_registry,
     dispatcher_registry,
 )
 
-class OmniSciDB_CPU(Generic):
+class OmniSciDB_Generic(Generic):
+    """Mark the target as generic
+    """
+
+class OmniSciDB_CPU(OmniSciDB_Generic):
     """Mark the target as OmniSciDB CPU
     """
 
-class OmniSciDB_GPU(Generic):
+class OmniSciDB_GPU(OmniSciDB_Generic):
     """Mark the target as OmniSciDB CPU
     """
 
+
+target_registry['omniscidb_generic'] = OmniSciDB_Generic
 target_registry['omniscidb_cpu'] = OmniSciDB_CPU
 target_registry['omniscidb_gpu'] = OmniSciDB_GPU
 
-# This is the function registry for the dpu, it just has one registry, this one!
-omniscidb_cpu_function_registry = imputils.Registry()
+omnisci_generic_registry = imputils.Registry()
+omnisci_cpu_registry = imputils.Registry()
+omnisci_gpu_registry = imputils.Registry()
 
 # Nested contexts to help with isolatings bits of compilations
 class _NestedContext(object):
@@ -163,19 +167,8 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
 
 class JITRemoteTypingContext(typing.Context):
-    def load_additional_registries(self):
-        for module in externals.__dict__.values():
-            if not isinstance(module, py_types.ModuleType):
-                continue
-
-            typing_registry = getattr(module, 'typing_registry', None)
-            if typing_registry:
-                self.install_registry(typing_registry)
-
-        self.install_registry(mathimpl.typing_registry)
-        self.install_registry(structure_type.typing_registry)
-        super().load_additional_registries()
-
+    """JITRemote Typing Context
+    """
 
 class JITRemoteTargetContext(base.BaseContext):
     # Whether dynamic globals (CPU runtime addresses) is allowed
@@ -194,21 +187,18 @@ class JITRemoteTargetContext(base.BaseContext):
         self._internal_codegen = JITRemoteCodegen("numba.exec")
         self._target_data = llvm.create_target_data(target_info.datalayout)
 
-    def load_additional_registries(self):
-        for module in externals.__dict__.values():
-            if not isinstance(module, py_types.ModuleType):
-                continue
-
-            if 'rbc.externals' not in module.__name__:
-                continue
-
-            lowering_registry = getattr(module, 'lowering_registry', None)
-            if lowering_registry:
-                self.install_registry(lowering_registry)
-
-        self.install_registry(mathimpl.lowering_registry)
-        self.install_registry(structure_type.lowering_registry)
-        super().load_additional_registries()
+    def refresh(self):
+        registry = omnisci_cpu_registry
+        try:
+            loader = self._registries[registry]
+        except KeyError:
+            loader = imputils.RegistryLoader(registry)
+            self._registries[registry] = loader
+        self.install_registry(registry)
+        # Also refresh typing context, since @overload declarations can
+        # affect it.
+        self.typing_context.refresh()
+        super().refresh()
 
     def codegen(self):
         return self._internal_codegen
@@ -244,3 +234,7 @@ class JITRemoteTargetContext(base.BaseContext):
 
     def post_lowering(self, mod, library):
         pass
+
+    # Overrides
+    def get_ufunc_info(self, ufunc_key):
+        return ufunc_db.get_ufunc_info(ufunc_key)

@@ -1,9 +1,13 @@
 import math
 from rbc.externals import gen_codegen, dispatch_codegen
 from numba.core.typing.templates import infer_global
-from numba.core.imputils import lower_builtin
+# from numba.core.imputils import lower_builtin
 from numba.core.typing.templates import ConcreteTemplate, signature
 from numba.types import float32, float64, int32, int64, uint64, intp
+from numba.core.intrinsics import INTR_TO_CMATH
+
+from .omnisci_compiler import omnisci_cpu_registry
+lower_builtin = omnisci_cpu_registry.lower
 
 
 # Adding missing cases in Numba
@@ -82,7 +86,11 @@ binarys += [("remainder", "remainderf", math.remainder)]
 
 
 def impl_unary(fname, key, typ):
-    cpu = gen_codegen(fname)
+    if fname in INTR_TO_CMATH.values():
+        # use llvm intrinsics when possible
+        cpu = gen_codegen(f'llvm.{fname}')
+    else:
+        cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
     lower_builtin(key, typ)(dispatch_codegen(cpu, gpu))
 

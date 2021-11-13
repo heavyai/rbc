@@ -53,7 +53,7 @@ def omnisci():
 
 math_functions = [
     # Number-theoretic and representation functions
-    ('ceil', 'int64(double)'),
+    ('ceil', 'double(double)'),
     ('comb', 'int64(int64, int64)'),
     ('copysign', 'double(double, double)'),
     ('fabs', 'double(double)'),
