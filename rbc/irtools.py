@@ -48,6 +48,7 @@ def get_called_functions(library, funcname=None):
                 name = list(instruction.operands)[-1].name
                 f = module.get_function(name)
                 if name.startswith('llvm.'):
+                    import pdb; pdb.set_trace()
                     result['intrinsics'].add(name)
                 elif f.is_declaration:
                     found = False
@@ -161,7 +162,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
 
 
 def compile_instance(func, sig,
-                     target: TargetInfo,
+                     target_info: TargetInfo,
                      typing_context,
                      target_context,
                      pipeline_class,
@@ -208,28 +209,33 @@ def compile_instance(func, sig,
         raise
 
     result = get_called_functions(cres.library, cres.fndesc.llvm_func_name)
+    if target_info.name == 'gpu':
+        import pdb; pdb.set_trace()
 
     for f in result['declarations']:
-        if target.supports(f):
+        if target_info.supports(f):
             continue
         warnings.warn(f'Skipping {fname} that uses undefined function `{f}`')
         return
 
     nvvmlib = libfuncs.Library.get('nvvm')
     llvmlib = libfuncs.Library.get('llvm')
+    from rich import print
+    print(cres.library.get_llvm_str())
+    print(result)
     for f in result['intrinsics']:
-        if target.is_gpu:
+        if target_info.is_gpu:
             if f in nvvmlib:
                 continue
 
-        if target.is_cpu:
+        if target_info.is_cpu:
             if f in llvmlib:
                 continue
 
         warnings.warn(f'Skipping {fname} that uses unsupported intrinsic `{f}`')
         return
 
-    make_wrapper(fname, args, return_type, cres, target, verbose=debug)
+    make_wrapper(fname, args, return_type, cres, target_info, verbose=debug)
 
     main_module = main_library._final_module
     for lib in result['libraries']:
@@ -277,14 +283,14 @@ def compile_to_LLVM(functions_and_signatures,
     target_desc = registry.cpu_target
 
     typing_context = JITRemoteTypingContext()
-    target_context = JITRemoteTargetContext(typing_context, 'omniscidb_cpu')
+    target_context = JITRemoteTargetContext(typing_context, f'omniscidb_{target_info.name}')
 
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
-        main_library = codegen.create_library('rbc.irtools.compile_to_IR')
+        main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{target_info.name}')
         main_module = main_library._final_module
 
         if user_defined_llvm_ir is not None:

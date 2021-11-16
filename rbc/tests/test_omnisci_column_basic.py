@@ -919,3 +919,18 @@ def test_column_different_sizes(omnisci):
 
     expected = [(10.0,), (60.0,), (180.0,), (240.0,), (300.0,)]
     assert list(result) == expected
+
+
+def test_fx(omnisci):
+    import math
+    from numba import njit
+
+    @njit
+    def bar(x):
+        return math.exp(x)
+
+    @omnisci('double(double)', devices=['cpu', 'gpu'])
+    def foo(x):
+        return math.exp(x) + bar(x)
+
+    print(foo)

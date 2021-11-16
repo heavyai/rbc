@@ -4,28 +4,24 @@ from rbc.targetinfo import TargetInfo
 from numba.np import ufunc_db
 from numba.core import (
     codegen, compiler_lock, typing,
-    base, cpu, descriptors, utils,
-    dispatcher, callconv, imputils)
+    base, cpu, utils, registry,
+    dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
     target_registry,
     dispatcher_registry,
 )
 
-class OmniSciDB_Generic(Generic):
-    """Mark the target as generic
-    """
 
-class OmniSciDB_CPU(OmniSciDB_Generic):
+class OmniSciDB_CPU(Generic):
     """Mark the target as OmniSciDB CPU
     """
 
-class OmniSciDB_GPU(OmniSciDB_Generic):
+class OmniSciDB_GPU(Generic):
     """Mark the target as OmniSciDB CPU
     """
 
 
-target_registry['omniscidb_generic'] = OmniSciDB_Generic
 target_registry['omniscidb_cpu'] = OmniSciDB_CPU
 target_registry['omniscidb_gpu'] = OmniSciDB_GPU
 
@@ -33,75 +29,23 @@ omnisci_generic_registry = imputils.Registry()
 omnisci_cpu_registry = imputils.Registry()
 omnisci_gpu_registry = imputils.Registry()
 
-# Nested contexts to help with isolatings bits of compilations
-class _NestedContext(object):
-    _typing_context = None
-    _target_context = None
 
-    @contextmanager
-    def nested(self, typing_context, target_context):
-        old_nested = self._typing_context, self._target_context
-        try:
-            self._typing_context = typing_context
-            self._target_context = target_context
-            yield
-        finally:
-            self._typing_context, self._target_context = old_nested
+class OmnisciTarget(registry.CPUTarget):
+    # Create a target for the omniscidb backend
+    pass
 
-class OmnisciTarget(descriptors.TargetDescriptor):
-    options = cpu.CPUTargetOptions
-    _nested = _NestedContext()
-
-    @utils.cached_property
-    def _toplevel_target_context(self):
-        # Lazily-initialized top-level target context, for all threads
-        return JITRemoteTargetContext(self.typing_context, self._target_name)
-
-    @utils.cached_property
-    def _toplevel_typing_context(self):
-        # Lazily-initialized top-level typing context, for all threads
-        return typing.Context()
-
-    @property
-    def target_context(self):
-        """
-        The target context for DPU targets.
-        """
-        nested = self._nested._target_context
-        if nested is not None:
-            return nested
-        else:
-            return self._toplevel_target_context
-
-    @property
-    def typing_context(self):
-        """
-        The typing context for CPU targets.
-        """
-        nested = self._nested._typing_context
-        if nested is not None:
-            return nested
-        else:
-            return self._toplevel_typing_context
-
-    def nested_context(self, typing_context, target_context):
-        """
-        A context manager temporarily replacing the contexts with the
-        given ones, for the current thread of execution.
-        """
-        return self._nested.nested(typing_context, target_context)
-
-# Create a DPU target instance
-omniscidb_cpu_target = OmnisciTarget("omniscidb_cpu")
+# Create a target instance
+omniscidb_target = OmnisciTarget("omniscidb_target")
 
 # Declare a dispatcher for the DPU target
 class OmnisciDispatcher(dispatcher.Dispatcher):
-    targetdescr = omniscidb_cpu_target
+    targetdescr =omniscidb_target
 
-
-# Register a dispatcher for the DPU target, a lot of the code uses this
+# Register a dispatcher for the target, a lot of the code uses this
 # internally to work out what to do RE compilation
 dispatcher_registry[target_registry["omniscidb_cpu"]] = OmnisciDispatcher
+dispatcher_registry[target_registry["omniscidb_gpu"]] = OmnisciDispatcher
+
 
 class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
     """JITRemoteCodeLibrary was introduce to prevent numba from calling functions
@@ -188,7 +132,12 @@ class JITRemoteTargetContext(base.BaseContext):
         self._target_data = llvm.create_target_data(target_info.datalayout)
 
     def refresh(self):
-        registry = omnisci_cpu_registry
+        if self.target_name == 'omniscidb_cpu':
+            registry = omnisci_cpu_registry
+        elif self.target_name == 'omniscidb_gpu':
+            registry = omnisci_gpu_registry
+        else:
+            raise ValueError(f'Unknown target {self.target_name}')
         try:
             loader = self._registries[registry]
         except KeyError:

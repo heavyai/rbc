@@ -1,13 +1,14 @@
 import math
-from rbc.externals import gen_codegen, dispatch_codegen
+from rbc.externals import gen_codegen
 from numba.core.typing.templates import infer_global
-# from numba.core.imputils import lower_builtin
 from numba.core.typing.templates import ConcreteTemplate, signature
 from numba.types import float32, float64, int32, int64, uint64, intp
 from numba.core.intrinsics import INTR_TO_CMATH
+from .omnisci_compiler import omnisci_cpu_registry, omnisci_gpu_registry
 
-from .omnisci_compiler import omnisci_cpu_registry
-lower_builtin = omnisci_cpu_registry.lower
+
+lower_cpu = omnisci_cpu_registry.lower
+lower_gpu = omnisci_gpu_registry.lower
 
 
 # Adding missing cases in Numba
@@ -92,13 +93,15 @@ def impl_unary(fname, key, typ):
     else:
         cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower_builtin(key, typ)(dispatch_codegen(cpu, gpu))
+    lower_cpu(key, typ)(cpu)
+    lower_gpu(key, typ)(gpu)
 
 
 def impl_binary(fname, key, typ):
     cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower_builtin(key, typ, typ)(dispatch_codegen(cpu, gpu))
+    lower_cpu(key, typ)(cpu)
+    lower_gpu(key, typ)(gpu)
 
 
 for fname64, fname32, key in unarys:
@@ -119,8 +122,11 @@ def impl_ldexp():
     ldexpf_cpu = gen_codegen('ldexpf')
     ldexpf_gpu = gen_codegen('__nv_ldexpf')
 
-    lower_builtin(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
-    lower_builtin(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
+    lower_cpu(math.ldexp, float64, int32)(ldexp_cpu)
+    lower_gpu(math.ldexp, float64, int32)(ldexp_gpu)
+
+    lower_cpu(math.ldexp, float32, int32)(ldexpf_cpu)
+    lower_gpu(math.ldexp, float32, int32)(ldexpf_gpu)
 
 
 impl_ldexp()
