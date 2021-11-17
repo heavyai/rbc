@@ -48,7 +48,6 @@ def get_called_functions(library, funcname=None):
                 name = list(instruction.operands)[-1].name
                 f = module.get_function(name)
                 if name.startswith('llvm.'):
-                    import pdb; pdb.set_trace()
                     result['intrinsics'].add(name)
                 elif f.is_declaration:
                     found = False
@@ -176,6 +175,7 @@ def compile_instance(func, sig,
         flags.no_compile = True
         flags.no_cpython_wrapper = True
         flags.no_cfunc_wrapper = True
+        flags.target_backend = 'omniscidb_cpu'
     else:
         flags.set('no_compile')
         flags.set('no_cpython_wrapper')
@@ -209,8 +209,6 @@ def compile_instance(func, sig,
         raise
 
     result = get_called_functions(cres.library, cres.fndesc.llvm_func_name)
-    if target_info.name == 'gpu':
-        import pdb; pdb.set_trace()
 
     for f in result['declarations']:
         if target_info.supports(f):
@@ -220,9 +218,6 @@ def compile_instance(func, sig,
 
     nvvmlib = libfuncs.Library.get('nvvm')
     llvmlib = libfuncs.Library.get('llvm')
-    from rich import print
-    print(cres.library.get_llvm_str())
-    print(result)
     for f in result['intrinsics']:
         if target_info.is_gpu:
             if f in nvvmlib:

@@ -3,21 +3,23 @@ import llvmlite.binding as llvm
 from rbc.targetinfo import TargetInfo
 from numba.np import ufunc_db
 from numba.core import (
-    codegen, compiler_lock, typing,
-    base, cpu, utils, registry,
+    codegen, compiler_lock, typing, sigutils,
+    base, cpu, utils, registry, compiler,
     dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
+    CPU,
     target_registry,
     dispatcher_registry,
+    jit_registry,
 )
 
 
-class OmniSciDB_CPU(Generic):
+class OmniSciDB_CPU(CPU):
     """Mark the target as OmniSciDB CPU
     """
 
-class OmniSciDB_GPU(Generic):
+class OmniSciDB_GPU(CPU):
     """Mark the target as OmniSciDB CPU
     """
 
@@ -25,7 +27,6 @@ class OmniSciDB_GPU(Generic):
 target_registry['omniscidb_cpu'] = OmniSciDB_CPU
 target_registry['omniscidb_gpu'] = OmniSciDB_GPU
 
-omnisci_generic_registry = imputils.Registry()
 omnisci_cpu_registry = imputils.Registry()
 omnisci_gpu_registry = imputils.Registry()
 
@@ -35,11 +36,11 @@ class OmnisciTarget(registry.CPUTarget):
     pass
 
 # Create a target instance
-omniscidb_target = OmnisciTarget("omniscidb_target")
+omniscidb_target = OmnisciTarget("omniscidb_cpu")
 
 # Declare a dispatcher for the DPU target
 class OmnisciDispatcher(dispatcher.Dispatcher):
-    targetdescr =omniscidb_target
+    targetdescr = omniscidb_target
 
 # Register a dispatcher for the target, a lot of the code uses this
 # internally to work out what to do RE compilation
@@ -187,3 +188,13 @@ class JITRemoteTargetContext(base.BaseContext):
     # Overrides
     def get_ufunc_info(self, ufunc_key):
         return ufunc_db.get_ufunc_info(ufunc_key)
+
+def djit(*args, **options):
+    from numba.core.decorators import jit
+    return jit(*args, _target='omniscidb_gpu', target_backend='omniscidb_cpu', boundscheck=False, nopython=True)
+
+
+# add it to the decorator registry, this is so e.g. @overload can look up a
+# JIT function to do the compilation work.
+jit_registry[target_registry["omniscidb_cpu"]] = djit
+jit_registry[target_registry["omniscidb_gpu"]] = djit
