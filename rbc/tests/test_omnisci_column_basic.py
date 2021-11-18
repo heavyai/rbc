@@ -937,7 +937,7 @@ def test_issue343(omnisci):
 
     @omnisci('double(double)', devices=['cpu', 'gpu'])
     def foo(x):
-        return bar(x)
+        return math.exp(x) + bar(x)
 
     assert '__nv_exp' in str(foo)
     assert 'llvm.exp.f64' in str(foo)

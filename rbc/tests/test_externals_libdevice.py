@@ -15,6 +15,9 @@ for fname, (retty, args) in libdevicefuncs.functions.items():
     funcs.append((fname, str(retty), argtys, has_ptr_arg))
 
 
+fns = {}
+
+
 @pytest.fixture(scope="module")
 def omnisci():
 
@@ -48,6 +51,7 @@ def define(omnisci):
 
         fn.__name__ = f"{omnisci.table_name}_{fname[5:]}"
         fn = omnisci(f"{retty}({', '.join(argtypes)})", devices=["gpu"])(fn)
+        fns[fname] = fn
 
     for fname, retty, argtys, has_ptr_arg in funcs:
         if has_ptr_arg:
@@ -83,4 +87,7 @@ def test_externals_libdevice(omnisci, fname, retty, argtys, has_ptr_arg):
         cols = ", ".join(tuple(map(lambda x: cols_dict[x], argtys)))
         query = f"SELECT {func_name}({cols}) FROM {table}"
 
-    _, _ = omnisci.sql_execute(query)
+    _, result = omnisci.sql_execute(query)
+
+    assert fname in str(fns[fname])
+    # to-do: check results

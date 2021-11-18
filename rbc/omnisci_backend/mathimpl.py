@@ -98,7 +98,11 @@ def impl_unary(fname, key, typ):
 
 
 def impl_binary(fname, key, typ):
-    cpu = gen_codegen(fname)
+    if fname in INTR_TO_CMATH.values():
+        # use llvm intrinsics when possible
+        cpu = gen_codegen(f'llvm.{fname}')
+    else:
+        cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
     lower_cpu(key, typ)(cpu)
     lower_gpu(key, typ)(gpu)

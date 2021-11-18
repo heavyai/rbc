@@ -715,6 +715,7 @@ class DispatcherRJIT(Dispatcher):
         target_info = TargetInfo.host()
         target_info.set('has_numba', True)
         target_info.set('has_cpython', True)
+        target_info.set('software', 'remotejit')
         return dict(cpu=target_info.tojson())
 
     @dispatchermethod

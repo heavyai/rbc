@@ -17,7 +17,9 @@ from numba.core import (
     compiler,
     sigutils,
     cgutils,
-    extending)
+    extending,
+    typing,
+    cpu)
 from numba.core import errors as nb_errors
 from rbc.omnisci_backend import (
     JITRemoteTypingContext,
@@ -277,19 +279,26 @@ def compile_to_LLVM(functions_and_signatures,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    # target_desc = registry.cpu_target
     device = target_info.name
-    target_desc = omniscidb_cpu_target if device == 'cpu' else omniscidb_gpu_target
+    software = target_info.software[0]
 
-    typing_context = JITRemoteTypingContext()
-    target_context = JITRemoteTargetContext(typing_context, f'omniscidb_{device}')
+    if software == 'OmnisciDB':
+        target_name = f'omniscidb_{device}'
+        target_desc = omniscidb_cpu_target if device == 'cpu' else omniscidb_gpu_target
+        typing_context = JITRemoteTypingContext()
+        target_context = JITRemoteTargetContext(typing_context, target_name)
+    else:
+        target_name = 'cpu'
+        target_desc = registry.cpu_target
+        typing_context = typing.Context()
+        target_context = cpu.CPUContext(typing_context, target_name)
 
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
-        main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{device}')
+        main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{software}_{device}')
         main_module = main_library._final_module
 
         if user_defined_llvm_ir is not None:
@@ -302,7 +311,7 @@ def compile_to_LLVM(functions_and_signatures,
         function_names = []
         for func, signatures in functions_and_signatures:
             for fid, sig in signatures.items():
-                with switch_target(f'omniscidb_{device}'):
+                with switch_target(target_name):
                     fname = compile_instance(func, sig, target_info, typing_context,
                                              target_context, pipeline_class,
                                              main_library,

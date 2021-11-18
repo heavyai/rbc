@@ -9,8 +9,10 @@ from numba.core import (
     descriptors, dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
+    JitDecorator,
     target_registry,
     dispatcher_registry,
+    jit_registry,
 )
 
 from rbc.utils import get_version
@@ -48,8 +50,21 @@ class _NestedContext(object):
             self._typing_context, self._target_context = old_nested
 
 
+class OmnisciTargetOptions(cpu.CPUTargetOptions):
+    def finalize(self, flags, options):
+        flags.enable_pyobject = False
+        flags.enable_looplift = False
+        flags.nrt = False
+        flags.debuginfo = False
+        flags.boundscheck = False
+        flags.enable_pyobject_looplift = False
+        flags.inherit_if_not_set("fastmath")
+        flags.inherit_if_not_set("error_model", default="python")
+        # Add "target_backend" as a option that inherits from the caller
+        flags.inherit_if_not_set("target_backend")
+
 class OmnisciTarget(descriptors.TargetDescriptor):
-    options = cpu.CPUTargetOptions
+    options = OmnisciTargetOptions
     _nested = _NestedContext()
 
     @utils.cached_property
@@ -202,6 +217,7 @@ class JITRemoteTargetContext(base.BaseContext):
             registry = omnisci_cpu_registry
         else:
             registry = omnisci_gpu_registry
+
         try:
             loader = self._registries[registry]
         except KeyError:
@@ -222,25 +238,25 @@ class JITRemoteTargetContext(base.BaseContext):
         # uncomment as needed!
 
         # from numba.core import optional
-        from numba.np import linalg, polynomial, arraymath, arrayobj  # noqa: F401
+        # from numba.np import linalg, polynomial, arraymath, arrayobj  # noqa: F401
         # from numba.typed import typeddict, dictimpl
         # from numba.typed import typedlist, listobject
         # from numba.experimental import jitclass, function_type
         # from numba.np import npdatetime
 
         # Add target specific implementations
-        from numba.np import npyimpl
-        from numba.cpython import cmathimpl, mathimpl, printimpl, randomimpl
-        from numba.misc import cffiimpl
-        from numba.experimental.jitclass.base import ClassBuilder as \
-            jitclassimpl
-        self.install_registry(cmathimpl.registry)
-        self.install_registry(cffiimpl.registry)
-        self.install_registry(mathimpl.registry)
-        self.install_registry(npyimpl.registry)
-        self.install_registry(printimpl.registry)
-        self.install_registry(randomimpl.registry)
-        self.install_registry(jitclassimpl.class_impl_registry)
+        # from numba.np import npyimpl
+        # from numba.cpython import cmathimpl, mathimpl, printimpl, randomimpl
+        # from numba.misc import cffiimpl
+        # from numba.experimental.jitclass.base import ClassBuilder as \
+        #     jitclassimpl
+        # self.install_registry(cmathimpl.registry)
+        # self.install_registry(cffiimpl.registry)
+        # self.install_registry(mathimpl.registry)
+        # self.install_registry(npyimpl.registry)
+        # self.install_registry(printimpl.registry)
+        # self.install_registry(randomimpl.registry)
+        # self.install_registry(jitclassimpl.class_impl_registry)
 
     def codegen(self):
         return self._internal_codegen
@@ -314,6 +330,8 @@ class JITRemoteTargetContext(base.BaseContext):
     def get_ufunc_info(self, ufunc_key):
         return ufunc_db.get_ufunc_info(ufunc_key)
 
+
+# Retarget logic
 
 class CustomOmnisciRetarget(retarget.BasicRetarget):
 

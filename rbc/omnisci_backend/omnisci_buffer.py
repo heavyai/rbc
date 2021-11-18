@@ -187,7 +187,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
     return fa._getpointer()
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def free_omnisci_buffer(typingctx, ret):
     sig = types.void(ret)
 
