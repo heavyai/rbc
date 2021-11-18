@@ -2,50 +2,116 @@ from contextlib import contextmanager
 import llvmlite.binding as llvm
 from rbc.targetinfo import TargetInfo
 from numba.np import ufunc_db
+from numba import _dynfunc
 from numba.core import (
-    codegen, compiler_lock, typing, sigutils,
-    base, cpu, utils, registry, compiler,
-    dispatcher, callconv, imputils,)
+    codegen, compiler_lock, typing,
+    base, cpu, utils, retarget,
+    descriptors, dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
-    CPU,
     target_registry,
     dispatcher_registry,
-    jit_registry,
 )
 
+from rbc.utils import get_version
 
-class OmniSciDB_CPU(CPU):
+
+class OmniSciDB_CPU(Generic):
     """Mark the target as OmniSciDB CPU
     """
+    ...
 
-class OmniSciDB_GPU(CPU):
+
+class OmniSciDB_GPU(Generic):
     """Mark the target as OmniSciDB CPU
     """
+    ...
 
 
 target_registry['omniscidb_cpu'] = OmniSciDB_CPU
 target_registry['omniscidb_gpu'] = OmniSciDB_GPU
 
-omnisci_cpu_registry = imputils.Registry()
-omnisci_gpu_registry = imputils.Registry()
+omnisci_cpu_registry = imputils.Registry(name='omnisci_cpu_registry')
+omnisci_gpu_registry = imputils.Registry(name='omnisci_gpu_registry')
 
 
-class OmnisciTarget(registry.CPUTarget):
-    # Create a target for the omniscidb backend
-    pass
+class _NestedContext(object):
+    _typing_context = None
+    _target_context = None
+
+    @contextmanager
+    def nested(self, typing_context, target_context):
+        old_nested = self._typing_context, self._target_context
+        try:
+            self._typing_context = typing_context
+            self._target_context = target_context
+            yield
+        finally:
+            self._typing_context, self._target_context = old_nested
+
+
+class OmnisciTarget(descriptors.TargetDescriptor):
+    options = cpu.CPUTargetOptions
+    _nested = _NestedContext()
+
+    @utils.cached_property
+    def _toplevel_target_context(self):
+        # Lazily-initialized top-level target context, for all threads
+        return JITRemoteTargetContext(self.typing_context, self._target_name)
+
+    @utils.cached_property
+    def _toplevel_typing_context(self):
+        # Lazily-initialized top-level typing context, for all threads
+        return JITRemoteTypingContext()
+
+    @property
+    def target_context(self):
+        """
+        The target context for DPU targets.
+        """
+        nested = self._nested._target_context
+        if nested is not None:
+            return nested
+        else:
+            return self._toplevel_target_context
+
+    @property
+    def typing_context(self):
+        """
+        The typing context for CPU targets.
+        """
+        nested = self._nested._typing_context
+        if nested is not None:
+            return nested
+        else:
+            return self._toplevel_typing_context
+
+    def nested_context(self, typing_context, target_context):
+        """
+        A context manager temporarily replacing the contexts with the
+        given ones, for the current thread of execution.
+        """
+        return self._nested.nested(typing_context, target_context)
+
 
 # Create a target instance
-omniscidb_target = OmnisciTarget("omniscidb_cpu")
+omniscidb_cpu_target = OmnisciTarget("omniscidb_cpu")
+omniscidb_gpu_target = OmnisciTarget("omniscidb_gpu")
+
 
 # Declare a dispatcher for the DPU target
-class OmnisciDispatcher(dispatcher.Dispatcher):
-    targetdescr = omniscidb_target
+class OmnisciCPUDispatcher(dispatcher.Dispatcher):
+    targetdescr = omniscidb_cpu_target
+
+
+class OmnisciGPUDispatcher(dispatcher.Dispatcher):
+    targetdescr = omniscidb_gpu_target
+
 
 # Register a dispatcher for the target, a lot of the code uses this
 # internally to work out what to do RE compilation
-dispatcher_registry[target_registry["omniscidb_cpu"]] = OmnisciDispatcher
-dispatcher_registry[target_registry["omniscidb_gpu"]] = OmnisciDispatcher
+dispatcher_registry[target_registry["omniscidb_cpu"]] = OmnisciCPUDispatcher
+dispatcher_registry[target_registry["omniscidb_gpu"]] = OmnisciGPUDispatcher
 
 
 class JITRemoteCodeLibrary(codegen.JITCodeLibrary):
@@ -115,6 +181,7 @@ class JITRemoteTypingContext(typing.Context):
     """JITRemote Typing Context
     """
 
+
 class JITRemoteTargetContext(base.BaseContext):
     # Whether dynamic globals (CPU runtime addresses) is allowed
     allow_dynamic_globals = True
@@ -135,10 +202,8 @@ class JITRemoteTargetContext(base.BaseContext):
     def refresh(self):
         if self.target_name == 'omniscidb_cpu':
             registry = omnisci_cpu_registry
-        elif self.target_name == 'omniscidb_gpu':
-            registry = omnisci_gpu_registry
         else:
-            raise ValueError(f'Unknown target {self.target_name}')
+            registry = omnisci_gpu_registry
         try:
             loader = self._registries[registry]
         except KeyError:
@@ -149,6 +214,32 @@ class JITRemoteTargetContext(base.BaseContext):
         # affect it.
         self.typing_context.refresh()
         super().refresh()
+
+    def load_additional_registries(self):
+        # Add implementations that work via import
+        from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
+                                   iterators, listobj, numbers, rangeobj,
+                                   setobj, slicing, tupleobj, unicode,)
+        # from numba.core import optional
+        from numba.np import linalg, polynomial, arraymath, arrayobj  # noqa: F401
+        # from numba.typed import typeddict, dictimpl
+        # from numba.typed import typedlist, listobject
+        # from numba.experimental import jitclass, function_type
+        # from numba.np import npdatetime
+
+        # Add target specific implementations
+        from numba.np import npyimpl
+        from numba.cpython import cmathimpl, mathimpl, printimpl, randomimpl
+        from numba.misc import cffiimpl
+        from numba.experimental.jitclass.base import ClassBuilder as \
+            jitclassimpl
+        self.install_registry(cmathimpl.registry)
+        self.install_registry(cffiimpl.registry)
+        self.install_registry(mathimpl.registry)
+        self.install_registry(npyimpl.registry)
+        self.install_registry(printimpl.registry)
+        self.install_registry(randomimpl.registry)
+        self.install_registry(jitclassimpl.class_impl_registry)
 
     def codegen(self):
         return self._internal_codegen
@@ -180,7 +271,37 @@ class JITRemoteTargetContext(base.BaseContext):
         pass
 
     def get_executable(self, library, fndesc, env):
-        return None
+        """
+        Returns
+        -------
+        (cfunc, fnptr)
+
+        - cfunc
+            callable function (Can be None)
+        - fnptr
+            callable function address
+        - env
+            an execution environment (from _dynfunc)
+        """
+        # Code generation
+        fnptr = library.get_pointer_to_function(
+            fndesc.llvm_cpython_wrapper_name
+        )
+
+        # Note: we avoid reusing the original docstring to avoid encoding
+        # issues on Python 2, see issue #1908
+        doc = "compiled wrapper for %r" % (fndesc.qualname,)
+        cfunc = _dynfunc.make_function(
+            fndesc.lookup_module(),
+            fndesc.qualname.split(".")[-1],
+            doc,
+            fnptr,
+            env,
+            # objects to keepalive with the function
+            (library,),
+        )
+        library.codegen.set_env(self.get_env_name(fndesc), env)
+        return cfunc
 
     def post_lowering(self, mod, library):
         pass
@@ -189,12 +310,31 @@ class JITRemoteTargetContext(base.BaseContext):
     def get_ufunc_info(self, ufunc_key):
         return ufunc_db.get_ufunc_info(ufunc_key)
 
-def djit(*args, **options):
-    from numba.core.decorators import jit
-    return jit(*args, _target='omniscidb_gpu', target_backend='omniscidb_cpu', boundscheck=False, nopython=True)
+
+class CustomOmnisciRetarget(retarget.BasicRetarget):
+
+    def __init__(self, target_name):
+        self.target_name = target_name
+        super().__init__()
+
+    @property
+    def output_target(self):
+        return self.target_name
+
+    def compile_retarget(self, cpu_disp):
+        from numba import njit
+        kernel = njit(_target=self.target_name)(cpu_disp.py_func)
+        return kernel
 
 
-# add it to the decorator registry, this is so e.g. @overload can look up a
-# JIT function to do the compilation work.
-jit_registry[target_registry["omniscidb_cpu"]] = djit
-jit_registry[target_registry["omniscidb_gpu"]] = djit
+# cpu_retarget = CustomOmnisciRetarget('cpu')
+# gpu_retarget = CustomOmnisciRetarget('gpu')
+
+
+def switch_target(device):
+    if get_version('numba') > (0, 55):
+        tc = dispatcher.TargetConfigurationStack
+    else:
+        tc = dispatcher.TargetConfig
+
+    return tc.switch_target(CustomOmnisciRetarget(device))

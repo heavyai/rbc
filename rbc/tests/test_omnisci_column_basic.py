@@ -924,14 +924,13 @@ def test_column_different_sizes(omnisci):
 def test_fx(omnisci):
     import math
     from numba import njit
-    from rbc.omnisci_backend import djit
 
-    @djit
+    @njit
     def bar(x):
         return math.exp(x)
 
-    @omnisci('double(double)', devices=['cpu'])
+    @omnisci('double(double)', devices=['cpu', 'gpu'])
     def foo(x):
-        return math.exp(x) + bar(x)
+        return bar(x)
 
     print(foo)

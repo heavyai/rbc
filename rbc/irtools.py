@@ -22,7 +22,10 @@ from numba.core import errors as nb_errors
 from rbc.omnisci_backend import (
     JITRemoteTypingContext,
     JITRemoteCodegen,
-    JITRemoteTargetContext
+    JITRemoteTargetContext,
+    omniscidb_cpu_target,
+    omniscidb_gpu_target,
+    switch_target,
 )
 
 
@@ -175,7 +178,6 @@ def compile_instance(func, sig,
         flags.no_compile = True
         flags.no_cpython_wrapper = True
         flags.no_cfunc_wrapper = True
-        flags.target_backend = 'omniscidb_cpu'
     else:
         flags.set('no_compile')
         flags.set('no_cpython_wrapper')
@@ -275,17 +277,19 @@ def compile_to_LLVM(functions_and_signatures,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    target_desc = registry.cpu_target
+    # target_desc = registry.cpu_target
+    device = target_info.name
+    target_desc = omniscidb_cpu_target if device == 'cpu' else omniscidb_gpu_target
 
     typing_context = JITRemoteTypingContext()
-    target_context = JITRemoteTargetContext(typing_context, f'omniscidb_{target_info.name}')
+    target_context = JITRemoteTargetContext(typing_context, f'omniscidb_{device}')
 
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
-        main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{target_info.name}')
+        main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{device}')
         main_module = main_library._final_module
 
         if user_defined_llvm_ir is not None:
@@ -298,13 +302,14 @@ def compile_to_LLVM(functions_and_signatures,
         function_names = []
         for func, signatures in functions_and_signatures:
             for fid, sig in signatures.items():
-                fname = compile_instance(func, sig, target_info, typing_context,
-                                         target_context, pipeline_class,
-                                         main_library,
-                                         debug=debug)
-                if fname is not None:
-                    succesful_fids.append(fid)
-                    function_names.append(fname)
+                with switch_target(f'omniscidb_{device}'):
+                    fname = compile_instance(func, sig, target_info, typing_context,
+                                             target_context, pipeline_class,
+                                             main_library,
+                                             debug=debug)
+                    if fname is not None:
+                        succesful_fids.append(fid)
+                        function_names.append(fname)
 
         add_byval_metadata(main_library)
         main_library._optimize_final_module()
