@@ -19,13 +19,11 @@ from rbc.utils import get_version
 class OmniSciDB_CPU(Generic):
     """Mark the target as OmniSciDB CPU
     """
-    ...
 
 
 class OmniSciDB_GPU(Generic):
     """Mark the target as OmniSciDB CPU
     """
-    ...
 
 
 target_registry['omniscidb_cpu'] = OmniSciDB_CPU
@@ -67,7 +65,7 @@ class OmnisciTarget(descriptors.TargetDescriptor):
     @property
     def target_context(self):
         """
-        The target context for DPU targets.
+        The target context for CPU/GPU targets.
         """
         nested = self._nested._target_context
         if nested is not None:
@@ -99,7 +97,7 @@ omniscidb_cpu_target = OmnisciTarget("omniscidb_cpu")
 omniscidb_gpu_target = OmnisciTarget("omniscidb_gpu")
 
 
-# Declare a dispatcher for the DPU target
+# Declare a dispatcher for the CPU/GPU targets
 class OmnisciCPUDispatcher(dispatcher.Dispatcher):
     targetdescr = omniscidb_cpu_target
 
@@ -220,6 +218,9 @@ class JITRemoteTargetContext(base.BaseContext):
         from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
                                    iterators, listobj, numbers, rangeobj,
                                    setobj, slicing, tupleobj, unicode,)
+
+        # uncomment as needed!
+
         # from numba.core import optional
         from numba.np import linalg, polynomial, arraymath, arrayobj  # noqa: F401
         # from numba.typed import typeddict, dictimpl
@@ -283,6 +284,9 @@ class JITRemoteTargetContext(base.BaseContext):
         - env
             an execution environment (from _dynfunc)
         """
+        # although we don't use this function, it seems to be required
+        # by some parts of codegen in Numba.
+
         # Code generation
         fnptr = library.get_pointer_to_function(
             fndesc.llvm_cpython_wrapper_name
@@ -325,10 +329,6 @@ class CustomOmnisciRetarget(retarget.BasicRetarget):
         from numba import njit
         kernel = njit(_target=self.target_name)(cpu_disp.py_func)
         return kernel
-
-
-# cpu_retarget = CustomOmnisciRetarget('cpu')
-# gpu_retarget = CustomOmnisciRetarget('gpu')
 
 
 def switch_target(device):
