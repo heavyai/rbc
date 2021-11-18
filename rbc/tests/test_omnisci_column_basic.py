@@ -3,6 +3,8 @@ import os
 from collections import defaultdict
 import pytest
 import numpy as np
+import math
+from numba import njit
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -921,9 +923,13 @@ def test_column_different_sizes(omnisci):
     assert list(result) == expected
 
 
-def test_fx(omnisci):
-    import math
-    from numba import njit
+def test_issue343(omnisci):
+    # Before generating llvm code, the irtools entry point needs
+    # to switch the target context from CPU to GPU, so that functions
+    # are bind to the correct target. In the case below, math.exp
+    # is bind to '@llvm.exp.f64' on CPU and '@__nv_exp' on GPU.
+    if not omnisci.has_cuda:
+        pytest.skip('test requires omniscidb build with GPU support')
 
     @njit
     def bar(x):
@@ -933,4 +939,5 @@ def test_fx(omnisci):
     def foo(x):
         return bar(x)
 
-    print(foo)
+    assert '__nv_exp' in str(foo)
+    assert 'llvm.exp.f64' in str(foo)
