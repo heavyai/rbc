@@ -3,6 +3,7 @@ from numba.core import extending
 from numba.core import types as nb_types
 from rbc import irutils
 
+
 @extending.intrinsic
 def add_ints(typingctx, a_type, b_type):
     if (a_type, b_type) != (nb_types.int64, nb_types.int64):

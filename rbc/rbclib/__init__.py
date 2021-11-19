@@ -41,12 +41,13 @@ functions. However, using CFFI has many advantages:
 
 import llvmlite.binding
 from . import _rbclib
-from ._rbclib import lib, ffi
-from .intrinsic import add_ints
+from ._rbclib import lib, ffi  # noqa: F401
+from .intrinsic import add_ints  # noqa: F401
 
 # this contains all the C names which we want to expose to the RBC
 # compiler. See libfuncs.RBCLib.
 FUNCTION_NAMES = ['_rbclib_add_ints']
+
 
 def load_inside_llvm():
     llvmlite.binding.load_library_permanently(_rbclib.__file__)
