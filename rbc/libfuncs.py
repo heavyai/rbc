@@ -24,6 +24,8 @@ class Library:
             r = LLVMIntrinsics()
         elif libname == 'omniscidb':
             r = OmnisciDB()
+        elif libname == 'rbclib':
+            r = RBCLib()
         else:
             raise ValueError(f'Unknown library {libname}')
         _cache[libname] = r
@@ -307,3 +309,13 @@ class Libdevice(Library):
     ull2double_ru ull2double_rz ull2float_rd ull2float_rn ull2float_ru
     ull2float_rz ullmax ullmin umax umin umul24 umul64hi umulhi urhadd
     usad y0 y0f y1 y1f yn ynf '''.strip().split())
+
+
+class RBCLib(Library):
+
+    name = 'rbclib'
+    from rbc.rbclib import FUNCTION_NAMES as _function_names
+
+    def __init__(self):
+        import rbc.rbclib
+        rbc.rbclib.load_inside_llvm()

@@ -213,6 +213,7 @@ class TargetInfo(object):
         target_info.add_library('m')
         target_info.add_library('stdio')
         target_info.add_library('stdlib')
+        target_info.add_library('rbclib')
 
         cls._host_target_info_cache[key] = target_info
 
