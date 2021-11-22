@@ -15,7 +15,7 @@ from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta, OmnisciColumnListType)
+    BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
@@ -244,6 +244,7 @@ class RemoteOmnisci(RemoteJIT):
         Constant='int32|sizer=Constant',
         ColumnList='OmnisciColumnListType',
         TextEncodingDict='OmnisciTextEncodingDictType',
+        TableFunctionManager='OmnisciTableFunctionManagerType<>',
     )
 
     def __init__(self,
@@ -869,6 +870,7 @@ class RemoteOmnisci(RemoteJIT):
         outputArgTypes = []
         sqlArgTypes = []
         annotations = []
+        function_annotations = dict()  # TODO: retrieve function annotations from orig_sig
         sizer = None
         sizer_index = -1
 
@@ -889,6 +891,12 @@ class RemoteOmnisci(RemoteJIT):
                 sizer_index = consumed_index + 1
                 sizer = _sizer
 
+            # process function annotations first to avoid appending annotations twice
+            if isinstance(a, OmnisciTableFunctionManagerType):
+                function_annotations['uses_manager'] = 'True'
+                consumed_index += 1
+                continue
+
             annotations.append(annot)
 
             if isinstance(a, OmnisciCursorType):
@@ -898,6 +906,7 @@ class RemoteOmnisci(RemoteJIT):
                         a_, OmnisciOutputColumnType), (a_)
                     inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
+
             else:
                 if isinstance(a, OmnisciOutputColumnType):
                     atype = self.type_to_extarg(a)
@@ -924,6 +933,7 @@ class RemoteOmnisci(RemoteJIT):
                         f' integer (got {sizer_index})')
         sizer_type = (thrift.TOutputBufferSizeType
                       ._NAMES_TO_VALUES[sizer])
+        annotations.append(function_annotations)
         return thrift.TUserDefinedTableFunction(
             name + sig.mangling(),
             sizer_type, sizer_index,

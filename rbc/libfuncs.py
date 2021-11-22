@@ -52,6 +52,8 @@ class OmnisciDB(Library):
 
     _function_names = list('''
     allocate_varlen_buffer set_output_row_size
+    TableFunctionManager_error_message TableFunctionManager_set_output_row_size
+    table_function_error
     '''.strip().split())
 
 

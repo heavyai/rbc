@@ -1,5 +1,6 @@
 import pytest
 from rbc.tests import omnisci_fixture, sql_execute
+from rbc.externals.omniscidb import table_function_error
 import numpy as np
 
 
@@ -221,6 +222,36 @@ def test_simple(omnisci):
         assert r == ((i % 5) * 2, (i % 5) * 2 + 1)
 
 
+def test_table_function_manager(omnisci):
+    omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6035', label='master')
+
+    @omnisci('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
+    def my_manager_error(mgr, col, out):
+        return mgr.error_message("TableFunctionManager error_message!")
+
+    @omnisci('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
+    def my_manager_row_size(mgr, col, out):
+        size = len(col)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            out[i] = col[i]
+        return size
+
+    with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
+        omnisci.sql_execute(
+            f'select out0 from table(my_manager_error('
+            f'cursor(select f8 from {omnisci.table_name})));')
+
+    assert exc.match('Error executing table function: TableFunctionManager error_message!')
+
+    _, result = omnisci.sql_execute(
+        f'select out0 from table(my_manager_row_size('
+        f'cursor(select f8 from {omnisci.table_name})));')
+
+    expected = [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
+    assert(list(result) == expected)
+
+
 @pytest.mark.parametrize("sleep", ['ct_sleep1', 'ct_sleep2'])
 @pytest.mark.parametrize("mode", [0, 1, 2, 3, 4])
 def test_parallel_execution(omnisci, sleep, mode):
@@ -290,3 +321,33 @@ def test_parallel_execution(omnisci, sleep, mode):
         for start, end, thread_id in outputs:
             print(f'{thread_id:8x} :' + ' ' * ((start - origin) // 100)
                   + '*' * ((end - start) // 100))
+
+
+def test_table_function_error(omnisci):
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
+    omnisci.reset()
+
+    @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
+    def my_divide(column, k, row_multiplier, out):
+        if k == 0:
+            return table_function_error('division by zero')
+        for i in range(len(column)):
+            out[i] = column[i] / k
+        return len(column)
+
+    descr, result = omnisci.sql_execute(f"""
+        select *
+        from table(
+            my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 2)
+        );
+    """)
+    assert list(result) == [(0.0,), (0.5,), (1.0,), (1.5,), (2.0,)]
+
+    with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
+        omnisci.sql_execute(f"""
+            select *
+            from table(
+                my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 0)
+            );
+        """)
+    assert exc.match('Error executing table function: division by zero')
