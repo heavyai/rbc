@@ -13,6 +13,7 @@ ffibuilder = FFI()
 # for both ffibuilder.cdef and ffibuilder.set_source.
 function_prototypes = """
 int64_t _rbclib_add_ints(int64_t a, int64_t b);
+int8_t* allocate_varlen_buffer(int64_t element_count, int64_t element_size);
 """
 
 ffibuilder.cdef(function_prototypes)
