@@ -61,8 +61,3 @@ def table_function_error(typingctx, message):
 
     sig = nb_types.int32(message)
     return sig, codegen
-
-
-# fix docstring for intrinsics
-for __func in (set_output_row_size, table_function_error):
-    functools.update_wrapper(__func, __func._defn)
