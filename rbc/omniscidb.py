@@ -825,6 +825,7 @@ class RemoteOmnisci(RemoteJIT):
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('omniscidb')
+                target_info.set('fn_allocate_varlen_buffer', 'allocate_varlen_buffer')
             elif target_info.is_gpu and self.version >= (5, 5):
                 target_info.add_library('libdevice')
 

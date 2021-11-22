@@ -154,6 +154,9 @@ def omnisci_buffer_constructor(context, builder, sig, args):
       b = MyBuffer(<size>, ...)
 
     """
+    target_info = TargetInfo()
+    allocate_varlen_buffer = target_info.info['fn_allocate_varlen_buffer']
+
     ptr_type, sz_type = sig.return_type.dtype.members[:2]
     if len(sig.return_type.dtype.members) > 2:
         assert len(sig.return_type.dtype.members) == 3
@@ -166,7 +169,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
 
-    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, "allocate_varlen_buffer")
+    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, allocate_varlen_buffer)
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     # remember possible temporary allocations so that when leaving a
     # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.

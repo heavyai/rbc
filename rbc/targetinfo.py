@@ -214,7 +214,7 @@ class TargetInfo(object):
         target_info.add_library('stdio')
         target_info.add_library('stdlib')
         target_info.add_library('rbclib')
-
+        target_info.set('fn_allocate_varlen_buffer', 'rbclib_allocate_varlen_buffer')
         cls._host_target_info_cache[key] = target_info
 
         return target_info
@@ -225,7 +225,8 @@ class TargetInfo(object):
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
                           'has_cpython', 'has_numba', 'driver', 'software',
-                          'llvm_version', 'null_values')
+                          'llvm_version', 'null_values',
+                          'fn_allocate_varlen_buffer', 'fn_free_buffer')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
