@@ -1,10 +1,15 @@
 """
 rbc-specific errors and warnings.
 """
-
-
 from rbc.utils import get_version
 from numba.core.errors import TypingError
+
+
+class OmnisciError(Exception):
+    """
+    Base class to use with raise
+    """
+    pass
 
 
 class OmnisciServerError(Exception):
