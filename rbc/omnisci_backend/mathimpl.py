@@ -1,13 +1,10 @@
 import math
 from rbc.externals import gen_codegen, dispatch_codegen
-from numba.core import imputils
-from numba.core.typing.templates import ConcreteTemplate, signature, Registry
+from numba.core.typing.templates import infer_global
+from numba.core.imputils import lower_builtin
+from numba.core.typing.templates import ConcreteTemplate, signature
 from numba.types import float32, float64, int32, int64, uint64, intp
 
-
-# Typing
-typing_registry = Registry()
-infer_global = typing_registry.register_global
 
 # Adding missing cases in Numba
 @infer_global(math.log2)  # noqa: E302
@@ -39,11 +36,6 @@ class Math_converter(ConcreteTemplate):
         signature(float32, float32),
         signature(float64, float64),
     ]
-
-
-# Lowering
-lowering_registry = imputils.Registry()
-lower = lowering_registry.lower
 
 
 booleans = []
@@ -92,13 +84,13 @@ binarys += [("remainder", "remainderf", math.remainder)]
 def impl_unary(fname, key, typ):
     cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower(key, typ)(dispatch_codegen(cpu, gpu))
+    lower_builtin(key, typ)(dispatch_codegen(cpu, gpu))
 
 
 def impl_binary(fname, key, typ):
     cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower(key, typ, typ)(dispatch_codegen(cpu, gpu))
+    lower_builtin(key, typ, typ)(dispatch_codegen(cpu, gpu))
 
 
 for fname64, fname32, key in unarys:
@@ -119,8 +111,8 @@ def impl_ldexp():
     ldexpf_cpu = gen_codegen('ldexpf')
     ldexpf_gpu = gen_codegen('__nv_ldexpf')
 
-    lower(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
-    lower(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
+    lower_builtin(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
+    lower_builtin(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
 
 
 impl_ldexp()

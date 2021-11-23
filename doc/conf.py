@@ -88,7 +88,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
-    'canonical_url': 'https://xnd.io/',
+    # 'html_baseurl': 'https://xnd.io/',
     'analytics_id': '',
     'logo_only': False,
     'display_version': True,
@@ -98,11 +98,6 @@ html_theme_options = {
     'sticky_navigation': True,
     # 'navigation_depth': 4,
 }
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
 
 # The Xnd logo
 html_logo = "images/xndlogo.png"

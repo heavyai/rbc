@@ -16,15 +16,14 @@ Casts:
 
 __all__ = ["sizeof", "cast"]
 
-import functools
 from llvmlite import ir
 from numba.core import extending, imputils, typing, typeconv
 from numba.core import types as nb_types
 from rbc.typesystem import Type
 
 
-typing_registry = typing.templates.Registry()
-lowering_registry = imputils.Registry()
+typing_registry = typing.templates.builtin_registry
+lowering_registry = imputils.builtin_registry
 
 
 @extending.intrinsic
@@ -62,13 +61,6 @@ def cast(typingctx, ptr, typ):
         return builder.bitcast(args[0], dtype.tollvmir())
 
     return sig, codegen
-
-
-# fix docstring for intrinsics
-# TODO: remove this after Numba 0.54 is released
-# https://github.com/numba/numba/pull/6915
-for __func in (sizeof, cast):
-    functools.update_wrapper(__func, __func._defn)
 
 
 @extending.overload_method(type(nb_types.voidptr), "cast")

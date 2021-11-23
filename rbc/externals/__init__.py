@@ -1,7 +1,5 @@
-import types as py_types
 from rbc.targetinfo import TargetInfo
-from rbc.typesystem import Type
-from numba.core import funcdesc, typing
+from numba.core import funcdesc
 
 
 def gen_codegen(fn_name):
@@ -29,37 +27,25 @@ def sanitize(name):
     return name
 
 
-def register_external(
-    fname,
-    retty,
-    argtys,
-    module_name,
-    module_globals,
-    typing_registry,
-    lowering_registry,
-    doc,
-):
+def make_intrinsic(fname, retty, argnames, module_name, module_globals, doc):
+    argnames = tuple(map(lambda x: sanitize(x), argnames))
+    fn_str = f'''
+from numba.core.extending import intrinsic
+@intrinsic
+def {fname}(typingctx, {", ".join(argnames)}):
+    from rbc.typesystem import Type
+    retty_ = Type.fromobject("{retty}").tonumba()
+    argnames_ = tuple(map(lambda x: Type.fromobject(x).tonumba(), [{", ".join(argnames)}]))  # noqa: E501
+    signature = retty_(*argnames_)
+    def codegen(context, builder, sig, args):
+        from numba.core import funcdesc
+        fndesc = funcdesc.ExternalFunctionDescriptor("{fname}", sig.return_type, sig.args)  # noqa: E501
+        func = context.declare_external_function(builder.module, fndesc)
+        return builder.call(func, args)
+    return signature, codegen
+'''
 
-    # expose
-    fn = eval(f'lambda {",".join(map(lambda x: sanitize(x.name), argtys))}: None', {}, {})
-    _key = py_types.FunctionType(fn.__code__, {}, fname)
-    _key.__module__ = __name__
-    globals()[fname] = _key
-
-    # typing
-    @typing_registry.register_global(_key)
-    class ExternalTemplate(typing.templates.AbstractTemplate):
-        key = _key
-
-        def generic(self, args, kws):
-            retty_ = Type.fromobject(retty).tonumba()
-            argtys_ = tuple(map(lambda x: Type.fromobject(x.ty).tonumba(), argtys))
-            codegen = gen_codegen(fname)
-            lowering_registry.lower(_key, *argtys_)(codegen)
-            return retty_(*argtys_)
-
-    module_globals[fname] = _key
-    _key.__module__ = module_name
-    _key.__doc__ = doc
-    del globals()[fname]
-    return _key
+    exec(fn_str, module_globals)
+    fn = module_globals[fname]
+    fn.__doc__ = doc
+    return fn
