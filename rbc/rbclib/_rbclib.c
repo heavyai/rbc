@@ -17,3 +17,11 @@ int8_t *rbclib_allocate_varlen_buffer(int64_t element_count, int64_t element_siz
         size = 1;
     return (int8_t *)malloc(size);
 }
+
+void rbclib_free_buffer(int8_t *addr) {
+    // XXX: currently there is a bug in the FreeOmnisciBuffer and the free()
+    // is never called.  We should remove the abort() as soon as this code is
+    // actually called
+    abort();
+    free((void*)addr);
+}

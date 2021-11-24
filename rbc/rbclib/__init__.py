@@ -46,7 +46,11 @@ from .intrinsic import add_ints  # noqa: F401
 
 # this contains all the C names which we want to expose to the RBC
 # compiler. See libfuncs.RBCLib.
-FUNCTION_NAMES = ['_rbclib_add_ints', 'rbclib_allocate_varlen_buffer']
+FUNCTION_NAMES = [
+    '_rbclib_add_ints',
+    'rbclib_allocate_varlen_buffer',
+    'rbclib_free_buffer',
+]
 
 
 def load_inside_llvm():
