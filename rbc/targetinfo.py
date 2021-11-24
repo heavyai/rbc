@@ -215,6 +215,7 @@ class TargetInfo(object):
         target_info.add_library('stdlib')
         target_info.add_library('rbclib')
         target_info.set('fn_allocate_varlen_buffer', 'rbclib_allocate_varlen_buffer')
+        target_info.set('fn_free_buffer', 'rbclib_free_buffer')
         cls._host_target_info_cache[key] = target_info
 
         return target_info
