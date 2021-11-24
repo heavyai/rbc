@@ -357,8 +357,12 @@ class Caller(object):
         """Return the result of a remote JIT compiled function call.
         """
         device = options.get('device')
+        debug = options.get('debug', False)
         targets = self.remotejit.targets
         if device is None:
+            # try to find a target with the desired debug value
+            # XXX WIP we should properly test this logic
+            targets = {name: t for name, t in targets.items() if t.debug == debug}
             if len(targets) > 1:
                 raise TypeError(
                     f'specifying device is required when target has more than'
@@ -720,10 +724,14 @@ class DispatcherRJIT(Dispatcher):
         info : dict
           Map of target devices and their properties.
         """
-        target_info = TargetInfo.host()
-        target_info.set('has_numba', True)
-        target_info.set('has_cpython', True)
-        return dict(cpu=target_info.tojson())
+        cpu = TargetInfo.host()
+        cpu.set('has_numba', True)
+        cpu.set('has_cpython', True)
+        #
+        cpu_debug = TargetInfo.host(name='host_cpu_debug', debug=True)
+        cpu_debug.set('has_numba', True)
+        cpu_debug.set('has_cpython', True)
+        return dict(cpu=cpu.tojson(), cpu_debug=cpu_debug.tojson())
 
     @dispatchermethod
     def compile(self, name: str, signatures: str, ir: str) -> int:
