@@ -33,26 +33,23 @@ def sanitize(name):
 
 def make_intrinsic(fname, retty, argnames, module_name, module_globals, doc):
     argnames = tuple(map(lambda x: sanitize(x), argnames))
-    fn_str = (
-        f'from numba.core.extending import intrinsic\n'
-        f'@intrinsic\n'
-        f'def {fname}(typingctx, {", ".join(argnames)}):\n'
-        f'    from rbc.typesystem import Type\n'
-        f'    retty_ = Type.fromobject("{retty}").tonumba()\n'
-        f'    argnames_ = tuple(map(lambda x: Type.fromobject(x).tonumba(), [{", ".join(argnames)}]))\n'  # noqa: E501
-        f'    signature = retty_(*argnames_)\n'
-        f'    def codegen(context, builder, sig, args):\n'
-        f'        from numba.core import funcdesc\n'
-        f'        fndesc = funcdesc.ExternalFunctionDescriptor("{fname}", sig.return_type, sig.args)\n'  # noqa: E501
-        f'        func = context.declare_external_function(builder.module, fndesc)\n'
-        f'        return builder.call(func, args)\n'
-        f'    return signature, codegen'
-    )
+    fn_str = f'''
+from numba.core.extending import intrinsic
+@intrinsic
+def {fname}(typingctx, {", ".join(argnames)}):
+    from rbc.typesystem import Type
+    retty_ = Type.fromobject("{retty}").tonumba()
+    argnames_ = tuple(map(lambda x: Type.fromobject(x).tonumba(), [{", ".join(argnames)}]))  # noqa: E501
+    signature = retty_(*argnames_)
+    def codegen(context, builder, sig, args):
+        from numba.core import funcdesc
+        fndesc = funcdesc.ExternalFunctionDescriptor("{fname}", sig.return_type, sig.args)  # noqa: E501
+        func = context.declare_external_function(builder.module, fndesc)
+        return builder.call(func, args)
+    return signature, codegen
+'''
 
-    exec(fn_str)
-    fn = locals()[fname]
-    fn.__module__ = module_name
+    exec(fn_str, module_globals)
+    fn = module_globals[fname]
     fn.__doc__ = doc
-    fn.__name__ = fname
-    module_globals[fname] = fn
     return fn

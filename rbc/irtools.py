@@ -77,7 +77,6 @@ def get_called_functions(library, funcname=None):
 
 
 # ---------------------------------------------------------------------------
-# Code generation methods
 
 
 # @contextmanager
