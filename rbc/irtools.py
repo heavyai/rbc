@@ -80,13 +80,13 @@ def get_called_functions(library, funcname=None):
 # Code generation methods
 
 
-@contextmanager
-def replace_numba_internals_hack():
-    # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
-    _internal_codegen_bkp = registry.cpu_target.target_context._internal_codegen
-    registry.cpu_target.target_context._internal_codegen = JITRemoteCodegen("numba.exec")
-    yield
-    registry.cpu_target.target_context._internal_codegen = _internal_codegen_bkp
+# @contextmanager
+# def replace_numba_internals_hack():
+#     # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
+#     _internal_codegen_bkp = registry.cpu_target.target_context._internal_codegen
+#     registry.cpu_target.target_context._internal_codegen = JITRemoteCodegen("numba.exec")
+#     yield
+#     registry.cpu_target.target_context._internal_codegen = _internal_codegen_bkp
 
 
 def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
@@ -296,74 +296,73 @@ def compile_to_LLVM(functions_and_signatures,
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
-    with replace_numba_internals_hack():
-        codegen = target_context.codegen()
-        main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{software}_{device}')
-        main_module = main_library._final_module
+    codegen = target_context.codegen()
+    main_library = codegen.create_library(f'rbc.irtools.compile_to_IR_{software}_{device}')
+    main_module = main_library._final_module
 
-        if user_defined_llvm_ir is not None:
-            if isinstance(user_defined_llvm_ir, str):
-                user_defined_llvm_ir = llvm.parse_assembly(user_defined_llvm_ir)
-            assert isinstance(user_defined_llvm_ir, llvm.ModuleRef)
-            main_module.link_in(user_defined_llvm_ir, preserve=True)
+    if user_defined_llvm_ir is not None:
+        if isinstance(user_defined_llvm_ir, str):
+            user_defined_llvm_ir = llvm.parse_assembly(user_defined_llvm_ir)
+        assert isinstance(user_defined_llvm_ir, llvm.ModuleRef)
+        main_module.link_in(user_defined_llvm_ir, preserve=True)
 
-        succesful_fids = []
-        function_names = []
-        for func, signatures in functions_and_signatures:
-            for fid, sig in signatures.items():
-                with switch_target(target_name):
-                    fname = compile_instance(func, sig, target_info, typing_context,
-                                             target_context, pipeline_class,
-                                             main_library,
-                                             debug=debug)
-                    if fname is not None:
-                        succesful_fids.append(fid)
-                        function_names.append(fname)
+    succesful_fids = []
+    function_names = []
+    for func, signatures in functions_and_signatures:
+        for fid, sig in signatures.items():
+            with switch_target(target_name):
+                fname = compile_instance(func, sig, target_info, typing_context,
+                                            target_context, pipeline_class,
+                                            main_library,
+                                            debug=debug)
+                if fname is not None:
+                    succesful_fids.append(fid)
+                    function_names.append(fname)
 
-        add_byval_metadata(main_library)
+    add_byval_metadata(main_library)
+    main_library._optimize_final_module()
+
+    # Remove unused defined functions and declarations
+    used_symbols = defaultdict(set)
+    for fname in function_names:
+        for k, v in get_called_functions(main_library, fname).items():
+            used_symbols[k].update(v)
+
+    all_symbols = get_called_functions(main_library)
+
+    unused_symbols = defaultdict(set)
+    for k, lst in all_symbols.items():
+        if k == 'libraries':
+            continue
+        for fn in lst:
+            if fn not in used_symbols[k]:
+                unused_symbols[k].add(fn)
+
+    changed = False
+    for f in main_module.functions:
+        fn = f.name
+        if fn.startswith('llvm.'):
+            if f.name in unused_symbols['intrinsics']:
+                f.linkage = llvm.Linkage.external
+                changed = True
+        elif f.is_declaration:
+            if f.name in unused_symbols['declarations']:
+                f.linkage = llvm.Linkage.external
+                changed = True
+        else:
+            if f.name in unused_symbols['defined']:
+                f.linkage = llvm.Linkage.private
+                changed = True
+
+    # TODO: determine unused global_variables and struct_types
+
+    if changed:
         main_library._optimize_final_module()
 
-        # Remove unused defined functions and declarations
-        used_symbols = defaultdict(set)
-        for fname in function_names:
-            for k, v in get_called_functions(main_library, fname).items():
-                used_symbols[k].update(v)
-
-        all_symbols = get_called_functions(main_library)
-
-        unused_symbols = defaultdict(set)
-        for k, lst in all_symbols.items():
-            if k == 'libraries':
-                continue
-            for fn in lst:
-                if fn not in used_symbols[k]:
-                    unused_symbols[k].add(fn)
-
-        changed = False
-        for f in main_module.functions:
-            fn = f.name
-            if fn.startswith('llvm.'):
-                if f.name in unused_symbols['intrinsics']:
-                    f.linkage = llvm.Linkage.external
-                    changed = True
-            elif f.is_declaration:
-                if f.name in unused_symbols['declarations']:
-                    f.linkage = llvm.Linkage.external
-                    changed = True
-            else:
-                if f.name in unused_symbols['defined']:
-                    f.linkage = llvm.Linkage.private
-                    changed = True
-
-        # TODO: determine unused global_variables and struct_types
-
-        if changed:
-            main_library._optimize_final_module()
-
-        main_module.verify()
-        main_library._finalized = True
-        main_module.triple = target_info.triple
-        main_module.data_layout = target_info.datalayout
+    main_module.verify()
+    main_library._finalized = True
+    main_module.triple = target_info.triple
+    main_module.data_layout = target_info.datalayout
 
     return main_module, succesful_fids
 
