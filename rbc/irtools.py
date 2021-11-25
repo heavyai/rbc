@@ -3,7 +3,6 @@
 
 import re
 import warnings
-from contextlib import contextmanager
 from collections import defaultdict
 from llvmlite import ir
 import llvmlite.binding as llvm
@@ -23,7 +22,6 @@ from numba.core import (
 from numba.core import errors as nb_errors
 from rbc.omnisci_backend import (
     JITRemoteTypingContext,
-    JITRemoteCodegen,
     JITRemoteTargetContext,
     omniscidb_cpu_target,
     omniscidb_gpu_target,
@@ -77,16 +75,6 @@ def get_called_functions(library, funcname=None):
 
 
 # ---------------------------------------------------------------------------
-
-
-# @contextmanager
-# def replace_numba_internals_hack():
-#     # Hackish solution to prevent numba from calling _ensure_finalize. See issue #87
-#     _internal_codegen_bkp = registry.cpu_target.target_context._internal_codegen
-#     registry.cpu_target.target_context._internal_codegen = JITRemoteCodegen("numba.exec")
-#     yield
-#     registry.cpu_target.target_context._internal_codegen = _internal_codegen_bkp
-
 
 def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
     """Make wrapper function to numba compile result.
@@ -311,9 +299,9 @@ def compile_to_LLVM(functions_and_signatures,
         for fid, sig in signatures.items():
             with switch_target(target_name):
                 fname = compile_instance(func, sig, target_info, typing_context,
-                                            target_context, pipeline_class,
-                                            main_library,
-                                            debug=debug)
+                                         target_context, pipeline_class,
+                                         main_library,
+                                         debug=debug)
                 if fname is not None:
                     succesful_fids.append(fid)
                     function_names.append(fname)

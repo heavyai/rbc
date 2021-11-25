@@ -9,10 +9,8 @@ from numba.core import (
     descriptors, dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
-    JitDecorator,
     target_registry,
     dispatcher_registry,
-    jit_registry,
 )
 
 from rbc.utils import get_version
@@ -62,6 +60,7 @@ class OmnisciTargetOptions(cpu.CPUTargetOptions):
         flags.inherit_if_not_set("error_model", default="python")
         # Add "target_backend" as a option that inherits from the caller
         flags.inherit_if_not_set("target_backend")
+
 
 class OmnisciTarget(descriptors.TargetDescriptor):
     options = OmnisciTargetOptions
@@ -194,6 +193,11 @@ class JITRemoteTypingContext(typing.Context):
     """JITRemote Typing Context
     """
 
+    def load_additional_registries(self):
+        from rbc.omnisci_backend import mathimpl
+        self.install_registry(mathimpl.registry)
+        return super().load_additional_registries()
+
 
 class JITRemoteTargetContext(base.BaseContext):
     # Whether dynamic globals (CPU runtime addresses) is allowed
@@ -231,9 +235,9 @@ class JITRemoteTargetContext(base.BaseContext):
 
     def load_additional_registries(self):
         # Add implementations that work via import
-        from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
-                                   iterators, listobj, numbers, rangeobj,
-                                   setobj, slicing, tupleobj, unicode,)
+        # from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
+        #                            iterators, listobj, numbers, rangeobj,
+        #                            setobj, slicing, tupleobj, unicode,)
 
         # uncomment as needed!
 
@@ -246,13 +250,14 @@ class JITRemoteTargetContext(base.BaseContext):
 
         # Add target specific implementations
         from numba.np import npyimpl
+        from numba.cpython import mathimpl
         # from numba.cpython import cmathimpl, mathimpl, printimpl, randomimpl
         # from numba.misc import cffiimpl
         # from numba.experimental.jitclass.base import ClassBuilder as \
         #     jitclassimpl
         # self.install_registry(cmathimpl.registry)
         # self.install_registry(cffiimpl.registry)
-        # self.install_registry(mathimpl.registry)
+        self.install_registry(mathimpl.registry)
         self.install_registry(npyimpl.registry)
         # self.install_registry(printimpl.registry)
         # self.install_registry(randomimpl.registry)

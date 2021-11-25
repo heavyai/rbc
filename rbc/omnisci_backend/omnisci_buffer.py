@@ -478,7 +478,7 @@ def omnisci_buffer_idx_is_null_(typingctx, col_var, row_idx):
 # "BufferPointer.is_null" checks if a given array or column is null
 # as opposed to "BufferType.is_null" that checks if an index in a
 # column is null
-@extending.overload_method(BufferPointer, 'is_null')
+@extending.overload_method(BufferPointer, 'is_null', target='omniscidb_cpu')
 def omnisci_buffer_is_null(x, row_idx=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(row_idx):

@@ -1,7 +1,7 @@
 import math
-from rbc.externals import gen_codegen
-from numba.core.typing.templates import infer_global
-from numba.core.typing.templates import ConcreteTemplate, signature
+from rbc.externals import gen_codegen, dispatch_codegen
+from numba.core.imputils import lower_builtin
+from numba.core.typing.templates import ConcreteTemplate, signature, Registry
 from numba.types import float32, float64, int32, int64, uint64, intp
 from numba.core.intrinsics import INTR_TO_CMATH
 from .omnisci_compiler import omnisci_cpu_registry, omnisci_gpu_registry
@@ -9,6 +9,10 @@ from .omnisci_compiler import omnisci_cpu_registry, omnisci_gpu_registry
 
 lower_cpu = omnisci_cpu_registry.lower
 lower_gpu = omnisci_gpu_registry.lower
+
+
+registry = Registry()
+infer_global = registry.register_global
 
 
 # Adding missing cases in Numba
@@ -80,7 +84,7 @@ unarys += [("trunc", "truncf", math.trunc)]
 binarys = []
 binarys += [("copysign", "copysignf", math.copysign)]
 binarys += [("atan2", "atan2f", math.atan2)]
-binarys += [("pow", "powf", math.pow)]
+# binarys += [("pow", "powf", math.pow)]
 binarys += [("fmod", "fmodf", math.fmod)]
 binarys += [("hypot", "hypotf", math.hypot)]
 binarys += [("remainder", "remainderf", math.remainder)]
@@ -104,8 +108,8 @@ def impl_binary(fname, key, typ):
     else:
         cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower_cpu(key, typ)(cpu)
-    lower_gpu(key, typ)(gpu)
+    lower_cpu(key, typ, typ)(cpu)
+    lower_gpu(key, typ, typ)(gpu)
 
 
 for fname64, fname32, key in unarys:
@@ -126,14 +130,29 @@ def impl_ldexp():
     ldexpf_cpu = gen_codegen('ldexpf')
     ldexpf_gpu = gen_codegen('__nv_ldexpf')
 
-    lower_cpu(math.ldexp, float64, int32)(ldexp_cpu)
-    lower_gpu(math.ldexp, float64, int32)(ldexp_gpu)
+    lower_builtin(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
+    lower_builtin(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
 
-    lower_cpu(math.ldexp, float32, int32)(ldexpf_cpu)
-    lower_gpu(math.ldexp, float32, int32)(ldexpf_gpu)
+
+def impl_pow():
+    pow_cpu = gen_codegen('pow')
+    pow_gpu = gen_codegen('__nv_pow')
+
+    powf_cpu = gen_codegen('powf')
+    powf_gpu = gen_codegen('__nv_powf')
+
+    powi_gpu = gen_codegen('__nv_powi')
+    powif_gpu = gen_codegen('__nv_powif')
+
+    lower_builtin(math.pow, float64, float64)(dispatch_codegen(pow_cpu, pow_gpu))
+    lower_builtin(math.pow, float32, float32)(dispatch_codegen(powf_cpu, powf_gpu))
+    lower_builtin(math.pow, float64, int32)(dispatch_codegen(pow_cpu, powi_gpu))
+    lower_builtin(math.pow, float32, int32)(dispatch_codegen(powf_cpu, powif_gpu))
 
 
 impl_ldexp()
+impl_pow()
+
 
 # CPU only:
 # math.gcd
