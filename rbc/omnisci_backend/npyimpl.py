@@ -432,3 +432,148 @@ ufunc_db._ufunc_db[np.tan].update(
         "d->d": dispatch_codegen(npyfuncs.np_real_tan_impl, gen_codegen("__nv_tan")),
     }
 )
+
+# fmax
+ufunc_db._ufunc_db[np.fmax].update(
+    {
+        "ff->f": dispatch_codegen(
+            npyfuncs.np_real_fmax_impl, gen_codegen("__nv_fmaxf")
+        ),
+        "dd->d": dispatch_codegen(
+            npyfuncs.np_real_fmax_impl, gen_codegen("__nv_fmax")
+        ),
+    }
+)
+
+# fmin
+ufunc_db._ufunc_db[np.fmin].update(
+    {
+        "ff->f": dispatch_codegen(
+            npyfuncs.np_real_fmin_impl, gen_codegen("__nv_fminf")
+        ),
+        "dd->d": dispatch_codegen(
+            npyfuncs.np_real_fmin_impl, gen_codegen("__nv_fmin")
+        ),
+    }
+)
+
+# maximum
+ufunc_db._ufunc_db[np.maximum].update(
+    {
+        "ff->f": dispatch_codegen(
+            npyfuncs.np_real_fmax_impl, gen_codegen("__nv_fmaxf")
+        ),
+        "dd->d": dispatch_codegen(
+            npyfuncs.np_real_fmax_impl, gen_codegen("__nv_fmax")
+        ),
+    }
+)
+
+# minimum
+ufunc_db._ufunc_db[np.minimum].update(
+    {
+        "ff->f": dispatch_codegen(
+            npyfuncs.np_real_fmin_impl, gen_codegen("__nv_fminf")
+        ),
+        "dd->d": dispatch_codegen(
+            npyfuncs.np_real_fmin_impl, gen_codegen("__nv_fmin")
+        ),
+    }
+)
+
+# add
+ufunc_db._ufunc_db[np.add].update(
+    {
+        "ff->f": dispatch_codegen(
+            numbers.real_add_impl, gen_codegen("__nv_fadd_rz")
+        ),
+        "dd->d": dispatch_codegen(
+            numbers.real_add_impl, gen_codegen("__nv_dadd_rz")
+        ),
+    }
+)
+
+# subtract
+ufunc_db._ufunc_db[np.subtract].update(
+    {
+        "ff->f": dispatch_codegen(
+            numbers.real_sub_impl, gen_codegen("__nv_fsub_rz")
+        ),
+        # no libdevice double impl for sub?
+        # "dd->d": dispatch_codegen(
+        #     numbers.real_sub_impl, gen_codegen("__nv_dsub_rz")
+        # ),
+    }
+)
+
+# multiply
+ufunc_db._ufunc_db[np.multiply].update(
+    {
+        "ff->f": dispatch_codegen(
+            numbers.real_mul_impl, gen_codegen("__nv_fmul_rz")
+        ),
+        "dd->d": dispatch_codegen(
+            numbers.real_mul_impl, gen_codegen("__nv_dmul_rz")
+        ),
+    }
+)
+
+# divide
+ufunc_db._ufunc_db[np.divide].update(
+    {
+        "ff->f": dispatch_codegen(
+            numbers.real_div_impl, gen_codegen("__nv_fdiv_rz")
+        ),
+        "dd->d": dispatch_codegen(
+            numbers.real_div_impl, gen_codegen("__nv_ddiv_rz")
+        ),
+    }
+)
+
+# fmod
+ufunc_db._ufunc_db[np.fmod].update(
+    {
+        "ff->f": dispatch_codegen(
+            npyfuncs.np_real_fmod_impl, gen_codegen("__nv_fmodf")
+        ),
+        "dd->d": dispatch_codegen(
+            npyfuncs.np_real_fmod_impl, gen_codegen("__nv_fmod")
+        ),
+    }
+)
+
+# isfinite
+ufunc_db._ufunc_db[np.isfinite].update(
+    {
+        "f->?": dispatch_codegen(
+            npyfuncs.np_real_isfinite_impl, gen_codegen("__nv_isfinite")
+        ),
+        "d->?": dispatch_codegen(
+            npyfuncs.np_real_isfinite_impl, gen_codegen("__nv_isfinited")
+        ),
+    }
+)
+
+# isinf
+ufunc_db._ufunc_db[np.isinf].update(
+    {
+        "f->?": dispatch_codegen(
+            npyfuncs.np_real_isinf_impl, gen_codegen("__nv_isinff")
+        ),
+        "d->?": dispatch_codegen(
+            npyfuncs.np_real_isinf_impl, gen_codegen("__nv_isinfd")
+        ),
+    }
+)
+
+# isnan
+ufunc_db._ufunc_db[np.isnan].update(
+    {
+        "f->?": dispatch_codegen(
+            npyfuncs.np_real_isnan_impl, gen_codegen("__nv_isnanf")
+        ),
+        "d->?": dispatch_codegen(
+            npyfuncs.np_real_isnan_impl, gen_codegen("__nv_isnand")
+        ),
+    }
+)
