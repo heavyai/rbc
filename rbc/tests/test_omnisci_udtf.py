@@ -1,5 +1,5 @@
 import pytest
-from rbc.errors import OmnisciError
+from rbc.errors import NumbaTypeError
 from rbc.tests import omnisci_fixture, sql_execute
 from rbc.externals.omniscidb import table_function_error
 import numpy as np
@@ -354,32 +354,19 @@ def test_table_function_error(omnisci):
     assert exc.match('Error executing table function: division by zero')
 
 
-@pytest.mark.parametrize("excp", [OmnisciError, ValueError])
-def test_raise_error(omnisci, excp):
+def test_raise_error(omnisci):
     omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
     omnisci.reset()
 
-    @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
-    def my_divide(column, k, row_multiplier, out):
-        if k == 0:
-            raise excp('division by zero')
-        for i in range(len(column)):
-            out[i] = column[i] / k
-        return len(column)
+    with pytest.raises(NumbaTypeError) as exc:
+        @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
+        def my_divide(column, k, row_multiplier, out):
+            if k == 0:
+                raise ValueError('division by zero')
+            for i in range(len(column)):
+                out[i] = column[i] / k
+            return len(column)
 
-    descr, result = omnisci.sql_execute(f"""
-        select *
-        from table(
-            my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 2)
-        );
-    """)
-    assert list(result) == [(0.0,), (0.5,), (1.0,), (1.5,), (2.0,)]
+        omnisci.register()
 
-    with pytest.raises(omnisci.thrift_client.thrift.TMapDException) as exc:
-        omnisci.sql_execute(f"""
-            select *
-            from table(
-                my_divide(CURSOR(SELECT f8 FROM {omnisci.table_name}), 0)
-            );
-        """)
-    assert exc.match('Error executing table function: division by zero')
+    assert exc.match('raise statement is not supported')

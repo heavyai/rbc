@@ -1,4 +1,4 @@
-from rbc.externals.omniscidb import table_function_error
+from rbc.errors import NumbaTypeError
 from .omnisci_buffer import BufferMeta, free_omnisci_buffer
 from numba.core import ir
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
@@ -55,8 +55,8 @@ class FreeOmnisciBuffer(FunctionPass):
 
 
 @register_pass(mutates_CFG=False, analysis_only=False)
-class RewriteRaises(FunctionPass):
-    _name = "rewrite_raises"
+class CheckRaiseStmts(FunctionPass):
+    _name = "check_raise_stmts"
 
     def __init__(self):
         FunctionPass.__init__(self)
@@ -66,26 +66,11 @@ class RewriteRaises(FunctionPass):
         func_ir = state.func_ir
         for blk in func_ir.blocks.values():
             for _raise in blk.find_insts(ir.Raise):
-                name = 'table_function_error'
+                msg = ('raise statement is not supported in '
+                       'UDF/UDTFs. Please, use `return table_function_error(msg)` '
+                       'to raise an error.')
                 loc = _raise.loc
-                fn = ir.Assign(value=ir.Global(name, table_function_error, loc=loc),
-                               target=blk.scope.make_temp(loc=loc), loc=loc)
-
-                # replace called function by 'table_function_error'
-                call = blk.find_variable_assignment(_raise.exception.name)
-                glob = blk.find_variable_assignment(call.value.func.name)
-                blk.insert_after(fn, glob)
-                call.value.func = fn.target
-
-                # create a return inst
-                ret = ir.Return(value=call.target, loc=loc)
-                blk.append(ret)
-
-                # remove raise instruction
-                blk.remove(_raise)
-
-                mutated = True
-
+                raise NumbaTypeError(msg, loc=loc)
         return mutated
 
 
@@ -97,7 +82,7 @@ class OmnisciCompilerPipeline(CompilerBase):
         pm = DefaultPassBuilder.define_nopython_pipeline(self.state)
         # Add the new pass to run after IRProcessing
         pm.add_pass_after(FreeOmnisciBuffer, IRProcessing)
-        pm.add_pass_after(RewriteRaises, IRProcessing)
+        pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         # finalize
         pm.finalize()
         # return as an iterable, any number of pipelines may be defined!

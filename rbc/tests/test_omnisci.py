@@ -884,3 +884,19 @@ def test_truncate_issue(omnisci):
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
+
+
+def test_raise_error(omnisci):
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
+    omnisci.reset()
+
+    with pytest.raises(errors.NumbaTypeError) as exc:
+        @omnisci('int32(int32)')
+        def my_divide(a):
+            if a == 0:
+                raise ValueError('a == 0')
+            return a
+
+        omnisci.register()
+
+    assert exc.match('raise statement is not supported')
