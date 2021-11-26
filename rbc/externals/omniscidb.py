@@ -2,7 +2,7 @@
 """
 
 from rbc import irutils
-from rbc.errors import UnsupportedError
+from rbc.errors import UnsupportedError, NumbaTypeError
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types as nb_types
 from numba.core.cgutils import make_bytearray, global_constant
@@ -43,7 +43,7 @@ def table_function_error(typingctx, message):
     ``message`` must be a string literal.
     """
     if not isinstance(message, nb_types.StringLiteral):
-        raise TypeError(f"expected StringLiteral but got {type(message).__name__}")
+        raise NumbaTypeError(f"expected StringLiteral but got {type(message).__name__}")
 
     def codegen(context, builder, sig, args):
         int8ptr = ir.PointerType(ir.IntType(8))
