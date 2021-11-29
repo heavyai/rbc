@@ -18,6 +18,7 @@ from numba.core import (
     cgutils,
     extending,
     typing,
+    target_extension,
     cpu)
 from numba.core import errors as nb_errors
 from rbc.omnisci_backend import (
@@ -298,13 +299,14 @@ def compile_to_LLVM(functions_and_signatures,
     for func, signatures in functions_and_signatures:
         for fid, sig in signatures.items():
             with switch_target(target_name):
-                fname = compile_instance(func, sig, target_info, typing_context,
-                                         target_context, pipeline_class,
-                                         main_library,
-                                         debug=debug)
-                if fname is not None:
-                    succesful_fids.append(fid)
-                    function_names.append(fname)
+                with target_extension.target_override(target_name):
+                    fname = compile_instance(func, sig, target_info, typing_context,
+                                             target_context, pipeline_class,
+                                             main_library,
+                                             debug=debug)
+                    if fname is not None:
+                        succesful_fids.append(fid)
+                        function_names.append(fname)
 
     add_byval_metadata(main_library)
     main_library._optimize_final_module()
