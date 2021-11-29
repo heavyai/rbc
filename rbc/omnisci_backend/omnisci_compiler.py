@@ -229,6 +229,7 @@ class JITRemoteTargetContext(base.BaseContext):
         except KeyError:
             loader = imputils.RegistryLoader(registry)
             self._registries[registry] = loader
+
         self.install_registry(registry)
         # Also refresh typing context, since @overload declarations can
         # affect it.
@@ -237,10 +238,11 @@ class JITRemoteTargetContext(base.BaseContext):
 
     def load_additional_registries(self):
         # Add implementations that work via import
-        # from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
-        #                            iterators, listobj, numbers, rangeobj,
-        #                            setobj, slicing, tupleobj, unicode,)
+        from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
+                                   iterators, listobj, numbers, rangeobj,
+                                   setobj, slicing, tupleobj, unicode,)
 
+        self.install_registry(imputils.builtin_registry)
         # uncomment as needed!
 
         # from numba.core import optional

@@ -43,7 +43,7 @@ class OutputColumn(Column):
     pass
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_column_set_null_(typingctx, col_var, row_idx):
     # Float values are serialized as integers by OmniSciDB
     # For reference, here is the conversion table for float and double
@@ -70,14 +70,14 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
     return sig, codegen
 
 
-@extending.overload_method(BufferType, 'set_null', target='omniscidb_cpu')
+@extending.overload_method(BufferType, 'set_null')
 def omnisci_column_set_null(col_var, index):
     def impl(col_var, index):
         return omnisci_column_set_null_(col_var, index)
     return impl
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_column_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
     sig = types.boolean(col_var, row_idx)
@@ -99,7 +99,7 @@ def omnisci_column_is_null_(typingctx, col_var, row_idx):
     return sig, codegen
 
 
-@extending.overload_method(BufferType, 'is_null', target='omniscidb_cpu')
+@extending.overload_method(BufferType, 'is_null')
 def omnisci_column_is_null(col_var, row_idx):
     def impl(col_var, row_idx):
         return omnisci_column_is_null_(col_var, row_idx)

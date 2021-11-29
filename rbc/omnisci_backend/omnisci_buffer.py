@@ -187,7 +187,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
     return fa._getpointer()
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def free_omnisci_buffer(typingctx, ret):
     sig = types.void(ret)
 
@@ -217,7 +217,7 @@ def free_omnisci_buffer(typingctx, ret):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_ptr_get_ptr_(typingctx, data):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
@@ -233,7 +233,7 @@ def omnisci_buffer_ptr_get_ptr_(typingctx, data):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_get_ptr_(typingctx, data):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
@@ -248,7 +248,7 @@ def omnisci_buffer_get_ptr_(typingctx, data):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_ptr_item_get_ptr_(typingctx, data, index):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
@@ -264,7 +264,7 @@ def omnisci_buffer_ptr_item_get_ptr_(typingctx, data, index):
     return sig, codegen
 
 
-@extending.overload_method(BufferPointer, 'ptr', target='omniscidb_cpu')
+@extending.overload_method(BufferPointer, 'ptr')
 def omnisci_buffer_get_ptr(x, index=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(index):
@@ -283,7 +283,7 @@ def omnisci_buffer_get_ptr(x, index=None):
         return impl
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_ptr_len_(typingctx, data):
     sig = types.int64(data)
 
@@ -297,7 +297,7 @@ def omnisci_buffer_ptr_len_(typingctx, data):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_len_(typingctx, data):
     sig = types.int64(data)
 
@@ -308,7 +308,7 @@ def omnisci_buffer_len_(typingctx, data):
     return sig, codegen
 
 
-@extending.overload(len, target='omniscidb_cpu')
+@extending.overload(len)
 def omnisci_buffer_len(x):
     if isinstance(x, BufferPointer):
         return lambda x: omnisci_buffer_ptr_len_(x)
@@ -316,7 +316,7 @@ def omnisci_buffer_len(x):
         return lambda x: omnisci_buffer_len_(x)
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_ptr_getitem_(typingctx, data, index):
     sig = data.eltype(data, index)
 
@@ -332,7 +332,7 @@ def omnisci_buffer_ptr_getitem_(typingctx, data, index):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_getitem_(typingctx, data, index):
     eltype = data.eltype
     sig = eltype(data, index)
@@ -346,7 +346,7 @@ def omnisci_buffer_getitem_(typingctx, data, index):
     return sig, codegen
 
 
-@extending.overload(operator.getitem, target='omniscidb_cpu')
+@extending.overload(operator.getitem)
 def omnisci_buffer_getitem(x, i):
     if isinstance(x, BufferPointer):
         return lambda x, i: omnisci_buffer_ptr_getitem_(x, i)
@@ -380,7 +380,7 @@ def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
     return value
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
@@ -402,7 +402,7 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
@@ -419,7 +419,7 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
     return sig, codegen
 
 
-@extending.overload(operator.setitem, target='omniscidb_cpu')
+@extending.overload(operator.setitem)
 def omnisci_buffer_setitem(a, i, v):
     if isinstance(a, BufferPointer):
         return lambda a, i, v: omnisci_buffer_ptr_setitem_(a, i, v)
@@ -427,7 +427,7 @@ def omnisci_buffer_setitem(a, i, v):
         return lambda a, i, v: omnisci_buffer_setitem_(a, i, v)
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_is_null_(typingctx, data):
     sig = types.int8(data)
 
@@ -439,7 +439,7 @@ def omnisci_buffer_is_null_(typingctx, data):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_set_null_(typingctx, data):
     sig = types.none(data)
 
@@ -451,7 +451,7 @@ def omnisci_buffer_set_null_(typingctx, data):
     return sig, codegen
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_idx_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
     sig = types.boolean(col_var, row_idx)
@@ -478,7 +478,7 @@ def omnisci_buffer_idx_is_null_(typingctx, col_var, row_idx):
 # "BufferPointer.is_null" checks if a given array or column is null
 # as opposed to "BufferType.is_null" that checks if an index in a
 # column is null
-@extending.overload_method(BufferPointer, 'is_null', target='omniscidb_cpu')
+@extending.overload_method(BufferPointer, 'is_null')
 def omnisci_buffer_is_null(x, row_idx=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(row_idx):
@@ -490,7 +490,7 @@ def omnisci_buffer_is_null(x, row_idx=None):
         return impl
 
 
-@extending.intrinsic(target='omniscidb_cpu')
+@extending.intrinsic
 def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
     T = arr.eltype
     sig = types.none(arr, row_idx)
@@ -504,6 +504,13 @@ def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
     null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
 
     def codegen(context, builder, signature, args):
+        # get the operator.setitem intrinsic
+        fnop = context.typing_context.resolve_value_type(omnisci_buffer_ptr_setitem_)
+        setitem_sig = types.none(arr, row_idx, T)
+        # register the intrinsic in the typing ctx
+        fnop.get_call_type(context.typing_context, setitem_sig.args, {})
+        intrinsic = context.get_function(fnop, setitem_sig)
+
         data, index = args
         # data = {T*, i64, i8}*
         ty = data.type.pointee.elements[0].pointee
@@ -511,18 +518,12 @@ def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
         if isinstance(T, types.Float):
             nv = builder.bitcast(nv, ty)
 
-        zero = int32_t(0)
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        ptr = builder.load(rawptr)
-
-        buf = builder.load(builder.gep(ptr, [zero, zero]))
-        value = truncate_or_extend(builder, T, T, nv, buf.type.pointee)
-        builder.store(value, builder.gep(buf, [index]))
+        intrinsic(builder, (data, index, nv,))
 
     return sig, codegen
 
 
-@extending.overload_method(BufferPointer, 'set_null', target='omniscidb_cpu')
+@extending.overload_method(BufferPointer, 'set_null')
 def omnisci_buffer_set_null(x, row_idx=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(row_idx):
