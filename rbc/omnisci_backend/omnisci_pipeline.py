@@ -62,7 +62,6 @@ class CheckRaiseStmts(FunctionPass):
         FunctionPass.__init__(self)
 
     def run_pass(self, state):
-        mutated = False
         func_ir = state.func_ir
         for blk in func_ir.blocks.values():
             for _raise in blk.find_insts(ir.Raise):
@@ -71,7 +70,7 @@ class CheckRaiseStmts(FunctionPass):
                        'to raise an error.')
                 loc = _raise.loc
                 raise NumbaTypeError(msg, loc=loc)
-        return mutated
+        return False
 
 
 class OmnisciCompilerPipeline(CompilerBase):
