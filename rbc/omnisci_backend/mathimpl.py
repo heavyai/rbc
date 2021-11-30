@@ -1,6 +1,5 @@
 import math
-from rbc.externals import gen_codegen, dispatch_codegen
-from numba.core.imputils import lower_builtin
+from rbc.externals import gen_codegen
 from numba.core.typing.templates import ConcreteTemplate, signature, Registry
 from numba.types import float32, float64, int32, int64, uint64, intp
 from numba.core.intrinsics import INTR_TO_CMATH

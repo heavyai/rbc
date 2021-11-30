@@ -5,14 +5,12 @@ from numba.np import ufunc_db
 from numba import _dynfunc
 from numba.core import (
     codegen, compiler_lock, typing,
-    base, cpu, utils, retarget, compiler,
+    base, cpu, utils, retarget,
     descriptors, dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
-    JitDecorator,
     target_registry,
     dispatcher_registry,
-    jit_registry,
 )
 
 from rbc.utils import get_version
