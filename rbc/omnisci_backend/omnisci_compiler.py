@@ -243,8 +243,8 @@ class JITRemoteTargetContext(base.BaseContext):
                                    setobj, slicing, tupleobj, unicode,)
 
         self.install_registry(imputils.builtin_registry)
-        # uncomment as needed!
 
+        # uncomment as needed!
         # from numba.core import optional
         # from numba.np import linalg, polynomial, arraymath, arrayobj  # noqa: F401
         # from numba.typed import typeddict, dictimpl
@@ -365,50 +365,3 @@ def switch_target(target_name):
         tc = dispatcher.TargetConfig
 
     return tc.switch_target(CustomOmnisciRetarget(target_name))
-
-
-#########################
-
-
-class ojit(JitDecorator):
-    def __init__(self, *args, **kwargs):
-        self._args = args
-        self._kwargs = kwargs
-
-    def __call__(self, *args):
-        assert len(args) < 2
-        if args:
-            func = args[0]
-        else:
-            func = self._args[0]
-        self.py_func = func
-        # wrap in dispatcher
-        return self.dispatcher_wrapper()
-
-    def get_dispatcher(self):
-        """
-        Returns the dispatcher
-        """
-        return dispatcher_registry[target_registry["omniscidb_cpu"]]
-
-    def dispatcher_wrapper(self):
-        disp = self.get_dispatcher()
-        # Parse self._kwargs here
-        topt = {}
-        if "nopython" in self._kwargs:
-            topt["nopython"] = True
-
-        # It would be easy to specialise the default compilation pipeline for
-        # this target here.
-        pipeline_class = compiler.Compiler
-        if "pipeline_class" in self._kwargs:
-            pipeline_class = self._kwargs["pipeline_class"]
-        return disp(
-            py_func=self.py_func,
-            targetoptions=topt,
-            pipeline_class=pipeline_class,
-        )
-
-
-jit_registry[target_registry["omniscidb_cpu"]] = ojit
-jit_registry[target_registry["omniscidb_gpu"]] = ojit

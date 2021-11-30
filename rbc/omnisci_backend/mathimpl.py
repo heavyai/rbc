@@ -84,7 +84,6 @@ unarys += [("trunc", "truncf", math.trunc)]
 binarys = []
 binarys += [("copysign", "copysignf", math.copysign)]
 binarys += [("atan2", "atan2f", math.atan2)]
-# binarys += [("pow", "powf", math.pow)]
 binarys += [("fmod", "fmodf", math.fmod)]
 binarys += [("hypot", "hypotf", math.hypot)]
 binarys += [("remainder", "remainderf", math.remainder)]
@@ -124,30 +123,37 @@ for fname64, fname32, key in binarys:
 
 # manual mapping
 def impl_ldexp():
+    # cpu
     ldexp_cpu = gen_codegen('ldexp')
-    ldexp_gpu = gen_codegen('__nv_ldexp')
-
     ldexpf_cpu = gen_codegen('ldexpf')
-    ldexpf_gpu = gen_codegen('__nv_ldexpf')
+    lower_cpu(math.ldexp, float64, int32)(ldexp_cpu)
+    lower_cpu(math.ldexp, float32, int32)(ldexpf_cpu)
 
-    lower_builtin(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
-    lower_builtin(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
+    # gpu
+    ldexp_gpu = gen_codegen('__nv_ldexp')
+    ldexpf_gpu = gen_codegen('__nv_ldexpf')
+    lower_gpu(math.ldexp, float64, int32)(ldexp_gpu)
+    lower_gpu(math.ldexp, float32, int32)(ldexpf_gpu)
 
 
 def impl_pow():
+    # cpu
     pow_cpu = gen_codegen('pow')
-    pow_gpu = gen_codegen('__nv_pow')
-
     powf_cpu = gen_codegen('powf')
-    powf_gpu = gen_codegen('__nv_powf')
+    lower_cpu(math.pow, float64, float64)(pow_cpu)
+    lower_cpu(math.pow, float32, float32)(powf_cpu)
+    lower_cpu(math.pow, float64, int32)(pow_cpu)
+    lower_cpu(math.pow, float32, int32)(powf_cpu)
 
+    # gpu
+    pow_gpu = gen_codegen('__nv_pow')
+    powf_gpu = gen_codegen('__nv_powf')
     powi_gpu = gen_codegen('__nv_powi')
     powif_gpu = gen_codegen('__nv_powif')
-
-    lower_builtin(math.pow, float64, float64)(dispatch_codegen(pow_cpu, pow_gpu))
-    lower_builtin(math.pow, float32, float32)(dispatch_codegen(powf_cpu, powf_gpu))
-    lower_builtin(math.pow, float64, int32)(dispatch_codegen(pow_cpu, powi_gpu))
-    lower_builtin(math.pow, float32, int32)(dispatch_codegen(powf_cpu, powif_gpu))
+    lower_gpu(math.pow, float64, float64)(pow_gpu)
+    lower_gpu(math.pow, float32, float32)(powf_gpu)
+    lower_gpu(math.pow, float64, int32)(powi_gpu)
+    lower_gpu(math.pow, float32, int32)(powif_gpu)
 
 
 impl_ldexp()
