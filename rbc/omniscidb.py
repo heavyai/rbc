@@ -272,11 +272,11 @@ class RemoteOmnisci(RemoteJIT):
         self._version = None
         self._thrift_client = None
         self._session_id = None
+        self._targets = None
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
         self.has_cuda = None
         self._null_values = dict()
-        self._targets = self.retrieve_targets()
 
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
