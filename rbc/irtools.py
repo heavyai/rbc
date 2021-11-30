@@ -11,6 +11,7 @@ from .errors import UnsupportedError
 from .utils import get_version
 from . import libfuncs
 from rbc import externals
+from .irutils import switch_target
 from numba.core import (
     registry,
     compiler,
@@ -26,7 +27,6 @@ from rbc.omnisci_backend import (
     JITRemoteTargetContext,
     omniscidb_cpu_target,
     omniscidb_gpu_target,
-    switch_target,
 )
 
 

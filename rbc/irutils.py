@@ -1,5 +1,5 @@
 from rbc.utils import get_version
-from numba.core import cgutils
+from numba.core import cgutils, dispatcher, retarget
 from llvmlite import ir
 
 
@@ -29,3 +29,28 @@ def get_member_value(builder, data, idx):
         assert data.opname == 'load', data.opname
         struct = data.operands[0]
         return builder.load(builder.gep(struct, [int32_t(0), int32_t(idx)]))
+
+
+class Retarget(retarget.BasicRetarget):
+
+    def __init__(self, target_name):
+        self.target_name = target_name
+        super().__init__()
+
+    @property
+    def output_target(self):
+        return self.target_name
+
+    def compile_retarget(self, cpu_disp):
+        from numba import njit
+        kernel = njit(_target=self.target_name)(cpu_disp.py_func)
+        return kernel
+
+
+def switch_target(target_name):
+    if get_version('numba') > (0, 55):
+        tc = dispatcher.TargetConfigurationStack
+    else:
+        tc = dispatcher.TargetConfig
+
+    return tc.switch_target(Retarget(target_name))

@@ -5,15 +5,13 @@ from numba.np import ufunc_db
 from numba import _dynfunc
 from numba.core import (
     codegen, compiler_lock, typing,
-    base, cpu, utils, retarget,
-    descriptors, dispatcher, callconv, imputils,)
+    base, cpu, utils, descriptors,
+    dispatcher, callconv, imputils,)
 from numba.core.target_extension import (
     Generic,
     target_registry,
     dispatcher_registry,
 )
-
-from rbc.utils import get_version
 
 
 class OmniSciDB_CPU(Generic):
@@ -336,30 +334,3 @@ class JITRemoteTargetContext(base.BaseContext):
     # Overrides
     def get_ufunc_info(self, ufunc_key):
         return ufunc_db.get_ufunc_info(ufunc_key)
-
-
-# Retarget logic
-
-class CustomOmnisciRetarget(retarget.BasicRetarget):
-
-    def __init__(self, target_name):
-        self.target_name = target_name
-        super().__init__()
-
-    @property
-    def output_target(self):
-        return self.target_name
-
-    def compile_retarget(self, cpu_disp):
-        from numba import njit
-        kernel = njit(_target=self.target_name)(cpu_disp.py_func)
-        return kernel
-
-
-def switch_target(target_name):
-    if get_version('numba') > (0, 55):
-        tc = dispatcher.TargetConfigurationStack
-    else:
-        tc = dispatcher.TargetConfig
-
-    return tc.switch_target(CustomOmnisciRetarget(target_name))
