@@ -1,4 +1,5 @@
 import pytest
+from rbc.errors import NumbaTypeError
 from rbc.tests import omnisci_fixture, sql_execute
 from rbc.externals.omniscidb import table_function_error
 import numpy as np
@@ -351,3 +352,21 @@ def test_table_function_error(omnisci):
             );
         """)
     assert exc.match('Error executing table function: division by zero')
+
+
+def test_raise_error(omnisci):
+    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5879')
+    omnisci.reset()
+
+    with pytest.raises(NumbaTypeError) as exc:
+        @omnisci('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
+        def my_divide(column, k, row_multiplier, out):
+            if k == 0:
+                raise ValueError('division by zero')
+            for i in range(len(column)):
+                out[i] = column[i] / k
+            return len(column)
+
+        omnisci.register()
+
+    assert exc.match('raise statement is not supported')
