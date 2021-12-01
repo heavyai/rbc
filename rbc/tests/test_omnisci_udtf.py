@@ -17,7 +17,7 @@ def define(omnisci):
     T = ['int64', 'int32', 'int16', 'int8', 'float64', 'float32']
 
     @omnisci('int32(Cursor<int64, T>, T, RowMultiplier,'
-                ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+             ' OutputColumn<int64>, OutputColumn<T>)', T=T)
     def sqlmultiply(rowid, col, alpha, row_multiplier, rowid_out, out):
         for i in range(len(col)):
             j = rowid[i]
@@ -26,7 +26,7 @@ def define(omnisci):
         return len(col)
 
     @omnisci('int32(Cursor<int64, T>, T, RowMultiplier,'
-                ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+             ' OutputColumn<int64>, OutputColumn<T>)', T=T)
     def sqladd(rowid, col, alpha, row_multiplier, rowid_out, out):
         for i in range(len(col)):
             j = rowid[i]
@@ -35,7 +35,7 @@ def define(omnisci):
         return len(col)
 
     @omnisci('int32(Cursor<int64, T>, Cursor<int64, T>, RowMultiplier,'
-                ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+             ' OutputColumn<int64>, OutputColumn<T>)', T=T)
     def sqladd2(rowid1, col1, rowid2, col2, row_multiplier, rowid_out, out):
         for i1 in range(len(col1)):
             j1 = rowid1[i1]
@@ -48,7 +48,7 @@ def define(omnisci):
         return len(col1)
 
     @omnisci('int32(Cursor<int64, T>, Cursor<int64, T>, RowMultiplier,'
-                ' OutputColumn<int64>, OutputColumn<T>)', T=T)
+             ' OutputColumn<int64>, OutputColumn<T>)', T=T)
     def sqlmultiply2(rowid1, col1, rowid2, col2, row_multiplier, rowid_out, out):
         for i1 in range(len(col1)):
             j1 = rowid1[i1]
