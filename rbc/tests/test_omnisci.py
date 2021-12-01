@@ -1,7 +1,6 @@
 import os
 from rbc import errors
 import itertools
-import numpy as np
 import pytest
 from rbc.tests import omnisci_fixture
 
@@ -86,32 +85,6 @@ def test_redefine(omnisci):
         f'select i4, incr(i4) from {omnisci.table_name}')
     for x, x1 in result:
         assert x1 == x + 2
-
-
-def test_forbidden_define(omnisci):
-    omnisci.reset()
-
-    msg = "Attempt to define function with name `{name}`"
-
-    @omnisci('double(double)')
-    def sinh(x):
-        return np.sinh(x)
-
-    with pytest.raises(errors.ForbiddenNameError) as excinfo:
-        omnisci.register()
-    assert msg.format(name='sinh') in str(excinfo.value)
-
-    omnisci.reset()
-
-    @omnisci('double(double)')
-    def trunc(x):
-        return np.trunc(x)
-
-    with pytest.raises(errors.ForbiddenNameError) as excinfo:
-        omnisci.register()
-    assert msg.format(name='trunc') in str(excinfo.value)
-
-    omnisci.reset()
 
 
 def test_single_argument_overloading(omnisci):
