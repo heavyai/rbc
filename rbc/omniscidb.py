@@ -317,29 +317,6 @@ class RemoteOmnisci(RemoteJIT):
         if client is None:
             client = self.thrift_client
 
-        if name == 'register_runtime_udf' and self.version[:2] >= (4, 9):
-            warnings.warn('Using register_runtime_udf is deprecated, '
-                          'use register_runtime_extension_functions instead.')
-            session_id, signatures, device_ir_map = args
-            udfs = []
-            sig_re = re.compile(r"\A(?P<name>[\w\d_]+)\s+"
-                                r"'(?P<rtype>[\w\d_]+)[(](?P<atypes>.*)[)]'\Z")
-            thrift = client.thrift
-            ext_arguments_map = self._get_ext_arguments_map()
-            for signature in signatures.splitlines():
-                m = sig_re.match(signature)
-                if m is None:
-                    raise RuntimeError(
-                        'Failed to parse signature %r' % (signature))
-                name = m.group('name')
-                rtype = ext_arguments_map[m.group('rtype')]
-                atypes = [ext_arguments_map[a.strip()]
-                          for a in m.group('atypes').split(',')]
-                udfs.append(thrift.TUserDefinedFunction(
-                    name, atypes, rtype))
-            return self.thrift_call('register_runtime_extension_functions',
-                                    session_id, udfs, [], device_ir_map)
-
         if self.debug:
             msg = 'thrift_call %s%s' % (name, args)
             if len(msg) > 200:
@@ -391,6 +368,12 @@ class RemoteOmnisci(RemoteJIT):
           The table must have the specified columns defined.
 
         """
+        if self.version[:2] < (5, 3):
+            msg = (f'RBC is connected to an older version of omniscidb '
+                   f'({".".join(map(str, self.version))}) which is '
+                   f'not supported anymore.')
+            raise RuntimeError(msg)
+
         if not self._null_values:
             self.retrieve_targets()  # initializes null values
 
