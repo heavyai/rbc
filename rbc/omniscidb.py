@@ -368,7 +368,7 @@ class RemoteOmnisci(RemoteJIT):
           The table must have the specified columns defined.
 
         """
-        if self.version[:2] < (5, 3):
+        if self.version[:2] < (5, 6):
             msg = (f'RBC is connected to an older version of omniscidb '
                    f'({".".join(map(str, self.version))}) which is '
                    f'not supported anymore.')
