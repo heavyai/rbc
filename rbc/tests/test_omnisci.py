@@ -89,10 +89,6 @@ def test_redefine(omnisci):
 
 
 def test_forbidden_define(omnisci):
-    if omnisci.version > (5, 1):
-        pytest.skip(
-            f'forbidden defines not required for OmnisciDB {omnisci.version}')
-
     omnisci.reset()
 
     msg = "Attempt to define function with name `{name}`"
@@ -151,44 +147,6 @@ def test_single_argument_overloading(omnisci):
     for x, x1 in result:
         assert x1 == x - 1
         assert isinstance(x1, type(x))
-
-
-def test_numpy_forbidden_ufunc(omnisci, nb_version):
-    omnisci.reset()
-
-    if omnisci.version >= (5, 5) and nb_version >= (0, 52):
-        pytest.skip(
-            f'forbidden ufunc not required for OmniSciDB {omnisci.version} '
-            f'and Numba {nb_version}')
-
-    if not omnisci.has_cuda:
-        pytest.skip('forbidden ufunc not required for CUDA-disabled OmniSciDB')
-
-    if omnisci.version >= (5, 5):
-        # Requires: https://github.com/omnisci/omniscidb-internal/pull/4955
-        pytest.skip('forbidden ufunc not required if CPU ufuncs work [omniscidb-interal PR 4955]')
-
-    msg = "Attempt to use function with name `{ufunc}`"
-
-    @omnisci('double(double)')
-    def arcsin(x):
-        return np.arcsin(x)
-
-    with pytest.raises(errors.ForbiddenIntrinsicError) as excinfo:
-        omnisci.register()
-    assert msg.format(ufunc='asin') in str(excinfo.value)
-
-    omnisci.reset()
-
-    @omnisci('float32(float32, float32)')
-    def logaddexp(x, y):
-        return np.logaddexp(x, y)
-
-    with pytest.raises(errors.ForbiddenIntrinsicError) as excinfo:
-        omnisci.register()
-    assert msg.format(ufunc='log1pf') in str(excinfo.value)
-
-    omnisci.reset()
 
 
 def test_thrift_api_doc(omnisci):

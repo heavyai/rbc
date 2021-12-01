@@ -120,19 +120,6 @@ def define(omnisci):
 @pytest.mark.parametrize("method, args, expected", ndarray_methods,
                          ids=[item[0] for item in ndarray_methods])
 def test_ndarray_methods(omnisci, method, args, expected):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            f'{method}: crashes CUDA enabled omniscidb server [issue 93]')
-
-    if available_version[:3] == (5, 3, 1) and method in ['fill']:
-        pytest.skip(
-            f'{method}: crashes CPU-only omniscidb server v 5.3.1 [issue 113]')
-
-    if available_version[:3] >= (5, 3, 1) and method in ['max_empty']:
-        pytest.skip(
-            f'{method}: fails on CPU-only omniscidb server'
-            ' v 5.3.1+ [issue 114]')
-
     query_args = ', '.join(map(str, args))
     query = f'SELECT ndarray_{method}({query_args})'
 

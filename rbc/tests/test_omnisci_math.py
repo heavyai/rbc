@@ -138,24 +138,8 @@ def test_math_function(omnisci, device, nb_version, fn_name, signature):
                    'fmod', 'isclose', 'isqrt', 'modf', 'dist', 'perm']:
         pytest.skip(f'{fn_name}: Numba uses cpython implementation! [rbc issue 156]')
 
-    if omnisci.version < (5, 5) and omnisci.has_cuda and \
-        fn_name in ['gcd', 'comb', 'factorial', 'fsum', 'isclose', 'isfinite',
-                    'isqrt', 'ldexp', 'modf', 'perm', 'prod',
-                    'dist', 'fmod']:
-        pytest.skip(f'CUDA target does not support {fn_name} function [rbc issue 156]')
-
-    if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['pow', 'gamma', 'lgamma']:
-        pytest.skip(f'{fn_name} crashes with CUDA-enabled server [rbc issue 156/158]')
-
     if fn_name in ['frexp']:
         pytest.skip(f'{fn_name} returns a pair (m, e) [rbc issue 156/202]')
-
-    if omnisci.version < (5, 5) and omnisci.has_cuda and nb_version < (0, 52):
-        if fn_name in ['expm1', 'log1p', 'hypot', 'acosh', 'asinh', 'atanh',
-                       'cosh', 'sinh', 'tanh', 'erf', 'erfc', 'acos', 'asin',
-                       'atan', 'atan2']:
-            pytest.skip(f'{fn_name} requires numba version 0.52, currently using'
-                        f' {".".join(map(str, nb_version))}')
 
     arity = signature.count(',') + 1
     kind = signature.split('(')[1].split(',')[0].split(')')[0]
@@ -363,12 +347,6 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
         # give lambda function a name
         fn.__name__ = fn_name
 
-    if omnisci.version[:2] < (5, 4) and fn_name in \
-            ['logical_or', 'logical_xor', 'logical_and', 'logical_not']:
-        pytest.skip(
-            f"using boolean arguments requires omniscidb v 5.4 or newer"
-            f" (got {omnisci.version}) [issue 108]")
-
     if fn_name in ['positive', 'divmod0', 'frexp0']:
         try:
             if arity == 1:
@@ -382,35 +360,6 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
     if fn_name in ['spacing']:
         # Skipping spacing__cpu_0 that uses undefined function `npy_spacing`
         pytest.skip(f'{fn_name}: FIXME')
-
-    if omnisci.version < (5, 5) and omnisci.has_cuda and fn_name in ['lcm']:
-        # https://github.com/xnd-project/rbc/issues/71
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 71]')
-
-    if omnisci.version < (5, 2) and nb_version < (0, 52) and omnisci.has_cuda and fn_name in [
-            'arcsin', 'arccos', 'arctan', 'arctan2', 'hypot', 'sinh', 'cosh',
-            'tanh', 'arcsinh', 'arccosh', 'arctanh', 'expm1', 'exp2', 'log2',
-            'log1p', 'logaddexp2', 'ldexp', 'lcm', 'logaddexp', 'nextafter']:
-        pytest.skip(f"{fn_name}: libdevice bindings requires numba 0.52 or newer,"
-                    f" got Numba v{'.'.join(map(str, nb_version))}")
-
-    if omnisci.version < (5, 2) and fn_name in [
-            'sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1', 'exp2', 'log2',
-            'log1p', 'gcd', 'lcm', 'around', 'fmod', 'hypot']:
-        # fix forbidden names
-        fn_name += 'FIX'
-        fn.__name__ = fn_name
-
-    if omnisci.version < (5, 2) and omnisci.has_cuda and fn_name in [
-            'fmax', 'fmin', 'power', 'sqrt', 'tan', 'radians', 'degrees'
-    ]:
-        # NativeCodegen.cpp:849 use of undefined value '@llvm.maxnum.f64'
-        # NativeCodegen.cpp:849 invalid redefinition of function 'power'
-        # NativeCodegen.cpp:849 invalid redefinition of function
-        #                       'llvm.lifetime.start.p0i8'
-        # NativeCodegen.cpp:849 invalid redefinition of function 'radians'
-        pytest.skip(f'{fn_name}: crashes CUDA enabled omniscidb server < 5.2')
 
     if device == 'gpu' and fn_name in ['floor_divide', 'around', 'round2', 'round_']:
         pytest.skip(f'Missing libdevice bindigs for {fn_name}')

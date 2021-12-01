@@ -4,7 +4,7 @@ from rbc.tests import omnisci_fixture
 
 @pytest.fixture(scope="module")
 def omnisci():
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5, 5)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
         define(o)
         yield o
 

@@ -103,9 +103,6 @@ target triple = "{cpu_target_triple}"
         assert len(a) == sz
 
 
-@pytest.mark.skipif(available_version[:2] < (5, 2),
-                    reason="test requires 5.2 or newer (got %s)" % (
-                        available_version,))
 @pytest.mark.parametrize('c_name', ['int8_t i1', 'int16_t i2', 'int32_t i4', 'int64_t i8',
                                     'float f4', 'double f8'])
 @pytest.mark.parametrize('device', ['cpu', 'gpu'])
@@ -310,10 +307,6 @@ def test_even_sum(omnisci):
 
 
 def test_array_setitem(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            'test_array_setitem: crashes CUDA enabled omniscidb server'
-            ' [rbc issue 72]')
     omnisci.reset()
 
     @omnisci('double(double[], int32)')
@@ -334,10 +327,6 @@ def test_array_setitem(omnisci):
 
 
 def test_array_constructor_noreturn(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            'crashes CUDA enabled omniscidb server [issue 94]')
-
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
@@ -362,10 +351,6 @@ def test_array_constructor_noreturn(omnisci):
 
 
 def test_array_constructor_return(omnisci):
-    if available_version[:3] == (5, 3, 1):
-        pytest.skip(
-            'crashes CPU-only omniscidb server v 5.3.1 [issue 112]')
-
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
@@ -413,10 +398,6 @@ def test_array_constructor_len(omnisci):
 
 
 def test_array_constructor_getitem(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            'test_array_constructor_getitem: crashes CUDA enabled omniscidb'
-            ' server [rbc issue 72]')
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
