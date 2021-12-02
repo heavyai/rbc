@@ -20,7 +20,7 @@ class OmniSciDB_CPU(Generic):
 
 
 class OmniSciDB_GPU(Generic):
-    """Mark the target as OmniSciDB CPU
+    """Mark the target as OmniSciDB GPU
     """
 
 
