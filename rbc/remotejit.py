@@ -1,7 +1,7 @@
 """RemoteJIT client/server config functions
 """
 
-__all__ = ['RemoteJIT', 'Signature', 'Caller', 'RemoteJIT']
+__all__ = ['RemoteJIT', 'Signature', 'Caller']
 
 import os
 import inspect
@@ -403,7 +403,7 @@ class RemoteJIT(object):
 
     typesystem_aliases = dict()
 
-    def __init__(self, host='localhost', port=12532,
+    def __init__(self, host='localhost', port=11532,
                  local=False, debug=False):
         """Construct remote JIT function decorator.
 
