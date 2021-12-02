@@ -6,7 +6,8 @@ from numba import _dynfunc
 from numba.core import (
     codegen, compiler_lock, typing,
     base, cpu, utils, descriptors,
-    dispatcher, callconv, imputils,)
+    dispatcher, callconv, imputils,
+    options,)
 from numba.core.target_extension import (
     Generic,
     target_registry,
@@ -46,7 +47,20 @@ class _NestedContext(object):
             self._typing_context, self._target_context = old_nested
 
 
-class OmnisciTargetOptions(cpu.CPUTargetOptions):
+_options_mixin = options.include_default_options(
+    "no_rewrites",
+    "no_cpython_wrapper",
+    "no_cfunc_wrapper",
+    "fastmath",
+    "inline",
+    "boundscheck",
+    "nopython",
+    # Add "target_backend" as a accepted option for the CPU in @jit(...)
+    "target_backend",
+)
+
+
+class OmnisciTargetOptions(_options_mixin, options.TargetOptions):
     def finalize(self, flags, options):
         flags.enable_pyobject = False
         flags.enable_looplift = False
@@ -54,6 +68,8 @@ class OmnisciTargetOptions(cpu.CPUTargetOptions):
         flags.debuginfo = False
         flags.boundscheck = False
         flags.enable_pyobject_looplift = False
+        flags.no_rewrites = True
+        flags.auto_parallel = cpu.ParallelOptions(False)
         flags.inherit_if_not_set("fastmath")
         flags.inherit_if_not_set("error_model", default="python")
         # Add "target_backend" as a option that inherits from the caller
