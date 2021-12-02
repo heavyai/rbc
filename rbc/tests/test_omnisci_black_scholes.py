@@ -118,6 +118,9 @@ def test_black_scholes_udtf(omnisci):
         pytest.skip('crashes CUDA enabled omniscidb server'
                     ' [issue 169]')
 
+    if omnisci.has_cuda:
+        pytest.xfail('libdevice support seems to be broken!')
+
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
