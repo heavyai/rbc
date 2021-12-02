@@ -18,7 +18,7 @@ from .omnisci_backend import (
     BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import OmnisciServerError
+from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
 from . import ctools
 from . import typesystem
@@ -295,6 +295,11 @@ class RemoteOmnisci(RemoteJIT):
         if self._version is None:
             version = self.thrift_call('get_version')
             self._version = parse_version(version)
+            if self._version[:2] < (5, 6):
+                ver = ".".join(map(str, self._version))
+                msg = (f'OmniSciDB server is too old (v.{ver}) and some '
+                       'features might not be available.')
+                warnings.warn(msg, PendingDeprecationWarning)
         return self._version
 
     @property
@@ -316,6 +321,29 @@ class RemoteOmnisci(RemoteJIT):
         client = kwargs.get('client')
         if client is None:
             client = self.thrift_client
+
+        if name == 'register_runtime_udf' and self.version[:2] >= (4, 9):
+            warnings.warn('Using register_runtime_udf is deprecated, '
+                          'use register_runtime_extension_functions instead.')
+            session_id, signatures, device_ir_map = args
+            udfs = []
+            sig_re = re.compile(r"\A(?P<name>[\w\d_]+)\s+"
+                                r"'(?P<rtype>[\w\d_]+)[(](?P<atypes>.*)[)]'\Z")
+            thrift = client.thrift
+            ext_arguments_map = self._get_ext_arguments_map()
+            for signature in signatures.splitlines():
+                m = sig_re.match(signature)
+                if m is None:
+                    raise RuntimeError(
+                        'Failed to parse signature %r' % (signature))
+                name = m.group('name')
+                rtype = ext_arguments_map[m.group('rtype')]
+                atypes = [ext_arguments_map[a.strip()]
+                          for a in m.group('atypes').split(',')]
+                udfs.append(thrift.TUserDefinedFunction(
+                    name, atypes, rtype))
+            return self.thrift_call('register_runtime_extension_functions',
+                                    session_id, udfs, [], device_ir_map)
 
         if self.debug:
             msg = 'thrift_call %s%s' % (name, args)
@@ -368,12 +396,6 @@ class RemoteOmnisci(RemoteJIT):
           The table must have the specified columns defined.
 
         """
-        if self.version[:2] < (5, 6):
-            msg = (f'RBC is connected to an older version of omniscidb '
-                   f'({".".join(map(str, self.version))}) which is '
-                   f'not supported anymore.')
-            raise RuntimeError(msg)
-
         if not self._null_values:
             self.retrieve_targets()  # initializes null values
 
@@ -402,6 +424,62 @@ class RemoteOmnisci(RemoteJIT):
 
         thrift = self.thrift_client.thrift
         table_details = self.get_table_details(table_name)
+        use_sql = self.version[:2] < (5, 3)
+        if not use_sql and self.version[:2] < (5, 5):
+            for column_data in columnar_data.values():
+                for v in column_data:
+                    if v is None:
+                        break
+                    elif isinstance(v, (tuple, list)):
+                        for _v in v:
+                            if _v is None:
+                                break
+                        else:
+                            continue
+                        break
+                else:
+                    continue
+                use_sql = True
+                break
+        if use_sql:
+            rows = None
+            for column_name, column_data in columnar_data.items():
+                if rows is None:
+                    rows = [[None for j in range(len(columnar_data))]
+                            for i in range(len(column_data))]
+                col_index = None
+                for i, ct in enumerate(table_details.row_desc):
+                    if ct.col_name == column_name:
+                        typeinfo = ct.col_type
+                        col_index = i
+                        datumtype = thrift.TDatumType._VALUES_TO_NAMES[
+                            typeinfo.type]
+                        is_array = typeinfo.is_array
+                        break
+                assert col_index is not None
+                for i, v in enumerate(column_data):
+                    if v is None:
+                        v = "NULL"
+                    elif is_array:
+                        if datumtype == 'BOOL':
+                            v = ["'true'" if v_ else ("'false'"
+                                                      if v_ is not None else "NULL")
+                                 for v_ in v]
+                        else:
+                            v = [(str(v_) if v_ is not None else "NULL") for v_ in v]
+                        v = ', '.join(v)
+                        v = f'ARRAY[{v}]'
+                    else:
+                        if datumtype == 'BOOL':
+                            v = "'true'" if v else "'false'"
+                    rows[i][col_index] = v
+
+            for row in rows:
+                table_row = ', '.join(map(str, row))
+                self.sql_execute(
+                    f'INSERT INTO {table_name} VALUES ({table_row})')
+            return
+
         columns = []
         for column_name, column_data in columnar_data.items():
             typeinfo = None
@@ -602,6 +680,10 @@ class RemoteOmnisci(RemoteJIT):
                 'ColumnListTextEncodingDict'),
         }
 
+        if self.version[:2] < (5, 4):
+            ext_arguments_map['Array<bool>'] = typemap[
+                'TExtArgumentType']['ArrayInt8']
+
         ext_arguments_map['bool8'] = ext_arguments_map['bool']
 
         for ptr_type, T in [
@@ -748,7 +830,7 @@ class RemoteOmnisci(RemoteJIT):
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('omniscidb')
-            elif target_info.is_gpu:
+            elif target_info.is_gpu and self.version >= (5, 5):
                 target_info.add_library('libdevice')
 
             version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
@@ -764,7 +846,23 @@ class RemoteOmnisci(RemoteJIT):
             target_info.set('null_values', null_values_asint)
         return targets
 
+    @property
+    def forbidden_names(self):
+        """Return a list of forbidden function names. See
+        https://github.com/xnd-project/rbc/issues/32
+        """
+        if self.version < (5, 2):
+            return ['sinh', 'cosh', 'tanh', 'rint', 'trunc', 'expm1',
+                    'exp2', 'log2', 'log1p', 'fmod']
+        return []
+
     def _make_udtf(self, caller, orig_sig, sig):
+        if self.version < (5, 4):
+            v = '.'.join(map(str, self.version))
+            raise RuntimeError(
+                'UDTFs with Column arguments require '
+                'omniscidb 5.4 or newer, currently '
+                'connected to ', v)
         thrift = self.thrift_client.thrift
         sizer_map = dict(
             ConstantParameter='kUserSpecifiedConstantParameter',
@@ -847,6 +945,47 @@ class RemoteOmnisci(RemoteJIT):
             inputArgTypes, outputArgTypes, sqlArgTypes,
             annotations)
 
+    def _make_udtf_old(self, caller, orig_sig, sig):
+        # old style UDTF for omniscidb <= 5.3, to be deprecated
+        if self.version >= (5, 4):
+            v = '.'.join(map(str, self.version))
+            raise RuntimeError(
+                'Old-style UDTFs require '
+                'omniscidb 5.3 or older, currently '
+                'connected to ', v)
+        thrift = self.thrift_client.thrift
+
+        sizer = None
+        sizer_index = -1
+        inputArgTypes = []
+        outputArgTypes = []
+        sqlArgTypes = []
+        name = caller.func.__name__
+        for i, a in enumerate(sig[1]):
+            _sizer = a.annotation().get('sizer')
+            if _sizer is not None:
+                # expect no more than one sizer argument
+                assert sizer_index == -1
+                sizer_index = i + 1
+                sizer = _sizer
+            atype = self.type_to_extarg(a)
+            if 'output' in a.annotation():
+                outputArgTypes.append(atype)
+            else:
+                if 'input' in a.annotation():
+                    sqlArgTypes.append(atype)
+                elif 'cursor' in a.annotation():
+                    sqlArgTypes.append(self.type_to_extarg('Cursor'))
+                inputArgTypes.append(atype)
+        if sizer is None:
+            sizer = 'kConstant'
+        sizer_type = (thrift.TOutputBufferSizeType
+                      ._NAMES_TO_VALUES[sizer])
+        return thrift.TUserDefinedTableFunction(
+            name + sig.mangling(),
+            sizer_type, sizer_index,
+            inputArgTypes, outputArgTypes, sqlArgTypes)
+
     def _make_udf(self, caller, orig_sig, sig):
         name = caller.func.__name__
         thrift = self.thrift_client.thrift
@@ -882,6 +1021,15 @@ class RemoteOmnisci(RemoteJIT):
                 for caller in reversed(self.get_callers()):
                     signatures = {}
                     name = caller.func.__name__
+                    if name in self.forbidden_names:
+                        raise ForbiddenNameError(
+                            f'\n\nAttempt to define function with name `{name}`.\n'
+                            f'As a workaround, add a prefix to the function name '
+                            f'or define it with another name:\n\n'
+                            f'   def prefix_{name}(x):\n'
+                            f'       return np.trunc(x)\n\n'
+                            f'For more information, see: '
+                            f'https://github.com/xnd-project/rbc/issues/32')
                     for sig in caller.get_signatures():
                         i = len(function_signatures[name])
                         if sig in function_signatures[name]:
@@ -898,10 +1046,23 @@ class RemoteOmnisci(RemoteJIT):
                         sig = sig[0](*sig.argument_types, **dict(name=name))
                         function_signatures[name].append(sig)
                         sig_is_udtf = is_udtf(sig)
-                        sig.set_mangling('__%s_%s' % (device, i))
+                        is_old_udtf = 'table' in sig[0].annotation()
+
+                        if i == 0 and (self.version < (5, 2) or is_old_udtf or
+                                       (self.version < (5, 5) and sig_is_udtf)):
+                            sig.set_mangling('')
+                        else:
+                            if self.version < (5, 5):
+                                sig.set_mangling('__%s' % (i))
+                            else:
+                                sig.set_mangling('__%s_%s' % (device, i))
 
                         if sig_is_udtf:
+                            # new style UDTF, requires omniscidb version >= 5.4
                             udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
+                        elif is_old_udtf:
+                            # old style UDTF for omniscidb <= 5.3, to be deprecated
+                            udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
                         else:
                             udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
                         signatures[fid] = sig
