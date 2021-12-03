@@ -7,11 +7,13 @@ import os
 import inspect
 import warnings
 import ctypes
+from contextlib import nullcontext
 from . import irtools
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
 from .targetinfo import TargetInfo
+from .rbclib import debug_allocator
 # XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
 # we support Arrays even without omnisci, so it must be renamed and moved
 # somewhere elsef
@@ -356,14 +358,9 @@ class Caller(object):
     def __call__(self, *arguments, **options):
         """Return the result of a remote JIT compiled function call.
         """
-        # XXX WIP: find a proper way to use a target with debug_allocator=True
-        # when needed
         device = options.get('device')
         targets = self.remotejit.targets
         if device is None:
-            # try to find a target with the desired debug value
-            # XXX WIP we should properly test this logic
-            targets = {name: t for name, t in targets.items()}
             if len(targets) > 1:
                 raise TypeError(
                     f'specifying device is required when target has more than'
@@ -414,7 +411,7 @@ class RemoteJIT(object):
     typesystem_aliases = dict()
 
     def __init__(self, host='localhost', port=11532,
-                 local=False, debug=False):
+                 local=False, debug=False, use_debug_allocator=False):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -429,11 +426,17 @@ class RemoteJIT(object):
           When True, use local client. Useful for debugging.
         debug : bool
           When True, output debug messages.
+        use_debug_allocator : bool
+          When True, enabled the automatic detection of memory leaks.
         """
         if host == 'localhost':
             host = get_local_ip()
 
+        if use_debug_allocator and not local:
+            raise ValueError('use_debug_allocator=True can be used only with local=True')
+
         self.debug = debug
+        self.use_debug_allocator = use_debug_allocator
         self.host = host
         self.port = int(port)
         self.server_process = None
@@ -445,7 +448,8 @@ class RemoteJIT(object):
         self._targets = None
 
         if local:
-            self._client = LocalClient(debug=debug)
+            self._client = LocalClient(debug=debug,
+                                       use_debug_allocator=use_debug_allocator)
         else:
             self._client = None
 
@@ -709,8 +713,9 @@ class DispatcherRJIT(Dispatcher):
     """Implements remotejit service methods.
     """
 
-    def __init__(self, server, debug=False):
+    def __init__(self, server, debug=False, use_debug_allocator=False):
         super().__init__(server, debug=debug)
+        self.use_debug_allocator = use_debug_allocator
         self.compiled_functions = dict()
         self.engines = dict()
         self.python_globals = dict()
@@ -725,15 +730,14 @@ class DispatcherRJIT(Dispatcher):
         info : dict
           Map of target devices and their properties.
         """
-        cpu = TargetInfo.host()
-        cpu.set('has_numba', True)
-        cpu.set('has_cpython', True)
-        #
-        # WIP: re-enable targets with debug_allocator=True
-        ## cpu_debug = TargetInfo.host(name='host_cpu_debug', debug=True)
-        ## cpu_debug.set('has_numba', True)
-        ## cpu_debug.set('has_cpython', True)
-        return dict(cpu=cpu.tojson()) #, cpu_debug=cpu_debug.tojson())
+        if self.use_debug_allocator:
+            target_info = TargetInfo.host(name='host_cpu_debug_allocator',
+                                          use_debug_allocator=True)
+        else:
+            target_info = TargetInfo.host()
+        target_info.set('has_numba', True)
+        target_info.set('has_cpython', True)
+        return dict(cpu=target_info.tojson())
 
     @dispatchermethod
     def compile(self, name: str, signatures: str, ir: str) -> int:
@@ -780,6 +784,16 @@ class DispatcherRJIT(Dispatcher):
         arguments : tuple
           Specify the arguments to the function.
         """
+        # if we are using a debug allocator, automatically detect memory leaks
+        # at each call.
+        if self.use_debug_allocator:
+            leak_detector = debug_allocator.new_leak_detector()
+        else:
+            leak_detector = nullcontext()
+        with leak_detector:
+            return self._do_call(fullname, arguments)
+
+    def _do_call(self, fullname, arguments):
         if self.debug:
             print(f'call({fullname}, {arguments})')
         ef = self.compiled_functions.get(fullname)
@@ -844,8 +858,9 @@ class LocalClient(object):
     All calls will be made in a local process. Useful for debbuging.
     """
 
-    def __init__(self, debug=False):
-        self.dispatcher = DispatcherRJIT(None, debug=debug)
+    def __init__(self, debug=False, use_debug_allocator=False):
+        self.dispatcher = DispatcherRJIT(None, debug=debug,
+                                         use_debug_allocator=use_debug_allocator)
 
     def __call__(self, **services):
         results = {}

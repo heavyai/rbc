@@ -1,8 +1,18 @@
 import pytest
+from rbc.remotejit import RemoteJIT
 from rbc import rbclib
 from rbc.rbclib.debug_allocator import (DebugAllocator, LeakDetector,
                                         InvalidFreeError, MemoryLeakError)
 from .test_numpy_rjit import rjit  # noqa: F401
+
+
+@pytest.fixture
+def djit():
+    """
+    Debug JIT: a RemoteJIT() which automatically uses debug_allocator and
+    detects memory leaks
+    """
+    return RemoteJIT(local=True, debug=True, use_debug_allocator=True)
 
 
 def test_add_ints_cffi():
@@ -88,3 +98,27 @@ class TestLeakDetector:
                 allocator.record_allocate(0x789)
                 allocator.record_free(0x123)
         assert exc.value.leaks == [(0x456, 2), (0x789, 3)]
+
+
+class Test_djit:
+    """
+    These are the the most important rbclib tests: checks that we can actually
+    detect memory leaks inside @djit compiled functions.
+    """
+
+    def test_djit_target_info(self, djit):
+        targets = djit.targets
+        ti = targets['cpu']
+        assert ti.name == 'host_cpu_debug_allocator'
+        assert ti.use_debug_allocator
+        assert ti.info['fn_allocate_varlen_buffer'] == 'rbclib_debug_allocate_varlen_buffer'
+
+    def test_djit_leak(self, djit):
+        from rbc.stdlib import array_api as xp
+        @djit('int32(int32)')
+        def leak_some_memory(size):
+            a = xp.Array(size, xp.float64)  # memory leak!
+            return size
+
+        with pytest.raises(MemoryLeakError):
+            leak_some_memory(10)

@@ -77,6 +77,13 @@ class LeakDetector:
 # global singleton
 _ALLOCATOR = DebugAllocator()
 
+def new_leak_detector():
+    """
+    Return a new instance of LeakDetector associated to the global debug
+    allocator
+    """
+    return LeakDetector(_ALLOCATOR)
+
 
 @ffi.def_extern()
 def rbclib_debug_allocate_varlen_buffer(element_count, element_size):
