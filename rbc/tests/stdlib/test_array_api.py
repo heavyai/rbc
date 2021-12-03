@@ -1,10 +1,13 @@
-from ..test_numpy_rjit import rjit  # noqa: F401
+import pytest
 from rbc.stdlib import array_api as xp
+from rbc.rbclib.debug_allocator import MemoryLeakError
+from ..test_rbclib import djit  # noqa: F401
 
 
-def test_array_constructor_noreturn(rjit):    # noqa: F811
+@pytest.mark.xfail(raises=MemoryLeakError, reason='issue #377')
+def test_array_constructor_noreturn(djit):    # noqa: F811
 
-    @rjit('float64(int32)')
+    @djit('float64(int32)')
     def array_noreturn(size):
         a = xp.Array(size, xp.float64)
         b = xp.Array(size, xp.float64)
