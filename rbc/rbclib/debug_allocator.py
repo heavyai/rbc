@@ -3,8 +3,20 @@ from ._rbclib import lib, ffi
 class DebugAllocatorError(Exception):
     pass
 
+
 class InvalidFreeError(DebugAllocatorError):
     pass
+
+
+class MemoryLeakError(DebugAllocatorError):
+
+    def __init__(self, leaks):
+        lines = [f'Found {len(leaks)} memory leaks:']
+        for addr, seq in leaks:
+            lines.append(f'    {addr} (seq = {seq})')
+        message = '\n'.join(lines)
+        super().__init__(message)
+        self.leaks = leaks
 
 
 class DebugAllocator:
@@ -32,6 +44,34 @@ class DebugAllocator:
         if addr not in self.alive_memory:
             raise InvalidFreeError('Trying to free() a dangling pointer?')
         del self.alive_memory[addr]
+
+
+class LeakDetector:
+    """
+    Context manager to detect memory leaks on the given allocator.
+
+    When we enter the context manager, we record the current sequence
+    number. Upon exit, we check that all the new allocations have been freed.
+    """
+
+    def __init__(self, allocator):
+        self.allocator = allocator
+        self.start_seq = None
+
+    def __enter__(self):
+        if self.start_seq is not None:
+            raise ValueError('LeakDetector already active')
+        self.start_seq = self.allocator.seq
+
+    def __exit__(self, etype, evalue, tb):
+        leaks = []
+        for addr, seq in self.allocator.alive_memory.items():
+            if seq > self.start_seq:
+                leaks.append((addr, seq))
+        self.start_seq = None
+        if leaks:
+            leaks.sort(key=lambda t: t[1]) # sort by seq
+            raise MemoryLeakError(leaks)
 
 
 # global singleton

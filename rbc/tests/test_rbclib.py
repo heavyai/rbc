@@ -1,6 +1,7 @@
 import pytest
 from rbc import rbclib
-from rbc.rbclib.debug_allocator import DebugAllocator, InvalidFreeError
+from rbc.rbclib.debug_allocator import (DebugAllocator, LeakDetector,
+                                        InvalidFreeError, MemoryLeakError)
 from .test_numpy_rjit import rjit  # noqa: F401
 
 
@@ -46,3 +47,44 @@ class TestDebugAllocator:
         assert allocator.alive_memory == {}
         with pytest.raises(InvalidFreeError):
             allocator.record_free(0x456)
+
+
+class TestLeakDetector:
+
+    def test_no_nested_activation(self):
+        allocator = DebugAllocator()
+        ld = LeakDetector(allocator)
+        with ld:
+            with pytest.raises(ValueError):
+                with ld:
+                    pass
+
+    def test_double_enter(self):
+        allocator = DebugAllocator()
+        ld = LeakDetector(allocator)
+        # check that we can activate the same LeakDetector twice, as long as
+        # it's not nested
+        with ld:
+            pass
+        with ld:
+            pass
+
+    def test_no_leak(self):
+        allocator = DebugAllocator()
+        ld = LeakDetector(allocator)
+        with ld:
+            allocator.record_allocate(0x123)
+            allocator.record_allocate(0x456)
+            allocator.record_free(0x456)
+            allocator.record_free(0x123)
+
+    def test_detect_leak(self):
+        allocator = DebugAllocator()
+        ld = LeakDetector(allocator)
+        with pytest.raises(MemoryLeakError) as exc:
+            with ld:
+                allocator.record_allocate(0x123)
+                allocator.record_allocate(0x456)
+                allocator.record_allocate(0x789)
+                allocator.record_free(0x123)
+        assert exc.value.leaks == [(0x456, 2), (0x789, 3)]
