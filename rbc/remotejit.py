@@ -356,13 +356,14 @@ class Caller(object):
     def __call__(self, *arguments, **options):
         """Return the result of a remote JIT compiled function call.
         """
+        # XXX WIP: find a proper way to use a target with debug_allocator=True
+        # when needed
         device = options.get('device')
-        debug = options.get('debug', False)
         targets = self.remotejit.targets
         if device is None:
             # try to find a target with the desired debug value
             # XXX WIP we should properly test this logic
-            targets = {name: t for name, t in targets.items() if t.debug == debug}
+            targets = {name: t for name, t in targets.items()}
             if len(targets) > 1:
                 raise TypeError(
                     f'specifying device is required when target has more than'
@@ -728,10 +729,11 @@ class DispatcherRJIT(Dispatcher):
         cpu.set('has_numba', True)
         cpu.set('has_cpython', True)
         #
-        cpu_debug = TargetInfo.host(name='host_cpu_debug', debug=True)
-        cpu_debug.set('has_numba', True)
-        cpu_debug.set('has_cpython', True)
-        return dict(cpu=cpu.tojson(), cpu_debug=cpu_debug.tojson())
+        # WIP: re-enable targets with debug_allocator=True
+        ## cpu_debug = TargetInfo.host(name='host_cpu_debug', debug=True)
+        ## cpu_debug.set('has_numba', True)
+        ## cpu_debug.set('has_cpython', True)
+        return dict(cpu=cpu.tojson()) #, cpu_debug=cpu_debug.tojson())
 
     @dispatchermethod
     def compile(self, name: str, signatures: str, ir: str) -> int:
