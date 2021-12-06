@@ -5,7 +5,7 @@ from rbc.tests import omnisci_fixture
 @pytest.fixture(scope='module')
 def omnisci():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
         define(o)
         yield o
 
@@ -84,7 +84,6 @@ def define(omnisci):
 def test_copy(omnisci, use_default, inputs):
     if use_default:
         omnisci.require_version((5, 7), 'Requires omnisci-internal PR 5403')
-    omnisci.require_version((5, 5), 'Requires omniscidb-internal PR 5134')
 
     groups = inputs.split(';')
     table_names = [f'{omnisci.table_name}'] * len(groups)
@@ -136,7 +135,6 @@ def test_ct_binding_constant_sizer(omnisci, kind):
 def test_ct_binding_row_multiplier(omnisci, use_default, kind):
     if use_default:
         omnisci.require_version((5, 7), 'Requires omnisci-internal PR 5403')
-    omnisci.require_version((5, 5, 5), 'Requires omniscidb-internal PR 5403/5274')
 
     if omnisci.version < (5, 7):
         suffix = {'91': '2', '369': '2', '169': '3'}.get(kind, '')

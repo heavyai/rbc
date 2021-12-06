@@ -4,11 +4,6 @@ import pytest
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
-if available_version and available_version < (5, 5):
-    reason = ("test file requires omniscidb version 5.5+ with bytes support"
-              "(got %s)" % (available_version, ))
-    available_version = None
-
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 

@@ -7,12 +7,6 @@ import numpy as np
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
-if available_version and available_version < (5, 4):
-    reason = ('New-style UDTFs (with Column arguments) are available'
-              ' for omniscidb 5.4 or newer, '
-              'currently connected to omniscidb '
-              + '.'.join(map(str, available_version)))
-    available_version = ()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -130,12 +124,6 @@ def test_sizer_row_multiplier_param2(omnisci):
         assert r == ((i % 5) * alpha + 4,)
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with constant parameter"
-        " support (got %s) [issue 124]" % (
-            available_version,)))
 def test_sizer_constant_parameter(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -168,12 +156,6 @@ def test_sizer_constant_parameter(omnisci):
         assert r == ((i % 5) * 2,)
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with constant parameter"
-        " support (got %s) [issue 124]" % (
-            available_version,)))
 def test_sizer_return_size(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -197,11 +179,6 @@ def test_sizer_return_size(omnisci):
         assert r == ((i % 5) * 2,), repr((i, r))
 
 
-@pytest.mark.skipif(
-    available_version < (5, 4),
-    reason=(
-        "test requires omniscidb v 5.4 or newer (got %s) [issue 148]" % (
-            available_version,)))
 def test_rowmul_add_columns(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -231,12 +208,6 @@ def test_rowmul_add_columns(omnisci):
         assert r == (i + alpha * (i + 1.5),)
 
 
-@pytest.mark.skipif(
-    available_version <= (5, 4),
-    reason=(
-        "test requires omniscidb with multiple output"
-        " columns support (got %s) [issue 150]" % (
-            available_version,)))
 def test_rowmul_return_mixed_columns(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -280,12 +251,6 @@ def test_rowmul_return_mixed_columns(omnisci):
         assert r[0] == float(3 * i)
 
 
-@pytest.mark.skipif(
-    available_version < (5, 4),
-    reason=(
-        "test requires omniscidb with multiple output"
-        " columns support (got %s) [issue 150]" % (
-            available_version,)))
 @pytest.mark.parametrize("max_n", [-1, 3])
 @pytest.mark.parametrize("sizer", [1, 2])
 @pytest.mark.parametrize("num_columns", [1, 2, 3, 4])
@@ -371,12 +336,6 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
             assert v == float((i+1) * (j+1))
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with single cursor"
-        " support (got %s) [issue 173]" % (
-            available_version,)))
 @pytest.mark.parametrize("variant", [1, 2, 3])
 def test_issue173(omnisci, variant):
     omnisci.reset()
@@ -427,12 +386,6 @@ def test_issue173(omnisci, variant):
         assert result[i][0] == (0.0 if b[i] else f8[i])
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with udtf redefine"
-        " support (got %s) [issue 175]" % (
-            available_version,)))
 def test_redefine(omnisci):
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
@@ -495,12 +448,6 @@ def test_redefine(omnisci):
         assert result[i][0] == f8[i] + 2
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with udtf redefine"
-        " support (got %s) [issue 175]" % (
-            available_version,)))
 @pytest.mark.parametrize("step", [1, 2, 3])
 def test_overload_nonuniform(omnisci, step):
     pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
@@ -561,12 +508,6 @@ def test_overload_nonuniform(omnisci, step):
             descr, result = omnisci.sql_execute(sql_query)
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with udtf overload"
-        " support (got %s) [issue 182]" % (
-            available_version,)))
 def test_overload_uniform(omnisci):
     omnisci.reset()
     omnisci.register()
@@ -603,12 +544,6 @@ omnisci_unary_operations = ['+', '-']
 omnisci_binary_operations = ['+', '-', '*', '/']
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with aggregate udtf column"
-        " support (got %s) [issue 174]" % (
-            available_version,)))
 @pytest.mark.parametrize("prop", ['', 'groupby'])
 @pytest.mark.parametrize("oper", omnisci_aggregators + omnisci_aggregators2)
 def test_column_aggregate(omnisci, prop, oper):
@@ -717,12 +652,6 @@ def test_column_aggregate(omnisci, prop, oper):
     assert result == result_expected
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with aggregate udtf column"
-        " support (got %s) [issue 174]" % (
-            available_version,)))
 @pytest.mark.parametrize("oper", omnisci_functions + omnisci_functions2)
 def test_column_function(omnisci, oper):
     omnisci.reset()
@@ -768,12 +697,6 @@ def test_column_function(omnisci, oper):
         assert result == result_expected
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with aggregate udtf column"
-        " support (got %s) [issue 174]" % (
-            available_version,)))
 @pytest.mark.parametrize("oper", omnisci_binary_operations)
 def test_column_binary_operation(omnisci, oper):
     omnisci.reset()
@@ -803,12 +726,6 @@ def test_column_binary_operation(omnisci, oper):
     assert result == result_expected
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb with aggregate udtf column"
-        " support (got %s) [issue 174]" % (
-            available_version,)))
 @pytest.mark.parametrize("oper", omnisci_unary_operations)
 def test_column_unary_operation(omnisci, oper):
     omnisci.reset()
@@ -837,12 +754,6 @@ def test_column_unary_operation(omnisci, oper):
     assert result == result_expected
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test requires omniscidb create as support"
-        " (got %s)" % (
-            available_version,)))
 def test_create_as(omnisci):
     omnisci.reset()
     omnisci.register()
@@ -891,12 +802,6 @@ def create_columns(omnisci):
     omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
 
 
-@pytest.mark.skipif(
-    available_version < (5, 5),
-    reason=(
-        "test with different column sizes requires omnisci 5.5"
-        " support (got %s) [issue 176]" % (
-            available_version,)))
 @pytest.mark.usefixtures('create_columns')
 def test_column_different_sizes(omnisci):
 

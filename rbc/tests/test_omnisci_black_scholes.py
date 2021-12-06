@@ -6,12 +6,6 @@ import math
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
-if available_version and available_version < (5, 4):
-    reason = ('New-style UDTFs (with Column arguments) are available'
-              ' for omniscidb 5.4 or newer, '
-              'currently connected to omniscidb '
-              + '.'.join(map(str, available_version)))
-    available_version = ()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -78,10 +72,6 @@ def cnd_numba(d):
 
 
 def test_black_scholes_udf(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [issue 60]')
-
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
@@ -114,10 +104,6 @@ def test_black_scholes_udf(omnisci):
 
 
 def test_black_scholes_udtf(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip('crashes CUDA enabled omniscidb server'
-                    ' [issue 169]')
-
     omnisci.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL

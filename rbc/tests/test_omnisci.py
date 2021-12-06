@@ -1,7 +1,5 @@
 import os
-from rbc import errors
 import itertools
-import numpy as np
 import pytest
 from rbc.tests import omnisci_fixture
 
@@ -88,36 +86,6 @@ def test_redefine(omnisci):
         assert x1 == x + 2
 
 
-def test_forbidden_define(omnisci):
-    if omnisci.version > (5, 1):
-        pytest.skip(
-            f'forbidden defines not required for OmnisciDB {omnisci.version}')
-
-    omnisci.reset()
-
-    msg = "Attempt to define function with name `{name}`"
-
-    @omnisci('double(double)')
-    def sinh(x):
-        return np.sinh(x)
-
-    with pytest.raises(errors.ForbiddenNameError) as excinfo:
-        omnisci.register()
-    assert msg.format(name='sinh') in str(excinfo.value)
-
-    omnisci.reset()
-
-    @omnisci('double(double)')
-    def trunc(x):
-        return np.trunc(x)
-
-    with pytest.raises(errors.ForbiddenNameError) as excinfo:
-        omnisci.register()
-    assert msg.format(name='trunc') in str(excinfo.value)
-
-    omnisci.reset()
-
-
 def test_single_argument_overloading(omnisci):
     omnisci.reset()
 
@@ -153,44 +121,6 @@ def test_single_argument_overloading(omnisci):
         assert isinstance(x1, type(x))
 
 
-def test_numpy_forbidden_ufunc(omnisci, nb_version):
-    omnisci.reset()
-
-    if omnisci.version >= (5, 5) and nb_version >= (0, 52):
-        pytest.skip(
-            f'forbidden ufunc not required for OmniSciDB {omnisci.version} '
-            f'and Numba {nb_version}')
-
-    if not omnisci.has_cuda:
-        pytest.skip('forbidden ufunc not required for CUDA-disabled OmniSciDB')
-
-    if omnisci.version >= (5, 5):
-        # Requires: https://github.com/omnisci/omniscidb-internal/pull/4955
-        pytest.skip('forbidden ufunc not required if CPU ufuncs work [omniscidb-interal PR 4955]')
-
-    msg = "Attempt to use function with name `{ufunc}`"
-
-    @omnisci('double(double)')
-    def arcsin(x):
-        return np.arcsin(x)
-
-    with pytest.raises(errors.ForbiddenIntrinsicError) as excinfo:
-        omnisci.register()
-    assert msg.format(ufunc='asin') in str(excinfo.value)
-
-    omnisci.reset()
-
-    @omnisci('float32(float32, float32)')
-    def logaddexp(x, y):
-        return np.logaddexp(x, y)
-
-    with pytest.raises(errors.ForbiddenIntrinsicError) as excinfo:
-        omnisci.register()
-    assert msg.format(ufunc='log1pf') in str(excinfo.value)
-
-    omnisci.reset()
-
-
 def test_thrift_api_doc(omnisci):
     omnisci.reset()
 
@@ -207,113 +137,6 @@ def test_thrift_api_doc(omnisci):
     for i, (x, x1) in enumerate(result):
         assert x1 == x * i + 55
         assert isinstance(x1, type(x))
-
-
-def test_manual_ir(omnisci):
-    omnisci.reset()
-    descr, result = omnisci.sql_execute(
-        'SELECT * FROM {omnisci.table_name}'.format(**locals()))
-    result = list(result)
-    assert result == [(0.0, 0.0, 0, 0, 0, 0, 1), (1.0, 1.0, 1, 1, 1, 1, 0),
-                      (2.0, 2.0, 2, 2, 2, 2, 1), (3.0, 3.0, 3, 3, 3, 3, 0),
-                      (4.0, 4.0, 4, 4, 4, 4, 1)]
-    device_params = omnisci.thrift_call('get_device_parameters',
-                                        omnisci.session_id)
-    cpu_target_triple = device_params['cpu_triple']
-    cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-    gpu_target_triple = device_params.get('gpu_triple')
-    gpu_target_datalayout = ("e-p:64:64:64-i1:8:8-i8:8:8-"
-                             "i16:16:16-i32:32:32-i64:64:64-"
-                             "f32:32:32-f64:64:64-v16:16:16-"
-                             "v32:32:32-v64:64:64-v128:128:128-n16:32:64")
-
-    foo_ir = '''\
-define i32 @foobar(i32 %.1, i32 %.2) {
-entry:
-  %.18.i = mul i32 %.2, %.1
-  %.33.i = add i32 %.18.i, 55
-  ret i32 %.33.i
-}
-'''
-    ast_signatures = "foobar 'int32(int32, int32)'"
-    device_ir_map = dict()
-    device_ir_map['cpu'] = '''
-target datalayout = "{cpu_target_datalayout}"
-target triple = "{cpu_target_triple}"
-{foo_ir}
-'''.format(**locals())
-
-    if gpu_target_triple is not None:
-        device_ir_map['gpu'] = '''
-target datalayout = "{gpu_target_datalayout}"
-target triple = "{gpu_target_triple}"
-{foo_ir}
-'''.format(**locals())
-
-    omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
-                        ast_signatures, device_ir_map)
-    omnisci._last_ir_map = {}  # hack
-    descr, result = omnisci.sql_execute(
-        'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'
-        .format(**locals()))
-    result = list(result)
-    assert len(result) > 0
-    for x, r in result:
-        assert r == x * x + 55
-
-
-def test_ir_parse_error(omnisci):
-    device_params = omnisci.thrift_call('get_device_parameters',
-                                        omnisci.session_id)
-    foo_ir = '''\
-define i32 @foobar(i32 %.1, i32 %.2) {
-entry:
-  %.18.i = mul i32 %.2, %.1
-  %.33.i = add i32 %.18.i, 55
-  ret i32 %.33.i
-
-'''
-    ast_signatures = "foobar 'int32(int32, int32)'"
-    device_ir_map = dict()
-    device_ir_map['cpu'] = foo_ir
-
-    gpu_target_triple = device_params.get('gpu_triple')
-    if gpu_target_triple is not None:
-        device_ir_map['gpu_triple'] = foo_ir
-
-    with pytest.raises(Exception, match=r".*LLVM IR ParseError:"):
-        omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
-                            ast_signatures, device_ir_map)
-
-
-def test_ir_query_error(omnisci):
-    pytest.skip("requires omniscidb-internal catching undefined symbols")
-
-    device_params = omnisci.thrift_call('get_device_parameters',
-                                        omnisci.session_id)
-    gpu_target_triple = device_params.get('gpu_triple')
-    foo_ir = '''\
-define i32 @foobarrr(i32 %.1, i32 %.2) {
-entry:
-  %.18.i = mul i32 %.2, %.1
-  %.33.i = add i32 %.18.i, 55
-  ret i32 %.33.i
-}
-'''
-    ast_signatures = "foobar 'int32(int32, int32)'"
-    device_ir_map = dict()
-    device_ir_map['cpu'] = foo_ir
-    if gpu_target_triple is not None:
-        device_ir_map['gpu'] = foo_ir
-
-    omnisci.thrift_call('register_runtime_udf', omnisci.session_id,
-                        ast_signatures, device_ir_map)
-    try:
-        omnisci.sql_execute(
-            'SELECT i4, foobar(i4, i4) FROM {omnisci.table_name}'
-            .format(**locals()))
-    except errors.OmnisciServerError as msg:
-        assert "use of undefined value '@foobar'" in str(msg)
 
 
 def test_multiple_implementation(omnisci):

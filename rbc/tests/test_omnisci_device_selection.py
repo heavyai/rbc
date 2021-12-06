@@ -5,7 +5,7 @@ from rbc.tests import omnisci_fixture
 @pytest.fixture(scope='module')
 def omnisci():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
         define(o)
 
         def require_loadtime(kind, _cache=[None]):
@@ -184,7 +184,6 @@ def define(omnisci):
 @pytest.mark.parametrize("ext", ['udf', 'udtf'])
 @pytest.mark.parametrize("kind", ['rt', 'ct', 'lt'])
 def test_device_selection_single(omnisci, func, ext, kind):
-    omnisci.require_version((5, 5), 'omniscidb-internal PR 5026')
     omnisci.require_loadtime(kind)
 
     if kind == 'lt' and ext == 'udtf':
@@ -205,7 +204,6 @@ def test_device_selection_single(omnisci, func, ext, kind):
 @pytest.mark.parametrize("kind2", kinds)
 @pytest.mark.parametrize("kind1", kinds)
 def test_device_selection_pair(omnisci, func12, ext, kind2, kind1):
-    omnisci.require_version((5, 5), 'omniscidb-internal PR 5026')
     func12 = tuple(func12.split('/'))
     func1, func2 = func12
 
