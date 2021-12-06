@@ -296,8 +296,8 @@ class RemoteOmnisci(RemoteJIT):
             version = self.thrift_call('get_version')
             self._version = parse_version(version)
             if self._version[:2] < (5, 6):
-                msg = (f'OmniSciDB server v.{version} is too old (expected v.5.6 or newer) and some '
-                       'features might not be available.')
+                msg = (f'OmniSciDB server v.{version} is too old (expected v.5.6 or newer) '
+                       'and some features might not be available.')
                 warnings.warn(msg, PendingDeprecationWarning)
         return self._version
 
