@@ -200,7 +200,8 @@ def omnisci_array_max(x, initial=None):
         def impl(x, initial=None):
             if len(x) <= 0:
                 printf("omnisci_array_max: cannot find max of zero-sized array")  # noqa: E501
-                return min_value
+                # the array api standard says this is implementation specific
+                return min_value + 1
             if initial is not None:
                 m = initial
             else:

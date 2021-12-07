@@ -19,7 +19,7 @@ def omnisci():
 ndarray_methods = [
     ('fill', (5, 4), [4.0, 4.0, 4.0, 4.0, 4.0]),
     ('max', (5, 4.0), 4.0),
-    ('max_empty', (0, ), -128),
+    ('max_empty', (0, ), -127),
     ('max_initial', (5, 4.0, 30.0), 30.0),
     ('mean', (5, 2.0), 2.0),
     ('mean_empty_float', (0, ), np.nan),
@@ -120,11 +120,6 @@ def define(omnisci):
 @pytest.mark.parametrize("method, args, expected", ndarray_methods,
                          ids=[item[0] for item in ndarray_methods])
 def test_ndarray_methods(omnisci, method, args, expected):
-    if method in ['max_empty']:
-        pytest.skip(
-            f'{method}: fails on CPU-only omniscidb server'
-            ' v 5.3.1+ [issue 114]')
-
     query_args = ', '.join(map(str, args))
     query = f'SELECT ndarray_{method}({query_args})'
 
