@@ -48,64 +48,6 @@ def omnisci():
         print('%s in deardown' % (type(msg)))
 
 
-def _test_get_array_size_ir1(omnisci):
-    omnisci.reset()
-    # register an empty set of UDFs in order to avoid unregistering
-    # UDFs created directly from LLVM IR strings when executing SQL
-    # queries:
-    omnisci.register()
-
-    device_params = omnisci.thrift_call('get_device_parameters')
-    cpu_target_triple = device_params['cpu_triple']
-    cpu_target_datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-
-    # The following are codelets from clang --emit-llvm output with
-    # attributes removed and change of function names:
-    Array_getSize_i32_ir = '''\
-define dso_local i64 @Array_getSize_i32(%struct.Array*) align 2 {
-  %2 = alloca %struct.Array*, align 8
-  store %struct.Array* %0, %struct.Array** %2, align 8
-  %3 = load %struct.Array*, %struct.Array** %2, align 8
-  %4 = getelementptr inbounds %struct.Array, %struct.Array* %3, i32 0, i32 1
-  %5 = load i64, i64* %4, align 8
-  ret i64 %5
-}
-'''
-
-    array_sz_i32_ir = '''\
-define dso_local i32 @array_sz_int32(%struct.Array* byval align 8) {
-  %2 = call i64 @Array_getSize_i32(%struct.Array* %0)
-  %3 = trunc i64 %2 to i32
-  ret i32 %3
-}'''
-
-    ast_signatures = "array_sz_int32 'int32_t(Array<int32_t>)'"
-
-    device_ir_map = dict()
-    device_ir_map['cpu'] = f'''\
-target datalayout = "{cpu_target_datalayout}"
-target triple = "{cpu_target_triple}"
-
-%struct.Array = type {{ i32*, i64, i8 }}
-
-{Array_getSize_i32_ir}
-
-{array_sz_i32_ir}
-'''
-
-    omnisci.thrift_call('register_runtime_udf',
-                        omnisci.session_id,
-                        ast_signatures, device_ir_map)
-
-    desrc, result = omnisci.sql_execute(
-        f'select i4, array_sz_int32(i4) from {omnisci.table_name}')
-    for a, sz in result:
-        assert len(a) == sz
-
-
-@pytest.mark.skipif(available_version[:2] < (5, 2),
-                    reason="test requires 5.2 or newer (got %s)" % (
-                        available_version,))
 @pytest.mark.parametrize('c_name', ['int8_t i1', 'int16_t i2', 'int32_t i4', 'int64_t i8',
                                     'float f4', 'double f8'])
 @pytest.mark.parametrize('device', ['cpu', 'gpu'])
@@ -310,10 +252,6 @@ def test_even_sum(omnisci):
 
 
 def test_array_setitem(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            'test_array_setitem: crashes CUDA enabled omniscidb server'
-            ' [rbc issue 72]')
     omnisci.reset()
 
     @omnisci('double(double[], int32)')
@@ -334,10 +272,6 @@ def test_array_setitem(omnisci):
 
 
 def test_array_constructor_noreturn(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            'crashes CUDA enabled omniscidb server [issue 94]')
-
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
@@ -362,10 +296,6 @@ def test_array_constructor_noreturn(omnisci):
 
 
 def test_array_constructor_return(omnisci):
-    if available_version[:3] == (5, 3, 1):
-        pytest.skip(
-            'crashes CPU-only omniscidb server v 5.3.1 [issue 112]')
-
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
@@ -413,10 +343,6 @@ def test_array_constructor_len(omnisci):
 
 
 def test_array_constructor_getitem(omnisci):
-    if omnisci.has_cuda and omnisci.version < (5, 5):
-        pytest.skip(
-            'test_array_constructor_getitem: crashes CUDA enabled omniscidb'
-            ' server [rbc issue 72]')
     omnisci.reset()
 
     from rbc.omnisci_backend import Array

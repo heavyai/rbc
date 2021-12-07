@@ -107,7 +107,7 @@ jobs:
             omniscidb-from: docker
           - os: ubuntu-latest
             python-version: 3.8
-            omniscidb-version: 5.8.0
+            omniscidb-version: 5.9.0
             docker-image: omnisci/core-os-cpu:v5.8.0
             omniscidb-from: docker
 

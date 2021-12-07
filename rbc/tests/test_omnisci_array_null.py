@@ -8,7 +8,7 @@ ARRAY_NOT_NULL = 2
 
 @pytest.fixture(scope='module')
 def omnisci():
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5)):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
         define(o)
         yield o
 
@@ -29,8 +29,6 @@ colnames = ['b', 'i1', 'i2', 'i4', 'i8', 'f4', 'f8']
 
 @pytest.mark.parametrize('col', colnames)
 def test_array_null(omnisci, col):
-    omnisci.require_version((5, 5),
-                            'Requires omniscidb-internal PR 5104 [rbc issue 240]')
     if col in ['i2', 'i8', 'f8']:
         omnisci.require_version((5, 7, 0),
                                 'Requires omniscidb-internal PR 5465 [rbc PR 330]')

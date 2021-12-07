@@ -490,23 +490,6 @@ def define(omnisci):
 @pytest.mark.parametrize("suffix, args, expected", operator_methods,
                          ids=[item[0] for item in operator_methods])
 def test_array_operators(omnisci, suffix, args, expected):
-
-    if omnisci.has_cuda and suffix in ['countOf', 'in', 'not_in'] and omnisci.version < (5, 5):
-        # https://github.com/xnd-project/rbc/issues/107
-        pytest.skip(f'operator_{suffix}: crashes CUDA enabled omniscidb server'
-                    ' [rbc issue 107]')
-
-    if (available_version[:3] == (5, 3, 1)
-        and suffix in ['abs', 'add', 'and_bw', 'eq', 'floordiv', 'floordiv2',
-                       'ge', 'gt', 'iadd', 'iand', 'ifloordiv', 'ifloordiv2',
-                       'ilshift', 'imul', 'ior', 'isub', 'ipow', 'irshift',
-                       'itruediv', 'itruediv2', 'imod', 'ixor', 'le', 'lshift',
-                       'lt', 'mul', 'mod', 'ne', 'neg', 'or_bw', 'pos', 'pow',
-                       'rshift', 'sub', 'truediv', 'truediv2', 'xor']):
-        pytest.skip(
-            f'operator_{suffix}: crashes CPU-only omniscidb server v 5.3.1'
-            ' [issue 115]')
-
     query = 'select operator_{suffix}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')'
     _, result = omnisci.sql_execute(query)

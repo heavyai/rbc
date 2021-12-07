@@ -6,7 +6,7 @@ from rbc.external import external
 
 @pytest.fixture(scope='module')
 def omnisci():
-    for o in omnisci_fixture(globals(), minimal_version=(5, 5), debug=not True):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 6), debug=not True):
         yield o
 
 
