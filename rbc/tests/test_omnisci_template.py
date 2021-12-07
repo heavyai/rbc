@@ -53,7 +53,7 @@ def test_template_text(omnisci, size):
 
     if omnisci.has_cuda:
         omnisci.require_version(
-            (5, 8), "Requires omniscidb-internal PR 5809", label='PR5809')
+            (5, 8), "Requires omniscidb-internal PR 5809")
 
     fn = "ct_binding_template"
     table = f"{omnisci.base_name}_{size}"
@@ -77,7 +77,7 @@ def test_template_number(omnisci, col):
 
     if omnisci.has_cuda:
         omnisci.require_version(
-            (5, 8), "Requires omniscidb-internal PR 5809", label='PR5809')
+            (5, 8), "Requires omniscidb-internal PR 5809")
 
     fn = "ct_binding_template"
     table = omnisci.table_name
