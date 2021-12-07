@@ -1,5 +1,6 @@
 from rbc.targetinfo import TargetInfo
 
+
 def test_basic():
     host = TargetInfo.host()
     assert host.name == 'host_cpu'

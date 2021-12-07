@@ -115,9 +115,11 @@ class Test_djit:
 
     def test_djit_leak(self, djit):
         from rbc.stdlib import array_api as xp
+
         @djit('int32(int32)')
         def leak_some_memory(size):
-            a = xp.Array(size, xp.float64)  # memory leak!
+            # memory leak!
+            a = xp.Array(size, xp.float64)  # noqa: F841
             return size
 
         with pytest.raises(MemoryLeakError):

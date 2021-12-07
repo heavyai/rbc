@@ -1,5 +1,6 @@
 from ._rbclib import lib, ffi
 
+
 class DebugAllocatorError(Exception):
     pass
 
@@ -70,12 +71,13 @@ class LeakDetector:
                 leaks.append((addr, seq))
         self.start_seq = None
         if leaks:
-            leaks.sort(key=lambda t: t[1]) # sort by seq
+            leaks.sort(key=lambda t: t[1])  # sort by seq
             raise MemoryLeakError(leaks)
 
 
 # global singleton
 _ALLOCATOR = DebugAllocator()
+
 
 def new_leak_detector():
     """
