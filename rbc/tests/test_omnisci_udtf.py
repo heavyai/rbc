@@ -169,8 +169,7 @@ def test_parallel_execution(omnisci, sleep, mode):
     (ct_sleep1).
 
     """
-    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5901',
-                            label='qe-99')
+    omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 5901')
     from multiprocessing import Process, Array
 
     def func(seconds, mode, a):
