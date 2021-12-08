@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 from rbc.omnisci_backend import Array
+from rbc.errors import OmnisciServerError
 from numba import types as nb_types
 import pytest
 
@@ -462,5 +463,11 @@ def test_issue77(omnisci):
         a.fill(1)
         return a
 
-    _, result = omnisci.sql_execute('select issue77();')
-    assert list(result)[0][0] == [1, 1, 1, 1, 1]
+    if omnisci.version[:2] >= (5, 8):
+        _, result = omnisci.sql_execute('select issue77();')
+        assert list(result)[0][0] == [1, 1, 1, 1, 1]
+    else:
+        with pytest.raises(OmnisciServerError) as exc:
+            _, result = omnisci.sql_execute('select issue77();')
+
+        assert exc.match('Could not bind issue77()')
