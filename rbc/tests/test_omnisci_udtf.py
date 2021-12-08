@@ -277,6 +277,7 @@ def test_raise_error(omnisci):
         omnisci.register()
 
     assert exc.match('raise statement is not supported')
+    omnisci.reset()
 
 
 def test_issue_235(omnisci):
