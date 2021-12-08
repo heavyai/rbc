@@ -452,3 +452,15 @@ def test_issue109(omnisci):
 
     _, result = omnisci.sql_execute('select issue109(3);')
     assert list(result) == [([0.0, 1.0, 2.0, 3.0, 4.0],)]
+
+
+def test_issue77(omnisci):
+
+    @omnisci('int64[]()')
+    def issue77():
+        a = Array(5, 'int64')
+        a.fill(1)
+        return a
+
+    _, result = omnisci.sql_execute('select issue77();')
+    assert list(result)[0][0] == [1, 1, 1, 1, 1]
