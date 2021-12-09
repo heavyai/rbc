@@ -241,7 +241,7 @@ def test_binding(omnisci):
         column_vars_types = argument_types
 
     if available_version[:2] >= (5, 9):
-        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6003', label='docker-dev')
+        omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6003')
 
         def get_result(overload_types, input_type, is_literal):
             overload_types_ = overload_types[::-1 if is_literal else 1]

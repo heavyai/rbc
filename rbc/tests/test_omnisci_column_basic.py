@@ -549,16 +549,6 @@ omnisci_binary_operations = ['+', '-', '*', '/']
 @pytest.mark.parametrize("prop", ['', 'groupby'])
 @pytest.mark.parametrize("oper", omnisci_aggregators + omnisci_aggregators2)
 def test_column_aggregate(omnisci, prop, oper):
-    if not omnisci.has_cuda and oper in omnisci_aggregators2 and prop == 'groupby':
-        pytest.skip(f'{oper}-{prop} test crashes CPU-only omnisci server [rbc issue 237]')
-    if omnisci.has_cuda and oper in ['sample', 'stddev', 'stddev_pop', 'stddev_samp',
-                                     'correlation', 'corr']:
-        # unreliable means that the results computed on CPU and on
-        # CUDA device may slightly vary causing test failures.
-        pytest.skip(f'{oper}-{prop} test result unreliable when on CUDA')
-    if omnisci.has_cuda and oper in ['covar_samp', 'covar_pop']:
-        pytest.skip(f'{oper}-{prop} test crashes CUDA enabled omnisci server')
-
     omnisci.reset()
     omnisci.register()
 

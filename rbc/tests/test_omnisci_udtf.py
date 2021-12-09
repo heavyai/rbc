@@ -131,7 +131,7 @@ def test_composition(omnisci, kind):
 
 
 def test_table_function_manager(omnisci):
-    omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6035', label='master')
+    omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 6035')
 
     @omnisci('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
     def my_manager_error(mgr, col, out):
@@ -169,8 +169,7 @@ def test_parallel_execution(omnisci, sleep, mode):
     (ct_sleep1).
 
     """
-    omnisci.require_version((5, 8), 'Requires omniscidb-internal PR 5901',
-                            label='qe-99')
+    omnisci.require_version((5, 9), 'Requires omniscidb-internal PR 5901')
     from multiprocessing import Process, Array
 
     def func(seconds, mode, a):
@@ -277,3 +276,25 @@ def test_raise_error(omnisci):
         omnisci.register()
 
     assert exc.match('raise statement is not supported')
+    omnisci.reset()
+
+
+def test_issue_235(omnisci):
+
+    @omnisci('int32(Column<int64>, RowMultiplier, OutputColumn<int64>)')
+    def text_rbc_copy_rowmul(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    @omnisci('int32(Cursor<int64, double>, RowMultiplier, OutputColumn<int64>, OutputColumn<double>)')  # noqa: E501
+    def text_rbc_copy_rowmul(x, x2, m, y, y2):  # noqa: F811
+        for i in range(len(x)):
+            y[i] = x[i]
+            y2[i] = x2[i]
+        return len(x)
+
+    query = (f'select * from table(text_rbc_copy_rowmul('
+             f'cursor(select i8, f8 from {omnisci.table_name}), 1));')
+    _, result = omnisci.sql_execute(query)
+    assert list(result) == list(zip(np.arange(5), np.arange(5, dtype=np.float64)))
