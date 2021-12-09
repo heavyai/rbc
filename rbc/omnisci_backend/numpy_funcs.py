@@ -279,7 +279,7 @@ def omnisci_np_prod(a, initial=None):
 @expose_and_overload(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
-    zero_value = np.nan  # 0 if x.dtype is int
+    zero_value = np.nan
 
     if isinstance(x, ArrayPointer):
         def impl(x):

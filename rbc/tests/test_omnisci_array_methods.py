@@ -29,11 +29,11 @@ ndarray_methods = [
     ('max_empty_float32', (0, ), np.finfo(np.float32).min),
     ('max_empty_float64', (0, ), np.finfo(np.float64).min),
     ('max_initial', (5, 4.0, 30.0), 30.0),
-    ('mean', (5, 2.0), 2.0),
-    ('mean_empty_int8', (0, ), 0),
-    ('mean_empty_int16', (0, ), 0),
-    ('mean_empty_int32', (0, ), 0),
-    ('mean_empty_int64', (0, ), 0),
+    ('mean', (5, 2), 2.0),
+    ('mean_empty_int8', (0, ), np.nan),
+    ('mean_empty_int16', (0, ), np.nan),
+    ('mean_empty_int32', (0, ), np.nan),
+    ('mean_empty_int64', (0, ), np.nan),
     ('mean_empty_float32', (0, ), np.nan),
     ('mean_empty_float64', (0, ), np.nan),
     ('min', (5, 4.0), 4.0),
@@ -73,7 +73,10 @@ def define(omnisci):
                   f'    return a.{op}()\n')
             exec(fn)
             fn = locals()[fn_name]
-            omnisci(f'{retty}(int32)')(fn)
+            if op == 'mean':
+                omnisci('float64(int32)')(fn)
+            else:
+                omnisci(f'{retty}(int32)')(fn)
 
     @omnisci('double(int64, double, double)')
     def ndarray_max_initial(size, v, initial):
