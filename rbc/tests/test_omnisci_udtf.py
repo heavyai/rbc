@@ -276,3 +276,25 @@ def test_raise_error(omnisci):
         omnisci.register()
 
     assert exc.match('raise statement is not supported')
+    omnisci.reset()
+
+
+def test_issue_235(omnisci):
+
+    @omnisci('int32(Column<int64>, RowMultiplier, OutputColumn<int64>)')
+    def text_rbc_copy_rowmul(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    @omnisci('int32(Cursor<int64, double>, RowMultiplier, OutputColumn<int64>, OutputColumn<double>)')  # noqa: E501
+    def text_rbc_copy_rowmul(x, x2, m, y, y2):  # noqa: F811
+        for i in range(len(x)):
+            y[i] = x[i]
+            y2[i] = x2[i]
+        return len(x)
+
+    query = (f'select * from table(text_rbc_copy_rowmul('
+             f'cursor(select i8, f8 from {omnisci.table_name}), 1));')
+    _, result = omnisci.sql_execute(query)
+    assert list(result) == list(zip(np.arange(5), np.arange(5, dtype=np.float64)))

@@ -364,6 +364,9 @@ class RemoteOmnisci(RemoteJIT):
             m = re.match(r'.*SQL Error: (.*)', msg.error_msg)
             if m:
                 raise OmnisciServerError(f'{m.group(1)}')
+            m = re.match(r'Could not bind *', msg.error_msg)
+            if m:
+                raise OmnisciServerError(msg.error_msg)
             # TODO: catch more known server failures here.
             raise
 
