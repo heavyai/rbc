@@ -34,11 +34,15 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.9, 3.8, 3.7]
-        numba-version: [0.54, 0.53]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        # python-version: [3.9, 3.8, 3.7]
+        # numba-version: [0.54, 0.53]
+        os: [macos-latest]
+        python-version: [3.9]
+        numba-version: [0.54]
 
-    needs: [lint, omniscidb]
+        
+    #needs: [lint, omniscidb]
 
     steps:
       - name: Checkout code
@@ -74,9 +78,15 @@ jobs:
         shell: bash -l {0}
         run: |
           mamba run -n rbc conda list
+
       - name: Develop rbc
         shell: bash -l {0}
         run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+              # workaround for
+              # https://github.com/conda-forge/clangdev-feedstock/issues/96
+              export SDKROOT=`xcrun --sdk macosx --show-sdk-path`
+          fi
           mamba run -n rbc python setup.py develop
       - name: Run rbc tests
         shell: bash -l {0}
