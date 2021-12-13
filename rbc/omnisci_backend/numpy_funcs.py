@@ -195,7 +195,15 @@ def omnisci_array_fill(x, v):
 @extending.overload_method(ArrayPointer, 'max')
 def omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
-        min_value = get_type_limits(x.eltype).min
+        # the array api standard says this is implementation specific
+        limits = get_type_limits(x.eltype)
+        t = typesystem.Type.fromobject(x.eltype)
+        if t.is_float:
+            min_value = limits.min
+        elif t.is_int or t.is_uint:
+            min_value = 0 if t.is_uint else limits.min + 1
+        else:
+            raise TypeError(f'Unsupported type {t}')
 
         def impl(x, initial=None):
             if len(x) <= 0:
@@ -271,10 +279,7 @@ def omnisci_np_prod(a, initial=None):
 @expose_and_overload(np.mean)
 @extending.overload_method(ArrayPointer, 'mean')
 def omnisci_array_mean(x):
-    if isinstance(x.eltype, types.Integer):
-        zero_value = 0
-    elif isinstance(x.eltype, types.Float):
-        zero_value = np.nan
+    zero_value = np.nan
 
     if isinstance(x, ArrayPointer):
         def impl(x):
