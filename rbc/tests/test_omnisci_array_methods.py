@@ -30,6 +30,7 @@ ndarray_methods = [
     ('max_empty_float64', (0, ), np.finfo(np.float64).min),
     ('max_initial', (5, 4.0, 30.0), 30.0),
     ('mean', (5, 2), 2.0),
+    ('mean', (5, 2.0), 2.0),
     ('mean_empty_int8', (0, ), np.nan),
     ('mean_empty_int16', (0, ), np.nan),
     ('mean_empty_int32', (0, ), np.nan),
