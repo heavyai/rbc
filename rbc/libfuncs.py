@@ -1,6 +1,7 @@
 """Collections of library function names.
 """
 
+import rbc.rbclib
 
 class Library:
     """Base class for a collection of library function names.
@@ -317,5 +318,4 @@ class RBCLib(Library):
     from rbc.rbclib import FUNCTION_NAMES as _function_names
 
     def __init__(self):
-        import rbc.rbclib
         rbc.rbclib.load_inside_llvm()
