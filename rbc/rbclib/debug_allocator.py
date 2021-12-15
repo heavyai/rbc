@@ -39,6 +39,7 @@ class DebugAllocator:
 
     def record_allocate(self, addr):
         self.seq += 1
+        assert addr not in self.alive_memory
         self.alive_memory[addr] = self.seq
 
     def record_free(self, addr):
