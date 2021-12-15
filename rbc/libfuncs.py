@@ -3,6 +3,7 @@
 
 import rbc.rbclib
 
+
 class Library:
     """Base class for a collection of library function names.
     """

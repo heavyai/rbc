@@ -1,5 +1,5 @@
 from ._rbclib import lib, ffi
-from .errors import DebugAllocatorError, InvalidFreeError, MemoryLeakError
+from .errors import DebugAllocatorError, InvalidFreeError, MemoryLeakError  # noqa: F401
 
 
 class DebugAllocator:
