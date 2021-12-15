@@ -10,8 +10,8 @@ This is the file layout:
 
   - _rbclib_build.py is the CFFI build script which is called by setup.py
 
-  - _rbclib.abi3.so is the native extension produced by _rbclib_build.py and that
-    can be imported by 'import rbc.rbclib._rbclib'
+  - _rbclib.abi3.so (_rbclib.pyd on Windows) is the native extension produced
+    by _rbclib_build.py and that can be imported by 'import rbc.rbclib._rbclib'
 
 rbclib functions can be called in two ways:
 
