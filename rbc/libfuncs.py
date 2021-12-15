@@ -315,6 +315,8 @@ class Libdevice(Library):
 class RBCLib(Library):
 
     name = 'rbclib'
+    # _function_names contains the list of functions which is exported by the
+    # library. See Library.check()
     from rbc.rbclib import FUNCTION_NAMES as _function_names
 
     def __init__(self):
