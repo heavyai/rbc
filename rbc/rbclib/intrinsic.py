@@ -1,13 +1,14 @@
 from llvmlite import ir
 from numba.core import extending
 from numba.core import types as nb_types
+from numba.core.errors import TypingError
 from rbc import irutils
 
 
 @extending.intrinsic
 def add_ints(typingctx, a_type, b_type):
     if (a_type, b_type) != (nb_types.int64, nb_types.int64):
-        return None
+        raise TypingError('add_ints(i64, i64)')
 
     sig = nb_types.int64(nb_types.int64, nb_types.int64)
 
