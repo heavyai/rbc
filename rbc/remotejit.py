@@ -13,7 +13,7 @@ from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
 from .targetinfo import TargetInfo
-from .rbclib import debug_allocator
+from .rbclib import tracing_allocator
 # XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
 # we support Arrays even without omnisci, so it must be renamed and moved
 # somewhere elsef
@@ -411,7 +411,7 @@ class RemoteJIT(object):
     typesystem_aliases = dict()
 
     def __init__(self, host='localhost', port=11532,
-                 local=False, debug=False, use_debug_allocator=False):
+                 local=False, debug=False, use_tracing_allocator=False):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -426,17 +426,17 @@ class RemoteJIT(object):
           When True, use local client. Useful for debugging.
         debug : bool
           When True, output debug messages.
-        use_debug_allocator : bool
-          When True, enabled the automatic detection of memory leaks.
+        use_tracing_allocator : bool
+          When True, enable the automatic detection of memory leaks.
         """
         if host == 'localhost':
             host = get_local_ip()
 
-        if use_debug_allocator and not local:
-            raise ValueError('use_debug_allocator=True can be used only with local=True')
+        if use_tracing_allocator and not local:
+            raise ValueError('use_tracing_allocator=True can be used only with local=True')
 
         self.debug = debug
-        self.use_debug_allocator = use_debug_allocator
+        self.use_tracing_allocator = use_tracing_allocator
         self.host = host
         self.port = int(port)
         self.server_process = None
@@ -449,7 +449,7 @@ class RemoteJIT(object):
 
         if local:
             self._client = LocalClient(debug=debug,
-                                       use_debug_allocator=use_debug_allocator)
+                                       use_tracing_allocator=use_tracing_allocator)
         else:
             self._client = None
 
@@ -713,9 +713,9 @@ class DispatcherRJIT(Dispatcher):
     """Implements remotejit service methods.
     """
 
-    def __init__(self, server, debug=False, use_debug_allocator=False):
+    def __init__(self, server, debug=False, use_tracing_allocator=False):
         super().__init__(server, debug=debug)
-        self.use_debug_allocator = use_debug_allocator
+        self.use_tracing_allocator = use_tracing_allocator
         self.compiled_functions = dict()
         self.engines = dict()
         self.python_globals = dict()
@@ -730,9 +730,9 @@ class DispatcherRJIT(Dispatcher):
         info : dict
           Map of target devices and their properties.
         """
-        if self.use_debug_allocator:
-            target_info = TargetInfo.host(name='host_cpu_debug_allocator',
-                                          use_debug_allocator=True)
+        if self.use_tracing_allocator:
+            target_info = TargetInfo.host(name='host_cpu_tracing_allocator',
+                                          use_tracing_allocator=True)
         else:
             target_info = TargetInfo.host()
         target_info.set('has_numba', True)
@@ -784,10 +784,10 @@ class DispatcherRJIT(Dispatcher):
         arguments : tuple
           Specify the arguments to the function.
         """
-        # if we are using a debug allocator, automatically detect memory leaks
+        # if we are using a tracing allocator, automatically detect memory leaks
         # at each call.
-        if self.use_debug_allocator:
-            leak_detector = debug_allocator.new_leak_detector()
+        if self.use_tracing_allocator:
+            leak_detector = tracing_allocator.new_leak_detector()
         else:
             leak_detector = nullcontext()
         with leak_detector:
@@ -858,9 +858,9 @@ class LocalClient(object):
     All calls will be made in a local process. Useful for debbuging.
     """
 
-    def __init__(self, debug=False, use_debug_allocator=False):
+    def __init__(self, debug=False, use_tracing_allocator=False):
         self.dispatcher = DispatcherRJIT(None, debug=debug,
-                                         use_debug_allocator=use_debug_allocator)
+                                         use_tracing_allocator=use_tracing_allocator)
 
     def __call__(self, **services):
         results = {}

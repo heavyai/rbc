@@ -31,9 +31,9 @@ int8_t* rbclib_allocate_varlen_buffer(int64_t element_count, int64_t element_siz
 void rbclib_free_buffer(int8_t *addr);
 
 extern "C+Python" {
-    int8_t* rbclib_debug_allocate_varlen_buffer(int64_t element_count,
-                                                int64_t element_size);
-    void rbclib_debug_free_buffer(int8_t *addr);
+    int8_t* rbclib_tracing_allocate_varlen_buffer(int64_t element_count,
+                                                  int64_t element_size);
+    void rbclib_tracing_free_buffer(int8_t *addr);
 }
 """)
 

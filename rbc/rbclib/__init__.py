@@ -43,7 +43,7 @@ import llvmlite.binding
 from . import _rbclib
 from ._rbclib import lib, ffi  # noqa: F401
 from .intrinsic import add_ints  # noqa: F401
-from . import debug_allocator  # noqa: F401, side effects
+from . import tracing_allocator  # noqa: F401, side effects
 
 # this contains all the C names which we want to expose to the RBC
 # compiler. See libfuncs.RBCLib.
@@ -51,8 +51,8 @@ FUNCTION_NAMES = [
     '_rbclib_add_ints',
     'rbclib_allocate_varlen_buffer',
     'rbclib_free_buffer',
-    'rbclib_debug_allocate_varlen_buffer',
-    'rbclib_debug_free_buffer',
+    'rbclib_tracing_allocate_varlen_buffer',
+    'rbclib_tracing_free_buffer',
 ]
 
 

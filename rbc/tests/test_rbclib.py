@@ -1,18 +1,18 @@
 import pytest
 from rbc.remotejit import RemoteJIT
 from rbc import rbclib
-from rbc.rbclib.debug_allocator import (DebugAllocator, LeakDetector,
-                                        InvalidFreeError, MemoryLeakError)
+from rbc.rbclib.tracing_allocator import (TracingAllocator, LeakDetector,
+                                          InvalidFreeError, MemoryLeakError)
 from .test_numpy_rjit import rjit  # noqa: F401
 
 
 @pytest.fixture
 def djit():
     """
-    Debug JIT: a RemoteJIT() which automatically uses debug_allocator and
+    Debug JIT: a RemoteJIT() which automatically uses tracing_allocator and
     detects memory leaks
     """
-    return RemoteJIT(local=True, debug=True, use_debug_allocator=True)
+    return RemoteJIT(local=True, debug=True, use_tracing_allocator=True)
 
 
 def test_add_ints_cffi():
@@ -27,17 +27,17 @@ def test_add_ints_rjit(rjit):  # noqa: F811
     assert my_add(20, 22) == 42
 
 
-class TestDebugAllocator:
+class TestTracingAllocator:
 
     def test_record_allocate(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         allocator.record_allocate(0x123)
         allocator.record_allocate(0x456)
         assert allocator.seq == 2
         assert allocator.alive_memory == {0x123: 1, 0x456: 2}
 
     def test_record_free(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         allocator.record_allocate(0x123)
         allocator.record_allocate(0x456)
         allocator.record_free(0x123)
@@ -46,7 +46,7 @@ class TestDebugAllocator:
         assert allocator.alive_memory == {0x456: 2, 0x789: 3}
 
     def test_invalid_free(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         # 1. raise in case we try to free an unknown pointer
         with pytest.raises(InvalidFreeError):
             allocator.record_free(0x123)
@@ -62,7 +62,7 @@ class TestDebugAllocator:
 class TestLeakDetector:
 
     def test_no_nested_activation(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         ld = LeakDetector(allocator)
         with ld:
             with pytest.raises(ValueError):
@@ -70,7 +70,7 @@ class TestLeakDetector:
                     pass
 
     def test_double_enter(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         ld = LeakDetector(allocator)
         # check that we can activate the same LeakDetector twice, as long as
         # it's not nested
@@ -80,7 +80,7 @@ class TestLeakDetector:
             pass
 
     def test_no_leak(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         ld = LeakDetector(allocator)
         with ld:
             allocator.record_allocate(0x123)
@@ -89,7 +89,7 @@ class TestLeakDetector:
             allocator.record_free(0x123)
 
     def test_detect_leak(self):
-        allocator = DebugAllocator()
+        allocator = TracingAllocator()
         ld = LeakDetector(allocator)
         with pytest.raises(MemoryLeakError) as exc:
             with ld:
@@ -109,9 +109,9 @@ class Test_djit:
     def test_djit_target_info(self, djit):
         targets = djit.targets
         ti = targets['cpu']
-        assert ti.name == 'host_cpu_debug_allocator'
-        assert ti.use_debug_allocator
-        assert ti.info['fn_allocate_varlen_buffer'] == 'rbclib_debug_allocate_varlen_buffer'
+        assert ti.name == 'host_cpu_tracing_allocator'
+        assert ti.use_tracing_allocator
+        assert ti.info['fn_allocate_varlen_buffer'] == 'rbclib_tracing_allocate_varlen_buffer'
 
     def test_djit_leak(self, djit):
         from rbc.stdlib import array_api as xp

@@ -1,11 +1,12 @@
 from ._rbclib import lib, ffi
-from .errors import DebugAllocatorError, InvalidFreeError, MemoryLeakError  # noqa: F401
+from .errors import TracingAllocatorError, InvalidFreeError, MemoryLeakError  # noqa: F401
 
 
-class DebugAllocator:
+class TracingAllocator:
     """
-    Provide debug versions of allocate_varlen_buffer and free_buffer to detect
-    memory leak.
+    Provide debug versions of allocate_varlen_buffer and free_buffer which
+    keep trace of all the allocation/deallocations in order to detect memory
+    leaks.
 
     The logic is written in pure Python, and it is exposed to the C world
     through CFFI's @def_extern() mechanism.
@@ -59,25 +60,25 @@ class LeakDetector:
 
 
 # global singleton
-_ALLOCATOR = DebugAllocator()
+_ALLOCATOR = TracingAllocator()
 
 
 def new_leak_detector():
     """
-    Return a new instance of LeakDetector associated to the global debug
+    Return a new instance of LeakDetector associated to the global tracing
     allocator
     """
     return LeakDetector(_ALLOCATOR)
 
 
 @ffi.def_extern()
-def rbclib_debug_allocate_varlen_buffer(element_count, element_size):
+def rbclib_tracing_allocate_varlen_buffer(element_count, element_size):
     addr = lib.rbclib_allocate_varlen_buffer(element_count, element_size)
     _ALLOCATOR.record_allocate(addr)
     return addr
 
 
 @ffi.def_extern()
-def rbclib_debug_free_buffer(addr):
+def rbclib_tracing_free_buffer(addr):
     _ALLOCATOR.record_free(addr)
     lib.rbclib_free_buffer(addr)

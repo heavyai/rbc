@@ -1,12 +1,12 @@
-class DebugAllocatorError(Exception):
+class TracingAllocatorError(Exception):
     pass
 
 
-class InvalidFreeError(DebugAllocatorError):
+class InvalidFreeError(TracingAllocatorError):
     pass
 
 
-class MemoryLeakError(DebugAllocatorError):
+class MemoryLeakError(TracingAllocatorError):
 
     def __init__(self, leaks):
         lines = [f'Found {len(leaks)} memory leaks:']

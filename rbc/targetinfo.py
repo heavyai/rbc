@@ -80,7 +80,7 @@ class TargetInfo(object):
         return obj
 
     def _init(self, name: str, strict: bool = False, nested: bool = False,
-              use_debug_allocator: bool = False):
+              use_tracing_allocator: bool = False):
         """
         Parameters
         ----------
@@ -91,13 +91,13 @@ class TargetInfo(object):
           typesystem.
         nested: bool
           When True, allow nested target info contexts.
-        use_debug_allocator: bool
-          When True, use the debug allocator, to enable the LeakDetector
+        use_tracing_allocator: bool
+          When True, use the tracing allocator, to enable the LeakDetector
         """
         self.name = name
         self.strict = strict
         self.nested = nested
-        self.use_debug_allocator = use_debug_allocator
+        self.use_tracing_allocator = use_tracing_allocator
         self._parent = None
         self.info = {}
         self.type_sizeof = {}
@@ -131,7 +131,7 @@ class TargetInfo(object):
 
     def todict(self):
         return dict(name=self.name, strict=self.strict,
-                    use_debug_allocator=self.use_debug_allocator,
+                    use_tracing_allocator=self.use_tracing_allocator,
                     info=self.info,
                     type_sizeof=self.type_sizeof,
                     libraries=[lib.name for lib in self._supported_libraries],
@@ -141,7 +141,7 @@ class TargetInfo(object):
     def fromdict(cls, data):
         target_info = cls(data.get('name', 'somedevice'),
                           strict=data.get('strict', False),
-                          use_debug_allocator=data.get('use_debug_allocator', False))
+                          use_tracing_allocator=data.get('use_tracing_allocator', False))
         target_info.update(data)
         return target_info
 
@@ -178,10 +178,10 @@ class TargetInfo(object):
     _host_target_info_cache = {}
 
     @classmethod
-    def host(cls, name='host_cpu', strict=False, use_debug_allocator=False):
+    def host(cls, name='host_cpu', strict=False, use_tracing_allocator=False):
         """Return target info for host CPU.
         """
-        key = (name, strict, use_debug_allocator)
+        key = (name, strict, use_tracing_allocator)
 
         target_info = TargetInfo._host_target_info_cache.get(key)
         if target_info is not None:
@@ -189,7 +189,7 @@ class TargetInfo(object):
 
         import llvmlite.binding as ll
         target_info = cls(name=name, strict=strict,
-                          use_debug_allocator=use_debug_allocator)
+                          use_tracing_allocator=use_tracing_allocator)
         target_info.set('name', ll.get_host_cpu_name())
         target_info.set('triple', ll.get_default_triple())
         features = ','.join(['-+'[int(v)] + k
@@ -225,11 +225,11 @@ class TargetInfo(object):
         target_info.add_library('stdio')
         target_info.add_library('stdlib')
         target_info.add_library('rbclib')
-        if use_debug_allocator:
+        if use_tracing_allocator:
             target_info.set('fn_allocate_varlen_buffer',
-                            'rbclib_debug_allocate_varlen_buffer')
+                            'rbclib_tracing_allocate_varlen_buffer')
             target_info.set('fn_free_buffer',
-                            'rbclib_debug_free_buffer')
+                            'rbclib_tracing_free_buffer')
         else:
             target_info.set('fn_allocate_varlen_buffer', 'rbclib_allocate_varlen_buffer')
             target_info.set('fn_free_buffer', 'rbclib_free_buffer')
