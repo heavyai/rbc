@@ -21,4 +21,5 @@ dependencies:
   - clang=10
   - clangxx=10
   - six
+  - cffi
   # - cudatoolkit-dev   # disable temporary

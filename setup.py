@@ -44,7 +44,7 @@ def setup_package():
         # Get requirements via PyPI. Use at your own risk as more than
         # once the numba and llvmlite have not matched.
         install_requires = open('requirements.txt', 'r').read().splitlines()
-        setup_requires = ['pytest-runner']
+        setup_requires = ['pytest-runner', 'cffi']
         tests_require = ['pytest']
 
     metadata = dict(
@@ -71,6 +71,7 @@ def setup_package():
         ],
         packages=find_packages(),
         package_data={'': ['*.thrift']},
+        cffi_modules=['rbc/rbclib//_rbclib_build.py:ffibuilder'],
         install_requires=install_requires,
         setup_requires=setup_requires,
         tests_require=tests_require,

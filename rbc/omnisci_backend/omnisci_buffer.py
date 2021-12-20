@@ -154,6 +154,9 @@ def omnisci_buffer_constructor(context, builder, sig, args):
       b = MyBuffer(<size>, ...)
 
     """
+    target_info = TargetInfo()
+    alloc_fn_name = target_info.info['fn_allocate_varlen_buffer']
+
     ptr_type, sz_type = sig.return_type.dtype.members[:2]
     if len(sig.return_type.dtype.members) > 2:
         assert len(sig.return_type.dtype.members) == 3
@@ -166,7 +169,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
 
-    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, "allocate_varlen_buffer")
+    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, alloc_fn_name)
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     # remember possible temporary allocations so that when leaving a
     # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.
@@ -196,8 +199,11 @@ def free_omnisci_buffer(typingctx, ret):
 
         # TODO: using stdlib `free` that works only for CPU. For CUDA
         # devices, we need to use omniscidb provided deallocator.
-        free_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
-        free_fn = irutils.get_or_insert_function(builder.module, free_fnty, "free")
+        target_info = TargetInfo()
+        free_buffer_fn_name = target_info.info['fn_free_buffer']
+        free_buffer_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
+        free_buffer_fn = irutils.get_or_insert_function(
+            builder.module, free_buffer_fnty, free_buffer_fn_name)
 
         # We skip the ret pointer iff we're returning a Buffer
         # otherwise, we free everything
@@ -207,10 +213,10 @@ def free_omnisci_buffer(typingctx, ret):
             ptr = builder.bitcast(ptr, int8_t.as_pointer())
             for ptr8 in buffers:
                 with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
-                    builder.call(free_fn, [ptr8])
+                    builder.call(free_buffer_fn, [ptr8])
         else:
             for ptr8 in buffers:
-                builder.call(free_fn, [ptr8])
+                builder.call(free_buffer_fn, [ptr8])
 
         del builder_buffers[builder]
 

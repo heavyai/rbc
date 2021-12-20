@@ -7,11 +7,17 @@ import os
 import inspect
 import warnings
 import ctypes
+from contextlib import nullcontext
 from . import irtools
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
 from .targetinfo import TargetInfo
+from .rbclib import tracing_allocator
+# XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
+# we support Arrays even without omnisci, so it must be renamed and moved
+# somewhere elsef
+from .omnisci_backend import OmnisciCompilerPipeline
 
 
 def isfunctionlike(obj):
@@ -336,6 +342,7 @@ class Caller(object):
                     llvm_module, succesful_fids = irtools.compile_to_LLVM(
                         [(self.func, signatures_map)],
                         target_info,
+                        pipeline_class=OmnisciCompilerPipeline,
                         debug=self.remotejit.debug)
                     lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
@@ -404,7 +411,7 @@ class RemoteJIT(object):
     typesystem_aliases = dict()
 
     def __init__(self, host='localhost', port=11532,
-                 local=False, debug=False):
+                 local=False, debug=False, use_tracing_allocator=False):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -419,11 +426,17 @@ class RemoteJIT(object):
           When True, use local client. Useful for debugging.
         debug : bool
           When True, output debug messages.
+        use_tracing_allocator : bool
+          When True, enable the automatic detection of memory leaks.
         """
         if host == 'localhost':
             host = get_local_ip()
 
+        if use_tracing_allocator and not local:
+            raise ValueError('use_tracing_allocator=True can be used only with local=True')
+
         self.debug = debug
+        self.use_tracing_allocator = use_tracing_allocator
         self.host = host
         self.port = int(port)
         self.server_process = None
@@ -435,7 +448,8 @@ class RemoteJIT(object):
         self._targets = None
 
         if local:
-            self._client = LocalClient(debug=debug)
+            self._client = LocalClient(debug=debug,
+                                       use_tracing_allocator=use_tracing_allocator)
         else:
             self._client = None
 
@@ -649,7 +663,10 @@ class RemoteJIT(object):
         if self.debug:
             print(f'remote_compile({func}, {ftype})')
         llvm_module, succesful_fids = irtools.compile_to_LLVM(
-            [(func, {0: ftype})], target_info, debug=self.debug)
+            [(func, {0: ftype})],
+            target_info,
+            pipeline_class=OmnisciCompilerPipeline,
+            debug=self.debug)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
         response = self.client(remotejit=dict(
@@ -696,8 +713,9 @@ class DispatcherRJIT(Dispatcher):
     """Implements remotejit service methods.
     """
 
-    def __init__(self, server, debug=False):
+    def __init__(self, server, debug=False, use_tracing_allocator=False):
         super().__init__(server, debug=debug)
+        self.use_tracing_allocator = use_tracing_allocator
         self.compiled_functions = dict()
         self.engines = dict()
         self.python_globals = dict()
@@ -712,7 +730,11 @@ class DispatcherRJIT(Dispatcher):
         info : dict
           Map of target devices and their properties.
         """
-        target_info = TargetInfo.host()
+        if self.use_tracing_allocator:
+            target_info = TargetInfo.host(name='host_cpu_tracing_allocator',
+                                          use_tracing_allocator=True)
+        else:
+            target_info = TargetInfo.host()
         target_info.set('has_numba', True)
         target_info.set('has_cpython', True)
         return dict(cpu=target_info.tojson())
@@ -762,6 +784,16 @@ class DispatcherRJIT(Dispatcher):
         arguments : tuple
           Specify the arguments to the function.
         """
+        # if we are using a tracing allocator, automatically detect memory leaks
+        # at each call.
+        if self.use_tracing_allocator:
+            leak_detector = tracing_allocator.new_leak_detector()
+        else:
+            leak_detector = nullcontext()
+        with leak_detector:
+            return self._do_call(fullname, arguments)
+
+    def _do_call(self, fullname, arguments):
         if self.debug:
             print(f'call({fullname}, {arguments})')
         ef = self.compiled_functions.get(fullname)
@@ -826,8 +858,9 @@ class LocalClient(object):
     All calls will be made in a local process. Useful for debbuging.
     """
 
-    def __init__(self, debug=False):
-        self.dispatcher = DispatcherRJIT(None, debug=debug)
+    def __init__(self, debug=False, use_tracing_allocator=False):
+        self.dispatcher = DispatcherRJIT(None, debug=debug,
+                                         use_tracing_allocator=use_tracing_allocator)
 
     def __call__(self, **services):
         results = {}
