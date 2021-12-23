@@ -258,9 +258,8 @@ def free_buffer(typingctx, buf):
         free_buffer_fn = irutils.get_or_insert_function(
             builder.module, free_buffer_fnty, free_buffer_fn_name)
 
-        # free all the buffers apart value_to_keep_alive
         [buf] = args
-        buf_ptr = builder.load(builder.gep(buf, [int32_t(0), int32_t(0)])) # buf.ptr
+        buf_ptr = builder.load(builder.gep(buf, [int32_t(0), int32_t(0)]))  # buf.ptr
         buf_ptr = builder.bitcast(buf_ptr, int8_t.as_pointer())
         builder.call(free_buffer_fn, [buf_ptr])
 
@@ -583,6 +582,7 @@ def omnisci_buffer_set_null(x, row_idx=None):
                 return omnisci_buffer_idx_set_null(x, row_idx)
             return impl
         return impl
+
 
 @extending.overload_method(BufferPointer, 'free')
 def omnisci_buffer_free(x):

@@ -1,6 +1,4 @@
-import pytest
 from rbc.stdlib import array_api as xp
-from rbc.rbclib.tracing_allocator import MemoryLeakError
 from rbc.omnisci_backend.omnisci_buffer import free_buffer
 from ..test_rbclib import djit  # noqa: F401
 
