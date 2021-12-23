@@ -583,3 +583,10 @@ def omnisci_buffer_set_null(x, row_idx=None):
                 return omnisci_buffer_idx_set_null(x, row_idx)
             return impl
         return impl
+
+@extending.overload_method(BufferPointer, 'free')
+def omnisci_buffer_free(x):
+    if isinstance(x, BufferPointer):
+        def impl(x):
+            return free_buffer(x)
+        return impl

@@ -17,6 +17,18 @@ def test_array_free_function_call(djit):    # noqa: F811
     assert res == 10
 
 
+def test_array_free_method(djit):    # noqa: F811
+
+    @djit('int32(int32)')
+    def fn(size):
+        a = xp.Array(size, xp.float64)
+        a.free()
+        return size
+
+    res = fn(10)
+    assert res == 10
+
+
 @pytest.mark.xfail(raises=MemoryLeakError, reason='issue #377')
 def test_array_constructor_noreturn(djit):    # noqa: F811
 
