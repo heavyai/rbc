@@ -1,7 +1,20 @@
 import pytest
 from rbc.stdlib import array_api as xp
 from rbc.rbclib.tracing_allocator import MemoryLeakError
+from rbc.omnisci_backend.omnisci_buffer import free_buffer
 from ..test_rbclib import djit  # noqa: F401
+
+
+def test_array_free_function_call(djit):    # noqa: F811
+
+    @djit('int32(int32)')
+    def fn(size):
+        a = xp.Array(size, xp.float64)
+        free_buffer(a)
+        return size
+
+    res = fn(10)
+    assert res == 10
 
 
 @pytest.mark.xfail(raises=MemoryLeakError, reason='issue #377')

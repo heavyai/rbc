@@ -242,6 +242,32 @@ def free_all_other_buffers(typingctx, value_to_keep_alive):
 
 
 @extending.intrinsic
+def free_buffer(typingctx, buf):
+    """
+    Free a buffer
+    """
+    sig = types.void(buf)
+    assert isinstance(buf, BufferPointer)
+
+    def codegen(context, builder, signature, args):
+        # TODO: using stdlib `free` that works only for CPU. For CUDA
+        # devices, we need to use omniscidb provided deallocator.
+        target_info = TargetInfo()
+        free_buffer_fn_name = target_info.info['fn_free_buffer']
+        free_buffer_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
+        free_buffer_fn = irutils.get_or_insert_function(
+            builder.module, free_buffer_fnty, free_buffer_fn_name)
+
+        # free all the buffers apart value_to_keep_alive
+        [buf] = args
+        buf_ptr = builder.load(builder.gep(buf, [int32_t(0), int32_t(0)])) # buf.ptr
+        buf_ptr = builder.bitcast(buf_ptr, int8_t.as_pointer())
+        builder.call(free_buffer_fn, [buf_ptr])
+
+    return sig, codegen
+
+
+@extending.intrinsic
 def omnisci_buffer_ptr_get_ptr_(typingctx, data):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
