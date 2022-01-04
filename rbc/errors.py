@@ -17,10 +17,14 @@ class OmnisciServerError(Exception):
 
 class UnsupportedError(Exception):
     """
-    Raised when an attempt to use a feature that is not supported
-    for a given target.
+    Raised when an attempt to use a feature that is not supported for
+    a given target. The attempt may be made both in lowering as well
+    as in typing phase.
     """
-    pass
+    def __init__(self, *args, **kwargs):
+        # numba mangles exception messages. Here we insert the exception
+        # name so that irtools can demangle the messages.
+        Exception.__init__(self, type(self).__name__, *args, **kwargs)
 
 
 class ForbiddenNameError(Exception):
