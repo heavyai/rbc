@@ -60,7 +60,8 @@ enum TOutputBufferSizeType {
   kConstant,
   kUserSpecifiedConstantParameter,
   kUserSpecifiedRowMultiplier,
-  kTableFunctionSpecifiedParameter
+  kTableFunctionSpecifiedParameter,
+  kPreFlightParameter
 }
 
 struct TUserDefinedFunction {
