@@ -1,6 +1,6 @@
 # RBC - Remote Backend Compiler
 
-[![Travis CI](https://travis-ci.org/xnd-project/rbc.svg?branch=master)](https://travis-ci.org/xnd-project/rbc) [![Appveyor CI](https://ci.appveyor.com/api/projects/status/i9xbkqkvomhbr8n4/branch/master?svg=true)](https://ci.appveyor.com/project/pearu/rbc-mnh7b/branch/master) [![Documentation Status](https://readthedocs.org/projects/rbc/badge/?version=latest)](https://rbc.readthedocs.io/en/latest/?badge=latest)
+[![GitHub Actions](https://github.com/xnd-project/rbc/actions/workflows/rbc_test.yml/badge.svg)](https://github.com/xnd-project/rbc/actions) [![Documentation Status](https://readthedocs.org/projects/rbc/badge/?version=latest)](https://rbc.readthedocs.io/en/latest/?badge=latest)
 
 ## Introduction - test
 
