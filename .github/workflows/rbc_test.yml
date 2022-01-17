@@ -106,15 +106,9 @@ jobs:
         os: [ubuntu-latest]
         python-version: ['3.9', '3.8', '3.7']
         numba-version: ['0.55', '0.54']
-        omniscidb-version: ['5.10', '5.9', '5.8', '5.7']
+        omniscidb-version: ['5.9', '5.8', '5.7']
         omniscidb-from: [conda]
         include:
-          - os: ubuntu-latest
-            python-version: '3.10'
-            numba-version: '0.55'
-            omniscidb-version: '5.10'
-            docker-image:
-            omniscidb-from: conda
           - os: ubuntu-latest
             python-version: '3.10'
             numba-version: '0.55'
