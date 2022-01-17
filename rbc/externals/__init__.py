@@ -3,15 +3,15 @@ from numba.core import funcdesc
 
 
 def gen_codegen(fn_name):
-    def codegen(context, builder, sig, args):
-        module = builder.module
-        if fn_name.startswith('llvm.'):
-            func = module.declare_intrinsic(fn_name, [a.type for a in args])
-        else:
+    if fn_name.startswith('llvm.'):
+        def codegen(context, builder, sig, args):
+            func = builder.module.declare_intrinsic(fn_name, [a.type for a in args])
+            return builder.call(func, args)
+    else:
+        def codegen(context, builder, sig, args):
             fndesc = funcdesc.ExternalFunctionDescriptor(fn_name, sig.return_type, sig.args)
-            func = context.declare_external_function(module, fndesc)
-        fn = builder.call(func, args)
-        return fn
+            func = context.declare_external_function(builder.module, fndesc)
+            return builder.call(func, args)
 
     return codegen
 
