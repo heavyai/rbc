@@ -40,7 +40,17 @@ functions. However, using CFFI has many advantages:
 """
 
 import llvmlite.binding
-from . import _rbclib
+try:
+    from . import _rbclib
+except ImportError as e:
+    # improve the ImportError error message
+    msg = ("cannot import rbc.rbclib._rbclib: this probably indicates "
+           "that rbc has not been built/installed correctly, possibly "
+           "because cffi was not available at compilation time")
+    e.msg = msg
+    e.args = (msg,)
+    raise
+
 from ._rbclib import lib, ffi  # noqa: F401
 from .intrinsic import add_ints  # noqa: F401
 from . import tracing_allocator  # noqa: F401, side effects
