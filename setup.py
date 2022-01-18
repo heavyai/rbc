@@ -41,10 +41,10 @@ def setup_package():
         # ignored and result in an ImportError at runtime
         try:
             import cffi  # noqa: F401
-        except ImportError:
-            msg = ('Cannot find cffi, which is a required build-time dependency. '
-                   'Please do:\n'
-                   '              conda install -c conda-forge cffi')
+        except ImportError as e:
+            msg = (f'{e}\n'
+                   f'cffi is a required build-time dependency, please do:\n'
+                   f'    conda install -c conda-forge cffi')
             raise RuntimeError(msg)
     else:
         # Get requirements via PyPI. Use at your own risk as more than

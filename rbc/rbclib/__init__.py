@@ -44,7 +44,7 @@ try:
     from . import _rbclib
 except ImportError as e:
     # improve the ImportError error message
-    msg = ("cannot import rbc.rbclib._rbclib: this probably indicates "
+    msg = (f"{e}\nThis probably indicates "
            "that rbc has not been built/installed correctly, possibly "
            "because cffi was not available at compilation time")
     e.msg = msg
