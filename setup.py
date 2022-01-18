@@ -1,6 +1,5 @@
 import os
 import sys
-import builtins
 import versioneer
 
 if sys.version_info[:2] < (3, 7):
@@ -41,7 +40,7 @@ def setup_package():
         # manually check that cffi is available, else _rbclib is silently
         # ignored and result in an ImportError at runtime
         try:
-            import cffi
+            import cffi  # noqa: F401
         except ImportError:
             msg = ('Cannot find cffi, which is a required build-time dependency. '
                    'Please do:\n'
