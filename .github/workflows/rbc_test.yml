@@ -177,7 +177,11 @@ jobs:
           mkdir data
           mamba run -n omniscidb-env omnisci_initdb data -f
           mamba run -n omniscidb-env omnisci_server --version
-          mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions \> omniscidb-output.txt 2\>\&1 \& echo \$! \> omniscidb.pid
+          if [[ ${omniscidb-version} -eq '5.10' ]] then
+            mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions --enable-dev-table-functions \> omniscidb-output.txt 2\>\&1 \& echo \$! \> omniscidb.pid
+          else
+            mamba run -n omniscidb-env omnisci_server --enable-runtime-udf --enable-table-functions \> omniscidb-output.txt 2\>\&1 \& echo \$! \> omniscidb.pid
+          fi
           sleep 10
           cat omniscidb.pid
 
