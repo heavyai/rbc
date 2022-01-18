@@ -227,6 +227,14 @@ jobs:
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
 
+      - name: Show Omniscidb conda logs on failure [conda]
+        shell: bash -l {0}
+        if: failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'conda'
+        run: |
+          mamba run -n omniscidb-env cat data/mapd_log/omnisci_server.INFO
+          mamba run -n omniscidb-env cat data/mapd_log/omnisci_server.WARNING
+          mamba run -n omniscidb-env cat data/mapd_log/omnisci_server.ERROR
+
       - name: Show Omniscidb docker logs on failure [docker]
         shell: bash -l {0}
         if: failure() && matrix.os == 'ubuntu-latest' && matrix.omniscidb-from == 'docker'
