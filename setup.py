@@ -6,8 +6,6 @@ import versioneer
 if sys.version_info[:2] < (3, 7):
     raise RuntimeError("Python version >= 3.7 required.")
 
-builtins.__RBC_SETUP__ = True
-
 if os.path.exists('MANIFEST'):
     os.remove('MANIFEST')
 
@@ -96,4 +94,3 @@ def setup_package():
 
 if __name__ == '__main__':
     setup_package()
-    del builtins.__RBC_SETUP__
