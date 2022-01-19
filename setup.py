@@ -1,12 +1,9 @@
 import os
 import sys
-import builtins
 import versioneer
 
 if sys.version_info[:2] < (3, 7):
     raise RuntimeError("Python version >= 3.7 required.")
-
-builtins.__RBC_SETUP__ = True
 
 if os.path.exists('MANIFEST'):
     os.remove('MANIFEST')
@@ -40,6 +37,15 @@ def setup_package():
         install_requires = []
         setup_requires = []
         tests_require = []
+        # manually check that cffi is available, else _rbclib is silently
+        # ignored and result in an ImportError at runtime
+        try:
+            import cffi  # noqa: F401
+        except ImportError as e:
+            msg = (f'{e}\n'
+                   f'cffi is a required build-time dependency, please do:\n'
+                   f'    conda install -c conda-forge cffi')
+            raise RuntimeError(msg)
     else:
         # Get requirements via PyPI. Use at your own risk as more than
         # once the numba and llvmlite have not matched.
@@ -87,4 +93,3 @@ def setup_package():
 
 if __name__ == '__main__':
     setup_package()
-    del builtins.__RBC_SETUP__
