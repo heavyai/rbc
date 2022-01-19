@@ -1,5 +1,5 @@
 from rbc.errors import NumbaTypeError
-from .omnisci_buffer import BufferMeta, free_omnisci_buffer
+from .omnisci_buffer import BufferMeta, free_all_other_buffers
 from numba.core import ir
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.compiler_machinery import FunctionPass, register_pass
@@ -10,8 +10,18 @@ from numba.core.untyped_passes import IRProcessing
 # mutate the control flow graph and that it is not an analysis_only pass (it
 # potentially mutates the IR).
 @register_pass(mutates_CFG=False, analysis_only=False)
-class FreeOmnisciBuffer(FunctionPass):
-    _name = "free_omnisci_buffers"  # the common name for the pass
+class AutoFreeBuffers(FunctionPass):
+    """
+    Black magic at work.
+
+    The goal of this pass is to "automagically" free all the buffers which
+    were allocated, apart the one which is used as a return value (if any).
+
+    NOTE: at the moment of writing there are very few tests for this and it's
+    likely that it is broken and/or does not work properly in the general
+    case. [Remove this note once we are confident that it works well]
+    """
+    _name = "auto_free_buffers"  # the common name for the pass
 
     def __init__(self):
         FunctionPass.__init__(self)
@@ -39,8 +49,8 @@ class FreeOmnisciBuffer(FunctionPass):
             scope = blk.scope
             for ret in blk.find_insts(ir.Return):
 
-                name = "free_omnisci_buffer_fn"
-                value = ir.Global(name, free_omnisci_buffer, loc)
+                name = "free_all_other_buffers_fn"
+                value = ir.Global(name, free_all_other_buffers, loc)
                 target = scope.make_temp(loc)
                 stmt = ir.Assign(value, target, loc)
                 blk.insert_before_terminator(stmt)
@@ -80,7 +90,7 @@ class OmnisciCompilerPipeline(CompilerBase):
         # namely the "nopython" pipeline
         pm = DefaultPassBuilder.define_nopython_pipeline(self.state)
         # Add the new pass to run after IRProcessing
-        pm.add_pass_after(FreeOmnisciBuffer, IRProcessing)
+        pm.add_pass_after(AutoFreeBuffers, IRProcessing)
         pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         # finalize
         pm.finalize()
