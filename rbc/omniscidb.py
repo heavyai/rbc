@@ -832,6 +832,11 @@ class RemoteOmnisci(RemoteJIT):
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('omniscidb')
+                # NOTE: eventually, we want omniscidb to provide a
+                # 'free_buffer' function, but in the meantime we just call
+                # free()
+                target_info.set('fn_allocate_varlen_buffer', 'allocate_varlen_buffer')
+                target_info.set('fn_free_buffer', 'free')
             elif target_info.is_gpu and self.version >= (5, 5):
                 target_info.add_library('libdevice')
 
