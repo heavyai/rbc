@@ -32,7 +32,7 @@ from rbc import typesystem, irutils
 from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 from numba.core import datamodel, cgutils, extending, types
-
+from rbc.errors import UnsupportedError
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -155,7 +155,10 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
     """
     target_info = TargetInfo()
-    alloc_fn_name = target_info.info['fn_allocate_varlen_buffer']
+    try:
+        alloc_fn_name = target_info.info['fn_allocate_varlen_buffer']
+    except KeyError as msg:
+        raise UnsupportedError(f'{target_info} does not provide {msg}')
 
     ptr_type, sz_type = sig.return_type.dtype.members[:2]
     if len(sig.return_type.dtype.members) > 2:
@@ -200,7 +203,10 @@ def free_omnisci_buffer(typingctx, ret):
         # TODO: using stdlib `free` that works only for CPU. For CUDA
         # devices, we need to use omniscidb provided deallocator.
         target_info = TargetInfo()
-        free_buffer_fn_name = target_info.info['fn_free_buffer']
+        try:
+            free_buffer_fn_name = target_info.info['fn_free_buffer']
+        except KeyError as msg:
+            raise UnsupportedError(f'{target_info} does not provide {msg}')
         free_buffer_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
         free_buffer_fn = irutils.get_or_insert_function(
             builder.module, free_buffer_fnty, free_buffer_fn_name)
