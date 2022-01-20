@@ -294,7 +294,7 @@ class RemoteOmnisci(RemoteJIT):
         ... def farenheight2celcius(f):
         ...     return (f - 32) * 5 / 9
         ...
-        >>> _, r=omni.sql_execute('select farenheight2celcius(40)')
+        >>> _, r = omni.sql_execute('select farenheight2celcius(40)')
         >>> print(list(r))
         [(4.444444444444445,)]
 
@@ -306,7 +306,7 @@ class RemoteOmnisci(RemoteJIT):
         >>> def farenheight2celcius(f):
         ...     return (f - 32) * 5 / 9
         ...
-        >>> omni('double(double)')(farenheight2celcius)
+        >>> decorated = omni('double(double)')(farenheight2celcius)
         >>> _, r=omni.sql_execute('select farenheight2celcius(40)')
         >>> print(list(r))
         [(4.444444444444445,)]
