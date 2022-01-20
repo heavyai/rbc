@@ -194,8 +194,20 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
 
 @extending.intrinsic
-def free_omnisci_buffer(typingctx, ret):
-    sig = types.void(ret)
+def free_all_other_buffers(typingctx, value_to_keep_alive):
+    """
+    Black magic function which automatically frees all the buffers which were
+    allocated in the function apart the given one.
+
+    value_to_keep_alive can be of any type:
+      - if it's of a Buffer type, it will be kept alive and not freed
+      - if it's of any other type, all buffers will be freed unconditionally
+
+    The end user should never call this function explicitly: it is
+    automatically inserted by omnisci_pipeline.AutoFreeBuffers.
+    """
+
+    sig = types.void(value_to_keep_alive)
 
     def codegen(context, builder, signature, args):
         buffers = builder_buffers[builder]
@@ -211,20 +223,45 @@ def free_omnisci_buffer(typingctx, ret):
         free_buffer_fn = irutils.get_or_insert_function(
             builder.module, free_buffer_fnty, free_buffer_fn_name)
 
-        # We skip the ret pointer iff we're returning a Buffer
-        # otherwise, we free everything
-        if isinstance(ret, BufferPointer):
-            [arg] = args
-            ptr = builder.load(builder.gep(arg, [int32_t(0), int32_t(0)]))
-            ptr = builder.bitcast(ptr, int8_t.as_pointer())
+        if isinstance(value_to_keep_alive, BufferPointer):
+            # free all the buffers apart value_to_keep_alive
+            [keep_alive] = args
+            keep_alive_ptr = builder.load(builder.gep(keep_alive, [int32_t(0), int32_t(0)]))
+            keep_alive_ptr = builder.bitcast(keep_alive_ptr, int8_t.as_pointer())
             for ptr8 in buffers:
-                with builder.if_then(builder.icmp_signed('!=', ptr, ptr8)):
+                with builder.if_then(builder.icmp_signed('!=', keep_alive_ptr, ptr8)):
                     builder.call(free_buffer_fn, [ptr8])
         else:
+            # free all the buffers unconditionally
             for ptr8 in buffers:
                 builder.call(free_buffer_fn, [ptr8])
 
         del builder_buffers[builder]
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def free_buffer(typingctx, buf):
+    """
+    Free a buffer
+    """
+    sig = types.void(buf)
+    assert isinstance(buf, BufferPointer)
+
+    def codegen(context, builder, signature, args):
+        # TODO: using stdlib `free` that works only for CPU. For CUDA
+        # devices, we need to use omniscidb provided deallocator.
+        target_info = TargetInfo()
+        free_buffer_fn_name = target_info.info['fn_free_buffer']
+        free_buffer_fnty = llvm_ir.FunctionType(void_t, [int8_t.as_pointer()])
+        free_buffer_fn = irutils.get_or_insert_function(
+            builder.module, free_buffer_fnty, free_buffer_fn_name)
+
+        [buf] = args
+        buf_ptr = builder.load(builder.gep(buf, [int32_t(0), int32_t(0)]))  # buf.ptr
+        buf_ptr = builder.bitcast(buf_ptr, int8_t.as_pointer())
+        builder.call(free_buffer_fn, [buf_ptr])
 
     return sig, codegen
 
@@ -545,4 +582,12 @@ def omnisci_buffer_set_null(x, row_idx=None):
             def impl(x, row_idx=None):
                 return omnisci_buffer_idx_set_null(x, row_idx)
             return impl
+        return impl
+
+
+@extending.overload_method(BufferPointer, 'free')
+def omnisci_buffer_free(x):
+    if isinstance(x, BufferPointer):
+        def impl(x):
+            return free_buffer(x)
         return impl
