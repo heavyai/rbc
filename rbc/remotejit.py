@@ -66,7 +66,7 @@ def extract_templates(options):
     return new_options, templates
 
 
-class Signature(object):
+class Signature:
     """Signature decorator for Python functions.
 
     A Signature decorator may contain many signature objects
@@ -280,7 +280,7 @@ class Signature(object):
         return signature
 
 
-class Caller(object):
+class Caller:
     """Remote JIT caller, holds the decorated function that can be
     executed remotely.
     """
@@ -377,7 +377,7 @@ class Caller(object):
             return self.remotejit.remote_call(self.func, ftype, arguments)
 
 
-class RemoteJIT(object):
+class RemoteJIT:
     """RemoteJIT is a decorator generator for user functions to be
     remotely JIT compiled.
 
@@ -852,7 +852,7 @@ class DebugDispatcherRJIT(DispatcherRJIT):
     debug = True
 
 
-class LocalClient(object):
+class LocalClient:
     """Pretender of thrift.Client.
 
     All calls will be made in a local process. Useful for debbuging.
