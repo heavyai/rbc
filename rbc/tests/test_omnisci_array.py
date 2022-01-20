@@ -471,3 +471,18 @@ def test_issue77(omnisci):
             _, result = omnisci.sql_execute('select issue77();')
 
         assert exc.match('Could not bind issue77()')
+
+
+def test_array_dtype(omnisci):
+    table = omnisci.table_name
+
+    @omnisci('T(T[])', T=['int32', 'int64'])
+    def array_dtype_fn(x):
+        if x.dtype == nb_types.int32:
+            return 32
+        else:
+            return 64
+
+    for col, r in (('i4', 32), ('i8', 64)):
+        _, result = omnisci.sql_execute(f'select array_dtype_fn({col}) from {table}')
+        assert list(result) == [(r,)] * 5

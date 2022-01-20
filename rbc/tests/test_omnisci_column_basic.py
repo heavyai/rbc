@@ -814,3 +814,36 @@ def test_column_different_sizes(omnisci):
 
     expected = [(10.0,), (60.0,), (180.0,), (240.0,), (300.0,)]
     assert list(result) == expected
+
+
+def test_column_dtype(omnisci):
+    from numba import types
+    table = omnisci.table_name
+
+    @omnisci('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
+             T=['int32', 'int64', 'float', 'double'])
+    def col_dtype_fn(x, m, y):
+        sz = len(x)
+        for i in range(sz):
+            if x.dtype == types.int32:
+                y[i] = 1
+            elif x.dtype == types.int64:
+                y[i] = 2
+            elif x.dtype == types.float32:
+                y[i] = 3.0
+            elif x.dtype == types.float64:
+                y[i] = 4.0
+            else:
+                y[i] = 'hello world'  # this ought be removed by DCE
+        return sz
+
+    inpts = (
+        ('i4', 1),
+        ('i8', 2),
+        ('f4', 3.0),
+        ('f8', 4.0),
+    )
+    for col, r in inpts:
+        query = f'select * from table(col_dtype_fn(cursor(select {col} from {table}), 1))'
+        _, result = omnisci.sql_execute(query)
+        assert list(result) == [(r,)] * 5

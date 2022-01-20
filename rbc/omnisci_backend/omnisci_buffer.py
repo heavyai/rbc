@@ -590,3 +590,23 @@ def omnisci_buffer_free(x):
         def impl(x):
             return free_buffer(x)
         return impl
+
+
+@extending.overload(operator.eq)
+def dtype_eq(a, b):
+    if isinstance(a, types.DTypeSpec) and isinstance(b, types.DTypeSpec):
+        eq = (a == b)
+
+        def impl(a, b):
+            return eq
+        return impl
+
+
+@extending.overload_attribute(BufferPointer, 'dtype')
+def omnisci_buffer_dtype(x):
+    if isinstance(x, BufferPointer):
+        dtype = x.eltype
+
+        def impl(x):
+            return dtype
+        return impl
