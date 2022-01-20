@@ -282,9 +282,9 @@ class RemoteOmnisci(RemoteJIT):
         self.user_defined_llvm_ir = {}
 
     def __call__(self, *args, **kwargs):
-        msg = """Decorated functions called directly. Decorated function are
-        not meant to be called directly, but are registered and later
-        executed directly on the database.
+        msg = """Cannot call functions decorated by `RemoteOmnisci`.
+        These functions are registered on the database and can be called only
+        from a SQL query.
 
         Following is a proper usage of `RemoteOmnisci`.
 
