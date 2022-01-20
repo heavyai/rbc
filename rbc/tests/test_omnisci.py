@@ -1,6 +1,8 @@
 import os
 import itertools
 import pytest
+
+from rbc.errors import UnsupportedError
 from rbc.tests import omnisci_fixture
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -61,6 +63,18 @@ def nb_version():
 def omnisci():
     for o in omnisci_fixture(globals()):
         yield o
+
+
+def test_direct_call(omnisci):
+    omnisci.reset()
+
+    @omnisci('double(double)')
+    def farenheight2celcius(f):
+        return (f - 32) * 5 / 9
+
+    msg = "Decorated functions called directly"
+    with pytest.raises(UnsupportedError, match=msg):
+        farenheight2celcius(40)
 
 
 def test_redefine(omnisci):
