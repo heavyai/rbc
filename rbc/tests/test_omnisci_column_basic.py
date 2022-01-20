@@ -550,7 +550,6 @@ def test_column_aggregate(omnisci, prop, oper):
     omnisci.reset()
     omnisci.register()
 
-
     if prop == 'groupby' and oper == 'corr':
         pytest.skip('omniscidb server crashes')
 
