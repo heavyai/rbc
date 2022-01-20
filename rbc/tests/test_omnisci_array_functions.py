@@ -140,3 +140,17 @@ def test_array_methods(omnisci, method, signature, args, expected):
     out = list(result)[0]
 
     assert np.array_equal(expected, out[0]), 'np_' + method
+
+
+@pytest.mark.parametrize('col', ('i4', 'i8', 'f4'))
+def test_dtype(omnisci, col):
+    omnisci.reset()
+
+    @omnisci('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
+    def zeros_like(x):
+        z = omni.zeros(len(x), x.dtype)
+        return z
+
+    query = f'select zeros_like({col}) from {omnisci.table_name} limit 1;'
+    _, result = omnisci.sql_execute(query)
+    assert np.all(list(result)[0][0] == np.zeros(6, dtype=col))
