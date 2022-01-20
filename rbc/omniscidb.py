@@ -18,7 +18,7 @@ from .omnisci_backend import (
     BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import ForbiddenNameError, OmnisciServerError
+from .errors import ForbiddenNameError, OmnisciServerError, UnsupportedError
 from .utils import parse_version
 from . import ctools
 from . import typesystem
@@ -280,6 +280,40 @@ class RemoteOmnisci(RemoteJIT):
 
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
+
+    def __call__(self, *args, **kwargs):
+        msg = """Decorated functions called directly. Decorated function are
+        not meant to be called directly, but are registered and later
+        executed directly on the database.
+
+        Following is a proper usage of `RemoteOmnisci`.
+
+        >>> from rbc.omniscidb import RemoteOmnisci
+        >>> omni = RemoteOmnisci()
+        >>> @omni('double(double)')
+        ... def farenheight2celcius(f):
+        ...     return (f - 32) * 5 / 9
+        ...
+        >>> _, r=omni.sql_execute('select farenheight2celcius(40)')
+        >>> print(list(r))
+        [(4.444444444444445,)]
+
+        Alternatively, you can define a Python function and decorate it
+        in a second step. This allows you to be able to call the Python
+        function. In any case, the decorated function cannot be called.
+
+        >>> omni = RemoteOmnisci()
+        >>> def farenheight2celcius(f):
+        ...     return (f - 32) * 5 / 9
+        ...
+        >>> omni('double(double)')(farenheight2celcius)
+        >>> _, r=omni.sql_execute('select farenheight2celcius(40)')
+        >>> print(list(r))
+        [(4.444444444444445,)]
+        >>> print(farenheight2celcius(40))
+        4.444444444444445
+        """
+        raise UnsupportedError(msg)
 
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.
