@@ -320,8 +320,7 @@ class Caller:
 
     def __repr__(self):
         msg = (
-            f"{type(self).__name__}({self.func}, {self.signature}, "
-            f"describe={self.describe()})"
+            f"{type(self).__name__}({self.func}, {self.signature})"
         )
         return msg
 
