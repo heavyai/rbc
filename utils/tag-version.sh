@@ -28,4 +28,4 @@ fi
 # tag a commit
 echo "Creating a new tag"
 git tag -a ${TAG_STR} -m "Bumping rbc to version ${TAG_STR}"
-git push origin master --tags
+git push origin ${TAG_STR}
