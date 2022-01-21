@@ -300,7 +300,7 @@ class TargetInfo(object):
             return bits
         # expand this dict as needed
         return dict(x86_64=64, nvptx64=64,
-                    x86=32, nvptx=32)[self.arch]
+                    x86=32, nvptx=32, arm64=64)[self.arch]
 
     @property
     def datalayout(self):
