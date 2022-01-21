@@ -320,7 +320,7 @@ class Caller(object):
         if not self.remotejit._supports_callable_caller:
             msg = (
                 "Cannot create a local `Caller` when using "
-                f"{type(self.remotejit)}."
+                f"{type(self.remotejit).__name__}."
             )
             raise UnsupportedError(msg)
 
@@ -369,7 +369,7 @@ class Caller(object):
         if not self.remotejit._supports_callable_caller:
             msg = (
                 "Cannot call functions decorated by "
-                f"{type(self.remotejit)}."
+                f"{type(self.remotejit).__name__}."
             )
             raise UnsupportedError(msg)
 
