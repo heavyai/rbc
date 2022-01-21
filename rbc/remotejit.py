@@ -317,6 +317,13 @@ class Caller(object):
         """Return Caller instance that executes function calls on the local
         host. Useful for debugging.
         """
+        if not self.remotejit._supports_callable_caller:
+            msg = (
+                "Cannot create a local `Caller` when using "
+                f"{type(self.remotejit)}."
+            )
+            raise UnsupportedError(msg)
+
         return Caller(self.func, self.signature.local)
 
     def __repr__(self):

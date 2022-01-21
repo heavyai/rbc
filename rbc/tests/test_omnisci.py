@@ -77,6 +77,19 @@ def test_direct_call(omnisci):
         farenheight2celcius(40)
 
 
+def test_local_caller(omnisci):
+    omnisci.reset()
+
+    def func(f):
+        return f
+
+    caller = omnisci('double(double)')(func)
+
+    msg = "Cannot call functions"
+    with pytest.raises(UnsupportedError, match=msg):
+        _ = caller.local
+
+
 def test_redefine(omnisci):
     omnisci.reset()
 

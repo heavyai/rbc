@@ -18,7 +18,7 @@ from .omnisci_backend import (
     BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import ForbiddenNameError, OmnisciServerError, UnsupportedError
+from .errors import ForbiddenNameError, OmnisciServerError
 from .utils import parse_version
 from . import ctools
 from . import typesystem
