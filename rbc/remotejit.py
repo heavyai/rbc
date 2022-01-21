@@ -362,9 +362,7 @@ class Caller(object):
         if not self.remotejit._supports_callable_caller:
             msg = (
                 "Cannot call functions decorated by "
-                f"{self.remotejit.__class__}. These functions are "
-                "registered on the database and can be called "
-                "only from a SQL query."
+                f"{type(self.remotejit)}."
             )
             raise UnsupportedError(msg)
 
