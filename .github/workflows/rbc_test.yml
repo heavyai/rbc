@@ -10,7 +10,7 @@ on:
 # kill any previous running job on a new commit
 concurrency:
   group: build-and-test-rbc-${{ github.head_ref }}
-  cancel-on-progress: true
+  cancel-in-progress: true
 
 jobs:
   lint:
