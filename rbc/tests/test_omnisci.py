@@ -85,7 +85,7 @@ def test_local_caller(omnisci):
 
     caller = omnisci('double(double)')(func)
 
-    msg = "Cannot call functions"
+    msg = "Cannot create a local `Caller`"
     with pytest.raises(UnsupportedError, match=msg):
         _ = caller.local
 
