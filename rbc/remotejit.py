@@ -9,6 +9,7 @@ import warnings
 import ctypes
 from contextlib import nullcontext
 from . import irtools
+from .errors import UnsupportedError
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
@@ -316,6 +317,13 @@ class Caller:
         """Return Caller instance that executes function calls on the local
         host. Useful for debugging.
         """
+        if not self.remotejit._supports_callable_caller:
+            msg = (
+                "Cannot create a local `Caller` when using "
+                f"{type(self.remotejit).__name__}."
+            )
+            raise UnsupportedError(msg)
+
         return Caller(self.func, self.signature.local)
 
     def __repr__(self):
@@ -357,6 +365,13 @@ class Caller:
     def __call__(self, *arguments, **options):
         """Return the result of a remote JIT compiled function call.
         """
+        if not self.remotejit._supports_callable_caller:
+            msg = (
+                "Cannot call functions decorated by "
+                f"{type(self.remotejit).__name__}."
+            )
+            raise UnsupportedError(msg)
+
         device = options.get('device')
         targets = self.remotejit.targets
         if device is None:
@@ -445,6 +460,8 @@ class RemoteJIT:
         self._callers = []
         self._last_compile = None
         self._targets = None
+        # Some callers cannot be locally called
+        self._supports_callable_caller = True
 
         if local:
             self._client = LocalClient(debug=debug,

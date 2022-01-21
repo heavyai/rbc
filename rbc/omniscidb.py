@@ -278,6 +278,9 @@ class RemoteOmnisci(RemoteJIT):
         self.has_cuda = None
         self._null_values = dict()
 
+        # Registered functions can only be called from a SQL query
+        self._supports_callable_caller = False
+
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
 
