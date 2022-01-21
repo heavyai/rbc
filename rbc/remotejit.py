@@ -319,8 +319,11 @@ class Caller:
         return Caller(self.func, self.signature.local)
 
     def __repr__(self):
-        return '%s(%s, %s, local=%s)' % (type(self).__name__, self.func,
-                                         self.signature, self.local)
+        msg = (
+            f"{type(self).__name__}({self.func}, {self.signature}, "
+            f"describe={self.describe()})"
+        )
+        return msg
 
     def __str__(self):
         return self.describe()
