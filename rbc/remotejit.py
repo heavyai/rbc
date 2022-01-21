@@ -9,6 +9,7 @@ import warnings
 import ctypes
 from contextlib import nullcontext
 from . import irtools
+from .errors import UnsupportedError
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip
@@ -358,6 +359,15 @@ class Caller(object):
     def __call__(self, *arguments, **options):
         """Return the result of a remote JIT compiled function call.
         """
+        if not self.remotejit._supports_callable_caller:
+            msg = (
+                "Cannot call functions decorated by "
+                f"{self.remotejit.__class__}. These functions are "
+                "registered on the database and can be called "
+                "only from a SQL query."
+            )
+            raise UnsupportedError(msg)
+
         device = options.get('device')
         targets = self.remotejit.targets
         if device is None:
@@ -446,6 +456,8 @@ class RemoteJIT(object):
         self._callers = []
         self._last_compile = None
         self._targets = None
+        # Some callers cannot be locally called
+        self._supports_callable_caller = True
 
         if local:
             self._client = LocalClient(debug=debug,

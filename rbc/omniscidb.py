@@ -278,42 +278,11 @@ class RemoteOmnisci(RemoteJIT):
         self.has_cuda = None
         self._null_values = dict()
 
+        # Registered functions can only be called from a SQL query
+        self._supports_callable_caller = False
+
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
-
-    def __call__(self, *args, **kwargs):
-        msg = """Cannot call functions decorated by `RemoteOmnisci`.
-        These functions are registered on the database and can be called only
-        from a SQL query.
-
-        Following is a proper usage of `RemoteOmnisci`.
-
-        >>> from rbc.omniscidb import RemoteOmnisci
-        >>> omni = RemoteOmnisci()
-        >>> @omni('double(double)')
-        ... def farenheight2celcius(f):
-        ...     return (f - 32) * 5 / 9
-        ...
-        >>> _, r = omni.sql_execute('select farenheight2celcius(40)')
-        >>> print(list(r))
-        [(4.444444444444445,)]
-
-        Alternatively, you can define a Python function and decorate it
-        in a second step. This allows you to be able to call the Python
-        function. In any case, the decorated function cannot be called.
-
-        >>> omni = RemoteOmnisci()
-        >>> def farenheight2celcius(f):
-        ...     return (f - 32) * 5 / 9
-        ...
-        >>> decorated = omni('double(double)')(farenheight2celcius)
-        >>> _, r=omni.sql_execute('select farenheight2celcius(40)')
-        >>> print(list(r))
-        [(4.444444444444445,)]
-        >>> print(farenheight2celcius(40))
-        4.444444444444445
-        """
-        raise UnsupportedError(msg)
 
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.

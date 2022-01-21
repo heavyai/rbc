@@ -72,7 +72,7 @@ def test_direct_call(omnisci):
     def farenheight2celcius(f):
         return (f - 32) * 5 / 9
 
-    msg = "Decorated functions called directly"
+    msg = "Cannot call functions"
     with pytest.raises(UnsupportedError, match=msg):
         farenheight2celcius(40)
 
