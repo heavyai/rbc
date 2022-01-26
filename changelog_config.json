@@ -30,6 +30,12 @@
             "labels": [
                 "tests"
             ]
+        },
+        {
+            "title": "## Skip Changelog",
+            "labels": [
+                "Skip-Changelog"
+            ]
         }
     ],
     "ignore_labels": [
