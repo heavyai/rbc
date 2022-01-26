@@ -3,12 +3,14 @@ name: RBC
 on:
   # Trigger the workflow on push or pull request,
   # but only for the main branch
-  push:
-    branches:
-      - master
   pull_request:
     branches:
       - master
+
+# kill any previous running job on a new commit
+concurrency:
+  group: build-and-test-rbc-${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -269,3 +271,52 @@ jobs:
         run: |
           mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> omniscidb-docker.log
           cat omniscidb-docker.log
+
+  eval-notebooks:
+      runs-on: ubuntu-latest
+      needs: lint
+
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: Set up Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: 3.8
+
+        - uses: conda-incubator/setup-miniconda@v2
+          with:
+            python-version: 3.8
+            mamba-version: "*"
+            channels: conda-forge
+            environment-file: .conda/environment.yml
+
+        - name: Install additional packages
+          shell: bash -l {0}
+          run: |
+            mamba install -c conda-forge omniscidb nbval ibis-omniscidb matplotlib pandas ibis-framework=2.0
+
+        - name: Start omniscidb server
+          shell: bash -l {0}
+          run: |
+            mkdir data && omnisci_initdb data -f
+            omnisci_server --version
+            omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > omniscidb-output.txt &
+            sleep 10
+
+        - name: conda config
+          shell: bash -l {0}
+          run: conda config --show
+
+        - name: conda list
+          shell: bash -l {0}
+          run: |
+            conda list
+
+        - name: Execute pytest
+          shell: bash -l {0}
+          run: |
+            pip install -e .
+            pytest -v -rs --nbval notebooks/ -x
+            pkill -f omnisci_server
+            cat omniscidb-output.txt
