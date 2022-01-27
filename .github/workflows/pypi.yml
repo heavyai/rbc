@@ -33,6 +33,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.3.1
         env:  # minimum version is cpython 3.7
           CIBW_BUILD: "cp37-*64 cp38-*64 cp39-* cp310-*"
+        run: pip install cffi
 
       - uses: actions/upload-artifact@v2
         with:
