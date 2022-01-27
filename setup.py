@@ -77,7 +77,7 @@ def setup_package():
             "Topic :: Software Development",
         ],
         packages=find_packages(),
-        package_data={'': ['*.thrift']},
+        package_data={'': ['*.thrift'], 'rbc.rbclib': ['*.c', '*.h']},
         cffi_modules=['rbc/rbclib//_rbclib_build.py:ffibuilder'],
         install_requires=install_requires,
         setup_requires=setup_requires,
