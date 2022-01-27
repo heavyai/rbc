@@ -4,4 +4,3 @@ tblib
 thriftpy2
 six
 netifaces
-cffi
