@@ -420,7 +420,7 @@ class CommonNameCallers:
 
         if not penalty_device_caller_ftype:
             raise TypeError(f'found no matching function type to given argument types:'
-                            ' function name={self.name}, (arguments={arguments}')
+                            f' function name={self.name}, (arguments={arguments}')
 
         _, device, caller_id, ftype = penalty_device_caller_ftype[0]
         target_info = self.remotejit.targets[device]

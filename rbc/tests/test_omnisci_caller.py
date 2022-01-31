@@ -18,6 +18,7 @@ def define(omnisci):
         return x + 1
 
     T = ['int64', 'float64', 'int32']
+
     @omnisci('UDTF(int32 | name=size, T, OutputColumn<T> | name=x)', T=T, devices=['cpu'])
     def arange(size, x0, x):
         set_output_row_size(size)
@@ -26,6 +27,7 @@ def define(omnisci):
         return size
 
     T = ['int64', 'float32']
+
     @omnisci('UDTF(Column<T> | name=x, T, OutputColumn<T> | name=y)', T=T, devices=['cpu'])
     def aincr(x, dx, y):
         size = len(x)
