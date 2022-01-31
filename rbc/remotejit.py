@@ -221,18 +221,22 @@ class Signature:
                     match_penalty = penalty
         if available_types and ftype is None and self.remotejit.debug:
             satypes = ', '.join(map(str, atypes))
-            available = []
-            for typ in available_types:
-                sig = self.remotejit.caller_signature(typ)
-                if sig == typ:
-                    available.append(f'{sig}')
-                else:
-                    available.append(f'{sig}\n  - {typ}')
-            available = '\n    '.join(available)
+            available = self._format_available_function_types(func)
             print(f'found no matching function type to given argument types:'
                   f'\n    {satypes}\n'
                   f'  available function types:\n    {available}')
         return ftype, match_penalty
+
+    def _format_available_function_types(self, func):
+        available_types = self.normalized(func).signatures
+        lines = []
+        for typ in available_types:
+            sig = self.remotejit.caller_signature(typ)
+            if sig == typ:
+                lines.append(f'{sig}')
+            else:
+                lines.append(f'{sig}\n  - {typ}')
+        return '    ' + '\n    '.join(lines)
 
     def normalized(self, func=None):
         """Return a copy of Signature object where all signatures are
@@ -405,6 +409,7 @@ class CommonNameCallers:
     def __call__(self, *arguments, **options):
         device = options.get('device', UNSPECIFIED)
         penalty_device_caller_ftype = []
+        atypes = None
         for device_, target_info in self.remotejit.targets.items():
             if device is not UNSPECIFIED and device != device_:
                 continue
@@ -416,11 +421,24 @@ class CommonNameCallers:
                         if ftype is None:
                             continue
                         penalty_device_caller_ftype.append((penalty, device_, caller_id, ftype))
+        if atypes is None:
+            raise ValueError(f'no target info found for given device {device}')
+
         penalty_device_caller_ftype.sort()
 
         if not penalty_device_caller_ftype:
+            available = ''
+            for device_, target_info in self.remotejit.targets.items():
+                if device is not UNSPECIFIED and device != device_:
+                    continue
+                with target_info:
+                    for caller in self.callers:
+                        with Type.alias(**self.remotejit.typesystem_aliases):
+                            available += ('\n' + caller.signature.
+                                          _format_available_function_types(caller.func))
+            satypes = ', '.join(map(str, atypes))
             raise TypeError(f'found no matching function type to given argument types:'
-                            f' function name={self.name}, (arguments={arguments}')
+                            f'\n    {satypes}\n  available function types:{available}')
 
         _, device, caller_id, ftype = penalty_device_caller_ftype[0]
         target_info = self.remotejit.targets[device]

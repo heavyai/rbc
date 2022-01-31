@@ -6,7 +6,7 @@ from rbc.tests import omnisci_fixture, assert_equal
 
 @pytest.fixture(scope='module')
 def omnisci():
-    for o in omnisci_fixture(globals()):
+    for o in omnisci_fixture(globals(), minimal_version=(5, 8)):
         define(o)
         yield o
 
