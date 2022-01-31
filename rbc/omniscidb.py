@@ -9,7 +9,7 @@ import warnings
 import configparser
 import numpy
 from collections import defaultdict, namedtuple
-from .remotejit import RemoteJIT
+from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
 from . import omnisci_backend
 from .omnisci_backend import (
@@ -19,7 +19,7 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version
+from .utils import parse_version, DEFAULT, UNSPECIFIED
 from . import ctools
 from . import typesystem
 
@@ -212,6 +212,98 @@ def get_client_config(**config):
     return config
 
 
+def is_udtf(sig):
+    """Check if signature is a table function signature.
+    """
+    if sig[0].annotation().get('kind') == 'UDTF':
+        return True
+    for a in sig[1]:
+        if isinstance(a, (OmnisciOutputColumnType, OmnisciColumnType,
+                          OmnisciColumnListType, OmnisciTableFunctionManagerType)):
+            return True
+    return False
+
+
+output_buffer_sizer_map = dict(
+    ConstantParameter='kUserSpecifiedConstantParameter',
+    RowMultiplier='kUserSpecifiedRowMultiplier',
+    Constant='kConstant',
+    SpecifiedParameter='kTableFunctionSpecifiedParameter',
+    PreFlight='kPreFlightParameter')
+output_buffer_sizer_map[None] = output_buffer_sizer_map['RowMultiplier']
+
+user_specified_output_buffer_sizers = {
+    'kUserSpecifiedConstantParameter', 'kUserSpecifiedRowMultiplier',
+}
+
+
+def type_to_type_name(typ: typesystem.Type):
+    """Return typesystem.Type as DatumType name.
+    """
+    styp = typ.tostring(use_annotation=False)
+    type_name = dict(
+        int8='TINYINT',
+        int16='SMALLINT',
+        int32='INT',
+        int64='BIGINT',
+        float32='FLOAT',
+        float64='DOUBLE',
+    ).get(styp)
+    if type_name is not None:
+        return type_name
+    raise NotImplementedError(f'converting `{styp}` to DatumType not supported')
+
+
+def type_name_to_dtype(type_name):
+    """Return DatumType name as the corresponding numpy dtype.
+    """
+    dtype = dict(
+        SMALLINT=numpy.int16,
+        INT=numpy.int32,
+        BIGINT=numpy.int64,
+        FLOAT=numpy.float32,
+        # DECIMAL=,
+        DOUBLE=numpy.float32,
+        STR=numpy.str0,
+        # TIME=,
+        # TIMESTAMP=,
+        # DATE=,
+        BOOL=numpy.bool8,
+        # INTERVAL_DAY_TIME=,
+        # INTERVAL_YEAR_MONTH=,
+        # POINT=,
+        # LINESTRING=,
+        # POLYGON=,
+        # MULTIPOLYGON=,
+        TINYINT=numpy.int8,
+        # GEOMETRY=,
+        # GEOGRAPHY=
+    ).get(type_name)
+    if dtype is not None:
+        return dtype
+    raise NotImplementedError(
+        f'convert DatumType `{type_name}` to numpy dtype')
+
+
+class Query(RemoteCallCapsule):
+
+    def __call__(self, hold=DEFAULT, try_run=DEFAULT):
+        if is_udtf(self.ftype):
+            if hold is DEFAULT:
+                hold = True  # UDTFs executions are postponed
+            if try_run is DEFAULT:
+                try_run = False
+        else:
+            if hold is DEFAULT:
+                hold = False  # UDFs are evaluated immidiately
+            if try_run is DEFAULT:
+                try_run = False
+        return RemoteCallCapsule.__call__(self, hold=hold and not try_run, try_run=try_run)
+
+    def __getitem__(self, key):
+        return self.execute()[key]
+
+
 class RemoteOmnisci(RemoteJIT):
 
     """Usage:
@@ -245,7 +337,10 @@ class RemoteOmnisci(RemoteJIT):
         ColumnList='OmnisciColumnListType',
         TextEncodingDict='OmnisciTextEncodingDictType',
         TableFunctionManager='OmnisciTableFunctionManagerType<>',
+        UDTF='int32|kind=UDTF'
     )
+
+    remote_call_capsule_cls = Query
 
     def __init__(self,
                  user='admin',
@@ -279,7 +374,8 @@ class RemoteOmnisci(RemoteJIT):
         self._null_values = dict()
 
         # Registered functions can only be called from a SQL query
-        self._supports_callable_caller = False
+        self._supports_callable_caller = True
+        self._supports_local_caller = False
 
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
@@ -292,6 +388,7 @@ class RemoteOmnisci(RemoteJIT):
             if hasattr(typ, '_NAMES_TO_VALUES'):
                 for name, value in typ._NAMES_TO_VALUES.items():
                     typemap[typename][name] = value
+                    typemap[typename+'-inverse'][value] = name
 
     @property
     def version(self):
@@ -620,10 +717,13 @@ class RemoteOmnisci(RemoteJIT):
         result = self.thrift_call(
             'sql_execute', self.session_id, query, columnar, "", -1, -1)
 
-        Description = namedtuple("Description", ["name", "type_code", "null_ok"])
+        type_code_to_type_name = self.thrift_typemap['TDatumType-inverse']
+        Description = namedtuple("Description", ["name", "type_name", "null_ok"])
         descr = []
         for col in result.row_set.row_desc:
-            descr.append(Description(col.col_name, col.col_type.type, col.col_type.nullable))
+            descr.append(Description(col.col_name,
+                                     type_code_to_type_name[col.col_type.type],
+                                     col.col_type.nullable))
         return descr, self._make_row_results_set(result)
 
     _ext_arguments_map = None
@@ -874,11 +974,6 @@ class RemoteOmnisci(RemoteJIT):
                 'omniscidb 5.4 or newer, currently '
                 'connected to ', v)
         thrift = self.thrift_client.thrift
-        sizer_map = dict(
-            ConstantParameter='kUserSpecifiedConstantParameter',
-            RowMultiplier='kUserSpecifiedRowMultiplier',
-            Constant='kConstant',
-            SpecifiedParameter='kTableFunctionSpecifiedParameter')
 
         unspecified = object()
         inputArgTypes = []
@@ -900,7 +995,7 @@ class RemoteOmnisci(RemoteJIT):
                         'sizer argument must have type int32')
                 if _sizer is None:
                     _sizer = 'RowMultiplier'
-                _sizer = sizer_map[_sizer]
+                _sizer = output_buffer_sizer_map[_sizer]
                 # cannot have multiple sizer arguments
                 assert sizer_index == -1
                 sizer_index = consumed_index + 1
@@ -1012,12 +1107,6 @@ class RemoteOmnisci(RemoteJIT):
     def _register(self):
         if self.have_last_compile:
             return
-
-        def is_udtf(sig):
-            for a in sig[1]:
-                if isinstance(a, (OmnisciOutputColumnType, OmnisciColumnType)):
-                    return True
-            return False
 
         device_ir_map = {}
         llvm_function_names = []
@@ -1148,3 +1237,98 @@ class RemoteOmnisci(RemoteJIT):
                 print(f'compiler={compiler}')
             self._compiler = compiler
         return self._compiler
+
+    def caller_signature(self, signature: typesystem.Type):
+        """Return signature of a caller.
+
+        See RemoteJIT.caller_signature.__doc__.
+        """
+        if is_udtf(signature):
+            rtype = signature[0]
+            if not (rtype.is_int and rtype.bits == 32):
+                raise ValueError(
+                    f'UDTF implementation return type must be int32, got {rtype}')
+            rtypes = []
+            atypes = []
+            for atype in signature[1]:
+                _sizer = atype.annotation().get('sizer', UNSPECIFIED)
+                if _sizer is not UNSPECIFIED:
+                    if not (atype.is_int and atype.bits == 32):
+                        raise ValueError(
+                            f'sizer argument must have type int32, got {atype}')
+                    _sizer = output_buffer_sizer_map.get(_sizer, _sizer)
+                    if _sizer not in user_specified_output_buffer_sizers:
+                        continue
+                    atype.annotation(sizer=_sizer)
+                elif isinstance(atype, OmnisciTableFunctionManagerType):
+                    continue
+                elif isinstance(atype, OmnisciOutputColumnType):
+                    rtypes.append(atype.copy(OmnisciColumnType))
+                    continue
+                atypes.append(atype)
+            return typesystem.Type(*rtypes,
+                                   **dict(struct_is_tuple=True))(*atypes, **signature._params)
+        return signature
+
+    def get_types(self, *values):
+        """Convert values to the corresponding typesystem types.
+
+        See RemoteJIT.get_types.__doc__.
+        """
+        types = []
+        for value in values:
+            if isinstance(value, RemoteCallCapsule):
+                typ = value.__typesystem_type__
+                if typ.is_struct and typ._params.get('struct_is_tuple'):
+                    types.extend(typ)
+                else:
+                    types.append(typ)
+            else:
+                types.append(typesystem.Type.fromvalue(value))
+        return tuple(types)
+
+    # We define remote_compile and remote_call for Caller.__call__ method.
+    def remote_compile(self, func, ftype: typesystem.Type, target_info: TargetInfo):
+        """Remote compile function and signatures to machine code.
+
+        See RemoteJIT.remote_compile.__doc__.
+        """
+        if self.query_requires_register(func.__name__):
+            self.register()
+
+    def remote_call(self, func, ftype: typesystem.Type, arguments: tuple, try_run=False):
+        """
+        See RemoteJIT.remote_call.__doc__.
+        """
+        sig = self.caller_signature(ftype)
+        assert len(arguments) == len(sig[1]), (sig, arguments)
+        rtype = sig[0]
+        args = []
+        for a, atype in zip(arguments, sig[1]):
+            if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
+                if isinstance(a, RemoteCallCapsule):
+                    a = a.execute(try_run=True)
+                args.append(f'CURSOR({a})')
+            else:
+                args.append(f'CAST({a} AS {type_to_type_name(atype)})')
+        args = ', '.join(args)
+        is_udtf_call = is_udtf(ftype)
+        if is_udtf_call:
+            colnames = []
+            if rtype.is_struct and rtype._params.get('struct_is_tuple'):
+                for i, t in enumerate(rtype):
+                    n = t.annotation().get('name', f'out{i}')
+                    colnames.append(n)
+            else:
+                colnames.append(rtype.annotation().get('name', '*'))
+            q = f'SELECT {", ".join(colnames)} FROM TABLE({func.__name__}({args}))'
+        else:
+            q = f'SELECT {func.__name__}({args})'
+        if try_run:
+            return q
+        descrs, result = self.sql_execute(q + ';')
+        dtype = [(descr.name, type_name_to_dtype(descr.type_name)) for descr in descrs]
+        if is_udtf_call:
+            return numpy.array(list(result), dtype).view(numpy.recarray)
+        else:
+            return dtype[0][1](list(result)[0][0])

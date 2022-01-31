@@ -411,6 +411,13 @@ class Type(tuple, metaclass=MetaType):
                 'attempt to create an invalid Type object from `%s`' % (args,))
         return obj.postprocess_type()
 
+    def copy(self, cls=None):
+        """Return a copy of type.
+        """
+        if cls is None:
+            cls = type(self)
+        return cls(*self, **self._params)
+
     @classmethod
     def preprocess_args(cls, args):
         """Preprocess the arguments of Type constructor.
@@ -1469,6 +1476,15 @@ class Type(tuple, metaclass=MetaType):
             elif self.is_pointer and (other.is_int or other.is_uint):
                 if self.bits == other.bits:
                     return 1
+                return
+            elif self.is_custom:
+                if type(self) is not type(other):
+                    return
+                if self[0] == other[0]:
+                    return 0
+                # WARNING: if the state of custom type depends on
+                # params or annotations then it must re-define match
+                # method accordingly.
                 return
             # TODO: lots of
             raise NotImplementedError(repr((self, other)))

@@ -1,9 +1,10 @@
 import os
 import itertools
 import pytest
+import numpy as np
 
 from rbc.errors import UnsupportedError
-from rbc.tests import omnisci_fixture
+from rbc.tests import omnisci_fixture, assert_equal
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -72,9 +73,7 @@ def test_direct_call(omnisci):
     def farenheight2celcius(f):
         return (f - 32) * 5 / 9
 
-    msg = "Cannot call functions"
-    with pytest.raises(UnsupportedError, match=msg):
-        farenheight2celcius(40)
+    assert_equal(farenheight2celcius(40), np.float32(40 / 9))
 
 
 def test_local_caller(omnisci):

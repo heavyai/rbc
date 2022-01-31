@@ -4,7 +4,22 @@ __all__ = ['omnisci_fixture', 'sql_execute']
 import os
 import pytest
 import warnings
+import numpy
 from collections import defaultdict
+
+
+def assert_equal(actual, desired):
+    """Test equality of actual and desired.
+
+    When both inputs are numpy array or number objects, test equality
+    of dtype attributes as well.
+    """
+    numpy.testing.assert_equal(actual, desired)
+
+    if isinstance(actual, numpy.ndarray) and isinstance(desired, numpy.ndarray):
+        numpy.testing.assert_equal(actual.dtype, desired.dtype)
+    elif isinstance(actual, numpy.number) and isinstance(desired, numpy.number):
+        numpy.testing.assert_equal(actual.dtype, desired.dtype)
 
 
 def sql_execute(query):

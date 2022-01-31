@@ -12,7 +12,7 @@ from . import irtools
 from .errors import UnsupportedError
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
-from .utils import get_local_ip
+from .utils import get_local_ip, UNSPECIFIED
 from .targetinfo import TargetInfo
 from .rbclib import tracing_allocator
 # XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
@@ -119,7 +119,7 @@ class Signature:
 
     def __str__(self):
         lst = ["'%s'" % (s,) for s in self.signatures]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(lst))
+        return '%s(%s)' % (type(self).__name__, ', '.join(lst))
 
     def __call__(self, obj, **options):
         """Decorate signatures or a function.
@@ -211,19 +211,28 @@ class Signature:
         ftype = None
         match_penalty = None
         available_types = self.normalized(func).signatures
+
         for typ in available_types:
-            penalty = typ.match(atypes)
+            sig = self.remotejit.caller_signature(typ)
+            penalty = sig.match(atypes)
             if penalty is not None:
                 if ftype is None or penalty < match_penalty:
                     ftype = typ
                     match_penalty = penalty
-        if ftype is None:
+        if available_types and ftype is None and self.remotejit.debug:
             satypes = ', '.join(map(str, atypes))
-            available = '; '.join(map(str, available_types))
-            raise TypeError(
-                f'found no matching function type to given argument types'
-                f' `{satypes}`. Available function types: {available}')
-        return ftype
+            available = []
+            for typ in available_types:
+                sig = self.remotejit.caller_signature(typ)
+                if sig == typ:
+                    available.append(f'{sig}')
+                else:
+                    available.append(f'{sig}\n  - {typ}')
+            available = '\n    '.join(available)
+            print(f'found no matching function type to given argument types:'
+                  f'\n    {satypes}\n'
+                  f'  available function types:\n    {available}')
+        return ftype, match_penalty
 
     def normalized(self, func=None):
         """Return a copy of Signature object where all signatures are
@@ -317,7 +326,7 @@ class Caller:
         """Return Caller instance that executes function calls on the local
         host. Useful for debugging.
         """
-        if not self.remotejit._supports_callable_caller:
+        if not self.remotejit._supports_local_caller:
             msg = (
                 "Cannot create a local `Caller` when using "
                 f"{type(self.remotejit).__name__}."
@@ -371,24 +380,113 @@ class Caller:
                 f"{type(self.remotejit).__name__}."
             )
             raise UnsupportedError(msg)
+        return CommonNameCallers(self.func.__name__, [self])(*arguments, **options)
 
-        device = options.get('device')
-        targets = self.remotejit.targets
-        if device is None:
-            if len(targets) > 1:
-                raise TypeError(
-                    f'specifying device is required when target has more than'
-                    f' one device. Available devices: {", ".join(targets)}')
-            device = tuple(targets)[0]
-        target_info = targets[device]
-        with target_info:
-            atypes = tuple(map(Type.fromvalue, arguments))
-            ftype = self.signature.best_match(self.func, atypes)
-            key = self.func.__name__, ftype
-            if key not in self._is_compiled:
-                self.remotejit.remote_compile(self.func, ftype, target_info)
-                self._is_compiled.add(key)
-            return self.remotejit.remote_call(self.func, ftype, arguments)
+
+class CommonNameCallers:
+    """A collection of Caller instances holding functions with a common name.
+    """
+    def __init__(self, name, callers):
+        self.name = name
+        assert callers  # at least one caller must be specified
+        self.remotejit = callers[0].remotejit
+        self.callers = callers
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.name}, {self.callers})"
+
+    def __str__(self):
+        lst = []
+        for caller in self.callers:
+            lst.append(str(caller.signature))
+        sigs = '\n  '.join(lst)
+        return f'{self.name}:\n  {sigs}'
+
+    def __call__(self, *arguments, **options):
+        device = options.get('device', UNSPECIFIED)
+        penalty_device_caller_ftype = []
+        for device_, target_info in self.remotejit.targets.items():
+            if device is not UNSPECIFIED and device != device_:
+                continue
+            with target_info:
+                atypes = self.remotejit.get_types(*arguments)
+                for caller_id, caller in enumerate(self.callers):
+                    with Type.alias(**self.remotejit.typesystem_aliases):
+                        ftype, penalty = caller.signature.best_match(caller.func, atypes)
+                        if ftype is None:
+                            continue
+                        penalty_device_caller_ftype.append((penalty, device_, caller_id, ftype))
+        penalty_device_caller_ftype.sort()
+
+        if not penalty_device_caller_ftype:
+            raise TypeError(f'found no matching function type to given argument types:'
+                            ' function name={self.name}, (arguments={arguments}')
+
+        _, device, caller_id, ftype = penalty_device_caller_ftype[0]
+        target_info = self.remotejit.targets[device]
+        caller = self.callers[caller_id]
+        r = self.remotejit.remote_call_capsule_cls(caller, target_info, ftype, arguments)
+
+        roptions = dict()
+        if 'hold' in options:
+            roptions.update(hold=options['hold'])
+        if 'try_run' in options:
+            roptions.update(hold=options['try_run'])
+        return r(**roptions)
+
+
+class RemoteCallCapsule:
+    """Encapsulates remote call execution.
+    """
+
+    def __init__(self, caller, target_info, ftype, arguments):
+        self.caller = caller
+        self.target_info = target_info
+        self.ftype = ftype
+        self.arguments = arguments
+
+    @property
+    def __typesystem_type__(self):
+        """The typesystem Type instance of the return value of the remote
+        call.
+        """
+        return self.caller.remotejit.caller_signature(self.ftype)[0]
+
+    def __repr__(self):
+        return (f'{type(self).__name__}({self.caller!r}, {self.target_info},'
+                f' {self.ftype}, {self.arguments})')
+
+    def __str__(self):
+        return f'{type(self).__name__}({self(try_run=True)})'
+
+    def __call__(self, hold=False, try_run=False):
+        """If hold is True then return an object that encapsulates function
+        call execution. The execution can be triggered by calling
+        execute() method of the returned object.
+
+        If try_run is True then execution will return an object that
+        represents remote call execution. The returned object is
+        constructed in the `remote_call(try_run=try_run)` method call.
+
+        This method can be overwritten by derived classes if different
+        defaults to hold and try_run options need to be specified.
+        """
+        return self if hold else self.execute(try_run=try_run)
+
+    def execute(self, try_run=False):
+        """Trigger the remote call execution.
+
+        When try_run is True, return an object that represents the
+        remote call.
+        """
+        if not try_run:
+            key = self.caller.func.__name__, self.ftype
+            if key not in self.caller._is_compiled:
+                self.caller.remotejit.remote_compile(
+                    self.caller.func, self.ftype, self.target_info)
+                self.caller._is_compiled.add(key)
+        return self.caller.remotejit.remote_call(self.caller.func, self.ftype,
+                                                 self.arguments, try_run=try_run)
 
 
 class RemoteJIT:
@@ -423,6 +521,8 @@ class RemoteJIT:
     thrift_content = None
 
     typesystem_aliases = dict()
+
+    remote_call_capsule_cls = RemoteCallCapsule
 
     def __init__(self, host='localhost', port=11532,
                  local=False, debug=False, use_tracing_allocator=False):
@@ -460,8 +560,10 @@ class RemoteJIT:
         self._callers = []
         self._last_compile = None
         self._targets = None
-        # Some callers cannot be locally called
+        # Some callers cannot be called
         self._supports_callable_caller = True
+        # Some callers cannot be locally called
+        self._supports_local_caller = True
 
         if local:
             self._client = LocalClient(debug=debug,
@@ -476,11 +578,26 @@ class RemoteJIT:
         return localjit
 
     def add_caller(self, caller):
-        self._callers.append(caller)
+        name = caller.func.__name__
+        for c in self._callers:
+            if c.name == name:
+                c.callers.append(caller)
+                break
+        else:
+            self._callers.append(CommonNameCallers(name, [caller]))
         self.discard_last_compile()
 
     def get_callers(self):
-        return self._callers
+        callers = []
+        for c in self._callers:
+            callers.extend(c.callers)
+        return callers
+
+    def get_caller(self, name):
+        for c in self._callers:
+            if c.name == name:
+                return c
+        return
 
     def reset(self):
         """Drop all callers definitions and compilation results.
@@ -678,11 +795,12 @@ class RemoteJIT:
         """
         if self.debug:
             print(f'remote_compile({func}, {ftype})')
-        llvm_module, succesful_fids = irtools.compile_to_LLVM(
-            [(func, {0: ftype})],
-            target_info,
-            pipeline_class=OmnisciCompilerPipeline,
-            debug=self.debug)
+        with target_info:
+            llvm_module, succesful_fids = irtools.compile_to_LLVM(
+                [(func, {0: ftype})],
+                target_info,
+                pipeline_class=OmnisciCompilerPipeline,
+                debug=self.debug)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
         response = self.client(remotejit=dict(
@@ -690,18 +808,25 @@ class RemoteJIT:
         assert response['remotejit']['compile'], response
         return llvm_module
 
-    def remote_call(self, func, ftype: Type, arguments: tuple):
+    def remote_call(self, func, ftype: Type, arguments: tuple, try_run=False):
         """Call function remotely on given arguments.
 
         The input function `func` is called remotely by sending the
         arguments data to remote host where the previously compiled
         function (see `remote_compile` method) is applied to the
         arguments, and the result is returned to local process.
+
+        If `try_run` is True then return an object that specifies
+        remote call but does not execute it. The type of return object
+        is custom to particular RemoteJIT specialization.
         """
         if self.debug:
             print(f'remote_call({func}, {ftype}, {arguments})')
         fullname = func.__name__ + ftype.mangle()
-        response = self.client(remotejit=dict(call=(fullname, arguments)))
+        call = dict(call=(fullname, arguments))
+        if try_run:
+            return call
+        response = self.client(remotejit=call)
         return response['remotejit']['call']
 
     def python(self, statement):
@@ -723,6 +848,26 @@ class RemoteJIT:
           Preprocessed func.
         """
         return func
+
+    def caller_signature(self, signature: Type):
+        """Return signature of a caller.
+
+        Parameters
+        ----------
+        signature: Type
+          Signature of function implementation
+
+        Returns
+        -------
+        signature: Type
+          Signature of function caller
+        """
+        return signature
+
+    def get_types(self, *values):
+        """Convert values to the corresponding typesystem types.
+        """
+        return tuple(map(Type.fromvalue, values))
 
 
 class DispatcherRJIT(Dispatcher):
