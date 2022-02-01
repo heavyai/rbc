@@ -288,16 +288,13 @@ def type_name_to_dtype(type_name):
 class Query(RemoteCallCapsule):
 
     def __call__(self, hold=DEFAULT, try_run=DEFAULT):
-        if is_udtf(self.ftype):
-            if hold is DEFAULT:
-                hold = True  # UDTFs executions are postponed
-            if try_run is DEFAULT:
-                try_run = False
-        else:
-            if hold is DEFAULT:
-                hold = False  # UDFs are evaluated immidiately
-            if try_run is DEFAULT:
-                try_run = False
+        if try_run is DEFAULT:
+            try_run = False
+        if hold is DEFAULT:
+            # UDF/UDTFs executions are hold by default to support
+            # extension functions compositions in a data-transfer
+            # efficient way.
+            hold = True
         return RemoteCallCapsule.__call__(self, hold=hold and not try_run, try_run=try_run)
 
     def __getitem__(self, key):
@@ -1318,9 +1315,9 @@ class RemoteOmnisci(RemoteJIT):
         rtype = sig[0]
         args = []
         for a, atype in zip(arguments, sig[1]):
+            if isinstance(a, RemoteCallCapsule):
+                a = a.execute(try_run=True)
             if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
-                if isinstance(a, RemoteCallCapsule):
-                    a = a.execute(try_run=True)
                 args.append(f'CURSOR({a})')
             else:
                 args.append(f'CAST({a} AS {type_to_type_name(atype)})')
@@ -1335,10 +1332,13 @@ class RemoteOmnisci(RemoteJIT):
             else:
                 colnames.append(rtype.annotation().get('name', '*'))
             q = f'SELECT {", ".join(colnames)} FROM TABLE({func.__name__}({args}))'
+            if try_run:
+                return q
         else:
-            q = f'SELECT {func.__name__}({args})'
-        if try_run:
-            return q
+            q = f'{func.__name__}({args})'
+            if try_run:
+                return q
+            q = 'SELECT ' + q
         descrs, result = self.sql_execute(q + ';')
         dtype = [(descr.name, type_name_to_dtype(descr.type_name)) for descr in descrs]
         if is_udtf_call:

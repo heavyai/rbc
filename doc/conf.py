@@ -21,7 +21,7 @@ from rbc import __version__
 # -- Project information -----------------------------------------------------
 
 project = 'RBC'
-copyright = '2022-%s, Xnd-Project Developers' % datetime.datetime.now().year
+copyright = '2018-%s, Xnd-Project Developers' % datetime.datetime.now().year
 author = 'Xnd-Project Developers'
 
 # The version info for the project you're documenting, acts as replacement for

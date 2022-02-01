@@ -40,18 +40,31 @@ def define(omnisci):
 def test_remote_udf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
-    assert myincr(3) == 4
-    assert myincr(3.5) == 4.5
+    assert_equal(str(myincr(3)), 'Query(myincr(CAST(3 AS BIGINT)))')
+    assert_equal(myincr(3, hold=False), 4)
+    assert_equal(myincr(3).execute(), 4)
 
-    assert_equal(myincr(np.int64(3)), np.int64(4))
+    assert myincr(3.5).execute() == 4.5
+
+    assert_equal(myincr(np.int64(3)).execute(), np.int64(4))
     # The following test fails because SELECT seems to upcast int32 to
     # int64. TODO: investigate.
     # assert_equal(myincr(np.int32(3)), np.int32(4))
 
-    assert_equal(myincr(np.float32(3.5)), np.float32(4.5))
+    assert_equal(myincr(np.float32(3.5)).execute(), np.float32(4.5))
     # The following test fails because SELECT seems to downcast
     # float64 to float32. TODO: investigate.
     # assert_equal(myincr(np.float64(3.5)), np.float64(4.5))
+
+
+def test_remote_composite_udf_evaluation(omnisci):
+    myincr = omnisci.get_caller('myincr')
+
+    assert_equal(str(myincr(myincr(3))),
+                 'Query(myincr(CAST(myincr(CAST(3 AS BIGINT)) AS BIGINT)))')
+    assert_equal(str(myincr(myincr(3, hold=False))), 'Query(myincr(CAST(4 AS BIGINT)))')
+    assert_equal(myincr(myincr(3), hold=False), 5)
+    assert_equal(myincr(myincr(3)).execute(), 5)
 
 
 def test_remote_udtf_evaluation(omnisci):
@@ -78,6 +91,7 @@ def test_remote_udtf_evaluation(omnisci):
 def test_remote_composite_udtf_evaluation(omnisci):
     arange = omnisci.get_caller('arange')
     aincr = omnisci.get_caller('aincr')
+    myincr = omnisci.get_caller('myincr')
 
     r = aincr(arange(3, 1), 2)
 
@@ -87,3 +101,16 @@ def test_remote_composite_udtf_evaluation(omnisci):
     r = r.execute()
 
     assert_equal(r['y'], np.arange(3, dtype=np.int64) + 1 + 2)
+
+    r = arange(3, myincr(2))
+    assert_equal(str(r), ('Query(SELECT x FROM TABLE(arange(CAST(3 AS INT),'
+                          ' CAST(myincr(CAST(2 AS BIGINT)) AS BIGINT))))'))
+
+    # TODO: the following crashes omniscidb server:
+    # TableFunctionExecutionContext.cpp:277 Check failed:
+    # col_buf_ptrs.size() == exe_unit.input_exprs.size() (1 == 2)
+    # assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
+
+    r = arange(3, myincr(2, hold=False))
+    assert_equal(str(r), 'Query(SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(3 AS BIGINT))))')
+    assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)

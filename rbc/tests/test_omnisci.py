@@ -70,10 +70,10 @@ def test_direct_call(omnisci):
     omnisci.reset()
 
     @omnisci('double(double)')
-    def farenheight2celcius(f):
+    def farhenheit2celcius(f):
         return (f - 32) * 5 / 9
 
-    assert_equal(farenheight2celcius(40), np.float32(40 / 9))
+    assert_equal(farhenheit2celcius(40), np.float32(40 / 9))
 
 
 def test_local_caller(omnisci):
