@@ -5,6 +5,7 @@
 
 
 import re
+import copy
 import ctypes
 import _ctypes
 import inspect
@@ -416,7 +417,7 @@ class Type(tuple, metaclass=MetaType):
         """
         if cls is None:
             cls = type(self)
-        return cls(*self, **self._params)
+        return cls(*self, **copy.deepcopy(self._params))
 
     @classmethod
     def preprocess_args(cls, args):
@@ -725,11 +726,13 @@ class Type(tuple, metaclass=MetaType):
             return self.tostring()
         return tuple.__str__(self)
 
-    def tostring(self, use_typename=False, use_annotation=True):
+    def tostring(self, use_typename=False, use_annotation=True, use_name=True,
+                 _skip_annotation=False):
         """Return string representation of a type.
         """
-        if use_annotation:
-            s = self.tostring(use_typename=use_typename, use_annotation=False)
+        options = dict(use_typename=use_typename, use_annotation=use_annotation, use_name=use_name)
+        if use_annotation and not _skip_annotation:
+            s = self.tostring(_skip_annotation=True, **options)
             annotation = self.annotation()
             for name, value in annotation.items():
                 if value:
@@ -740,18 +743,16 @@ class Type(tuple, metaclass=MetaType):
 
         if self.is_void:
             return 'void'
-        name = self._params.get('name')
+
+        name = self._params.get('name') if use_name else None
         if self.is_function:
             if use_typename:
                 typename = self._params.get('typename')
                 if typename is not None:
                     return typename
-            if name:
-                name = ' ' + name
-            return (self[0].tostring(use_typename=use_typename)
-                    + name + '(' + ', '.join(
-                        a.tostring(use_typename=use_typename)
-                        for a in self[1]) + ')')
+            name = ' ' + name if name else ''
+            return (self[0].tostring(**options)
+                    + name + '(' + ', '.join(a.tostring(**options) for a in self[1]) + ')')
 
         if name is not None:
             suffix = ' ' + name
@@ -764,15 +765,14 @@ class Type(tuple, metaclass=MetaType):
         if self.is_atomic:
             return self[0] + suffix
         if self.is_pointer:
-            return self[0].tostring(use_typename=use_typename) + '*' + suffix
+            return self[0].tostring(**options) + '*' + suffix
         if self.is_struct:
             clsname = self._params.get('clsname')
             if clsname is not None:
                 return clsname + '<' + ', '.join(
-                    [t.tostring(use_typename=use_typename)
+                    [t.tostring(**options)
                      for t in self]) + '>' + suffix
-            return '{' + ', '.join([t.tostring(use_typename=use_typename)
-                                    for t in self]) + '}' + suffix
+            return '{' + ', '.join([t.tostring(**options) for t in self]) + '}' + suffix
 
         if self.is_custom:
             params = self[0]
@@ -784,7 +784,7 @@ class Type(tuple, metaclass=MetaType):
             new_params = []
             for a in params:
                 if isinstance(a, Type):
-                    s = a.tostring(use_typename=use_typename)
+                    s = a.tostring(**options)
                 else:
                     s = str(a)
                 new_params.append(s)
@@ -1524,9 +1524,12 @@ class Type(tuple, metaclass=MetaType):
             yield self
         elif self.is_atomic:
             type_list = templates.get(self[0])
+            assert isinstance(type_list, list), type_list
             if type_list:
                 for i, t in enumerate(type_list):
-                    t = Type.fromobject(t)
+                    # using copy so that template symbols will not be
+                    # contaminated with self parameters
+                    t = Type.fromobject(t).copy()
                     t._params.update(self._params)
                     if t.is_concrete:
                         # templates is changed in-situ! This ensures that

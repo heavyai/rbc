@@ -240,7 +240,7 @@ user_specified_output_buffer_sizers = {
 def type_to_type_name(typ: typesystem.Type):
     """Return typesystem.Type as DatumType name.
     """
-    styp = typ.tostring(use_annotation=False)
+    styp = typ.tostring(use_annotation=False, use_name=False)
     type_name = dict(
         int8='TINYINT',
         int16='SMALLINT',
@@ -833,10 +833,10 @@ class RemoteOmnisci(RemoteJIT):
 
     def type_to_extarg(self, t):
         if isinstance(t, typesystem.Type):
-            s = t.tostring(use_annotation=False)
+            s = t.tostring(use_annotation=False, use_name=False)
             extarg = self._get_ext_arguments_map().get(s)
             if extarg is None:
-                raise ValueError(f'cannot convert {t} to ExtArgumentType')
+                raise ValueError(f'cannot convert {t}(={s}) to ExtArgumentType')
             return extarg
         elif isinstance(t, str):
             extarg = self._get_ext_arguments_map().get(t)
@@ -1286,6 +1286,19 @@ class RemoteOmnisci(RemoteJIT):
             else:
                 types.append(typesystem.Type.fromvalue(value))
         return tuple(types)
+
+    def normalize_function_type(self, ftype: typesystem.Type):
+        """Normalize typesystem function type.
+
+        See RemoteJIT.normalize_function_type.__doc__.
+        """
+        assert ftype.is_function, ftype
+        for atype in ftype[1]:
+            # convert `T foo` to `T | name=foo`
+            if 'name' not in atype.annotation() and atype.name is not None:
+                atype.annotation(name=atype.name)
+                atype._params.pop('name')
+        return ftype
 
     # We define remote_compile and remote_call for Caller.__call__ method.
     def remote_compile(self, func, ftype: typesystem.Type, target_info: TargetInfo):

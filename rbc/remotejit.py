@@ -238,6 +238,10 @@ class Signature:
                 lines.append(f'{sig}\n  - {typ}')
         return '    ' + '\n    '.join(lines)
 
+    def add(self, sig):
+        if sig not in self.signatures:
+            self.signatures.append(sig)
+
     def normalized(self, func=None):
         """Return a copy of Signature object where all signatures are
         normalized to Type instances using the current target device
@@ -283,14 +287,14 @@ class Signature:
             if not sig.is_concrete:
                 for csig in sig.apply_templates(templates):
                     assert isinstance(csig, Type), (sig, csig, type(csig))
-                    if csig not in signature.signatures:
-                        signature.signatures.append(csig)
+                    csig = self.remotejit.normalize_function_type(csig)
+                    signature.add(csig)
             else:
-                if sig not in signature.signatures:
-                    signature.signatures.append(sig)
+                sig = self.remotejit.normalize_function_type(sig)
+                signature.add(sig)
         if fsig is not None and fsig.is_complete:
-            if fsig not in signature.signatures:
-                signature.signatures.append(fsig)
+            fsig = self.remotejit.normalize_function_type(fsig)
+            signature.add(fsig)
         return signature
 
 
@@ -852,6 +856,22 @@ class RemoteJIT:
         """
         response = self.client(remotejit=dict(python=(statement,)))
         return response['remotejit']['python']
+
+    def normalize_function_type(self, ftype: Type):
+        """Apply RemoteJIT specific hooks to normalized function Type.
+
+        Parameters
+        ----------
+        ftype: Type
+          typesystem type of a function
+
+        Returns
+        -------
+        ftype: Type
+          typesystem type of a function with normalization hools applied
+        """
+        assert ftype.is_function, ftype
+        return ftype
 
     def preprocess_callable(self, func):
         """Preprocess func to be used as a remotejit function definition.

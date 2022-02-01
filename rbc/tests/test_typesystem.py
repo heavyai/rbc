@@ -622,3 +622,11 @@ def test_get_signature_ufunc(target_info):
 
     sig = get_signature(np.modf)
     assert len(sig.parameters) == 3
+
+
+def test_copy(target_info):
+    t = Type.fromstring('int foo| a = 1')
+    t2 = t.copy()
+    t.annotation(b=1)
+    assert str(t) == 'int32 foo | a=1 | b=1'
+    assert str(t2) == 'int32 foo | a=1'
