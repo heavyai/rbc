@@ -230,6 +230,8 @@ output_buffer_sizer_map = dict(
     Constant='kConstant',
     SpecifiedParameter='kTableFunctionSpecifiedParameter',
     PreFlight='kPreFlightParameter')
+
+# Default sizer is RowMultiplier:
 output_buffer_sizer_map[None] = output_buffer_sizer_map['RowMultiplier']
 
 user_specified_output_buffer_sizers = {
@@ -988,8 +990,6 @@ class RemoteOmnisci(RemoteJIT):
                 if not (a.is_int and a.bits == 32):
                     raise ValueError(
                         'sizer argument must have type int32')
-                if _sizer is None:
-                    _sizer = 'RowMultiplier'
                 _sizer = output_buffer_sizer_map[_sizer]
                 # cannot have multiple sizer arguments
                 assert sizer_index == -1
