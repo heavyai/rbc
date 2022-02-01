@@ -1524,8 +1524,8 @@ class Type(tuple, metaclass=MetaType):
             yield self
         elif self.is_atomic:
             type_list = templates.get(self[0])
-            assert isinstance(type_list, list), type_list
             if type_list:
+                assert isinstance(type_list, list), type_list
                 for i, t in enumerate(type_list):
                     # using copy so that template symbols will not be
                     # contaminated with self parameters
