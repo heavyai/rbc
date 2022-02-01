@@ -117,9 +117,20 @@ class Signature:
         assert not self.signature_templates
         return sig
 
+    def __repr__(self):
+        return f'{type(self).__name__}({str(self)})'
+
     def __str__(self):
-        lst = ["'%s'" % (s,) for s in self.signatures]
-        return '%s(%s)' % (type(self).__name__, ', '.join(lst))
+        lst = []
+        for t in self.signatures:
+            s = str(t)
+            for k, types in self.signature_templates.get(t, {}).items():
+                s += f', {k}={"|".join(map(str, types))}'
+            devices = self.signature_devices.get(t, [])
+            if devices:
+                s += f', device={"|".join(devices)}'
+            lst.append(repr(s))
+        return f'{"; ".join(lst)}'
 
     def __call__(self, obj, **options):
         """Decorate signatures or a function.
@@ -344,10 +355,10 @@ class Caller:
         return Caller(self.func, self.signature.local)
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.func}, {self.signature})"
+        return f"{type(self).__name__}({self.func}, {self.signature!r})"
 
     def __str__(self):
-        return self.describe()
+        return f"{self.func.__name__}[{self.signature}]"
 
     def describe(self):
         """Return LLVM IRs of all target devices.
@@ -382,16 +393,10 @@ class Caller:
     def __call__(self, *arguments, **options):
         """Return the result of a remote JIT compiled function call.
         """
-        if not self.remotejit._supports_callable_caller:
-            msg = (
-                "Cannot call functions decorated by "
-                f"{type(self.remotejit).__name__}."
-            )
-            raise UnsupportedError(msg)
-        return CommonNameCallers(self.func.__name__, [self])(*arguments, **options)
+        return RemoteDispatcher(self.func.__name__, [self])(*arguments, **options)
 
 
-class CommonNameCallers:
+class RemoteDispatcher:
     """A collection of Caller instances holding functions with a common name.
     """
     def __init__(self, name, callers):
@@ -401,14 +406,12 @@ class CommonNameCallers:
         self.callers = callers
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.name}, {self.callers})"
+        lst = [str(caller.signature) for caller in self.callers]
+        return f'{type(self).__name__}({self.name!r}, [{", ".join(lst)}])'
 
     def __str__(self):
-        lst = []
-        for caller in self.callers:
-            lst.append(str(caller.signature))
-        sigs = '\n  '.join(lst)
-        return f'{self.name}:\n  {sigs}'
+        lst = [str(caller.signature) for caller in self.callers]
+        return f'{self.name}[{", ".join(lst)}]'
 
     def __call__(self, *arguments, **options):
         device = options.get('device', UNSPECIFIED)
@@ -479,7 +482,7 @@ class RemoteCallCapsule:
                 f' {self.ftype}, {self.arguments})')
 
     def __str__(self):
-        return f'{type(self).__name__}({self(try_run=True)})'
+        return f'{self(try_run=True)}'
 
     def __call__(self, hold=False, try_run=False):
         """If hold is True then return an object that encapsulates function
@@ -582,8 +585,6 @@ class RemoteJIT:
         self._callers = []
         self._last_compile = None
         self._targets = None
-        # Some callers cannot be called
-        self._supports_callable_caller = True
         # Some callers cannot be locally called
         self._supports_local_caller = True
 
@@ -606,7 +607,7 @@ class RemoteJIT:
                 c.callers.append(caller)
                 break
         else:
-            self._callers.append(CommonNameCallers(name, [caller]))
+            self._callers.append(RemoteDispatcher(name, [caller]))
         self.discard_last_compile()
 
     def get_callers(self):

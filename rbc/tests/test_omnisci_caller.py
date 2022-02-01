@@ -37,10 +37,43 @@ def define(omnisci):
         return size
 
 
+def test_udf_string_repr(omnisci):
+    myincr = omnisci.get_caller('myincr')
+
+    assert_equal(repr(myincr),
+                 "RemoteDispatcher('myincr', ['T(T), T=int32|int64|float32|float64'])")
+    assert_equal(str(myincr), "myincr['T(T), T=int32|int64|float32|float64']")
+
+    assert_equal(repr(myincr(5)),
+                 "OmnisciQueryCapsule('myincr(CAST(5 AS BIGINT))')")
+    assert_equal(str(myincr(5)), "myincr(CAST(5 AS BIGINT))")
+
+    assert_equal(repr(myincr(myincr(5))),
+                 "OmnisciQueryCapsule('myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))')")
+    assert_equal(str(myincr(myincr(5))), "myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))")
+
+
+def test_udtf_string_repr(omnisci):
+    arange = omnisci.get_caller('arange')
+
+    assert_equal(repr(arange),
+                 ("RemoteDispatcher('arange', ['UDTF(int32 size, T x0, OutputColumn<T> x),"
+                  " T=int64|float64|int32, device=cpu'])"))
+    assert_equal(str(arange),
+                 ("arange['UDTF(int32 size, T x0, OutputColumn<T> x),"
+                  " T=int64|float64|int32, device=cpu']"))
+
+    assert_equal(repr(arange(5, 0)),
+                 ("OmnisciQueryCapsule('SELECT x FROM"
+                  " TABLE(arange(CAST(5 AS INT), CAST(0 AS BIGINT)))')"))
+    assert_equal(str(arange(5, 0)),
+                 "SELECT x FROM TABLE(arange(CAST(5 AS INT), CAST(0 AS BIGINT)))")
+
+
 def test_remote_udf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
-    assert_equal(str(myincr(3)), 'Query(myincr(CAST(3 AS BIGINT)))')
+    assert_equal(str(myincr(3)), 'myincr(CAST(3 AS BIGINT))')
     assert_equal(myincr(3, hold=False), 4)
     assert_equal(myincr(3).execute(), 4)
 
@@ -61,8 +94,8 @@ def test_remote_composite_udf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
     assert_equal(str(myincr(myincr(3))),
-                 'Query(myincr(CAST(myincr(CAST(3 AS BIGINT)) AS BIGINT)))')
-    assert_equal(str(myincr(myincr(3, hold=False))), 'Query(myincr(CAST(4 AS BIGINT)))')
+                 'myincr(CAST(myincr(CAST(3 AS BIGINT)) AS BIGINT))')
+    assert_equal(str(myincr(myincr(3, hold=False))), 'myincr(CAST(4 AS BIGINT))')
     assert_equal(myincr(myincr(3), hold=False), 5)
     assert_equal(myincr(myincr(3)).execute(), 5)
 
@@ -71,7 +104,7 @@ def test_remote_udtf_evaluation(omnisci):
     arange = omnisci.get_caller('arange')
 
     assert_equal(str(arange(3, 1)),
-                 'Query(SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(1 AS BIGINT))))')
+                 'SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(1 AS BIGINT)))')
 
     assert_equal(arange(3, 1)['x'], list(np.arange(3, dtype=np.int64) + 1))
     assert_equal(arange(3, 1.5)['x'], list(np.arange(3, dtype=np.float64) + 1.5))
@@ -95,16 +128,16 @@ def test_remote_composite_udtf_evaluation(omnisci):
 
     r = aincr(arange(3, 1), 2)
 
-    assert_equal(str(r), 'Query(SELECT y FROM TABLE(aincr(CURSOR(SELECT x FROM'
-                 ' TABLE(arange(CAST(3 AS INT), CAST(1 AS BIGINT)))), CAST(2 AS BIGINT))))')
+    assert_equal(str(r), 'SELECT y FROM TABLE(aincr(CURSOR(SELECT x FROM'
+                 ' TABLE(arange(CAST(3 AS INT), CAST(1 AS BIGINT)))), CAST(2 AS BIGINT)))')
 
     r = r.execute()
 
     assert_equal(r['y'], np.arange(3, dtype=np.int64) + 1 + 2)
 
     r = arange(3, myincr(2))
-    assert_equal(str(r), ('Query(SELECT x FROM TABLE(arange(CAST(3 AS INT),'
-                          ' CAST(myincr(CAST(2 AS BIGINT)) AS BIGINT))))'))
+    assert_equal(str(r), ('SELECT x FROM TABLE(arange(CAST(3 AS INT),'
+                          ' CAST(myincr(CAST(2 AS BIGINT)) AS BIGINT)))'))
 
     # TODO: the following crashes omniscidb server:
     # TableFunctionExecutionContext.cpp:277 Check failed:
@@ -112,5 +145,5 @@ def test_remote_composite_udtf_evaluation(omnisci):
     # assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
 
     r = arange(3, myincr(2, hold=False))
-    assert_equal(str(r), 'Query(SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(3 AS BIGINT))))')
+    assert_equal(str(r), 'SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(3 AS BIGINT)))')
     assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)

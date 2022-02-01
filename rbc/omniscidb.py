@@ -19,7 +19,7 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version, DEFAULT, UNSPECIFIED
+from .utils import parse_version, UNSPECIFIED
 from . import ctools
 from . import typesystem
 
@@ -285,17 +285,16 @@ def type_name_to_dtype(type_name):
         f'convert DatumType `{type_name}` to numpy dtype')
 
 
-class Query(RemoteCallCapsule):
+class OmnisciQueryCapsule(RemoteCallCapsule):
 
-    def __call__(self, hold=DEFAULT, try_run=DEFAULT):
-        if try_run is DEFAULT:
-            try_run = False
-        if hold is DEFAULT:
-            # UDF/UDTFs executions are hold by default to support
-            # extension functions compositions in a data-transfer
-            # efficient way.
-            hold = True
+    def __call__(self, hold=True, try_run=False):
+        # UDF/UDTFs executions are hold by default to support
+        # extension functions compositions in a data-transfer
+        # efficient way.
         return RemoteCallCapsule.__call__(self, hold=hold and not try_run, try_run=try_run)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({str(self)!r})'
 
     def __getitem__(self, key):
         return self.execute()[key]
@@ -337,7 +336,7 @@ class RemoteOmnisci(RemoteJIT):
         UDTF='int32|kind=UDTF'
     )
 
-    remote_call_capsule_cls = Query
+    remote_call_capsule_cls = OmnisciQueryCapsule
 
     def __init__(self,
                  user='admin',
@@ -371,7 +370,6 @@ class RemoteOmnisci(RemoteJIT):
         self._null_values = dict()
 
         # Registered functions can only be called from a SQL query
-        self._supports_callable_caller = True
         self._supports_local_caller = False
 
         # An user-defined device-LLVM IR mapping.
