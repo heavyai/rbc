@@ -1,7 +1,8 @@
 import operator
+import warnings
 
 from rbc.errors import NumbaTypeError
-from .omnisci_buffer import BufferMeta, free_all_other_buffers
+from .omnisci_buffer import BufferMeta, BufferPointer, free_all_other_buffers, free_buffer
 from numba.core import ir, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.compiler_machinery import FunctionPass, register_pass
@@ -9,7 +10,9 @@ from numba.core.untyped_passes import (IRProcessing,
                                        RewriteSemanticConstants,
                                        ReconstructSSA,
                                        DeadBranchPrune,)
-from numba.core.typed_passes import PartialTypeInference, DeadCodeElimination
+from numba.core.typed_passes import (PartialTypeInference,
+                                     DeadCodeElimination,
+                                     NopythonTypeInference)
 
 
 # Register this pass with the compiler framework, declare that it will not
@@ -151,6 +154,67 @@ class DTypeComparison(FunctionPass):
         return mutated
 
 
+class MissingFreeWarning(Warning):
+
+    _msg = """
+    Possible memory leak detected!
+    In RBC, arrays and buffers must be freed manually by calling the method
+    .free() or the function free_buffer(): see the relevant docs.
+    """
+
+    def __init__(self):
+        Warning.__init__(self, self._msg)
+
+
+@register_pass(mutates_CFG=False, analysis_only=True)
+class DetectMissingFree(FunctionPass):
+    _name = "DetectMissingFree"
+
+    def __init__(self):
+        FunctionPass.__init__(self)
+
+    def iter_calls(self, func_ir):
+        for block in func_ir.blocks.values():
+            for inst in block.find_insts(ir.Assign):
+                if isinstance(inst.value, ir.Expr) and inst.value.op == 'call':
+                    yield inst
+
+
+    def contains_buffer_constructors(self, state):
+        """
+        Check whether the func_ir contains any call which creates a buffer. This
+        could be either a direct call to e.g. xp.Array() or a call to any
+        function which returns a BufferPointer: in that case we assume that
+        the ownership is transfered upon return and that the caller is
+        responsible to free() it.
+        """
+        func_ir = state.func_ir
+        for inst in self.iter_calls(func_ir):
+            ret_type = state.typemap[inst.target.name]
+            if isinstance(ret_type, BufferPointer):
+                return True
+        return False
+
+    def contains_calls_to_free(self, state):
+        """
+        Check whether there is at least an instruction which calls free_buffer()
+        or BufferPointer.free()
+        """
+        func_ir = state.func_ir
+        for inst in self.iter_calls(func_ir):
+            rhs = func_ir.get_definition(inst.value.func)
+            if isinstance(rhs, ir.Global) and rhs.value is free_buffer:
+                return True
+        return False
+
+    def run_pass(self, state):
+        if (self.contains_buffer_constructors(state) and
+            not self.contains_calls_to_free(state)):
+            warnings.warn(MissingFreeWarning())
+
+        return False # we didn't modify the IR
+
+
 class OmnisciCompilerPipeline(CompilerBase):
     def define_pipelines(self):
         # define a new set of pipelines (just one in this case) and for ease
@@ -161,6 +225,7 @@ class OmnisciCompilerPipeline(CompilerBase):
         pm.add_pass_after(AutoFreeBuffers, IRProcessing)
         pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         pm.add_pass_after(DTypeComparison, ReconstructSSA)
+        pm.add_pass_after(DetectMissingFree, NopythonTypeInference)
         # finalize
         pm.finalize()
         # return as an iterable, any number of pipelines may be defined!
