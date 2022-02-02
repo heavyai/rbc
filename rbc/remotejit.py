@@ -441,8 +441,8 @@ class RemoteDispatcher:
         roptions = dict()
         if 'hold' in options:
             roptions.update(hold=options['hold'])
-        if 'try_run' in options:
-            roptions.update(hold=options['try_run'])
+        if 'postpone_execution' in options:
+            roptions.update(hold=options['postpone_execution'])
         return r(**roptions)
 
 
@@ -468,36 +468,40 @@ class RemoteCallCapsule:
                 f' {self.ftype}, {self.arguments})')
 
     def __str__(self):
-        return f'{self(try_run=True)}'
+        return f'{self(postpone_execution=True)}'
 
-    def __call__(self, hold=False, try_run=False):
+    def __call__(self, hold=False, postpone_execution=False):
         """If hold is True then return an object that encapsulates function
         call execution. The execution can be triggered by calling
         execute() method of the returned object.
 
-        If try_run is True then execution will return an object that
-        represents remote call execution. The returned object is
-        constructed in the `remote_call(try_run=try_run)` method call.
+        If postpone_execution is True then execution will return an
+        object that represents remote call execution. The returned
+        object is constructed in the
+        `remote_call(postpone_execution=postpone_execution)` method
+        call.
 
         This method can be overwritten by derived classes if different
-        defaults to hold and try_run options need to be specified.
+        defaults to hold and postpone_execution options need to be
+        specified.
         """
-        return self if hold else self.execute(try_run=try_run)
+        return self if hold else self.execute(postpone_execution=postpone_execution)
 
-    def execute(self, try_run=False):
+    def execute(self, postpone_execution=False):
         """Trigger the remote call execution.
 
-        When try_run is True, return an object that represents the
+        When postpone_execution is True, return an object that represents the
         remote call.
         """
-        if not try_run:
+        if not postpone_execution:
             key = self.caller.func.__name__, self.ftype
             if key not in self.caller._is_compiled:
                 self.caller.remotejit.remote_compile(
                     self.caller.func, self.ftype, self.target_info)
                 self.caller._is_compiled.add(key)
-        return self.caller.remotejit.remote_call(self.caller.func, self.ftype,
-                                                 self.arguments, try_run=try_run)
+        return self.caller.remotejit.remote_call(
+            self.caller.func, self.ftype,
+            self.arguments, postpone_execution=postpone_execution)
 
 
 class RemoteJIT:
@@ -817,7 +821,7 @@ class RemoteJIT:
         assert response['remotejit']['compile'], response
         return llvm_module
 
-    def remote_call(self, func, ftype: Type, arguments: tuple, try_run=False):
+    def remote_call(self, func, ftype: Type, arguments: tuple, postpone_execution=False):
         """Call function remotely on given arguments.
 
         The input function `func` is called remotely by sending the
@@ -825,15 +829,16 @@ class RemoteJIT:
         function (see `remote_compile` method) is applied to the
         arguments, and the result is returned to local process.
 
-        If `try_run` is True then return an object that specifies
-        remote call but does not execute it. The type of return object
-        is custom to particular RemoteJIT specialization.
+        If `postpone_execution` is True then return an object that
+        specifies remote call but does not execute it. The type of
+        return object is custom to particular RemoteJIT
+        specialization.
         """
         if self.debug:
             print(f'remote_call({func}, {ftype}, {arguments})')
         fullname = func.__name__ + ftype.mangle()
         call = dict(call=(fullname, arguments))
-        if try_run:
+        if postpone_execution:
             return call
         response = self.client(remotejit=call)
         return response['remotejit']['call']

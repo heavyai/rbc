@@ -309,11 +309,12 @@ def type_name_to_dtype(type_name):
 
 class OmnisciQueryCapsule(RemoteCallCapsule):
 
-    def __call__(self, hold=True, try_run=False):
+    def __call__(self, hold=True, postpone_execution=False):
         # UDF/UDTFs executions are hold by default to support
         # extension functions compositions in a data-transfer
         # efficient way.
-        return RemoteCallCapsule.__call__(self, hold=hold and not try_run, try_run=try_run)
+        return RemoteCallCapsule.__call__(self, hold=hold and not postpone_execution,
+                                          postpone_execution=postpone_execution)
 
     def __repr__(self):
         return f'{type(self).__name__}({str(self)!r})'
@@ -1356,7 +1357,8 @@ class RemoteOmnisci(RemoteJIT):
         if self.query_requires_register(func.__name__):
             self.register()
 
-    def remote_call(self, func, ftype: typesystem.Type, arguments: tuple, try_run=False):
+    def remote_call(self, func, ftype: typesystem.Type, arguments: tuple,
+                    postpone_execution=False):
         """
         See RemoteJIT.remote_call.__doc__.
         """
@@ -1366,7 +1368,7 @@ class RemoteOmnisci(RemoteJIT):
         args = []
         for a, atype in zip(arguments, sig[1]):
             if isinstance(a, RemoteCallCapsule):
-                a = a.execute(try_run=True)
+                a = a.execute(postpone_execution=True)
             if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
                 args.append(f'CURSOR({a})')
             else:
@@ -1382,11 +1384,11 @@ class RemoteOmnisci(RemoteJIT):
             else:
                 colnames.append(rtype.annotation().get('name', '*'))
             q = f'SELECT {", ".join(colnames)} FROM TABLE({func.__name__}({args}))'
-            if try_run:
+            if postpone_execution:
                 return q
         else:
             q = f'{func.__name__}({args})'
-            if try_run:
+            if postpone_execution:
                 return q
             q = 'SELECT ' + q
         descrs, result = self.sql_execute(q + ';')
