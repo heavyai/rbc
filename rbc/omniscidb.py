@@ -370,6 +370,13 @@ class RemoteOmnisci(RemoteJIT):
             m = re.match(r'Could not bind *', msg.error_msg)
             if m:
                 raise OmnisciServerError(msg.error_msg)
+            m = re.match(r'Runtime extension functions registration is disabled.',
+                         msg.error_msg)
+            if m:
+                msg = (f"{msg.error_msg} Please use server options --enable-runtime-udf"
+                       " and/or --enable-table-functions")
+                raise OmnisciServerError(msg)
+
             # TODO: catch more known server failures here.
             raise
 
