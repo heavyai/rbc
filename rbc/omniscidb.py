@@ -819,6 +819,8 @@ class RemoteOmnisci(RemoteJIT):
                 ('int64', 'int64_t'),
                 ('float32', 'float'),
                 ('float64', 'double'),
+                ('TextEncodingDict', 'TextEncodingDict'),
+                ('OmnisciTextEncodingDictType<>', 'TextEncodingDict'),
         ]:
             ext_arguments_map['OmnisciArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
@@ -832,15 +834,6 @@ class RemoteOmnisci(RemoteJIT):
                 = ext_arguments_map.get('ColumnList<%s>' % T)
 
         ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
-
-        ext_arguments_map['OmnisciColumnType<TextEncodingDict>'] \
-            = ext_arguments_map.get('Column<TextEncodingDict>')
-        ext_arguments_map['OmnisciOutputColumnType<TextEncodingDict>'] \
-            = ext_arguments_map.get('Column<TextEncodingDict>')
-        ext_arguments_map['OmnisciColumnListType<TextEncodingDict>'] \
-            = ext_arguments_map.get('ColumnList<TextEncodingDict>')
-        # ext_arguments_map['OmnisciOutputColumnListType<%s>' % size] \
-        #     = ext_arguments_map.get('ColumnList<%s>' % size)
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
