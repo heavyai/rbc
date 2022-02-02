@@ -8,6 +8,7 @@ import inspect
 import warnings
 import ctypes
 from contextlib import nullcontext
+from collections import defaultdict
 from . import irtools
 from .errors import UnsupportedError
 from .typesystem import Type, get_signature
@@ -230,24 +231,7 @@ class Signature:
                 if ftype is None or penalty < match_penalty:
                     ftype = typ
                     match_penalty = penalty
-        if available_types and ftype is None and self.remotejit.debug:
-            satypes = ', '.join(map(str, atypes))
-            available = self._format_available_function_types(func)
-            print(f'found no matching function type to given argument types:'
-                  f'\n    {satypes}\n'
-                  f'  available function types:\n    {available}')
         return ftype, match_penalty
-
-    def _format_available_function_types(self, func):
-        available_types = self.normalized(func).signatures
-        lines = []
-        for typ in available_types:
-            sig = self.remotejit.caller_signature(typ)
-            if sig == typ:
-                lines.append(f'{sig}')
-            else:
-                lines.append(f'{sig}\n  - {typ}')
-        return '    ' + '\n    '.join(lines)
 
     def add(self, sig):
         if sig not in self.signatures:
@@ -434,15 +418,17 @@ class RemoteDispatcher:
         penalty_device_caller_ftype.sort()
 
         if not penalty_device_caller_ftype:
-            available = ''
+            available_types_devices = defaultdict(set)
             for device_, target_info in self.remotejit.targets.items():
                 if device is not UNSPECIFIED and device != device_:
                     continue
                 with target_info:
                     for caller in self.callers:
                         with Type.alias(**self.remotejit.typesystem_aliases):
-                            available += ('\n' + caller.signature.
-                                          _format_available_function_types(caller.func))
+                            for t in caller.signature.normalized(caller.func).signatures:
+                                available_types_devices[t].add(device_)
+            lines = self.remotejit._format_available_function_types(available_types_devices)
+            available = '\n    ' + '\n    '.join(lines)
             satypes = ', '.join(map(str, atypes))
             raise TypeError(f'found no matching function type to given argument types:'
                             f'\n    {satypes}\n  available function types:{available}')
@@ -907,6 +893,26 @@ class RemoteJIT:
         """Convert values to the corresponding typesystem types.
         """
         return tuple(map(Type.fromvalue, values))
+
+    def format_type(self, typ: Type):
+        """Convert typesystem type to formatted string.
+        """
+        return str(typ)
+
+    def _format_available_function_types(self, available_types_devices):
+        all_devices = set()
+        list(map(all_devices.update, available_types_devices.values()))
+        lines = []
+        for typ, devices in available_types_devices.items():
+            sig = self.caller_signature(typ)
+            d = '  ' + '|'.join(devices) + ' only' if len(devices) != len(all_devices) else ''
+            s = self.format_type(sig)
+            t = self.format_type(typ)
+            if sig == typ:
+                lines.append(f'{s}{d}')
+            else:
+                lines.append(f'{s}{d}\n    - {t}')
+        return lines
 
 
 class DispatcherRJIT(Dispatcher):

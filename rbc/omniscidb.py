@@ -13,13 +13,14 @@ from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
 from . import omnisci_backend
 from .omnisci_backend import (
+    OmnisciArrayType, OmnisciBytesType, OmnisciTextEncodingDictType,
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
     BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version, UNSPECIFIED
+from .utils import parse_version
 from . import ctools
 from . import typesystem
 
@@ -224,6 +225,25 @@ def is_udtf(sig):
     return False
 
 
+def is_sizer(t):
+    """Check if type is a type of a sizer argument:
+      int32_t | sizer=...
+    """
+    return t.is_int and t.bits == 32 and 'sizer' in t.annotation()
+
+
+def get_sizer_enum(t):
+    """Return sizer enum value as defined by the omniscidb server.
+    """
+    sizer = t.annotation()['sizer']
+    sizer = output_buffer_sizer_map.get(sizer or None, sizer)
+    for shortname, fullname in output_buffer_sizer_map.items():
+        if sizer == fullname:
+            return sizer
+    print(f'Warning: unknown sizer {sizer}')
+    return sizer
+
+
 output_buffer_sizer_map = dict(
     ConstantParameter='kUserSpecifiedConstantParameter',
     RowMultiplier='kUserSpecifiedRowMultiplier',
@@ -331,7 +351,9 @@ class RemoteOmnisci(RemoteJIT):
         OutputColumn='OmnisciOutputColumnType',
         RowMultiplier='int32|sizer=RowMultiplier',
         ConstantParameter='int32|sizer=ConstantParameter',
+        SpecifiedParameter='int32|sizer=SpecifiedParameter',
         Constant='int32|sizer=Constant',
+        PreFlight='int32|sizer=PreFlight',
         ColumnList='OmnisciColumnListType',
         TextEncodingDict='OmnisciTextEncodingDictType',
         TableFunctionManager='OmnisciTableFunctionManagerType<>',
@@ -972,7 +994,6 @@ class RemoteOmnisci(RemoteJIT):
                 'connected to ', v)
         thrift = self.thrift_client.thrift
 
-        unspecified = object()
         inputArgTypes = []
         outputArgTypes = []
         sqlArgTypes = []
@@ -984,17 +1005,13 @@ class RemoteOmnisci(RemoteJIT):
         consumed_index = 0
         name = caller.func.__name__
         for i, a in enumerate(orig_sig[1]):
-            annot = a.annotation()
-            _sizer = annot.get('sizer', unspecified)
-            if _sizer is not unspecified:
-                if not (a.is_int and a.bits == 32):
-                    raise ValueError(
-                        'sizer argument must have type int32')
-                _sizer = output_buffer_sizer_map[_sizer]
-                # cannot have multiple sizer arguments
+            if is_sizer(a):
+                sizer = get_sizer_enum(a)
+                # cannot have multiple sizer arguments:
                 assert sizer_index == -1
                 sizer_index = consumed_index + 1
-                sizer = _sizer
+
+            annot = a.annotation()
 
             # process function annotations first to avoid appending annotations twice
             if isinstance(a, OmnisciTableFunctionManagerType):
@@ -1246,23 +1263,19 @@ class RemoteOmnisci(RemoteJIT):
             rtypes = []
             atypes = []
             for atype in signature[1]:
-                _sizer = atype.annotation().get('sizer', UNSPECIFIED)
-                if _sizer is not UNSPECIFIED:
-                    if not (atype.is_int and atype.bits == 32):
-                        raise ValueError(
-                            f'sizer argument must have type int32, got {atype}')
-                    _sizer = output_buffer_sizer_map.get(_sizer, _sizer)
-                    if _sizer not in user_specified_output_buffer_sizers:
+                if is_sizer(atype):
+                    sizer = get_sizer_enum(atype)
+                    if sizer not in user_specified_output_buffer_sizers:
                         continue
-                    atype.annotation(sizer=_sizer)
+                    atype.annotation(sizer=sizer)
                 elif isinstance(atype, OmnisciTableFunctionManagerType):
                     continue
                 elif isinstance(atype, OmnisciOutputColumnType):
                     rtypes.append(atype.copy(OmnisciColumnType))
                     continue
                 atypes.append(atype)
-            return typesystem.Type(*rtypes,
-                                   **dict(struct_is_tuple=True))(*atypes, **signature._params)
+            rtype = typesystem.Type(*rtypes, **dict(struct_is_tuple=True))
+            return rtype(*atypes, **signature._params)
         return signature
 
     def get_types(self, *values):
@@ -1294,6 +1307,52 @@ class RemoteOmnisci(RemoteJIT):
                 atype.annotation(name=atype.name)
                 atype._params.pop('name')
         return ftype
+
+    def format_type(self, typ: typesystem.Type):
+        """Convert typesystem type to formatted string.
+
+        See RemoteJIT.format_type.__doc__.
+        """
+        if typ.is_function:
+            args = map(self.format_type, typ[1])
+            if is_udtf(typ):
+                return f'UDTF({", ".join(args)})'
+            else:
+                return f'({", ".join(args)}) -> {self.format_type(typ[0])}'
+        use_typename = False
+        if typ.is_struct and typ._params.get('struct_is_tuple'):
+            return f'({", ".join(map(self.format_type, typ))})'
+        if isinstance(typ, OmnisciOutputColumnType):
+            p = tuple(map(self.format_type, typ[0]))
+            typ = typesystem.Type(('OutputColumn',) + p, **typ._params)
+        elif isinstance(typ, OmnisciColumnType):
+            p = tuple(map(self.format_type, typ[0]))
+            typ = typesystem.Type(('Column',) + p, **typ._params)
+        elif isinstance(typ, OmnisciColumnListType):
+            p = tuple(map(self.format_type, typ[0]))
+            typ = typesystem.Type(('ColumnList',) + p, **typ._params)
+        elif isinstance(typ, OmnisciArrayType):
+            p = tuple(map(self.format_type, typ[0]))
+            typ = typesystem.Type(('Array',) + p, **typ._params)
+        elif isinstance(typ, OmnisciBytesType):
+            typ = typ.copy().params(typename='Bytes')
+            use_typename = True
+        elif isinstance(typ, OmnisciTextEncodingDictType):
+            typ = typ.copy().params(typename='TextEncodingDict')
+            use_typename = True
+        elif isinstance(typ, OmnisciTableFunctionManagerType):
+            typ = typ.copy().params(typename='TableFunctionManager')
+            use_typename = True
+        elif is_sizer(typ):
+            sizer = get_sizer_enum(typ)
+            for shortname, fullname in output_buffer_sizer_map.items():
+                if fullname == sizer:
+                    use_typename = True
+                    typ = typ.copy().params(typename=shortname)
+                    typ.annotation().pop('sizer')
+                    break
+
+        return typ.tostring(use_typename=use_typename, use_annotation_name=True)
 
     # We define remote_compile and remote_call for Caller.__call__ method.
     def remote_compile(self, func, ftype: typesystem.Type, target_info: TargetInfo):

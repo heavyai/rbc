@@ -122,15 +122,16 @@ class Server(object):
                         args=(dispatcher, thrift_file, options))
         p.start()
         start = time.time()
+        number_of_tries = 0
         while time.time() < start + startup_time:
+            number_of_tries += 1
             try:
                 socket.create_connection(
-                    (options['host'], options['port']), timeout=0.1)
+                    (options['host'], options['port']), timeout=0.2)
             except ConnectionRefusedError:
                 time.sleep(0.5)
             except Exception as msg:
-                print('Connection failed: `%s`, trying again in 0.5 secs..'
-                      % (msg))
+                print(f'Connection failed: `{msg}`, trying again in 0.5 secs..')
                 time.sleep(0.5)
             else:
                 break
@@ -141,8 +142,11 @@ class Server(object):
                 p.terminate()
             raise RuntimeError(
                 'failed to start up rpc_thrift server'
-                ' (was alive={}, startup_time={}s)'
-                .format(is_alive, startup_time))
+                f' (was alive={is_alive}, startup time={startup_time}s,'
+                f' elapsed time={time.time() - start})')
+        if number_of_tries > 1:
+            print(f'More than one try ({number_of_tries}) in starting up rpc_thrift_server.'
+                  f' Total elapsed time is {time.time() - start} seconds.')
         return p
 
     def _serve(self):

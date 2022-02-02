@@ -77,17 +77,27 @@ def test_remote_udf_evaluation(omnisci):
     assert_equal(myincr(3, hold=False), 4)
     assert_equal(myincr(3).execute(), 4)
 
-    assert myincr(3.5).execute() == 4.5
-
+    assert_equal(myincr(3.5).execute(), 4.5)
     assert_equal(myincr(np.int64(3)).execute(), np.int64(4))
-    # The following test fails because SELECT seems to upcast int32 to
-    # int64. TODO: investigate.
-    # assert_equal(myincr(np.int32(3)), np.int32(4))
-
     assert_equal(myincr(np.float32(3.5)).execute(), np.float32(4.5))
-    # The following test fails because SELECT seems to downcast
-    # float64 to float32. TODO: investigate.
-    # assert_equal(myincr(np.float64(3.5)), np.float64(4.5))
+
+
+def test_remote_int32_evaluation(omnisci):
+    myincr = omnisci.get_caller('myincr')
+    arange = omnisci.get_caller('arange')
+
+    pytest.xfail('SELECT upcasts int32 to int64')
+    assert_equal(myincr(np.int32(3)), np.int32(4))
+    assert_equal(arange(3, np.int32(1))['x'], np.arange(3, dtype=np.int32) + 1)
+
+
+def test_remote_float64_evaluation(omnisci):
+    myincr = omnisci.get_caller('myincr')
+    arange = omnisci.get_caller('arange')
+
+    pytest.xfail('SELECT downcasts float64 to float32')
+    assert_equal(myincr(np.float64(3.5)), np.float64(4.5))
+    assert_equal(arange(3, np.float64(1))['x'], np.arange(3, dtype=np.float64) + 1)
 
 
 def test_remote_composite_udf_evaluation(omnisci):
@@ -109,16 +119,8 @@ def test_remote_udtf_evaluation(omnisci):
     assert_equal(arange(3, 1)['x'], list(np.arange(3, dtype=np.int64) + 1))
     assert_equal(arange(3, 1.5)['x'], list(np.arange(3, dtype=np.float64) + 1.5))
     assert_equal(arange(np.int32(3), 1)['x'], list(np.arange(3, dtype=np.int32) + 1))
-
     assert_equal(arange(3, np.float32(1))['x'], np.arange(3, dtype=np.float32) + 1)
-    # The following test fails because SELECT seems to downcast
-    # float64 to float32. TODO: investigate.
-    # assert_equal(arange(3, np.float64(1))['x'], np.arange(3, dtype=np.float64) + 1)
-
     assert_equal(arange(3, np.int64(1))['x'], np.arange(3, dtype=np.int64) + 1)
-    # The following test fails because SELECT seems to upcast int32 to
-    # int64. TODO: investigate.
-    # assert_equal(arange(3, np.int32(1))['x'], np.arange(3, dtype=np.int32) + 1)
 
 
 def test_remote_composite_udtf_evaluation(omnisci):
@@ -127,23 +129,64 @@ def test_remote_composite_udtf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
     r = aincr(arange(3, 1), 2)
-
     assert_equal(str(r), 'SELECT y FROM TABLE(aincr(CURSOR(SELECT x FROM'
                  ' TABLE(arange(CAST(3 AS INT), CAST(1 AS BIGINT)))), CAST(2 AS BIGINT)))')
 
     r = r.execute()
-
     assert_equal(r['y'], np.arange(3, dtype=np.int64) + 1 + 2)
+
+    r = arange(3, myincr(2, hold=False))
+    assert_equal(str(r), 'SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(3 AS BIGINT)))')
+    assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
+
+
+def test_remote_composite_udtf_udf(omnisci):
+    """
+    TableFunctionExecutionContext.cpp:277 Check failed:
+    col_buf_ptrs.size() == exe_unit.input_exprs.size() (1 == 2)
+    """
+    myincr = omnisci.get_caller('myincr')
+    arange = omnisci.get_caller('arange')
 
     r = arange(3, myincr(2))
     assert_equal(str(r), ('SELECT x FROM TABLE(arange(CAST(3 AS INT),'
                           ' CAST(myincr(CAST(2 AS BIGINT)) AS BIGINT)))'))
 
-    # TODO: the following crashes omniscidb server:
-    # TableFunctionExecutionContext.cpp:277 Check failed:
-    # col_buf_ptrs.size() == exe_unit.input_exprs.size() (1 == 2)
-    # assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
-
-    r = arange(3, myincr(2, hold=False))
-    assert_equal(str(r), 'SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(3 AS BIGINT)))')
+    pytest.xfail('udtf(udf) crashes omniscidb server')
     assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
+
+
+def test_remote_udf_typeerror(omnisci):
+    myincr = omnisci.get_caller('myincr')
+    try:
+        myincr("abc")
+    except TypeError as msg:
+        assert_equal(str(msg), '''\
+found no matching function type to given argument types:
+    string
+  available function types:
+    (int32) -> int32
+    (int64) -> int64
+    (float32) -> float32
+    (float64) -> float64''')
+    else:
+        assert 0  # expected TypeError
+
+
+def test_remote_udtf_typeerror(omnisci):
+    arange = omnisci.get_caller('arange')
+    try:
+        arange(1.2, 0)
+    except TypeError as msg:
+        assert_equal(str(msg), '''\
+found no matching function type to given argument types:
+    float64, int64
+  available function types:
+    (int32 size, int64 x0) -> (Column<int64> x)
+    - UDTF(int32 size, int64 x0, OutputColumn<int64> x)
+    (int32 size, float64 x0) -> (Column<float64> x)
+    - UDTF(int32 size, float64 x0, OutputColumn<float64> x)
+    (int32 size, int32 x0) -> (Column<int32> x)
+    - UDTF(int32 size, int32 x0, OutputColumn<int32> x)''')
+    else:
+        assert 0  # expected TypeError

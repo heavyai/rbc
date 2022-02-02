@@ -5,6 +5,7 @@ import numpy as np
 
 from rbc.errors import UnsupportedError
 from rbc.tests import omnisci_fixture, assert_equal
+from rbc.typesystem import Type
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
 available_version, reason = rbc_omnisci.is_available()
@@ -733,3 +734,67 @@ def test_truncate_issue(omnisci):
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
+
+
+def test_format_type(omnisci):
+    def test(s, caller=False):
+        with omnisci.targets['cpu']:
+            with Type.alias(**omnisci.typesystem_aliases):
+                typ = Type.fromobject(s)
+                if caller:
+                    typ = omnisci.caller_signature(typ)
+                return omnisci.format_type(typ)
+
+    assert test('int32 x') == 'int32 x'
+    assert test('Column<int32 x | name=y>') == 'Column<int32 x | name=y>'
+    assert test('Column<int32 | name=y>') == 'Column<int32 y>'
+    assert test('Column<int32 x>') == 'Column<int32 x>'
+    assert test('Column<int32>') == 'Column<int32>'
+    assert test('Column<int32> z') == 'Column<int32> z'
+    assert test('Column<int32> | name=z') == 'Column<int32> z'
+    assert test('Column<int32> x | name=z') == 'Column<int32> x | name=z'
+    assert test('Column<Bytes>') == 'Column<Bytes>'
+    assert test('Column<Array<int32>>') == 'Column<Array<int32>>'
+    assert test('Column<Array<Bytes>>') == 'Column<Array<Bytes>>'
+
+    assert test('OutputColumn<int32>') == 'OutputColumn<int32>'
+    assert test('ColumnList<int32>') == 'ColumnList<int32>'
+
+    assert test('UDTF(ColumnList<int32>)') == 'UDTF(ColumnList<int32>)'
+    assert test('int32(ColumnList<int32>)') == 'UDTF(ColumnList<int32>)'
+    assert (test('UDTF(int32 x, Column<float32> y, OutputColumn<int64> z)')
+            == 'UDTF(int32 x, Column<float32> y, OutputColumn<int64> z)')
+    assert test('UDTF(RowMultiplier)') == 'UDTF(RowMultiplier)'
+    assert test('UDTF(RowMultiplier m)') == 'UDTF(RowMultiplier m)'
+    assert test('UDTF(RowMultiplier | name=m)') == 'UDTF(RowMultiplier m)'
+    assert test('UDTF(Constant m)') == 'UDTF(Constant m)'
+    assert test('UDTF(ConstantParameter m)') == 'UDTF(ConstantParameter m)'
+    assert test('UDTF(SpecifiedParameter m)') == 'UDTF(SpecifiedParameter m)'
+    assert test('UDTF(PreFlight m)') == 'UDTF(PreFlight m)'
+    assert test('UDTF(TableFunctionManager mgr)') == 'UDTF(TableFunctionManager mgr)'
+
+    assert test('int32(int32)') == '(int32) -> int32'
+    assert test('int32(int32 x)') == '(int32 x) -> int32'
+    assert test('int32(Array<int32>)') == '(Array<int32>) -> int32'
+    assert test('int32(int32[])') == '(Array<int32>) -> int32'
+    assert test('int32(Array<int32> x)') == '(Array<int32> x) -> int32'
+    assert test('int32(Bytes)') == '(Bytes) -> int32'
+    assert test('int32(Bytes x)') == '(Bytes x) -> int32'
+    assert test('int32(TextEncodingDict)') == '(TextEncodingDict) -> int32'
+    assert test('int32(TextEncodingDict x)') == '(TextEncodingDict x) -> int32'
+    assert test('int32(Array<Bytes> x)') == '(Array<Bytes> x) -> int32'
+
+    def test2(s):
+        return test(s, caller=True)
+    assert test2('UDTF(int32, OutputColumn<int32>)') == '(int32) -> (Column<int32>)'
+    assert test2('UDTF(OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert (test2('UDTF(int32 | sizer, OutputColumn<int32>)')
+            == '(RowMultiplier) -> (Column<int32>)')
+    assert (test2('UDTF(ConstantParameter, OutputColumn<int32>)')
+            == '(ConstantParameter) -> (Column<int32>)')
+    assert test2('UDTF(SpecifiedParameter, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert test2('UDTF(Constant, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert test2('UDTF(PreFlight, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert test2('UDTF(TableFunctionManager, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert (test2('UDTF(RowMultiplier, OutputColumn<Array<Bytes>>)')
+            == '(RowMultiplier) -> (Column<Array<Bytes>>)')

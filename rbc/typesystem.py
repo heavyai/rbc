@@ -727,14 +727,22 @@ class Type(tuple, metaclass=MetaType):
         return tuple.__str__(self)
 
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
-                 _skip_annotation=False):
+                 use_annotation_name=False, _skip_annotation=False):
         """Return string representation of a type.
         """
-        options = dict(use_typename=use_typename, use_annotation=use_annotation, use_name=use_name)
+        options = dict(use_typename=use_typename, use_annotation=use_annotation,
+                       use_name=use_name,
+                       use_annotation_name=use_annotation_name)
+        annotation = self.annotation()
         if use_annotation and not _skip_annotation:
             s = self.tostring(_skip_annotation=True, **options)
-            annotation = self.annotation()
             for name, value in annotation.items():
+                if (
+                        use_annotation_name
+                        and use_name
+                        and name == 'name'
+                        and self._params.get('name', value) == value):
+                    continue
                 if value:
                     s = '%s | %s=%s' % (s, name, value)
                 else:
@@ -745,6 +753,11 @@ class Type(tuple, metaclass=MetaType):
             return 'void'
 
         name = self._params.get('name') if use_name else None
+        if use_annotation_name and use_name:
+            annot_name = annotation.get('name')
+            if annot_name is not None and name is None:
+                name = annot_name
+
         if self.is_function:
             if use_typename:
                 typename = self._params.get('typename')
@@ -781,6 +794,7 @@ class Type(tuple, metaclass=MetaType):
                 params = params[1:]
             else:
                 name = type(self).__name__
+            name = self._params.get('shorttypename', name)
             new_params = []
             for a in params:
                 if isinstance(a, Type):
@@ -1008,7 +1022,9 @@ class Type(tuple, metaclass=MetaType):
             else:
                 name = rtype._params.pop('name', '')
             return cls(rtype, atypes, name=name)
-        if '|' in s:
+
+        i_bar, i_gt = s.find('|'), s.find('>')  # TODO: will need a better parser
+        if '|' in s and (i_gt == -1 or i_bar > i_gt):
             s, a = s.rsplit('|', 1)
             t = cls._fromstring(s.rstrip())
             if '=' in a:
@@ -1477,6 +1493,9 @@ class Type(tuple, metaclass=MetaType):
                 if self.bits == other.bits:
                     return 1
                 return
+            elif ((self.is_string and not other.is_string)
+                  or (not self.is_string and other.is_string)):
+                return
             elif self.is_custom:
                 if type(self) is not type(other):
                     return
@@ -1506,7 +1525,7 @@ class Type(tuple, metaclass=MetaType):
         raise NotImplementedError(repr(type(other)))
 
     def __call__(self, *atypes, **params):
-        return Type(self, atypes, **params)
+        return Type(self, atypes or (Type(),), **params)
 
     def pointer(self):
         numba_ptr_type = self._params.get('NumbaPointerType')
@@ -1529,8 +1548,8 @@ class Type(tuple, metaclass=MetaType):
                 for i, t in enumerate(type_list):
                     # using copy so that template symbols will not be
                     # contaminated with self parameters
-                    t = Type.fromobject(t).copy()
-                    t._params.update(self._params)
+                    t = Type.fromobject(t)
+                    t_ = t.copy()
                     if t.is_concrete:
                         # templates is changed in-situ! This ensures that
                         # `T(T)` produces `i4(i4)`, `i8(i8)` for `T in
@@ -1539,8 +1558,7 @@ class Type(tuple, metaclass=MetaType):
                         # `T1(T2)` where `T1 in [i4, i8]` and `T2 in [i4,
                         # i8]`
                         templates[self[0]] = [t]
-                        # assert not self._params, (t, self, self._params)
-                        yield t
+                        yield t_.params(None, **self._params)
                         # restore templates
                         templates[self[0]] = type_list
                     else:
@@ -1549,7 +1567,7 @@ class Type(tuple, metaclass=MetaType):
                         templates[self[0]] = []
                         for ct in t.apply_templates(templates):
                             templates[self[0]] = [ct]
-                            yield ct
+                            yield ct.params(None, **self._params)
                             templates[self[0]] = []
                         templates[self[0]] = type_list
             else:
