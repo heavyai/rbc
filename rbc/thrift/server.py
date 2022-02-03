@@ -131,7 +131,7 @@ class Server(object):
             except ConnectionRefusedError:
                 time.sleep(0.5)
             except Exception as msg:
-                warnings.info(f'Connection failed: `{msg}`, trying again in 0.5 secs..')
+                warnings.warn(f'Connection failed: `{msg}`, trying again in 0.5 secs..')
                 time.sleep(0.5)
             else:
                 break
@@ -145,7 +145,7 @@ class Server(object):
                 f' (was alive={is_alive}, startup time={startup_time}s,'
                 f' elapsed time={time.time() - start})')
         if number_of_tries > 1:
-            warnings.info(
+            warnings.warn(
                 f'More than one try ({number_of_tries}) in starting up rpc_thrift_server.'
                 f' Total elapsed time is {time.time() - start} seconds.')
         return p
