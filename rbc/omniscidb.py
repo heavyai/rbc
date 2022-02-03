@@ -309,12 +309,7 @@ def type_name_to_dtype(type_name):
 
 class OmnisciQueryCapsule(RemoteCallCapsule):
 
-    def __call__(self, hold=True, postpone_execution=False):
-        # UDF/UDTFs executions are hold by default to support
-        # extension functions compositions in a data-transfer
-        # efficient way.
-        return RemoteCallCapsule.__call__(self, hold=hold and not postpone_execution,
-                                          postpone_execution=postpone_execution)
+    use_execute_cache = True
 
     def __repr__(self):
         return f'{type(self).__name__}({str(self)!r})'
@@ -362,6 +357,8 @@ class RemoteOmnisci(RemoteJIT):
     )
 
     remote_call_capsule_cls = OmnisciQueryCapsule
+    default_remote_call_hold = True
+    supports_local_caller = False
 
     def __init__(self,
                  user='admin',
@@ -393,9 +390,6 @@ class RemoteOmnisci(RemoteJIT):
         self._init_thrift_typemap()
         self.has_cuda = None
         self._null_values = dict()
-
-        # Registered functions can only be called from a SQL query
-        self._supports_local_caller = False
 
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
@@ -1360,8 +1354,7 @@ class RemoteOmnisci(RemoteJIT):
         if self.query_requires_register(func.__name__):
             self.register()
 
-    def remote_call(self, func, ftype: typesystem.Type, arguments: tuple,
-                    postpone_execution=False):
+    def remote_call(self, func, ftype: typesystem.Type, arguments: tuple, hold=False):
         """
         See RemoteJIT.remote_call.__doc__.
         """
@@ -1371,7 +1364,7 @@ class RemoteOmnisci(RemoteJIT):
         args = []
         for a, atype in zip(arguments, sig[1]):
             if isinstance(a, RemoteCallCapsule):
-                a = a.execute(postpone_execution=True)
+                a = a.execute(hold=True)
             if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
                 args.append(f'CURSOR({a})')
             else:
@@ -1387,11 +1380,11 @@ class RemoteOmnisci(RemoteJIT):
             else:
                 colnames.append(rtype.annotation().get('name', '*'))
             q = f'SELECT {", ".join(colnames)} FROM TABLE({func.__name__}({args}))'
-            if postpone_execution:
+            if hold:
                 return q
         else:
             q = f'{func.__name__}({args})'
-            if postpone_execution:
+            if hold:
                 return q
             q = 'SELECT ' + q
         descrs, result = self.sql_execute(q + ';')

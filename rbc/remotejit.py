@@ -329,7 +329,7 @@ class Caller:
         """Return Caller instance that executes function calls on the local
         host. Useful for debugging.
         """
-        if not self.remotejit._supports_local_caller:
+        if not self.remotejit.supports_local_caller:
             msg = (
                 "Cannot create a local `Caller` when using "
                 f"{type(self.remotejit).__name__}."
@@ -374,10 +374,10 @@ class Caller:
 
     # RBC user-interface
 
-    def __call__(self, *arguments, **options):
+    def __call__(self, *arguments, device=UNSPECIFIED, hold=UNSPECIFIED):
         """Return the result of a remote JIT compiled function call.
         """
-        return RemoteDispatcher(self.func.__name__, [self])(*arguments, **options)
+        return RemoteDispatcher(self.func.__name__, [self])(*arguments, device=device, hold=hold)
 
 
 class RemoteDispatcher:
@@ -397,8 +397,15 @@ class RemoteDispatcher:
         lst = [str(caller.signature) for caller in self.callers]
         return f'{self.name}[{", ".join(lst)}]'
 
-    def __call__(self, *arguments, **options):
-        device = options.get('device', UNSPECIFIED)
+    def __call__(self, *arguments, device=UNSPECIFIED, hold=UNSPECIFIED):
+        """Perform remote call with given arguments.
+
+        If `hold` is True, return an object that encapsulates the
+        remote call to postpone the remote execution.
+        """
+        if hold is UNSPECIFIED:
+            hold = self.remotejit.default_remote_call_hold
+
         penalty_device_caller_ftype = []
         atypes = None
         for device_, target_info in self.remotejit.targets.items():
@@ -438,23 +445,21 @@ class RemoteDispatcher:
         caller = self.callers[caller_id]
         r = self.remotejit.remote_call_capsule_cls(caller, target_info, ftype, arguments)
 
-        roptions = dict()
-        if 'hold' in options:
-            roptions.update(hold=options['hold'])
-        if 'postpone_execution' in options:
-            roptions.update(hold=options['postpone_execution'])
-        return r(**roptions)
+        return r if hold else r.execute()
 
 
 class RemoteCallCapsule:
     """Encapsulates remote call execution.
     """
 
+    use_execute_cache = False
+
     def __init__(self, caller, target_info, ftype, arguments):
         self.caller = caller
         self.target_info = target_info
         self.ftype = ftype
         self.arguments = arguments
+        self._execute_cache = UNSPECIFIED
 
     @property
     def __typesystem_type__(self):
@@ -468,40 +473,28 @@ class RemoteCallCapsule:
                 f' {self.ftype}, {self.arguments})')
 
     def __str__(self):
-        return f'{self(postpone_execution=True)}'
+        return f'{self.execute(hold=True)}'
 
-    def __call__(self, hold=False, postpone_execution=False):
-        """If hold is True then return an object that encapsulates function
-        call execution. The execution can be triggered by calling
-        execute() method of the returned object.
-
-        If postpone_execution is True then execution will return an
-        object that represents remote call execution. The returned
-        object is constructed in the
-        `remote_call(postpone_execution=postpone_execution)` method
-        call.
-
-        This method can be overwritten by derived classes if different
-        defaults to hold and postpone_execution options need to be
-        specified.
-        """
-        return self if hold else self.execute(postpone_execution=postpone_execution)
-
-    def execute(self, postpone_execution=False):
+    def execute(self, hold=False):
         """Trigger the remote call execution.
 
-        When postpone_execution is True, return an object that represents the
+        When `hold` is True, return an object that represents the
         remote call.
         """
-        if not postpone_execution:
+        if not hold:
+            if self.use_execute_cache and self._execute_cache is not UNSPECIFIED:
+                return self._execute_cache
+
             key = self.caller.func.__name__, self.ftype
             if key not in self.caller._is_compiled:
                 self.caller.remotejit.remote_compile(
                     self.caller.func, self.ftype, self.target_info)
                 self.caller._is_compiled.add(key)
-        return self.caller.remotejit.remote_call(
-            self.caller.func, self.ftype,
-            self.arguments, postpone_execution=postpone_execution)
+        result = self.caller.remotejit.remote_call(self.caller.func, self.ftype,
+                                                   self.arguments, hold=hold)
+        if not hold and self.use_execute_cache:
+            self._execute_cache = result
+        return result
 
 
 class RemoteJIT:
@@ -539,6 +532,12 @@ class RemoteJIT:
 
     remote_call_capsule_cls = RemoteCallCapsule
 
+    # Some callers cannot be called locally
+    supports_local_caller = True
+
+    # Should calling RemoteDispatcher hold the execution:
+    default_remote_call_hold = False
+
     def __init__(self, host='localhost', port=11532,
                  local=False, debug=False, use_tracing_allocator=False):
         """Construct remote JIT function decorator.
@@ -575,8 +574,6 @@ class RemoteJIT:
         self._callers = []
         self._last_compile = None
         self._targets = None
-        # Some callers cannot be locally called
-        self._supports_local_caller = True
 
         if local:
             self._client = LocalClient(debug=debug,
@@ -821,7 +818,7 @@ class RemoteJIT:
         assert response['remotejit']['compile'], response
         return llvm_module
 
-    def remote_call(self, func, ftype: Type, arguments: tuple, postpone_execution=False):
+    def remote_call(self, func, ftype: Type, arguments: tuple, hold=False):
         """Call function remotely on given arguments.
 
         The input function `func` is called remotely by sending the
@@ -829,16 +826,15 @@ class RemoteJIT:
         function (see `remote_compile` method) is applied to the
         arguments, and the result is returned to local process.
 
-        If `postpone_execution` is True then return an object that
-        specifies remote call but does not execute it. The type of
-        return object is custom to particular RemoteJIT
-        specialization.
+        If `hold` is True then return an object that specifies remote
+        call but does not execute it. The type of return object is
+        custom to particular RemoteJIT specialization.
         """
         if self.debug:
             print(f'remote_call({func}, {ftype}, {arguments})')
         fullname = func.__name__ + ftype.mangle()
         call = dict(call=(fullname, arguments))
-        if postpone_execution:
+        if hold:
             return call
         response = self.client(remotejit=call)
         return response['remotejit']['call']
