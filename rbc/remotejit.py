@@ -437,8 +437,8 @@ class RemoteDispatcher:
             lines = self.remotejit._format_available_function_types(available_types_devices)
             available = '\n    ' + '\n    '.join(lines)
             satypes = ', '.join(map(str, atypes))
-            raise TypeError(f'found no matching function type to given argument types:'
-                            f'\n    {satypes}\n  available function types:{available}')
+            raise TypeError(f'found no matching function signature to given argument types:'
+                            f'\n    ({satypes}) -> ...\n  available function signatures:{available}')
 
         _, device, caller_id, ftype = penalty_device_caller_ftype[0]
         target_info = self.remotejit.targets[device]

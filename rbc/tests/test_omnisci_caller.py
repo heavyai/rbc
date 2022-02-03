@@ -162,9 +162,9 @@ def test_remote_udf_typeerror(omnisci):
         myincr("abc")
     except TypeError as msg:
         assert_equal(str(msg), '''\
-found no matching function type to given argument types:
-    string
-  available function types:
+found no matching function signature to given argument types:
+    (string) -> ...
+  available function signatures:
     (int32) -> int32
     (int64) -> int64
     (float32) -> float32
@@ -179,9 +179,9 @@ def test_remote_udtf_typeerror(omnisci):
         arange(1.2, 0)
     except TypeError as msg:
         assert_equal(str(msg), '''\
-found no matching function type to given argument types:
-    float64, int64
-  available function types:
+found no matching function signature to given argument types:
+    (float64, int64) -> ...
+  available function signatures:
     (int32 size, int64 x0) -> (Column<int64> x)
     - UDTF(int32 size, int64 x0, OutputColumn<int64> x)
     (int32 size, float64 x0) -> (Column<float64> x)

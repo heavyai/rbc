@@ -161,7 +161,7 @@ def test_rjit_add(rjit):
 
     with pytest.raises(
             TypeError,
-            match=r'found no matching function type to given argument types'):
+            match=r'found no matching function signature to given argument types'):
         add(1, 2.5)
 
     add.signature('d(d,d)')
@@ -174,7 +174,7 @@ def test_rjit_add(rjit):
 
     with pytest.raises(
             TypeError,
-            match=r'found no matching function type to given argument types'):
+            match=r'found no matching function signature to given argument types'):
         add(1j, 2)
 
     add.signature('c128(c128,c128)')
