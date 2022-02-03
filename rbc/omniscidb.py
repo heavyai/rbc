@@ -1013,6 +1013,7 @@ class RemoteOmnisci(RemoteJIT):
             atypes, rtype)
 
     def register(self):
+        """Register caller cache to the server."""
         with typesystem.Type.alias(**self.typesystem_aliases):
             return self._register()
 
@@ -1127,6 +1128,11 @@ class RemoteOmnisci(RemoteJIT):
         return self.thrift_call(
             'register_runtime_extension_functions',
             self.session_id, udfs, udtfs, device_ir_map)
+
+    def unregister(self):
+        """Unregister caller cache locally and on the server."""
+        self.reset()
+        self.register()
 
     def preprocess_callable(self, func):
         func = super().preprocess_callable(func)

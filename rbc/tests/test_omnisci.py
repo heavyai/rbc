@@ -2,7 +2,7 @@ import os
 import itertools
 import pytest
 
-from rbc.errors import UnsupportedError
+from rbc.errors import UnsupportedError, OmnisciServerError
 from rbc.tests import omnisci_fixture
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -734,3 +734,19 @@ def test_truncate_issue(omnisci):
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
+
+def test_unregistering(omnisci):
+    omnisci.reset()
+
+    @omnisci('i32(i32)')
+    def farenheight2celcius(f):
+        return (f - 32) * 5 / 9
+
+    _, result = omnisci.sql_execute('select farenheight2celcius(40)')
+    assert list(result)[0] == (4,)
+
+    omnisci.unregister()
+
+    msg = "No match found for function"
+    with pytest.raises(OmnisciServerError, match=msg):
+        omnisci.sql_execute('select farenheight2celcius(40)')
