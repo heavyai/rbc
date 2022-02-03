@@ -45,12 +45,13 @@ def test_udf_string_repr(omnisci):
     assert_equal(str(myincr), "myincr['T(T), T=int32|int64|float32|float64']")
 
     assert_equal(repr(myincr(5)),
-                 "OmnisciQueryCapsule('myincr(CAST(5 AS BIGINT))')")
-    assert_equal(str(myincr(5)), "myincr(CAST(5 AS BIGINT))")
+                 "OmnisciQueryCapsule('SELECT myincr(CAST(5 AS BIGINT))')")
+    assert_equal(str(myincr(5)), "SELECT myincr(CAST(5 AS BIGINT))")
 
     assert_equal(repr(myincr(myincr(5))),
-                 "OmnisciQueryCapsule('myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))')")
-    assert_equal(str(myincr(myincr(5))), "myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))")
+                 "OmnisciQueryCapsule('SELECT myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))')")
+    assert_equal(str(myincr(myincr(5))),
+                 "SELECT myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))")
 
 
 def test_udtf_string_repr(omnisci):
@@ -73,7 +74,7 @@ def test_udtf_string_repr(omnisci):
 def test_remote_udf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
-    assert_equal(str(myincr(3)), 'myincr(CAST(3 AS BIGINT))')
+    assert_equal(str(myincr(3)), 'SELECT myincr(CAST(3 AS BIGINT))')
     assert_equal(myincr(3, hold=False), 4)
     assert_equal(myincr(3).execute(), 4)
 
@@ -104,8 +105,8 @@ def test_remote_composite_udf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
     assert_equal(str(myincr(myincr(3))),
-                 'myincr(CAST(myincr(CAST(3 AS BIGINT)) AS BIGINT))')
-    assert_equal(str(myincr(myincr(3, hold=False))), 'myincr(CAST(4 AS BIGINT))')
+                 'SELECT myincr(CAST(myincr(CAST(3 AS BIGINT)) AS BIGINT))')
+    assert_equal(str(myincr(myincr(3, hold=False))), 'SELECT myincr(CAST(4 AS BIGINT))')
     assert_equal(myincr(myincr(3), hold=False), 5)
     assert_equal(myincr(myincr(3)).execute(), 5)
 

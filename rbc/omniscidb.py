@@ -1364,7 +1364,10 @@ class RemoteOmnisci(RemoteJIT):
         args = []
         for a, atype in zip(arguments, sig[1]):
             if isinstance(a, RemoteCallCapsule):
-                a = a.execute(hold=True)
+                if is_udtf(a.ftype):
+                    a = a.execute(hold=True)
+                else:
+                    a = a.execute(hold=True).lstrip('SELECT ')
             if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
                 args.append(f'CURSOR({a})')
             else:
@@ -1380,13 +1383,10 @@ class RemoteOmnisci(RemoteJIT):
             else:
                 colnames.append(rtype.annotation().get('name', '*'))
             q = f'SELECT {", ".join(colnames)} FROM TABLE({func.__name__}({args}))'
-            if hold:
-                return q
         else:
-            q = f'{func.__name__}({args})'
-            if hold:
-                return q
-            q = 'SELECT ' + q
+            q = f'SELECT {func.__name__}({args})'
+        if hold:
+            return q
         descrs, result = self.sql_execute(q + ';')
         dtype = [(descr.name, type_name_to_dtype(descr.type_name)) for descr in descrs]
         if is_udtf_call:
