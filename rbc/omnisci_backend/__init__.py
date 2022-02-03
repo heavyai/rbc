@@ -11,3 +11,4 @@ from .omnisci_pipeline import *  # noqa: F401, F403
 from .python_operators import *  # noqa: F401, F403
 from .omnisci_column_list import *  # noqa: F401, F403
 from .omnisci_table_function_manager import *  # noqa: F401, F403
+from .omnisci_buffer import BufferMeta
