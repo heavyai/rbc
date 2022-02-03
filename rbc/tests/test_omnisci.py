@@ -735,6 +735,7 @@ def test_truncate_issue(omnisci):
         .format(**locals()))
     assert list(result)[0] == (64,)
 
+
 def test_unregistering(omnisci):
     omnisci.reset()
 
