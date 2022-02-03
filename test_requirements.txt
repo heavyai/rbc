@@ -1,3 +1,4 @@
+cffi
 numba>=0.52
 llvmlite>=0.29
 tblib

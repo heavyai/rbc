@@ -5,6 +5,7 @@
 
 
 import re
+import copy
 import ctypes
 import _ctypes
 import inspect
@@ -411,6 +412,13 @@ class Type(tuple, metaclass=MetaType):
                 'attempt to create an invalid Type object from `%s`' % (args,))
         return obj.postprocess_type()
 
+    def copy(self, cls=None):
+        """Return a copy of type.
+        """
+        if cls is None:
+            cls = type(self)
+        return cls(*self, **copy.deepcopy(self._params))
+
     @classmethod
     def preprocess_args(cls, args):
         """Preprocess the arguments of Type constructor.
@@ -718,13 +726,23 @@ class Type(tuple, metaclass=MetaType):
             return self.tostring()
         return tuple.__str__(self)
 
-    def tostring(self, use_typename=False, use_annotation=True):
+    def tostring(self, use_typename=False, use_annotation=True, use_name=True,
+                 use_annotation_name=False, _skip_annotation=False):
         """Return string representation of a type.
         """
-        if use_annotation:
-            s = self.tostring(use_typename=use_typename, use_annotation=False)
-            annotation = self.annotation()
+        options = dict(use_typename=use_typename, use_annotation=use_annotation,
+                       use_name=use_name,
+                       use_annotation_name=use_annotation_name)
+        annotation = self.annotation()
+        if use_annotation and not _skip_annotation:
+            s = self.tostring(_skip_annotation=True, **options)
             for name, value in annotation.items():
+                if (
+                        use_annotation_name
+                        and use_name
+                        and name == 'name'
+                        and self._params.get('name', value) == value):
+                    continue
                 if value:
                     s = '%s | %s=%s' % (s, name, value)
                 else:
@@ -733,18 +751,21 @@ class Type(tuple, metaclass=MetaType):
 
         if self.is_void:
             return 'void'
-        name = self._params.get('name')
+
+        name = self._params.get('name') if use_name else None
+        if use_annotation_name and use_name:
+            annot_name = annotation.get('name')
+            if annot_name is not None and name is None:
+                name = annot_name
+
         if self.is_function:
             if use_typename:
                 typename = self._params.get('typename')
                 if typename is not None:
                     return typename
-            if name:
-                name = ' ' + name
-            return (self[0].tostring(use_typename=use_typename)
-                    + name + '(' + ', '.join(
-                        a.tostring(use_typename=use_typename)
-                        for a in self[1]) + ')')
+            name = ' ' + name if name else ''
+            return (self[0].tostring(**options)
+                    + name + '(' + ', '.join(a.tostring(**options) for a in self[1]) + ')')
 
         if name is not None:
             suffix = ' ' + name
@@ -757,15 +778,14 @@ class Type(tuple, metaclass=MetaType):
         if self.is_atomic:
             return self[0] + suffix
         if self.is_pointer:
-            return self[0].tostring(use_typename=use_typename) + '*' + suffix
+            return self[0].tostring(**options) + '*' + suffix
         if self.is_struct:
             clsname = self._params.get('clsname')
             if clsname is not None:
                 return clsname + '<' + ', '.join(
-                    [t.tostring(use_typename=use_typename)
+                    [t.tostring(**options)
                      for t in self]) + '>' + suffix
-            return '{' + ', '.join([t.tostring(use_typename=use_typename)
-                                    for t in self]) + '}' + suffix
+            return '{' + ', '.join([t.tostring(**options) for t in self]) + '}' + suffix
 
         if self.is_custom:
             params = self[0]
@@ -774,10 +794,11 @@ class Type(tuple, metaclass=MetaType):
                 params = params[1:]
             else:
                 name = type(self).__name__
+            name = self._params.get('shorttypename', name)
             new_params = []
             for a in params:
                 if isinstance(a, Type):
-                    s = a.tostring(use_typename=use_typename)
+                    s = a.tostring(**options)
                 else:
                     s = str(a)
                 new_params.append(s)
@@ -1001,7 +1022,9 @@ class Type(tuple, metaclass=MetaType):
             else:
                 name = rtype._params.pop('name', '')
             return cls(rtype, atypes, name=name)
-        if '|' in s:
+
+        i_bar, i_gt = s.find('|'), s.find('>')  # TODO: will need a better parser
+        if '|' in s and (i_gt == -1 or i_bar > i_gt):
             s, a = s.rsplit('|', 1)
             t = cls._fromstring(s.rstrip())
             if '=' in a:
@@ -1388,6 +1411,16 @@ class Type(tuple, metaclass=MetaType):
                 return 0
             if other.is_void:
                 return (0 if self.is_void else None)
+            elif self.is_custom:
+                if type(self) is not type(other):
+                    return
+                if self[0] == other[0]:
+                    if self._params or other._params:
+                        warnings.warn(
+                            'The default match implementation ignores _params content. Please'
+                            f' implement match method for custom type {type(self).__name__}')
+                    return 1
+                return
             elif other.is_pointer:
                 if not self.is_pointer:
                     return
@@ -1470,6 +1503,10 @@ class Type(tuple, metaclass=MetaType):
                 if self.bits == other.bits:
                     return 1
                 return
+            elif ((self.is_string and not other.is_string)
+                  or (not self.is_string and other.is_string)):
+                return
+
             # TODO: lots of
             raise NotImplementedError(repr((self, other)))
         elif isinstance(other, tuple):
@@ -1490,7 +1527,7 @@ class Type(tuple, metaclass=MetaType):
         raise NotImplementedError(repr(type(other)))
 
     def __call__(self, *atypes, **params):
-        return Type(self, atypes, **params)
+        return Type(self, atypes or (Type(),), **params)
 
     def pointer(self):
         numba_ptr_type = self._params.get('NumbaPointerType')
@@ -1509,9 +1546,12 @@ class Type(tuple, metaclass=MetaType):
         elif self.is_atomic:
             type_list = templates.get(self[0])
             if type_list:
+                assert isinstance(type_list, list), type_list
                 for i, t in enumerate(type_list):
+                    # using copy so that template symbols will not be
+                    # contaminated with self parameters
                     t = Type.fromobject(t)
-                    t._params.update(self._params)
+                    t_ = t.copy()
                     if t.is_concrete:
                         # templates is changed in-situ! This ensures that
                         # `T(T)` produces `i4(i4)`, `i8(i8)` for `T in
@@ -1520,8 +1560,7 @@ class Type(tuple, metaclass=MetaType):
                         # `T1(T2)` where `T1 in [i4, i8]` and `T2 in [i4,
                         # i8]`
                         templates[self[0]] = [t]
-                        # assert not self._params, (t, self, self._params)
-                        yield t
+                        yield t_.params(None, **self._params)
                         # restore templates
                         templates[self[0]] = type_list
                     else:
@@ -1530,7 +1569,7 @@ class Type(tuple, metaclass=MetaType):
                         templates[self[0]] = []
                         for ct in t.apply_templates(templates):
                             templates[self[0]] = [ct]
-                            yield ct
+                            yield ct.params(None, **self._params)
                             templates[self[0]] = []
                         templates[self[0]] = type_list
             else:

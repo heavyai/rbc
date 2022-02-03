@@ -25,6 +25,14 @@ class OmnisciBytesType(OmnisciBufferType):
     def buffer_extra_members(self):
         return ('bool is_null',)
 
+    def match(self, other):
+        if type(self) is type(other):
+            return self[0] == other[0]
+        if other.is_pointer and other[0].is_char and other[0].bits == 8:
+            return 1
+        if other.is_string:
+            return 2
+
 
 BytesPointer = BufferPointer
 
