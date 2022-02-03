@@ -2,7 +2,7 @@ import operator
 import warnings
 
 from rbc.errors import NumbaTypeError
-from .omnisci_buffer import BufferMeta, BufferPointer, free_buffer
+from .omnisci_buffer import BufferPointer, free_buffer
 from numba.core import ir, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.compiler_machinery import FunctionPass, register_pass
@@ -121,7 +121,6 @@ class DetectMissingFree(FunctionPass):
                 if isinstance(inst.value, ir.Expr) and inst.value.op == 'call':
                     yield inst
 
-
     def contains_buffer_constructors(self, state):
         """
         Check whether the func_ir contains any call which creates a buffer. This
@@ -158,11 +157,9 @@ class DetectMissingFree(FunctionPass):
         return False
 
     def run_pass(self, state):
-        if (self.contains_buffer_constructors(state) and
-            not self.contains_calls_to_free(state)):
+        if (self.contains_buffer_constructors(state) and not self.contains_calls_to_free(state)):
             warnings.warn(MissingFreeWarning())
-
-        return False # we didn't modify the IR
+        return False  # we didn't modify the IR
 
 
 class OmnisciCompilerPipeline(CompilerBase):

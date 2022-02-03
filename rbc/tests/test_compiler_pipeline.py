@@ -6,6 +6,7 @@ from rbc.omnisci_backend.omnisci_buffer import free_buffer
 from rbc.omnisci_backend.omnisci_pipeline import MissingFreeWarning
 from rbc.stdlib import array_api as xp
 
+
 @pytest.fixture
 def rjit():
     return RemoteJIT(local=True)
@@ -22,6 +23,7 @@ def no_warnings(warning_cls):
             "Warnings were raised: " + ", ".join([str(w) for w in wlist])
         )
 
+
 def test_no_warnings_decorator():
     with no_warnings(MissingFreeWarning):
         pass
@@ -34,14 +36,13 @@ def test_no_warnings_decorator():
             warnings.warn(MissingFreeWarning())
 
 
-
 class TestDetectMissingFree:
 
     def test_missing_free(self, rjit):
         # basic case: we are creating an array but we don't call .free()
         @rjit('int32(int32)')
         def fn(size):
-            a = xp.Array(size, xp.float64)
+            a = xp.Array(size, xp.float64)  # noqa: F841
             return size
 
         with pytest.warns(MissingFreeWarning):
