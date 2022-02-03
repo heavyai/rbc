@@ -195,6 +195,12 @@ class DetectMissingFree(FunctionPass):
                 return True
         return False
 
+    def is_BufferPoint_dot_free(self, state, expr):
+        return (isinstance(expr, ir.Expr) and
+                expr.op == 'getattr' and
+                isinstance(state.typemap[expr.value.name], BufferPointer) and
+                expr.attr == 'free')
+
     def contains_calls_to_free(self, state):
         """
         Check whether there is at least an instruction which calls free_buffer()
@@ -204,6 +210,8 @@ class DetectMissingFree(FunctionPass):
         for inst in self.iter_calls(func_ir):
             rhs = func_ir.get_definition(inst.value.func)
             if isinstance(rhs, ir.Global) and rhs.value is free_buffer:
+                return True
+            elif self.is_BufferPoint_dot_free(state, rhs):
                 return True
         return False
 

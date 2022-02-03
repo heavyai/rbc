@@ -58,3 +58,14 @@ class TestDetectMissingFree:
         with no_warnings(MissingFreeWarning):
             res = fn(10)
             assert res == 10
+
+    def test_detect_call_to_method_free(self, rjit):
+        @rjit('int32(int32)')
+        def fn(size):
+            a = xp.Array(size, xp.float64)
+            a.free()
+            return size
+
+        with no_warnings(MissingFreeWarning):
+            res = fn(10)
+            assert res == 10
