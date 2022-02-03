@@ -60,6 +60,22 @@ class TestDetectMissingFree:
             res = fn(10)
             assert res == 10
 
+    def test_detect_call_to_free_buffer_non_global(self, rjit):
+        # note, this is not a typo: we are aware that free_buffer is already
+        # imported globally, but here we want to check that we detect the call
+        # to free_buffer even when it's imported locally
+        from rbc.omnisci_backend.omnisci_buffer import free_buffer
+
+        @rjit('int32(int32)')
+        def fn(size):
+            a = xp.Array(size, xp.float64)
+            free_buffer(a)
+            return size
+
+        with no_warnings(MissingFreeWarning):
+            res = fn(10)
+            assert res == 10
+
     def test_detect_call_to_method_free(self, rjit):
         @rjit('int32(int32)')
         def fn(size):

@@ -136,6 +136,9 @@ class DetectMissingFree(FunctionPass):
                 return True
         return False
 
+    def is_free_buffer(self, rhs):
+        return isinstance(rhs, (ir.Global, ir.FreeVar)) and rhs.value is free_buffer
+
     def is_BufferPoint_dot_free(self, state, expr):
         return (isinstance(expr, ir.Expr) and
                 expr.op == 'getattr' and
@@ -150,9 +153,7 @@ class DetectMissingFree(FunctionPass):
         func_ir = state.func_ir
         for inst in self.iter_calls(func_ir):
             rhs = func_ir.get_definition(inst.value.func)
-            if isinstance(rhs, ir.Global) and rhs.value is free_buffer:
-                return True
-            elif self.is_BufferPoint_dot_free(state, rhs):
+            if self.is_free_buffer(rhs) or self.is_BufferPoint_dot_free(state, rhs):
                 return True
         return False
 
