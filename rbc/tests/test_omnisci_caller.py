@@ -190,3 +190,17 @@ found no matching function signature to given argument types:
     - UDTF(int32 size, int32 x0, OutputColumn<int32> x)''')
     else:
         assert 0  # expected TypeError
+
+
+def test_remote_udf_overload(omnisci):
+
+    @omnisci('int32(int32)')  # noqa: F811
+    def incr_ol(x):           # noqa: F811
+        return x + 1
+
+    @omnisci('int32(int32, int32)')  # noqa: F811
+    def incr_ol(x, dx):              # noqa: F811
+        return x + dx
+
+    assert incr_ol(1).execute() == 2
+    assert incr_ol(1, 2).execute() == 3

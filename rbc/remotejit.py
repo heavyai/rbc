@@ -377,7 +377,8 @@ class Caller:
     def __call__(self, *arguments, device=UNSPECIFIED, hold=UNSPECIFIED):
         """Return the result of a remote JIT compiled function call.
         """
-        return RemoteDispatcher(self.func.__name__, [self])(*arguments, device=device, hold=hold)
+        caller = self.remotejit.get_caller(self.func.__name__)
+        return caller(*arguments, device=device, hold=hold)
 
 
 class RemoteDispatcher:
