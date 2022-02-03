@@ -172,7 +172,8 @@ class OmnisciCompilerPipeline(CompilerBase):
         # Add the new pass to run after IRProcessing
         pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         pm.add_pass_after(DTypeComparison, ReconstructSSA)
-        pm.add_pass_after(DetectMissingFree, NopythonTypeInference)
+        if not self.state.flags.disable_leak_warnings:
+            pm.add_pass_after(DetectMissingFree, NopythonTypeInference)
         # finalize
         pm.finalize()
         # return as an iterable, any number of pipelines may be defined!

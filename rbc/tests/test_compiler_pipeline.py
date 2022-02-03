@@ -49,6 +49,16 @@ class TestDetectMissingFree:
             res = fn(10)
             assert res == 10
 
+    def test_disable_leak_warnings(self, rjit):
+        @rjit('int32(int32)', disable_leak_warnings=True)
+        def fn(size):
+            a = xp.Array(size, xp.float64)  # noqa: F841
+            return size
+
+        with no_warnings(MissingFreeWarning):
+            res = fn(10)
+            assert res == 10
+
     def test_detect_call_to_free_buffer(self, rjit):
         @rjit('int32(int32)')
         def fn(size):

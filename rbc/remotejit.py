@@ -51,7 +51,7 @@ def extract_templates(options):
       correspond to a concrete type.
 
     """
-    known_options = ['devices', 'local']
+    known_options = ['devices', 'local', 'disable_leak_warnings']
     new_options = {}
     templates = options.get('templates')
     if templates is not None:
@@ -104,6 +104,7 @@ class Signature:
         self.signatures = []
         self.signature_devices = {}
         self.signature_templates = {}
+        self.disable_leak_warnings = False
 
     @property
     def debug(self):
@@ -135,6 +136,9 @@ class Signature:
           Specify device names for the given set of signatures.
         templates : dict
           Specify template types mapping.
+        disable_leak_warnings : bool
+          When True, disable the compile-time warnings about missing calls to Array.free.
+          Default is False
 
         Returns
         -------
@@ -155,9 +159,14 @@ class Signature:
             return self
         options, templates = extract_templates(options)
         devices = options.get('devices')
+        # if we specifiy disable_leak_warnings, override the previous settings
+        if 'disable_leak_warnings' in options:
+            self.disable_leak_warnings = options['disable_leak_warnings']
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
             self.signature_devices.update(obj.signature_devices)
+            # propagate this option from the original signature
+            self.disable_leak_warnings = obj.disable_leak_warnings
             self.remotejit.discard_last_compile()
             if devices is not None:
                 for s in obj.signatures:
@@ -386,7 +395,8 @@ class Caller:
             ftype = self.signature.best_match(self.func, atypes)
             key = self.func.__name__, ftype
             if key not in self._is_compiled:
-                self.remotejit.remote_compile(self.func, ftype, target_info)
+                self.remotejit.remote_compile(self.func, ftype, target_info,
+                                              self.signature.disable_leak_warnings)
                 self._is_compiled.add(key)
             return self.remotejit.remote_call(self.func, ftype, arguments)
 
@@ -597,6 +607,9 @@ class RemoteJIT:
           Specify device names for the given set of signatures.
         templates : dict
           Specify template types mapping.
+        disable_leak_warnings : bool
+          When True, disable the compile-time warnings about missing calls to Array.free.
+          Default is False
 
         Returns
         -------
@@ -617,9 +630,12 @@ class RemoteJIT:
         else:
             s = Signature(self)
         devices = options.get('devices')
+        disable_leak_warnings = options.get('disable_leak_warnings', False)
         options, templates = extract_templates(options)
+
         for sig in signatures:
-            s = s(sig, devices=devices, templates=templates)
+            s = s(sig, devices=devices, disable_leak_warnings=disable_leak_warnings,
+                  templates=templates)
         return s
 
     def start_server(self, background=False):
@@ -666,7 +682,8 @@ class RemoteJIT:
                 socket_timeout=60000)
         return self._client
 
-    def remote_compile(self, func, ftype: Type, target_info: TargetInfo):
+    def remote_compile(self, func, ftype: Type, target_info: TargetInfo,
+                       disable_leak_warnings=False):
         """Remote compile function and signatures to machine code.
 
         The input function `func` is compiled to LLVM IR module, the
@@ -682,7 +699,8 @@ class RemoteJIT:
             [(func, {0: ftype})],
             target_info,
             pipeline_class=OmnisciCompilerPipeline,
-            debug=self.debug)
+            debug=self.debug,
+            disable_leak_warnings=disable_leak_warnings,)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
         response = self.client(remotejit=dict(
