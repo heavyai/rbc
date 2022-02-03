@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from rbc.externals.omniscidb import set_output_row_size
+from rbc.omnisci_backend import Bytes
 from rbc.tests import omnisci_fixture, assert_equal
 
 
@@ -35,6 +36,16 @@ def define(omnisci):
         for i in range(size):
             y[i] = x[i] + dx
         return size
+
+    @omnisci('Bytes(Bytes)')
+    def myupper(s):
+        r = Bytes(len(s))
+        for i in range(len(s)):
+            c = s[i]
+            if c >= 97 and c <= 122:
+                c = c - 32
+            r[i] = c
+        return r
 
 
 def test_udf_string_repr(omnisci):
@@ -101,6 +112,15 @@ def test_remote_float64_evaluation(omnisci):
     assert_equal(arange(3, np.float64(1))['x'], np.arange(3, dtype=np.float64) + 1)
 
 
+def test_remote_bytes_evaluation(omnisci):
+    myupper = omnisci.get_caller('myupper')
+    assert str(myupper) == "myupper['Bytes(Bytes)']"
+    assert str(myupper("abc")) == "SELECT myupper('abc')"
+    assert str(myupper("abc").execute()) == 'ABC'
+    assert str(myupper(b"abc")) == "SELECT myupper('abc')"
+    assert str(myupper(b"abc").execute()) == 'ABC'
+
+
 def test_remote_composite_udf_evaluation(omnisci):
     myincr = omnisci.get_caller('myincr')
 
@@ -117,11 +137,11 @@ def test_remote_udtf_evaluation(omnisci):
     assert_equal(str(arange(3, 1)),
                  'SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(1 AS BIGINT)))')
 
-    assert_equal(arange(3, 1)['x'], list(np.arange(3, dtype=np.int64) + 1))
-    assert_equal(arange(3, 1.5)['x'], list(np.arange(3, dtype=np.float64) + 1.5))
-    assert_equal(arange(np.int32(3), 1)['x'], list(np.arange(3, dtype=np.int32) + 1))
-    assert_equal(arange(3, np.float32(1))['x'], np.arange(3, dtype=np.float32) + 1)
-    assert_equal(arange(3, np.int64(1))['x'], np.arange(3, dtype=np.int64) + 1)
+    assert_equal(arange(3, 1).execute()['x'], list(np.arange(3, dtype=np.int64) + 1))
+    assert_equal(arange(3, 1.5).execute()['x'], list(np.arange(3, dtype=np.float64) + 1.5))
+    assert_equal(arange(np.int32(3), 1).execute()['x'], list(np.arange(3, dtype=np.int32) + 1))
+    assert_equal(arange(3, np.float32(1)).execute()['x'], np.arange(3, dtype=np.float32) + 1)
+    assert_equal(arange(3, np.int64(1)).execute()['x'], np.arange(3, dtype=np.int64) + 1)
 
 
 def test_remote_composite_udtf_evaluation(omnisci):
@@ -138,7 +158,7 @@ def test_remote_composite_udtf_evaluation(omnisci):
 
     r = arange(3, myincr(2, hold=False))
     assert_equal(str(r), 'SELECT x FROM TABLE(arange(CAST(3 AS INT), CAST(3 AS BIGINT)))')
-    assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
+    assert_equal(r.execute()['x'], np.arange(3, dtype=np.int64) + 2 + 1)
 
 
 def test_remote_composite_udtf_udf(omnisci):

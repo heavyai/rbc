@@ -1411,6 +1411,16 @@ class Type(tuple, metaclass=MetaType):
                 return 0
             if other.is_void:
                 return (0 if self.is_void else None)
+            elif self.is_custom:
+                if type(self) is not type(other):
+                    return
+                if self[0] == other[0]:
+                    if self._params or other._params:
+                        warnings.warn(
+                            'The default match implementation ignores _params content. Please'
+                            f' implement match method for custom type {type(self).__name__}')
+                    return 1
+                return
             elif other.is_pointer:
                 if not self.is_pointer:
                     return
@@ -1496,15 +1506,7 @@ class Type(tuple, metaclass=MetaType):
             elif ((self.is_string and not other.is_string)
                   or (not self.is_string and other.is_string)):
                 return
-            elif self.is_custom:
-                if type(self) is not type(other):
-                    return
-                if self[0] == other[0]:
-                    return 0
-                # WARNING: if the state of custom type depends on
-                # params or annotations then it must re-define match
-                # method accordingly.
-                return
+
             # TODO: lots of
             raise NotImplementedError(repr((self, other)))
         elif isinstance(other, tuple):

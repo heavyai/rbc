@@ -240,8 +240,7 @@ def get_sizer_enum(t):
     for shortname, fullname in output_buffer_sizer_map.items():
         if sizer == fullname:
             return sizer
-    print(f'Warning: unknown sizer {sizer}')
-    return sizer
+    raise ValueError(f'unknown sizer value ({sizer}) in {t}')
 
 
 output_buffer_sizer_map = dict(
@@ -313,9 +312,6 @@ class OmnisciQueryCapsule(RemoteCallCapsule):
 
     def __repr__(self):
         return f'{type(self).__name__}({str(self)!r})'
-
-    def __getitem__(self, key):
-        return self.execute()[key]
 
 
 class RemoteOmnisci(RemoteJIT):
@@ -1368,8 +1364,15 @@ class RemoteOmnisci(RemoteJIT):
                     a = a.execute(hold=True)
                 else:
                     a = a.execute(hold=True).lstrip('SELECT ')
+
             if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
                 args.append(f'CURSOR({a})')
+            elif isinstance(atype, OmnisciBytesType):
+                if isinstance(a, bytes):
+                    a = repr(a.decode())
+                elif isinstance(a, str):
+                    a = repr(a)
+                args.append(f'{a}')
             else:
                 args.append(f'CAST({a} AS {type_to_type_name(atype)})')
         args = ', '.join(args)

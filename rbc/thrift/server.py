@@ -131,7 +131,7 @@ class Server(object):
             except ConnectionRefusedError:
                 time.sleep(0.5)
             except Exception as msg:
-                print(f'Connection failed: `{msg}`, trying again in 0.5 secs..')
+                warnings.info(f'Connection failed: `{msg}`, trying again in 0.5 secs..')
                 time.sleep(0.5)
             else:
                 break
@@ -145,8 +145,9 @@ class Server(object):
                 f' (was alive={is_alive}, startup time={startup_time}s,'
                 f' elapsed time={time.time() - start})')
         if number_of_tries > 1:
-            print(f'More than one try ({number_of_tries}) in starting up rpc_thrift_server.'
-                  f' Total elapsed time is {time.time() - start} seconds.')
+            warnings.info(
+                f'More than one try ({number_of_tries}) in starting up rpc_thrift_server.'
+                f' Total elapsed time is {time.time() - start} seconds.')
         return p
 
     def _serve(self):
