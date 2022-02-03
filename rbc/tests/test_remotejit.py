@@ -214,6 +214,7 @@ def test_composition(rjit):
 
 @with_localjit
 def test_templates(ljit):
+    ljit.reset()
 
     assert isinstance(ljit, RemoteJIT)
 
@@ -322,6 +323,8 @@ scalar_pointer_types = ['int64', 'int32', 'int16', 'int8', 'float32', 'float64',
 @pytest.mark.parametrize("T", scalar_pointer_types)
 @pytest.mark.parametrize("V", scalar_pointer_types)
 def test_scalar_pointer_conversion(rjit, T, V):
+    rjit.reset()
+
     with Type.alias(T=T, V=V, intp='int64'):
 
         # pointer-intp conversion
@@ -463,6 +466,7 @@ def test_scalar_pointer_conversion(rjit, T, V):
 
 @pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 def test_scalar_pointer_access_local(ljit, T):
+    ljit.reset()
 
     with Type.alias(T=T):
         arr = np.array([1, 2, 3, 4], dtype=T)
@@ -503,6 +507,8 @@ memory_managers = dict(
 @pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 @pytest.mark.parametrize("memman", list(memory_managers))
 def test_scalar_pointer_access_remote(rjit, memman, T):
+    rjit.reset()
+
     calloc_prototype, free_prototype = memory_managers[memman]
 
     with Type.alias(T=T):
@@ -548,6 +554,7 @@ def test_scalar_pointer_access_remote(rjit, memman, T):
 @pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 def test_struct_input(ljit, rjit, location, T):
     jit = rjit if location == 'remote' else ljit
+    jit.reset()
 
     S = '{T x, T y, T z}'
 
@@ -695,6 +702,7 @@ def test_struct_input(ljit, rjit, location, T):
 @pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 def test_struct_pointer_members(ljit, rjit, location, T):
     jit = rjit if location == 'remote' else ljit
+    jit.reset()
 
     index_t = 'int32'
     S = '{T* data, index_t size}'
@@ -779,6 +787,7 @@ def test_struct_pointer_members(ljit, rjit, location, T):
 @pytest.mark.parametrize("T", ['int64', 'int32', 'int16', 'int8', 'float32', 'float64'])
 def test_struct_double_pointer_members(ljit, rjit, location, T):
     jit = rjit if location == 'remote' else ljit
+    jit.reset()
 
     index_t = 'int32'
     S = '{T** data, index_t length, index_t size}'
