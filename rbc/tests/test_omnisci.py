@@ -772,6 +772,10 @@ def test_format_type(omnisci):
     assert test('UDTF(SpecifiedParameter m)') == 'UDTF(SpecifiedParameter m)'
     assert test('UDTF(PreFlight m)') == 'UDTF(PreFlight m)'
     assert test('UDTF(TableFunctionManager mgr)') == 'UDTF(TableFunctionManager mgr)'
+    assert test('UDTF(Cursor<int32, float64>)') == 'UDTF(Cursor<Column<int32>, Column<float64>>)'
+    assert test('UDTF(Cursor<int32 x>)') == 'UDTF(Cursor<Column<int32> x>)'
+    assert test('UDTF(Cursor<int32 | name=x>)') == 'UDTF(Cursor<Column<int32> x>)'
+    assert test('UDTF(Cursor<Bytes x>)') == 'UDTF(Cursor<Column<Bytes> x>)'
 
     assert test('int32(int32)') == '(int32) -> int32'
     assert test('int32(int32 x)') == '(int32 x) -> int32'
@@ -786,6 +790,7 @@ def test_format_type(omnisci):
 
     def test2(s):
         return test(s, caller=True)
+
     assert test2('UDTF(int32, OutputColumn<int32>)') == '(int32) -> (Column<int32>)'
     assert test2('UDTF(OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert (test2('UDTF(int32 | sizer, OutputColumn<int32>)')
@@ -798,3 +803,6 @@ def test_format_type(omnisci):
     assert test2('UDTF(TableFunctionManager, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert (test2('UDTF(RowMultiplier, OutputColumn<Array<Bytes>>)')
             == '(RowMultiplier) -> (Column<Array<Bytes>>)')
+
+    assert test2('UDTF(Cursor<int32>)') == '(Cursor<Column<int32>>) -> void'
+    assert test2('UDTF(Cursor<int32 x>)') == '(Cursor<Column<int32> x>) -> void'

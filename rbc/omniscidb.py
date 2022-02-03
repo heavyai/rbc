@@ -1328,6 +1328,9 @@ class RemoteOmnisci(RemoteJIT):
         elif isinstance(typ, OmnisciArrayType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('Array',) + p, **typ._params)
+        elif isinstance(typ, OmnisciCursorType):
+            p = tuple(map(self.format_type, typ[0]))
+            typ = typesystem.Type(('Cursor',) + p, **typ._params)
         elif isinstance(typ, OmnisciBytesType):
             typ = typ.copy().params(typename='Bytes')
             use_typename = True
