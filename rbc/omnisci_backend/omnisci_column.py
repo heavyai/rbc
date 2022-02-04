@@ -26,6 +26,10 @@ class OmnisciColumnType(OmnisciBufferType):
         omnisci_version = TargetInfo().software[1][:3]
         return omnisci_version <= (5, 7, 0)
 
+    def match(self, other):
+        if type(self) is type(other):
+            return self[0] == other[0]
+
 
 class OmnisciOutputColumnType(OmnisciColumnType):
     """Omnisci OutputColumn type for RBC typesystem.
@@ -114,7 +118,10 @@ class OmnisciCursorType(typesystem.Type):
         params = []
         for p in args[0]:
             if not isinstance(p, (OmnisciColumnType, OmnisciColumnListType)):
-                p = OmnisciColumnType((p,))
+                # map Cursor<T ...> to Cursor<Column<T> ...>
+                c = p.copy()
+                p = OmnisciColumnType((c,), **c._params)
+                c._params.clear()
             params.append(p)
         return (tuple(params),)
 
