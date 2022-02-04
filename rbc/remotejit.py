@@ -199,6 +199,8 @@ class Signature:
             assert not templates
             return Caller(obj.func, final)
         if isfunctionlike(obj):
+            if self.disable_leak_warnings:
+                obj.__disable_leak_warnings__ = True
             final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             assert devices is None
@@ -499,8 +501,7 @@ class RemoteCallCapsule:
             key = self.caller.func.__name__, self.ftype
             if key not in self.caller._is_compiled:
                 self.caller.remotejit.remote_compile(
-                    self.caller.func, self.ftype, self.target_info,
-                    self.caller.signature.disable_leak_warnings)
+                    self.caller.func, self.ftype, self.target_info)
                 self.caller._is_compiled.add(key)
         result = self.caller.remotejit.remote_call(self.caller.func, self.ftype,
                                                    self.arguments, hold=hold)
@@ -811,8 +812,7 @@ class RemoteJIT:
                 socket_timeout=60000)
         return self._client
 
-    def remote_compile(self, func, ftype: Type, target_info: TargetInfo,
-                       disable_leak_warnings=False):
+    def remote_compile(self, func, ftype: Type, target_info: TargetInfo):
         """Remote compile function and signatures to machine code.
 
         The input function `func` is compiled to LLVM IR module, the
@@ -829,8 +829,7 @@ class RemoteJIT:
                 [(func, {0: ftype})],
                 target_info,
                 pipeline_class=OmnisciCompilerPipeline,
-                debug=self.debug,
-                disable_leak_warnings=disable_leak_warnings,)
+                debug=self.debug)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
         response = self.client(remotejit=dict(

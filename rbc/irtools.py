@@ -263,11 +263,11 @@ def compile_instance(func, sig,
                      target_context,
                      pipeline_class,
                      main_library,
-                     debug=False,
-                     disable_leak_warnings=False):
+                     debug=False):
     """Compile a function with given signature. Return function name when
     succesful.
     """
+    disable_leak_warnings = getattr(func, '__disable_leak_warnings__', False)
     flags = compiler.Flags()
     if get_version('numba') >= (0, 54):
         flags.no_compile = True
@@ -350,8 +350,7 @@ def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
                     user_defined_llvm_ir=None,
-                    debug=False,
-                    disable_leak_warnings=False):
+                    debug=False):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -364,8 +363,6 @@ def compile_to_LLVM(functions_and_signatures,
       Specify user-defined LLVM IR module that is linked in to the
       returned module.
     debug : bool
-    disable_leak_warnings: bool
-      Disable warnings about possible memory leaks when using Arrays
 
     Returns
     -------
@@ -399,8 +396,7 @@ def compile_to_LLVM(functions_and_signatures,
                 fname = compile_instance(func, sig, target_info, typing_context,
                                          target_context, pipeline_class,
                                          main_library,
-                                         debug=debug,
-                                         disable_leak_warnings=disable_leak_warnings)
+                                         debug=debug)
                 if fname is not None:
                     succesful_fids.append(fid)
                     function_names.append(fname)
