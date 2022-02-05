@@ -99,13 +99,14 @@ class DTypeComparison(FunctionPass):
 class MissingFreeWarning(Warning):
 
     _msg = """
-    Possible memory leak detected!
+    Possible memory leak detected in function `{}` defined in {}#{}!
+
     In RBC, arrays and buffers must be freed manually by calling the method
     .free() or the function free_buffer(): see the relevant docs.
     """
 
-    def __init__(self):
-        Warning.__init__(self, self._msg)
+    def __init__(self, functionname, filename, firstlineno):
+        Warning.__init__(self, self._msg.format(functionname, filename, firstlineno))
 
 
 @register_pass(mutates_CFG=False, analysis_only=True)
@@ -159,7 +160,8 @@ class DetectMissingFree(FunctionPass):
 
     def run_pass(self, state):
         if (self.contains_buffer_constructors(state) and not self.contains_calls_to_free(state)):
-            warnings.warn(MissingFreeWarning())
+            warnings.warn(MissingFreeWarning(
+                state.func_id.func_name, state.func_id.filename, state.func_id.firstlineno))
         return False  # we didn't modify the IR
 
 
