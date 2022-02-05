@@ -16,7 +16,6 @@ def rjit():
 def no_warnings(warning_cls):
     with pytest.warns(None) as wlist:
         yield
-
     wlist = [w.message for w in wlist if isinstance(w.message, warning_cls)]
     if wlist:
         raise AssertionError(
@@ -33,7 +32,8 @@ def test_no_warnings_decorator():
 
     with pytest.raises(AssertionError, match='Warnings were raised'):
         with no_warnings(MissingFreeWarning):
-            warnings.warn(MissingFreeWarning())
+            c = test_no_warnings_decorator.__code__
+            warnings.warn(MissingFreeWarning(c.co_name, c.co_filename, c.co_firstlineno))
 
 
 class TestDetectMissingFree:
