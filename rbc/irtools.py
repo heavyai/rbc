@@ -129,10 +129,13 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
             warnings.warn(
                 f'{type(self).__name__}._get_host_cpu_features: `remove_features` dictionary'
                 ' requires an update: detected different LLVM versions in server '
-                f'{server_llvm_version} and client {client_llvm_version}.')
+                f'{server_llvm_version} and client {client_llvm_version}.'
+                f' CPU features: {features}.')
         else:
+            features += ','
             for f in remove_features:
-                features = features.replace('+' + f, '').replace('-' + f, '')
+                features = features.replace('+' + f + ',', '').replace('-' + f + ',', '')
+            features.rstrip(',')
         return features
 
     def _customize_tm_options(self, options):
