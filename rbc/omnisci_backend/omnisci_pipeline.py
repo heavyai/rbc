@@ -100,18 +100,26 @@ class MissingFreeWarning(Warning):
 
     _msg = """
     Possible memory leak detected!
-    In RBC, arrays and buffers must be freed manually by calling the method
-    .free() or the function free_buffer(): see the relevant docs.
+
+    Arrays or buffers are allocated by function {func_name} but the function
+    never calls .free() or free_buffer().
+    In RBC, arrays and buffers must be freed manually: the relevant docs.
     """
 
-    def __init__(self):
-        Warning.__init__(self, self._msg)
+    def __init__(self, func_name):
+        msg = self.make_message(func_name)
+        Warning.__init__(self, msg)
+
+    @classmethod
+    def make_message(cls, func_name):
+        return cls._msg.format(func_name=func_name)
 
 
 class MissingFreeError(Exception):
 
-    def __init__(self):
-        Exception.__init__(self, MissingFreeWarning._msg)
+    def __init__(self, func_name):
+        msg = MissingFreeWarning.make_message(func_name)
+        Exception.__init__(self, msg)
 
 
 @register_pass(mutates_CFG=False, analysis_only=True)
@@ -166,10 +174,11 @@ class DetectMissingFree(FunctionPass):
     def run_pass(self, state):
         on_missing_free= state.flags.on_missing_free
         if (self.contains_buffer_constructors(state) and not self.contains_calls_to_free(state)):
+            func_name = state.func_id.func.__name__
             if on_missing_free == 'warn':
-                warnings.warn(MissingFreeWarning())
+                warnings.warn(MissingFreeWarning(func_name))
             elif on_missing_free == 'fail':
-                raise MissingFreeError()
+                raise MissingFreeError(func_name)
             else:
                 raise ValueError(f"Unexpected value for on_missing_free: got {on_missing_free:r}, expected 'warn', 'fail' or 'ignore'")
         return False  # we didn't modify the IR

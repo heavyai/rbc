@@ -33,7 +33,7 @@ def test_no_warnings_decorator():
 
     with pytest.raises(AssertionError, match='Warnings were raised'):
         with no_warnings(MissingFreeWarning):
-            warnings.warn(MissingFreeWarning())
+            warnings.warn(MissingFreeWarning('hello'))
 
 
 class TestDetectMissingFree:
@@ -41,22 +41,22 @@ class TestDetectMissingFree:
     def test_on_missing_free_warn(self, rjit):
         # basic case: we are creating an array but we don't call .free()
         @rjit('int32(int32)')
-        def fn(size):
+        def my_func(size):
             a = xp.Array(size, xp.float64)  # noqa: F841
             return size
 
-        with pytest.warns(MissingFreeWarning):
-            res = fn(10)
+        with pytest.warns(MissingFreeWarning, match='by function my_func'):
+            res = my_func(10)
             assert res == 10
 
     def test_on_missing_free_fail(self, rjit):
         @rjit('int32(int32)', on_missing_free='fail')
-        def fn(size):
+        def my_func(size):
             a = xp.Array(size, xp.float64)  # noqa: F841
             return size
 
-        with pytest.raises(MissingFreeError):
-            res = fn(10)
+        with pytest.raises(MissingFreeError, match='by function my_func'):
+            res = my_func(10)
 
     def test_on_missing_free_ignore(self, rjit):
         @rjit('int32(int32)', on_missing_free='ignore')
