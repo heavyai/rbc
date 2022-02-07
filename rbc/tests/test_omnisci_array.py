@@ -14,7 +14,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+    m = rbc_omnisci.RemoteOmnisci(on_missing_free='fail', **config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -288,6 +288,9 @@ def test_array_constructor_noreturn(omnisci):
         s = 0.0
         for i in range(size):
             s += a[i] + b[i] + c[i] - a[i] * b[i]
+        a.free()
+        b.free()
+        c.free()
         return s
 
     query = 'select array_noreturn(10)'
@@ -313,8 +316,10 @@ def test_array_constructor_return(omnisci):
             b[i] = float(size - i - 1)
         if size % 2:
             c = a
+            b.free()
         else:
             c = b
+            a.free()
         printf("returning array with length %i\n", len(c))
         return c
 
@@ -335,7 +340,9 @@ def test_array_constructor_len(omnisci):
     @omnisci('int64(int32)')
     def array_len(size):
         a = Array(size, types.float64)
-        return len(a)
+        res = len(a)
+        a.free()
+        return res
 
     query = 'select array_len(30)'
     _, result = omnisci.sql_execute(query)
@@ -354,7 +361,9 @@ def test_array_constructor_getitem(omnisci):
         a = Array(size, np.double)
         for i in range(size):
             a[i] = i + 0.0
-        return a[pos]
+        res = a[pos]
+        a.free()
+        return res
 
     query = 'select array_ptr(5, 3)'
     _, result = omnisci.sql_execute(query)
@@ -370,7 +379,9 @@ def test_array_constructor_is_null(omnisci):
     @omnisci('int8(int64)')
     def array_is_null(size):
         a = Array(size, 'double')
-        return a.is_null()
+        res = a.is_null()
+        a.free()
+        return res
 
     query = 'select array_is_null(3);'
     _, result = omnisci.sql_execute(query)
@@ -407,7 +418,7 @@ def test_issue197(omnisci, typ, col, suffix):
     fn_name = f"fn_issue197_{typ}_{suffix}"
     fn_issue197.__name__ = fn_name
 
-    omnisci(f'{typ}[]({typ}[])')(fn_issue197)
+    omnisci(f'{typ}[]({typ}[])', on_missing_free='ignore')(fn_issue197)
 
     _, result = omnisci.sql_execute(
         f'SELECT {col}, {fn_name}({col}) FROM {omnisci.table_name};'
@@ -423,7 +434,7 @@ def test_issue197_bool(omnisci):
 
     import rbc.omnisci_backend as np
 
-    @omnisci('bool[](bool[])')
+    @omnisci('bool[](bool[])', on_missing_free='ignore')
     def fn_issue197_bool(x):
         y = np.zeros_like(x)
         for i in range(len(x)):
@@ -444,7 +455,7 @@ def test_issue197_bool(omnisci):
 
 def test_issue109(omnisci):
 
-    @omnisci('double[](int32)')
+    @omnisci('double[](int32)', on_missing_free='ignore')
     def issue109(size):
         a = Array(5, 'double')
         for i in range(5):
@@ -457,7 +468,7 @@ def test_issue109(omnisci):
 
 def test_issue77(omnisci):
 
-    @omnisci('int64[]()')
+    @omnisci('int64[]()', on_missing_free='ignore')
     def issue77():
         a = Array(5, 'int64')
         a.fill(1)
