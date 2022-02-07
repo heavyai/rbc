@@ -172,7 +172,7 @@ class DetectMissingFree(FunctionPass):
         return False
 
     def run_pass(self, state):
-        on_missing_free= state.flags.on_missing_free
+        on_missing_free = state.flags.on_missing_free
         if (self.contains_buffer_constructors(state) and not self.contains_calls_to_free(state)):
             func_name = state.func_id.func.__name__
             if on_missing_free == 'warn':
@@ -180,7 +180,10 @@ class DetectMissingFree(FunctionPass):
             elif on_missing_free == 'fail':
                 raise MissingFreeError(func_name)
             else:
-                raise ValueError(f"Unexpected value for on_missing_free: got {on_missing_free:r}, expected 'warn', 'fail' or 'ignore'")
+                raise ValueError(
+                    f"Unexpected value for on_missing_free: "
+                    f"got {on_missing_free:r}, expected 'warn', 'fail' or 'ignore'"
+                )
         return False  # we didn't modify the IR
 
 

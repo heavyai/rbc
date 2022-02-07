@@ -56,7 +56,7 @@ class TestDetectMissingFree:
             return size
 
         with pytest.raises(MissingFreeError, match='by function my_func'):
-            res = my_func(10)
+            my_func(10)
 
     def test_on_missing_free_ignore(self, rjit):
         @rjit('int32(int32)', on_missing_free='ignore')
@@ -70,6 +70,7 @@ class TestDetectMissingFree:
 
     def test_set_on_missing_globally(self):
         my_rjit = RemoteJIT(local=True, on_missing_free='fail')
+
         @my_rjit('int32(int32)')
         def fn(size):
             a = xp.Array(size, xp.float64)  # noqa: F841
@@ -78,7 +79,7 @@ class TestDetectMissingFree:
         # this raises because on_missing_free='fail' it set globablly on the
         # RemoteJIT instance
         with pytest.raises(MissingFreeError):
-            res = fn(10)
+            fn(10)
 
     def test_detect_call_to_free_buffer(self, rjit):
         @rjit('int32(int32)')
