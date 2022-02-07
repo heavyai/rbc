@@ -16,7 +16,6 @@ def rjit():
 def no_warnings(warning_cls):
     with pytest.warns(None) as wlist:
         yield
-
     wlist = [w.message for w in wlist if isinstance(w.message, warning_cls)]
     if wlist:
         raise AssertionError(
@@ -33,7 +32,8 @@ def test_no_warnings_decorator():
 
     with pytest.raises(AssertionError, match='Warnings were raised'):
         with no_warnings(MissingFreeWarning):
-            warnings.warn(MissingFreeWarning('hello'))
+            c = test_no_warnings_decorator.__code__
+            warnings.warn(MissingFreeWarning(c.co_name, c.co_filename, c.co_firstlineno))
 
 
 class TestDetectMissingFree:
@@ -45,7 +45,7 @@ class TestDetectMissingFree:
             a = xp.Array(size, xp.float64)  # noqa: F841
             return size
 
-        with pytest.warns(MissingFreeWarning, match='by function my_func'):
+        with pytest.warns(MissingFreeWarning, match='in function `my_func`'):
             res = my_func(10)
             assert res == 10
 
@@ -55,7 +55,7 @@ class TestDetectMissingFree:
             a = xp.Array(size, xp.float64)  # noqa: F841
             return size
 
-        with pytest.raises(MissingFreeError, match='by function my_func'):
+        with pytest.raises(MissingFreeError, match='in function `my_func`'):
             my_func(10)
 
     def test_on_missing_free_ignore(self, rjit):
