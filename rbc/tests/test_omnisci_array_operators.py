@@ -92,6 +92,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.add(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -103,6 +104,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.and_(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int64(int64, int64, int64)')
@@ -119,7 +121,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a == v
+        res = (a == v)
         a.free()
         return res
 
@@ -128,7 +130,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a == a
+        res = (a == a)
         a.free()
         return res
 
@@ -141,6 +143,7 @@ def define(omnisci):
             b[i] = nb_types.int32(i+3)
         res = operator.floordiv(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('double[](int64)')
@@ -152,6 +155,7 @@ def define(omnisci):
             b[i] = nb_types.double(i+3)
         res = operator.floordiv(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int8[](int64, int32)')
@@ -159,7 +163,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a >= v
+        res = (a >= v)
         a.free()
         return res
 
@@ -168,7 +172,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a >= a
+        res = (a >= a)
         a.free()
         return res
 
@@ -177,7 +181,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a > v
+        res = (a > v)
         a.free()
         return res
 
@@ -186,11 +190,11 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a > a
+        res = (a > a)
         a.free()
         return res
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_iadd(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -201,7 +205,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_iand(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -212,7 +216,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_ifloordiv(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -223,7 +227,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('double[](int64)', on_missing_free='ignore')
+    @omnisci('double[](int64)')
     def operator_ifloordiv2(size):
         a = Array(size, 'double')
         b = Array(size, 'double')
@@ -234,7 +238,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_ilshift(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -245,7 +249,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_imul(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -256,7 +260,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_ior(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -267,7 +271,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_isub(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -278,7 +282,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_ipow(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -289,7 +293,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_irshift(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -300,7 +304,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_itruediv(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -311,7 +315,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('double[](int64)', on_missing_free='ignore')
+    @omnisci('double[](int64)')
     def operator_itruediv2(size):
         a = Array(size, 'double')
         b = Array(size, 'double')
@@ -322,7 +326,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_imod(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -333,7 +337,7 @@ def define(omnisci):
         b.free()
         return a
 
-    @omnisci('int32[](int64)', on_missing_free='ignore')
+    @omnisci('int32[](int64)')
     def operator_ixor(size):
         a = Array(size, 'int32')
         b = Array(size, 'int32')
@@ -349,7 +353,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = v in a
+        res = (v in a)
         a.free()
         return res
 
@@ -357,7 +361,7 @@ def define(omnisci):
     def operator_is(size, v):
         a = Array(size, 'int32')
         a.fill(v)
-        res = a is a
+        res = (a is a)
         a.free()
         return res
 
@@ -365,7 +369,7 @@ def define(omnisci):
     def operator_is_not(size, v):
         a = Array(size, 'int32')
         a.fill(v)
-        res = a is not a
+        res = (a is not a)
         a.free()
         return res
 
@@ -375,8 +379,9 @@ def define(omnisci):
         a.fill(v)
         b = Array(size, 'int32')
         b.fill(v)
-        res = a is not b
+        res = (a is not b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int8[](int64, int32)')
@@ -384,7 +389,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a <= v
+        res = (a <= v)
         a.free()
         return res
 
@@ -393,7 +398,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a <= a
+        res = (a <= a)
         a.free()
         return res
 
@@ -406,6 +411,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.lshift(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int8[](int64, int32)')
@@ -413,7 +419,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a < v
+        res = (a < v)
         a.free()
         return res
 
@@ -422,7 +428,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a < a
+        res = (a < a)
         a.free()
         return res
 
@@ -435,6 +441,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.mul(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -446,6 +453,7 @@ def define(omnisci):
             b[i] = nb_types.int32(7)
         res = operator.mod(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int8[](int64, int32)')
@@ -453,7 +461,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a != v
+        res = (a != v)
         a.free()
         return res
 
@@ -462,7 +470,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = a != a
+        res = (a != a)
         a.free()
         return res
 
@@ -480,7 +488,7 @@ def define(omnisci):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
-        res = v not in a
+        res = (v not in a)
         a.free()
         return res
 
@@ -493,6 +501,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.or_(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -513,6 +522,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i)
         res = operator.pow(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -524,6 +534,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.rshift(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -535,6 +546,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.sub(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -546,6 +558,7 @@ def define(omnisci):
             b[i] = nb_types.int32(i+3)
         res = operator.truediv(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('double[](int64)')
@@ -557,6 +570,7 @@ def define(omnisci):
             b[i] = nb_types.double(i+3)
         res = operator.truediv(a, b)
         a.free()
+        b.free()
         return res
 
     @omnisci('int32[](int64)')
@@ -568,6 +582,7 @@ def define(omnisci):
             b[i] = nb_types.int32(size-i-1)
         res = operator.xor(a, b)
         a.free()
+        b.free()
         return res
 
 
