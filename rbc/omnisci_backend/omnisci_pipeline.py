@@ -108,6 +108,12 @@ class MissingFreeWarning(Warning):
         Warning.__init__(self, self._msg)
 
 
+class MissingFreeError(Exception):
+
+    def __init__(self):
+        Exception.__init__(self, MissingFreeWarning._msg)
+
+
 @register_pass(mutates_CFG=False, analysis_only=True)
 class DetectMissingFree(FunctionPass):
     _name = "DetectMissingFree"
@@ -158,8 +164,14 @@ class DetectMissingFree(FunctionPass):
         return False
 
     def run_pass(self, state):
+        on_missing_free= state.flags.on_missing_free
         if (self.contains_buffer_constructors(state) and not self.contains_calls_to_free(state)):
-            warnings.warn(MissingFreeWarning())
+            if on_missing_free == 'warn':
+                warnings.warn(MissingFreeWarning())
+            elif on_missing_free == 'fail':
+                raise MissingFreeError()
+            else:
+                raise ValueError(f"Unexpected value for on_missing_free: got {on_missing_free:r}, expected 'warn', 'fail' or 'ignore'")
         return False  # we didn't modify the IR
 
 
@@ -172,7 +184,7 @@ class OmnisciCompilerPipeline(CompilerBase):
         # Add the new pass to run after IRProcessing
         pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         pm.add_pass_after(DTypeComparison, ReconstructSSA)
-        if not self.state.flags.disable_leak_warnings:
+        if self.state.flags.on_missing_free != 'ignore':
             pm.add_pass_after(DetectMissingFree, NopythonTypeInference)
         # finalize
         pm.finalize()

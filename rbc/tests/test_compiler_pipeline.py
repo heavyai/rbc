@@ -3,7 +3,7 @@ import contextlib
 import warnings
 from rbc.remotejit import RemoteJIT
 from rbc.omnisci_backend.omnisci_buffer import free_buffer
-from rbc.omnisci_backend.omnisci_pipeline import MissingFreeWarning
+from rbc.omnisci_backend.omnisci_pipeline import MissingFreeWarning, MissingFreeError
 from rbc.stdlib import array_api as xp
 
 
@@ -38,7 +38,7 @@ def test_no_warnings_decorator():
 
 class TestDetectMissingFree:
 
-    def test_missing_free(self, rjit):
+    def test_on_missing_free_warn(self, rjit):
         # basic case: we are creating an array but we don't call .free()
         @rjit('int32(int32)')
         def fn(size):
@@ -49,8 +49,17 @@ class TestDetectMissingFree:
             res = fn(10)
             assert res == 10
 
-    def test_disable_leak_warnings(self, rjit):
-        @rjit('int32(int32)', disable_leak_warnings=True)
+    def test_on_missing_free_fail(self, rjit):
+        @rjit('int32(int32)', on_missing_free='fail')
+        def fn(size):
+            a = xp.Array(size, xp.float64)  # noqa: F841
+            return size
+
+        with pytest.raises(MissingFreeError):
+            res = fn(10)
+
+    def test_on_missing_free_ignore(self, rjit):
+        @rjit('int32(int32)', on_missing_free='ignore')
         def fn(size):
             a = xp.Array(size, xp.float64)  # noqa: F841
             return size
@@ -58,6 +67,18 @@ class TestDetectMissingFree:
         with no_warnings(MissingFreeWarning):
             res = fn(10)
             assert res == 10
+
+    def test_set_on_missing_globally(self):
+        my_rjit = RemoteJIT(local=True, on_missing_free='fail')
+        @my_rjit('int32(int32)')
+        def fn(size):
+            a = xp.Array(size, xp.float64)  # noqa: F841
+            return size
+
+        # this raises because on_missing_free='fail' it set globablly on the
+        # RemoteJIT instance
+        with pytest.raises(MissingFreeError):
+            res = fn(10)
 
     def test_detect_call_to_free_buffer(self, rjit):
         @rjit('int32(int32)')

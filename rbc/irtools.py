@@ -263,22 +263,25 @@ def compile_instance(func, sig,
                      target_context,
                      pipeline_class,
                      main_library,
-                     debug=False):
+                     debug=False,
+                     on_missing_free='warn'):
     """Compile a function with given signature. Return function name when
     succesful.
     """
-    disable_leak_warnings = getattr(func, '__disable_leak_warnings__', False)
+    # individual functions can override the global settig
+    if hasattr(func, '__on_missing_free__'):
+        on_missing_free = func.__on_missing_free__
     flags = compiler.Flags()
     if get_version('numba') >= (0, 54):
         flags.no_compile = True
         flags.no_cpython_wrapper = True
         flags.no_cfunc_wrapper = True
-        flags.disable_leak_warnings = disable_leak_warnings
+        flags.on_missing_free = on_missing_free
     else:
         flags.set('no_compile')
         flags.set('no_cpython_wrapper')
         flags.set('no_cfunc_wrapper')
-        flags.set('disable_leak_warnings', disable_leak_warnings)
+        flags.set('on_missing_free', on_missing_free)
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(
@@ -350,7 +353,8 @@ def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
                     user_defined_llvm_ir=None,
-                    debug=False):
+                    debug=False,
+                    on_missing_free='warn'):
     """Compile functions with given signatures to target specific LLVM IR.
 
     Parameters
@@ -363,6 +367,8 @@ def compile_to_LLVM(functions_and_signatures,
       Specify user-defined LLVM IR module that is linked in to the
       returned module.
     debug : bool
+    on_missing_free: str
+      'warn', 'fail' or 'ignore'.
 
     Returns
     -------
@@ -396,7 +402,8 @@ def compile_to_LLVM(functions_and_signatures,
                 fname = compile_instance(func, sig, target_info, typing_context,
                                          target_context, pipeline_class,
                                          main_library,
-                                         debug=debug)
+                                         debug=debug,
+                                         on_missing_free=on_missing_free)
                 if fname is not None:
                     succesful_fids.append(fid)
                     function_names.append(fname)
