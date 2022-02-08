@@ -102,6 +102,7 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
         # See https://github.com/xnd-project/rbc/issues/45
         remove_features = {
+            (12, 12): [], (11, 11): [], (10, 10): [], (9, 9): [], (8, 8): [],
             (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'tsxldtrk', 'amx-tile', 'amx-bf16',
                       'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
@@ -123,9 +124,18 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
                       'avx512bf16', 'movbe', 'xsaveopt', 'avx512dq', 'adx',
                       'avx512pf', 'sse3'],
             (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
-        }.get((server_llvm_version[0], client_llvm_version[0]), [])
-        for f in remove_features:
-            features = features.replace('+' + f, '').replace('-' + f, '')
+        }.get((server_llvm_version[0], client_llvm_version[0]), None)
+        if remove_features is None:
+            warnings.warn(
+                f'{type(self).__name__}._get_host_cpu_features: `remove_features` dictionary'
+                ' requires an update: detected different LLVM versions in server '
+                f'{server_llvm_version} and client {client_llvm_version}.'
+                f' CPU features: {features}.')
+        else:
+            features += ','
+            for f in remove_features:
+                features = features.replace('+' + f + ',', '').replace('-' + f + ',', '')
+            features.rstrip(',')
         return features
 
     def _customize_tm_options(self, options):

@@ -11,9 +11,6 @@ class OmnisciTextEncodingDictType(typesystem.Type):
     """Omnisci Text Encoding Dict type for RBC typesystem.
     """
 
-    def tostring(self, use_typename=False, use_annotation=True):
-        return 'TextEncodingDict'
-
     @property
     def __typesystem_type__(self):
         return typesystem.Type('int32')

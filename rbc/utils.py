@@ -235,3 +235,7 @@ def check_returns_none(func):
         last_instr = instr
 
     return True
+
+
+DEFAULT = object()
+UNSPECIFIED = object()
