@@ -1290,6 +1290,38 @@ class RemoteOmnisci(RemoteJIT):
         """
         types = []
         for value in values:
+
+            if isinstance(value, list):
+                items_types = set(map(typesystem.Type.fromvalue, value))
+
+                has_int, has_float, has_other = False, False, False
+
+                for item_type in items_types:
+                    is_int = item_type.is_int or item_type.is_uint
+                    if is_int:
+                        has_int = True
+                    if item_type.is_float:
+                        has_float = True
+                    if not (is_int or item_type.is_float):
+                        has_other = True
+
+                if (has_int or has_float) and (not has_other) \
+                        and len(items_types) != 1:
+
+                    if has_int and (not has_float):
+                        items_types = {typesystem.Type.fromstring('int64')}
+                    else:
+                        items_types = {typesystem.Type.fromstring('float64')}
+
+                if len(items_types) == 1:
+                    array_type = f'Array<{items_types.pop().tostring()}>'
+                    array_type = typesystem.Type.fromstring(array_type)
+                    types.append(array_type)
+                else:
+                    raise NotImplementedError(...)
+            else:
+                types.append(typesystem.Type.fromvalue(value))
+
             if isinstance(value, RemoteCallCapsule):
                 typ = value.__typesystem_type__
                 if typ.is_struct and typ._params.get('struct_is_tuple'):
