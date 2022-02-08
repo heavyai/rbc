@@ -748,7 +748,7 @@ def test_unregistering(omnisci):
 
     omnisci.unregister()
 
-    msg = "No match found for function"
+    msg = "Undefined function call"
     with pytest.raises(OmnisciServerError, match=msg):
         omnisci.sql_execute('select farenheight2celcius(40)')
 
