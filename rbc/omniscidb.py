@@ -472,8 +472,8 @@ class RemoteOmnisci(RemoteJIT):
             if m:
                 raise OmnisciServerError(f'{m.group(1)}')
             m = re.match(
-                    r'(.*)\: No match found for function signature (.*)\(.*\)',
-                         msg.error_msg
+                r'(.*)\: No match found for function signature (.*)\(.*\)',
+                msg.error_msg
             )
             if m:
                 msg = (f"Undefined function call {m.group(2)!r} in"
