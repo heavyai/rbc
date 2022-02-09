@@ -25,7 +25,7 @@ def test_mlpack(omnisci, func):
     try:
         _, result = omnisci.sql_execute(query)
     except OmnisciServerError as msg:
-        m = re.match(r'.*No match found for function signature ' + func + r'[(]',
+        m = re.match(fr'.*Undefined function call {func!r}',
                      msg.args[0])
         if m is not None:
             pytest.skip(f'test requires omniscidb server with MLPACK support: {msg}')
