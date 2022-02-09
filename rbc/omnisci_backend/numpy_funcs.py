@@ -6,6 +6,12 @@ from numba import njit
 from numba.core import extending, types, errors
 from numba.np import numpy_support
 
+__all__ = [
+    'full', 'full_like', 'empty_like', 'empty', 'zeros', 'zeros_like',
+    'ones', 'ones_like', 'array', 'amax', 'amin', 'sum', 'prod',
+    'mean', 'cumsum'
+]
+
 
 def expose_and_overload(func):
     name = func.__name__
@@ -222,6 +228,7 @@ def omnisci_array_max(x, initial=None):
 
 
 @extending.overload(min)
+@expose_and_overload(np.min)
 @extending.overload_method(ArrayPointer, 'min')
 def omnisci_array_min(x, initial=None):
     if isinstance(x, ArrayPointer):
