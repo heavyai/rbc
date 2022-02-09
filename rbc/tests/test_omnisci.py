@@ -201,7 +201,7 @@ def test_loadtime_udf(omnisci):
             'select i4, udf_diff2(i4, i4) from {omnisci.table_name}'
             .format(**locals()))
     except Exception as msg:
-        assert 'No match found for function signature udf_diff' in str(msg)
+        assert "Undefined function call 'udf_diff2'" in str(msg)
         return
     result = list(result)
     for i_, (i, d) in enumerate(result):
