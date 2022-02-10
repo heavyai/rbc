@@ -18,7 +18,7 @@ from .targetinfo import TargetInfo
 from .rbclib import tracing_allocator
 # XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
 # we support Arrays even without omnisci, so it must be renamed and moved
-# somewhere elsef
+# somewhere else
 from .omnisci_backend import OmnisciCompilerPipeline
 
 
@@ -52,7 +52,7 @@ def extract_templates(options):
       correspond to a concrete type.
 
     """
-    known_options = ['devices', 'local']
+    known_options = ['devices', 'local', 'on_missing_free']
     new_options = {}
     templates = options.get('templates')
     if templates is not None:
@@ -105,6 +105,7 @@ class Signature:
         self.signatures = []
         self.signature_devices = {}
         self.signature_templates = {}
+        self.on_missing_free = None
 
     @property
     def debug(self):
@@ -147,6 +148,10 @@ class Signature:
           Specify device names for the given set of signatures.
         templates : dict
           Specify template types mapping.
+        on_missing_free : str
+          Determine what to do if we detect a missing call to Array.free.
+          Can be None, 'warn', 'fail' or 'ignore. Default is None, which
+          means to use the default setting
 
         Returns
         -------
@@ -167,9 +172,14 @@ class Signature:
             return self
         options, templates = extract_templates(options)
         devices = options.get('devices')
+        # if we specifiy on_missing_free, override the previous settings
+        if 'on_missing_free' in options:
+            self.on_missing_free = options['on_missing_free']
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
             self.signature_devices.update(obj.signature_devices)
+            # propagate this option from the original signature
+            self.on_missing_free = obj.on_missing_free
             self.remotejit.discard_last_compile()
             if devices is not None:
                 for s in obj.signatures:
@@ -190,6 +200,8 @@ class Signature:
             assert not templates
             return Caller(obj.func, final)
         if isfunctionlike(obj):
+            if self.on_missing_free is not None:
+                obj.__on_missing_free__ = self.on_missing_free
             final = Signature(self.remotejit)
             final(self)  # copies the signatures from self to final
             assert devices is None
@@ -541,7 +553,8 @@ class RemoteJIT:
     default_remote_call_hold = False
 
     def __init__(self, host='localhost', port=11532,
-                 local=False, debug=False, use_tracing_allocator=False):
+                 local=False, debug=False, use_tracing_allocator=False,
+                 on_missing_free='warn'):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -558,13 +571,17 @@ class RemoteJIT:
           When True, output debug messages.
         use_tracing_allocator : bool
           When True, enable the automatic detection of memory leaks.
+        on_missing_free: str
+          Determine what to do if we statically determine a possible missing call to
+          Array.free(): can be 'warn', 'fail' or 'ignore'.
         """
         if host == 'localhost':
             host = get_local_ip()
 
         if use_tracing_allocator and not local:
             raise ValueError('use_tracing_allocator=True can be used only with local=True')
-
+        assert on_missing_free in ('warn', 'fail', 'ignore')
+        self.on_missing_free = on_missing_free
         self.debug = debug
         self.use_tracing_allocator = use_tracing_allocator
         self.host = host
@@ -726,6 +743,10 @@ class RemoteJIT:
           Specify device names for the given set of signatures.
         templates : dict
           Specify template types mapping.
+        on_missing_free : str
+          Determine what to do if we detect a missing call to Array.free.
+          Can be None, 'warn', 'fail' or 'ignore. Default is None, which means
+          to use the global settings which is set on the RemoteJIT.
 
         Returns
         -------
@@ -746,9 +767,12 @@ class RemoteJIT:
         else:
             s = Signature(self)
         devices = options.get('devices')
+        on_missing_free = options.get('on_missing_free', None)
         options, templates = extract_templates(options)
+
         for sig in signatures:
-            s = s(sig, devices=devices, templates=templates)
+            s = s(sig, devices=devices, on_missing_free=on_missing_free,
+                  templates=templates)
         return s
 
     def start_server(self, background=False):
@@ -812,7 +836,8 @@ class RemoteJIT:
                 [(func, {0: ftype})],
                 target_info,
                 pipeline_class=OmnisciCompilerPipeline,
-                debug=self.debug)
+                debug=self.debug,
+                on_missing_free=self.on_missing_free)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
         response = self.client(remotejit=dict(

@@ -37,7 +37,7 @@ def define(omnisci):
             y[i] = x[i] + dx
         return size
 
-    @omnisci('Bytes(Bytes)')
+    @omnisci('Bytes(Bytes)', on_missing_free='ignore')
     def myupper(s):
         r = Bytes(len(s))
         for i in range(len(s)):

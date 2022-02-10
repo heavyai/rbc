@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+    m = rbc_omnisci.RemoteOmnisci(on_missing_free='fail', **config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -103,7 +103,7 @@ def test_bytes_return(omnisci):
 
     from rbc.omnisci_backend import Bytes
 
-    @omnisci('Bytes(int32, int32)')
+    @omnisci('Bytes(int32, int32)', on_missing_free='ignore')
     def make_abc(first, n):
         r = Bytes(n)
         for i in range(n):
@@ -122,7 +122,7 @@ def test_bytes_upper(omnisci):
 
     from rbc.omnisci_backend import Bytes
 
-    @omnisci('Bytes(Bytes)')
+    @omnisci('Bytes(Bytes)', on_missing_free='ignore')
     def myupper(s):
         r = Bytes(len(s))
         for i in range(len(s)):

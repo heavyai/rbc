@@ -1184,7 +1184,8 @@ class RemoteOmnisci(RemoteJIT):
                     target_info,
                     pipeline_class=OmnisciCompilerPipeline,
                     user_defined_llvm_ir=self.user_defined_llvm_ir.get(device),
-                    debug=self.debug)
+                    debug=self.debug,
+                    on_missing_free=self.on_missing_free)
 
                 assert llvm_module.triple == target_info.triple
                 assert llvm_module.data_layout == target_info.datalayout

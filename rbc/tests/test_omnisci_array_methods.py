@@ -54,7 +54,7 @@ ndarray_methods = [
 
 def define(omnisci):
 
-    @omnisci('double[](int64, double)')
+    @omnisci('double[](int64, double)', on_missing_free='ignore')
     def ndarray_fill(size, v):
         a = Array(size, 'double')
         a.fill(v)
@@ -64,14 +64,18 @@ def define(omnisci):
     def ndarray_max(size, v):
         a = Array(size, 'double')
         a.fill(v)
-        return a.max()
+        res = a.max()
+        a.free()
+        return res
 
     for retty in NUMERIC_TYPES:
         for op in ('min', 'max', 'mean'):
             fn_name = f'ndarray_{op}_empty_{retty}'
             fn = (f'def {fn_name}(size):\n'
                   f'    a = Array(size, "{retty}")\n'
-                  f'    return a.{op}()\n')
+                  f'    res = a.{op}()\n'
+                  f'    a.free()\n'
+                  f'    return res')
             exec(fn)
             fn = locals()[fn_name]
             if op == 'mean':
@@ -83,49 +87,65 @@ def define(omnisci):
     def ndarray_max_initial(size, v, initial):
         a = Array(size, 'double')
         a.fill(v)
-        return a.max(initial=initial)
+        res = a.max(initial=initial)
+        a.free()
+        return res
 
     @omnisci('double(int64, double)')
     def ndarray_mean(size, v):
         a = Array(size, 'double')
         a.fill(v)
-        return a.mean()
+        res = a.mean()
+        a.free()
+        return res
 
     @omnisci('double(int64, double)')
     def ndarray_min(size, v):
         a = Array(size, 'double')
         a.fill(v)
-        return a.min()
+        res = a.min()
+        a.free()
+        return res
 
     @omnisci('double(int64, double, double)')
     def ndarray_min_initial(size, v, initial):
         a = Array(size, 'double')
         a.fill(v)
-        return a.min(initial=initial)
+        res = a.min(initial=initial)
+        a.free()
+        return res
 
     @omnisci('double(int64, double)')
     def ndarray_sum(size, v):
         a = Array(size, 'double')
         a.fill(v)
-        return a.sum()
+        res = a.sum()
+        a.free()
+        return res
 
     @omnisci('double(int64, double, double)')
     def ndarray_sum_initial(size, v, initial):
         a = Array(size, 'double')
         a.fill(v)
-        return a.sum(initial=initial)
+        res = a.sum(initial=initial)
+        a.free()
+        return res
 
     @omnisci('double(int64, double)')
     def ndarray_prod(size, v):
         a = Array(size, 'double')
         a.fill(v)
-        return a.prod()
+        res = a.prod()
+        a.free()
+        return res
 
     @omnisci('double(int64, double, double)')
     def ndarray_prod_initial(size, v, initial):
         a = Array(size, 'double')
         a.fill(v)
-        return a.prod(initial=initial)
+        res = a.prod(initial=initial)
+        a.free()
+        return res
 
 
 @pytest.mark.parametrize("method, args, expected", ndarray_methods,

@@ -1,7 +1,8 @@
 import operator
+import warnings
 
 from rbc.errors import NumbaTypeError
-from .omnisci_buffer import BufferMeta, free_all_other_buffers
+from .omnisci_buffer import BufferPointer, free_buffer
 from numba.core import ir, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.compiler_machinery import FunctionPass, register_pass
@@ -9,65 +10,9 @@ from numba.core.untyped_passes import (IRProcessing,
                                        RewriteSemanticConstants,
                                        ReconstructSSA,
                                        DeadBranchPrune,)
-from numba.core.typed_passes import PartialTypeInference, DeadCodeElimination
-
-
-# Register this pass with the compiler framework, declare that it will not
-# mutate the control flow graph and that it is not an analysis_only pass (it
-# potentially mutates the IR).
-@register_pass(mutates_CFG=False, analysis_only=False)
-class AutoFreeBuffers(FunctionPass):
-    """
-    Black magic at work.
-
-    The goal of this pass is to "automagically" free all the buffers which
-    were allocated, apart the one which is used as a return value (if any).
-
-    NOTE: at the moment of writing there are very few tests for this and it's
-    likely that it is broken and/or does not work properly in the general
-    case. [Remove this note once we are confident that it works well]
-    """
-    _name = "auto_free_buffers"  # the common name for the pass
-
-    def __init__(self):
-        FunctionPass.__init__(self)
-
-    # implement method to do the work, "state" is the internal compiler
-    # state from the CompilerBase instance.
-    def run_pass(self, state):
-        func_ir = state.func_ir  # get the FunctionIR object
-
-        for blk in func_ir.blocks.values():
-            for stmt in blk.find_insts(ir.Assign):
-                if (
-                    isinstance(stmt.value, ir.FreeVar)
-                    and stmt.value.name in BufferMeta.class_names
-                ):
-                    break
-            else:
-                continue
-            break
-        else:
-            return False  # one does not changes the IR
-
-        for blk in func_ir.blocks.values():
-            loc = blk.loc
-            scope = blk.scope
-            for ret in blk.find_insts(ir.Return):
-
-                name = "free_all_other_buffers_fn"
-                value = ir.Global(name, free_all_other_buffers, loc)
-                target = scope.make_temp(loc)
-                stmt = ir.Assign(value, target, loc)
-                blk.insert_before_terminator(stmt)
-
-                fn_call = ir.Expr.call(func=target, args=[ret.value], kws=(), loc=loc)
-                lhs = scope.make_temp(loc)
-                var = ir.Assign(fn_call, lhs, blk.loc)
-                blk.insert_before_terminator(var)
-                break
-
-        return True  # we changed the IR
+from numba.core.typed_passes import (PartialTypeInference,
+                                     DeadCodeElimination,
+                                     NopythonTypeInference)
 
 
 @register_pass(mutates_CFG=False, analysis_only=False)
@@ -151,6 +96,96 @@ class DTypeComparison(FunctionPass):
         return mutated
 
 
+class MissingFreeWarning(Warning):
+
+    _msg = """
+    Possible memory leak detected in function `{}` defined in {}#{}!
+
+    In RBC, arrays and buffers must be freed manually by calling the method
+    .free() or the function free_buffer(): see the relevant docs.
+    """
+
+    def __init__(self, functionname, filename, firstlineno):
+        msg = self.make_message(functionname, filename, firstlineno)
+        Warning.__init__(self, msg)
+
+    @classmethod
+    def make_message(cls, functionname, filename, firstlineno):
+        return cls._msg.format(functionname, filename, firstlineno)
+
+
+class MissingFreeError(Exception):
+
+    def __init__(self, functionname, filename, firstlineno):
+        msg = MissingFreeWarning.make_message(functionname, filename, firstlineno)
+        Exception.__init__(self, msg)
+
+
+@register_pass(mutates_CFG=False, analysis_only=True)
+class DetectMissingFree(FunctionPass):
+    _name = "DetectMissingFree"
+
+    def __init__(self):
+        FunctionPass.__init__(self)
+
+    def iter_calls(self, func_ir):
+        for block in func_ir.blocks.values():
+            for inst in block.find_insts(ir.Assign):
+                if isinstance(inst.value, ir.Expr) and inst.value.op == 'call':
+                    yield inst
+
+    def contains_buffer_constructors(self, state):
+        """
+        Check whether the func_ir contains any call which creates a buffer. This
+        could be either a direct call to e.g. xp.Array() or a call to any
+        function which returns a BufferPointer: in that case we assume that
+        the ownership is transfered upon return and that the caller is
+        responsible to free() it.
+        """
+        func_ir = state.func_ir
+        for inst in self.iter_calls(func_ir):
+            ret_type = state.typemap[inst.target.name]
+            if isinstance(ret_type, BufferPointer):
+                return True
+        return False
+
+    def is_free_buffer(self, rhs):
+        return isinstance(rhs, (ir.Global, ir.FreeVar)) and rhs.value is free_buffer
+
+    def is_BufferPoint_dot_free(self, state, expr):
+        return (isinstance(expr, ir.Expr) and
+                expr.op == 'getattr' and
+                isinstance(state.typemap[expr.value.name], BufferPointer) and
+                expr.attr == 'free')
+
+    def contains_calls_to_free(self, state):
+        """
+        Check whether there is at least an instruction which calls free_buffer()
+        or BufferPointer.free()
+        """
+        func_ir = state.func_ir
+        for inst in self.iter_calls(func_ir):
+            rhs = func_ir.get_definition(inst.value.func)
+            if self.is_free_buffer(rhs) or self.is_BufferPoint_dot_free(state, rhs):
+                return True
+        return False
+
+    def run_pass(self, state):
+        on_missing_free = state.flags.on_missing_free
+        fid = state.func_id
+        if (self.contains_buffer_constructors(state) and not self.contains_calls_to_free(state)):
+            if on_missing_free == 'warn':
+                warnings.warn(MissingFreeWarning(fid.func_name, fid.filename, fid.firstlineno))
+            elif on_missing_free == 'fail':
+                raise MissingFreeError(fid.func_name, fid.filename, fid.firstlineno)
+            else:
+                raise ValueError(
+                    f"Unexpected value for on_missing_free: "
+                    f"got {on_missing_free:r}, expected 'warn', 'fail' or 'ignore'"
+                )
+        return False  # we didn't modify the IR
+
+
 class OmnisciCompilerPipeline(CompilerBase):
     def define_pipelines(self):
         # define a new set of pipelines (just one in this case) and for ease
@@ -158,9 +193,10 @@ class OmnisciCompilerPipeline(CompilerBase):
         # namely the "nopython" pipeline
         pm = DefaultPassBuilder.define_nopython_pipeline(self.state)
         # Add the new pass to run after IRProcessing
-        pm.add_pass_after(AutoFreeBuffers, IRProcessing)
         pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         pm.add_pass_after(DTypeComparison, ReconstructSSA)
+        if self.state.flags.on_missing_free != 'ignore':
+            pm.add_pass_after(DetectMissingFree, NopythonTypeInference)
         # finalize
         pm.finalize()
         # return as an iterable, any number of pipelines may be defined!

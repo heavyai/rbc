@@ -12,7 +12,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+    m = rbc_omnisci.RemoteOmnisci(on_missing_free='fail', **config)
     table_name = 'rbc_test_omnisci_array'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -116,7 +116,7 @@ def test_omnisci_array_binary_math(omnisci, method, signature, columns):
     s = f'def np_{method}(a, b): return omni.{method}(a, b)'
     exec(s, globals())
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    omnisci(signature, on_missing_free='ignore')(eval('np_{}'.format(method)))
 
     ca, cb = columns.split(',')
 
@@ -178,7 +178,7 @@ def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
     s = f'def np_{method}(a, b): return omni.{method}(a, b)'
     exec(s, globals())
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    omnisci(signature, on_missing_free='ignore')(eval('np_{}'.format(method)))
 
     t = tuple(args.split(','))
     a, b = t[0], t[1]
@@ -261,7 +261,7 @@ def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
     s = f'def np_{method}(a): return omni.{method}(a)'
     exec(s, globals())
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    omnisci(signature, on_missing_free='ignore')(eval('np_{}'.format(method)))
 
     query = f'select {column}, ' + \
             f'np_{method}({column})' + \
@@ -280,7 +280,7 @@ def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
 
 def test_heaviside(omnisci):
 
-    @omnisci('double[](int64[], int64)')
+    @omnisci('double[](int64[], int64)', on_missing_free='ignore')
     def heaviside(x1, x2):
         return omni.heaviside(x1, x2)
 

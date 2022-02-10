@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def omnisci():
     # TODO: use omnisci_fixture from rbc/tests/__init__.py
     config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+    m = rbc_omnisci.RemoteOmnisci(on_missing_free='fail', **config)
     table_name = 'rbc_test_omnisci_array'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -130,7 +130,7 @@ array_methods = [
 def test_array_methods(omnisci, method, signature, args, expected):
     omnisci.reset()
 
-    fn = omnisci(signature)(eval('np_{}'.format(method)))
+    fn = omnisci(signature, on_missing_free='ignore')(eval('np_{}'.format(method)))
 
     query = 'select np_{method}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')' + \
@@ -146,7 +146,8 @@ def test_array_methods(omnisci, method, signature, args, expected):
 def test_dtype(omnisci, col):
     omnisci.reset()
 
-    @omnisci('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
+    @omnisci('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'],
+             on_missing_free='ignore')
     def zeros_like(x):
         z = omni.zeros(len(x), x.dtype)
         return z
