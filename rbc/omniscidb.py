@@ -471,6 +471,14 @@ class RemoteOmnisci(RemoteJIT):
             m = re.match(r'.*Exception: (.*)', msg.error_msg)
             if m:
                 raise OmnisciServerError(f'{m.group(1)}')
+            m = re.match(
+                r'(.*)\: No match found for function signature (.*)\(.*\)',
+                msg.error_msg
+            )
+            if m:
+                msg = (f"Undefined function call {m.group(2)!r} in"
+                       f" SQL statement: {m.group(1)}")
+                raise OmnisciServerError(msg)
             m = re.match(r'.*SQL Error: (.*)', msg.error_msg)
             if m:
                 raise OmnisciServerError(f'{m.group(1)}')
@@ -1104,6 +1112,7 @@ class RemoteOmnisci(RemoteJIT):
             atypes, rtype)
 
     def register(self):
+        """Register caller cache to the server."""
         with typesystem.Type.alias(**self.typesystem_aliases):
             return self._register()
 
@@ -1212,6 +1221,11 @@ class RemoteOmnisci(RemoteJIT):
         return self.thrift_call(
             'register_runtime_extension_functions',
             self.session_id, udfs, udtfs, device_ir_map)
+
+    def unregister(self):
+        """Unregister caller cache locally and on the server."""
+        self.reset()
+        self.register()
 
     def preprocess_callable(self, func):
         func = super().preprocess_callable(func)

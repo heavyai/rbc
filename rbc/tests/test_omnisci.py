@@ -3,7 +3,7 @@ import itertools
 import pytest
 import numpy as np
 
-from rbc.errors import UnsupportedError
+from rbc.errors import UnsupportedError, OmnisciServerError
 from rbc.tests import omnisci_fixture, assert_equal
 from rbc.typesystem import Type
 
@@ -201,7 +201,7 @@ def test_loadtime_udf(omnisci):
             'select i4, udf_diff2(i4, i4) from {omnisci.table_name}'
             .format(**locals()))
     except Exception as msg:
-        assert 'No match found for function signature udf_diff' in str(msg)
+        assert "Undefined function call 'udf_diff2'" in str(msg)
         return
     result = list(result)
     for i_, (i, d) in enumerate(result):
@@ -734,6 +734,23 @@ def test_truncate_issue(omnisci):
         ' from {omnisci.table_name} limit 1'
         .format(**locals()))
     assert list(result)[0] == (64,)
+
+
+def test_unregistering(omnisci):
+    omnisci.reset()
+
+    @omnisci('i32(i32)')
+    def fahrenheit2celsius(f):
+        return (f - 32) * 5 / 9
+
+    _, result = omnisci.sql_execute('select fahrenheit2celsius(40)')
+    assert list(result)[0] == (4,)
+
+    omnisci.unregister()
+
+    msg = "Undefined function call"
+    with pytest.raises(OmnisciServerError, match=msg):
+        omnisci.sql_execute('select fahrenheit2celsius(40)')
 
 
 def test_format_type(omnisci):
