@@ -53,6 +53,7 @@ class TServerSocket(thr.transport.TServerSocket):
             pass
         self.sock = None
 
+
 class Processor(thr.thrift.TProcessor):
 
     def __init__(self, server, service, handler):
