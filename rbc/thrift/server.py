@@ -37,19 +37,19 @@ if tblib is not None:
 class TServerSocket(thr.transport.TServerSocket):
 
     def close(self):
+        # Copied from https://github.com/Thriftpy/thriftpy2/pull/184
+        # Remove when using pythrift2 > 0.4.14
         if not self.sock:
             return
 
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
-        except OSError as msg:
-            print(msg)
+        except OSError:
             pass
 
         try:
             self.sock.close()
-        except OSError as msg:
-            print(msg)
+        except OSError:
             pass
         self.sock = None
 
