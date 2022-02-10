@@ -740,17 +740,17 @@ def test_unregistering(omnisci):
     omnisci.reset()
 
     @omnisci('i32(i32)')
-    def farenheight2celcius(f):
+    def fahrenheit2celsius(f):
         return (f - 32) * 5 / 9
 
-    _, result = omnisci.sql_execute('select farenheight2celcius(40)')
+    _, result = omnisci.sql_execute('select fahrenheit2celsius(40)')
     assert list(result)[0] == (4,)
 
     omnisci.unregister()
 
     msg = "Undefined function call"
     with pytest.raises(OmnisciServerError, match=msg):
-        omnisci.sql_execute('select farenheight2celcius(40)')
+        omnisci.sql_execute('select fahrenheit2celsius(40)')
 
 
 def test_format_type(omnisci):
