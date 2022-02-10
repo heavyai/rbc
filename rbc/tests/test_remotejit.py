@@ -13,8 +13,8 @@ win32 = sys.platform == 'win32'
 
 @pytest.fixture(scope="module")
 def rjit(request):
-    local = not False
-    rjit = RemoteJIT(debug=True, local=local)
+    local = False
+    rjit = RemoteJIT(debug=not True, local=local)
     if not local:
         rjit.start_server(background=True)
         request.addfinalizer(rjit.stop_server)
