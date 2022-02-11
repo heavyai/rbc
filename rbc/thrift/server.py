@@ -34,6 +34,26 @@ if tblib is not None:
     tblib.pickling_support.install()
 
 
+class TServerSocket(thr.transport.TServerSocket):
+
+    def close(self):
+        # Copied from https://github.com/Thriftpy/thriftpy2/pull/184
+        # Remove when using pythrift2 > 0.4.14
+        if not self.sock:
+            return
+
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+        self.sock = None
+
+
 class Processor(thr.thrift.TProcessor):
 
     def __init__(self, server, service, handler):
@@ -166,7 +186,7 @@ class Server(object):
             s_proc = Processor(self, service, self._dispatcher(self, debug=self.debug))
         server = thr.server.TThreadedServer(
             s_proc,
-            thr.transport.TServerSocket(**self.options),
+            TServerSocket(**self.options),
             iprot_factory=thr.protocol.TBinaryProtocolFactory(),
             itrans_factory=thr.transport.TBufferedTransportFactory())
         server.serve()
