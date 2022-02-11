@@ -35,7 +35,7 @@ jobs:
     name: ${{ matrix.os }} - Python v${{ matrix.python-version }} - Numba v${{ matrix.numba-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.9', '3.8', '3.7']
