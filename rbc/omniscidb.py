@@ -1319,10 +1319,7 @@ class RemoteOmnisci(RemoteJIT):
                     types.append(array_type)
                 else:
                     raise NotImplementedError(...)
-            else:
-                types.append(typesystem.Type.fromvalue(value))
-
-            if isinstance(value, RemoteCallCapsule):
+            elif isinstance(value, RemoteCallCapsule):
                 typ = value.__typesystem_type__
                 if typ.is_struct and typ._params.get('struct_is_tuple'):
                     types.extend(typ)
