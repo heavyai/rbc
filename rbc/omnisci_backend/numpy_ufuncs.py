@@ -4,6 +4,25 @@ from .. import typesystem
 from numba.core import extending, types
 
 
+__all__ = [
+    'add', 'subtract', 'multiply', 'divide', 'logaddexp', 'logaddexp2',
+    'true_divide', 'floor_divide', 'power', 'remainder', 'mod',
+    'fmod', 'gcd', 'lcm', 'bitwise_and', 'bitwise_or', 'bitwise_xor',
+    'bitwise_not', 'left_shift', 'right_shift', 'arctan2', 'hypot',
+    'greater', 'greater_equal', 'less', 'less_equal', 'not_equal',
+    'equal', 'logical_and', 'logical_or', 'logical_xor', 'maximum',
+    'minimum', 'fmax', 'fmin', 'nextafter', 'ldexp', 'negative',
+    'positive', 'absolute', 'fabs', 'rint', 'sign', 'absolute', 'conj',
+    'conjugate', 'exp', 'exp2', 'log', 'log2', 'log10', 'expm1',
+    'log1p', 'sqrt', 'square', 'reciprocal', 'invert', 'sin', 'cos',
+    'tan', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
+    'arcsinh', 'arccosh', 'arctanh', 'degrees', 'radians', 'deg2rad',
+    'rad2deg', 'logical_not', 'isfinite', 'isinf', 'isnan', 'fabs',
+    'floor', 'ceil', 'trunc', 'signbit', 'copysign', 'spacing',
+    'heaviside'
+]
+
+
 def determine_dtype(a, dtype):
     if isinstance(a, ArrayPointer):
         return a.eltype if dtype is None else dtype
@@ -182,7 +201,7 @@ def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
 @overload_elementwise_unary_ufunc(np.rint)
 @overload_elementwise_unary_ufunc(np.sign)
 @overload_elementwise_unary_ufunc(np.absolute)
-@overload_elementwise_unary_ufunc(np.conj)
+@overload_elementwise_unary_ufunc(np.conj, name='conj')
 @overload_elementwise_unary_ufunc(np.conjugate)
 @overload_elementwise_unary_ufunc(np.exp)
 @overload_elementwise_unary_ufunc(np.exp2)
