@@ -76,17 +76,17 @@ def test_columns_sum(omnisci, T, variant):
 @pytest.mark.xfail
 def test_columnlist_enumerate(omnisci):
 
-    @omnisci('int32(Cursor<ColumnList<T>>,'
-             ' RowMultiplier, OutputColumn<T>)',
-             T=['int32'], devices=['cpu'])
-    def columnlist_enumerate(lst, m, out):
-        for j in range(lst.ncols):
-            col = lst[j]
-            for i, e in enumerate(col):
-                out[i] = e if j == 0 else out[i] + e
-            # for i in range(lst.nrows):
-            #     out[i] = col[i] if j == 0 else out[i] + col[i]
-        return lst.nrows
+    # @omnisci('int32(Cursor<ColumnList<T>>,'
+    #          ' RowMultiplier, OutputColumn<T>)',
+    #          T=['int32'], devices=['cpu'])
+    # def columnlist_enumerate(lst, m, out):
+    #     for j in range(lst.ncols):
+    #         col = lst[j]
+    #         for i, e in enumerate(col):
+    #             out[i] = e if j == 0 else out[i] + e
+    #         # for i in range(lst.nrows):
+    #         #     out[i] = col[i] if j == 0 else out[i] + col[i]
+    #     return lst.nrows
 
     query = (f'select * from table(columnlist_enumerate(cursor('
              f'select i4, i4, i4 from {omnisci.table_name}), 1))')
