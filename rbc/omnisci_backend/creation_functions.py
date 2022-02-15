@@ -1,3 +1,8 @@
+"""
+https://data-apis.org/array-api/latest/API_specification/creation_functions.html
+"""
+
+import functools
 import numpy as np
 from rbc.externals.stdio import printf
 from rbc import typesystem
@@ -13,10 +18,12 @@ __all__ = [
 ]
 
 
-def expose_and_overload(func, name=None):
-    if name is None:
-        name = func.__name__
+ADDRESS = ("https://data-apis.org/array-api/latest/API_specification"
+           "/generated/signatures.creation_functions.{0}.html"
+           "#signatures.creation_functions.{1}")
 
+
+def _expose_and_overload(name):
     s = f'def {name}(*args, **kwargs): pass'
     exec(s, globals())
 
@@ -24,13 +31,67 @@ def expose_and_overload(func, name=None):
     decorate = extending.overload(fn)
 
     def wrapper(overload_func):
+        overload_func.__doc__ = f"`array-api '{name}' doc <{ADDRESS.format(name, name)}>`_"
+        functools.update_wrapper(fn, overload_func)
         return decorate(overload_func)
 
     return wrapper
 
 
-@expose_and_overload(np.full)
-def omnisci_np_full(shape, fill_value, dtype=None):
+def _not_implemented(name):
+    s = f'def {name}(*args, **kwargs): pass'
+    exec(s, globals())
+
+    fn = globals()[name]
+    def wraps(func):
+        func.__doc__ = "❌ Not implemented"
+        functools.update_wrapper(fn, func)
+        return func
+    return wraps
+
+
+@_not_implemented('arange')
+def _omnisci_arange(start, stop=None, step=1, dtype=None, device=None):
+    pass
+
+
+@_not_implemented('asarray')
+def asarray(obj, dtype=None, device=None, copy=None):
+    pass
+
+
+@_not_implemented('eye')
+def eye(n_rows, n_cols=None, k=0, dtype=None, device=None):
+	pass
+
+
+@_not_implemented('from_dlpack')
+def from_dlpack(x, /):
+	pass
+
+
+@_not_implemented('linspace')
+def linspace(start, stop, num, dtype=None, device=None, endpoint=True):
+	pass
+
+
+@_not_implemented('meshgrid')
+def meshgrid(*arrays, indexing='xy'):
+	pass
+
+
+@_not_implemented('tril')
+def tril(x, k=0):
+	pass
+
+
+@_not_implemented('triu')
+def triu(x, k=0):
+	pass
+
+
+@_expose_and_overload('full')
+def _omnisci_np_full(shape, fill_value, dtype=None):
 
     # XXX: dtype should be infered from fill_value
     if dtype is None:
@@ -45,8 +106,8 @@ def omnisci_np_full(shape, fill_value, dtype=None):
     return impl
 
 
-@expose_and_overload(np.full_like)
-def omnisci_np_full_like(a, fill_value, dtype=None):
+@_expose_and_overload('full_like')
+def _omnisci_np_full_like(a, fill_value, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -61,8 +122,8 @@ def omnisci_np_full_like(a, fill_value, dtype=None):
         return impl
 
 
-@expose_and_overload(np.empty_like)
-def omnisci_np_empty_like(a, dtype=None):
+@_expose_and_overload('empty_like')
+def _omnisci_np_empty_like(a, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -76,8 +137,11 @@ def omnisci_np_empty_like(a, dtype=None):
         return impl
 
 
-@expose_and_overload(np.empty)
-def omnisci_np_empty(shape, dtype=None):
+@_expose_and_overload('empty')
+def _omnisci_np_empty(shape, dtype=None):
+    """
+
+    """
 
     if dtype is None:
         nb_dtype = types.double
@@ -91,8 +155,8 @@ def omnisci_np_empty(shape, dtype=None):
     return impl
 
 
-@expose_and_overload(np.zeros)
-def omnisci_np_zeros(shape, dtype=None):
+@_expose_and_overload('zeros')
+def _omnisci_np_zeros(shape, dtype=None):
 
     if dtype is None:
         nb_dtype = types.double
@@ -106,8 +170,8 @@ def omnisci_np_zeros(shape, dtype=None):
     return impl
 
 
-@expose_and_overload(np.zeros_like)
-def omnisci_np_zeros_like(a, dtype=None):
+@_expose_and_overload('zeros_like')
+def _omnisci_np_zeros_like(a, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -121,8 +185,8 @@ def omnisci_np_zeros_like(a, dtype=None):
         return impl
 
 
-@expose_and_overload(np.ones)
-def omnisci_np_ones(shape, dtype=None):
+@_expose_and_overload('ones')
+def _omnisci_np_ones(shape, dtype=None):
 
     if dtype is None:
         nb_dtype = types.double
@@ -136,8 +200,8 @@ def omnisci_np_ones(shape, dtype=None):
     return impl
 
 
-@expose_and_overload(np.ones_like)
-def omnisci_np_ones_like(a, dtype=None):
+@_expose_and_overload('ones_like')
+def _omnisci_np_ones_like(a, dtype=None):
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -151,11 +215,11 @@ def omnisci_np_ones_like(a, dtype=None):
         return impl
 
 
-@expose_and_overload(np.array)
-def omnisci_np_array(a, dtype=None):
+@_expose_and_overload('array')
+def _omnisci_np_array(a, dtype=None):
 
     @njit
-    def omnisci_array_non_empty_copy(a, nb_dtype):
+    def _omnisci_array_non_empty_copy(a, nb_dtype):
         """Implement this here rather than inside "impl".
         LLVM DCE pass removes everything if we implement stuff inside "impl"
         """
@@ -178,7 +242,7 @@ def omnisci_np_array(a, dtype=None):
         return impl
 
 
-def get_type_limits(eltype):
+def _get_type_limits(eltype):
     np_dtype = numpy_support.as_dtype(eltype)
     if isinstance(eltype, types.Integer):
         return np.iinfo(np_dtype)
@@ -190,7 +254,7 @@ def get_type_limits(eltype):
 
 
 @extending.overload_method(ArrayPointer, 'fill')
-def omnisci_array_fill(x, v):
+def _omnisci_array_fill(x, v):
     if isinstance(x, ArrayPointer):
         def impl(x, v):
             for i in range(len(x)):
@@ -199,12 +263,12 @@ def omnisci_array_fill(x, v):
 
 
 @extending.overload(max)
-@expose_and_overload(np.max, name='max')
+@_expose_and_overload('max')
 @extending.overload_method(ArrayPointer, 'max')
-def omnisci_array_max(x, initial=None):
+def _omnisci_array_max(x, initial=None):
     if isinstance(x, ArrayPointer):
         # the array api standard says this is implementation specific
-        limits = get_type_limits(x.eltype)
+        limits = _get_type_limits(x.eltype)
         t = typesystem.Type.fromobject(x.eltype)
         if t.is_float:
             min_value = limits.min
@@ -230,11 +294,11 @@ def omnisci_array_max(x, initial=None):
 
 
 @extending.overload(min)
-@expose_and_overload(np.min, name='min')
+@_expose_and_overload('min')
 @extending.overload_method(ArrayPointer, 'min')
-def omnisci_array_min(x, initial=None):
+def _omnisci_array_min(x, initial=None):
     if isinstance(x, ArrayPointer):
-        max_value = get_type_limits(x.eltype).max
+        max_value = _get_type_limits(x.eltype).max
 
         def impl(x, initial=None):
             if len(x) <= 0:
@@ -253,9 +317,9 @@ def omnisci_array_min(x, initial=None):
 
 
 @extending.overload(sum)
-@expose_and_overload(np.sum)
+@_expose_and_overload('sum')
 @extending.overload_method(ArrayPointer, 'sum')
-def omnisci_np_sum(a, initial=None):
+def _omnisci_np_sum(a, initial=None):
     if isinstance(a, ArrayPointer):
         def impl(a, initial=None):
             if initial is not None:
@@ -269,9 +333,9 @@ def omnisci_np_sum(a, initial=None):
         return impl
 
 
-@expose_and_overload(np.prod)
+@_expose_and_overload('prod')
 @extending.overload_method(ArrayPointer, 'prod')
-def omnisci_np_prod(a, initial=None):
+def _omnisci_np_prod(a, initial=None):
     if isinstance(a, ArrayPointer):
         def impl(a, initial=None):
             if initial is not None:
@@ -285,9 +349,9 @@ def omnisci_np_prod(a, initial=None):
         return impl
 
 
-@expose_and_overload(np.mean)
+@_expose_and_overload('mean')
 @extending.overload_method(ArrayPointer, 'mean')
-def omnisci_array_mean(x):
+def _omnisci_array_mean(x):
     zero_value = np.nan
 
     if isinstance(x, ArrayPointer):
@@ -299,8 +363,8 @@ def omnisci_array_mean(x):
         return impl
 
 
-@expose_and_overload(np.cumsum)
-def omnisci_np_cumsum(a):
+@_expose_and_overload('cumsum')
+def _omnisci_np_cumsum(a):
     if isinstance(a, ArrayPointer):
         eltype = a.eltype
 

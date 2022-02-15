@@ -14,16 +14,25 @@ Top-level functions
 .. autosummary::
     :toctree: generated/
 
-    ctools
-    external
-    errors
-    libfuncs
-    omniscidb
-    remotejit
-    structure_type
-    targetinfo
-    typesystem
+    .. ctools
+    .. external
+    .. errors
+    .. libfuncs
+    .. omniscidb
+    .. remotejit
+    .. structure_type
+    .. targetinfo
+    .. typesystem
     utils
+
+
+Array API
+=========
+
+.. autosummary::
+    :toctree: generated/
+
+    omnisci_backend.creation_functions
 
 
 Externals
@@ -32,10 +41,10 @@ Externals
 .. autosummary::
     :toctree: generated/
 
-    externals.cmath
-    externals.libdevice
-    externals.macros
-    externals.omniscidb
+    .. externals.cmath
+    .. externals.libdevice
+    .. externals.macros
+    .. externals.omniscidb
     externals.stdio
 
 

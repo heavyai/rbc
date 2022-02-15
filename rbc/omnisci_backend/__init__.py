@@ -1,4 +1,4 @@
-from .numpy_funcs import *  # noqa: F401, F403
+from .creation_functions import *  # noqa: F401, F403
 from .numpy_ufuncs import *  # noqa: F401, F403
 from .omnisci_array import *  # noqa: F401, F403
 from .omnisci_column import *  # noqa: F401, F403
