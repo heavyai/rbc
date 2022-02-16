@@ -13,7 +13,7 @@ ADDRESS = ARRAY_API_ADDRESS
 
 
 class API(Enum):
-    NUMPY = 0
+    NUMPY_API = 0
     ARRAY_API = 1
 
 
@@ -45,9 +45,9 @@ class Expose:
         fn = self._globals.get(func_name)
         return fn
 
-    def format_docstring(self, ov_func, func_name, kind=API.NUMPY):
+    def format_docstring(self, ov_func, func_name, api):
         original_docstring = ov_func.__doc__
-        if kind == API.NUMPY:
+        if api == API.NUMPY_API:
             # Numpy
             link = (
                 f"`NumPy '{func_name}' "
@@ -55,18 +55,18 @@ class Expose:
         else:
             # Array API
             link = (
-                f"`Array-API'{func_name}' "
+                f"`Array-API '{func_name}' "
                 f"doc <{ARRAY_API_ADDRESS.format(self.module_name, func_name)}>`_")
 
         new_doctring = f"{link}\n\n{original_docstring}"
         return new_doctring
 
-    def implements(self, func_name):
+    def implements(self, func_name, api=API.ARRAY_API):
         fn = self.create_function(func_name)
         decorate = extending.overload(fn)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, func_name)
+            overload_func.__doc__ = self.format_docstring(overload_func, func_name, api)
             functools.update_wrapper(fn, overload_func)
             return decorate(overload_func)
 
@@ -87,7 +87,7 @@ class Expose:
 
 class BinaryUfuncExpose(Expose):
 
-    def implements(self, ufunc, ufunc_name=None, dtype=None):
+    def implements(self, ufunc, ufunc_name=None, dtype=None, api=API.ARRAY_API):
         """
         Wrapper for binary ufuncs that returns an array
         """
@@ -149,7 +149,7 @@ class BinaryUfuncExpose(Expose):
         fn = self.create_function(ufunc_name)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name)
+            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name, api)
             functools.update_wrapper(fn, overload_func)
 
             decorate = extending.overload(fn)
@@ -160,7 +160,7 @@ class BinaryUfuncExpose(Expose):
 
 class UnaryUfuncExpose(BinaryUfuncExpose):
 
-    def implements(self, ufunc, ufunc_name=None, dtype=None):
+    def implements(self, ufunc, ufunc_name=None, dtype=None, api=API.ARRAY_API):
         """
         Wrapper for unary ufuncs that returns an array
         """
@@ -191,7 +191,7 @@ class UnaryUfuncExpose(BinaryUfuncExpose):
         fn = self.create_function(ufunc_name)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name)
+            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name, api)
             functools.update_wrapper(fn, overload_func)
 
             decorate = extending.overload(fn)

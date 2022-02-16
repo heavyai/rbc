@@ -2,7 +2,7 @@
 https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html
 """
 
-from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose
+from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose, API
 import numpy as np
 from rbc import typesystem
 from rbc.omnisci_backend import ArrayPointer, Array
@@ -11,20 +11,21 @@ from numba.core import types
 
 __all__ = [
     'add', 'subtract', 'multiply', 'divide', 'logaddexp', 'logaddexp2',
-    'true_divide', 'floor_divide', 'power', 'remainder', 'mod',
+    'true_divide', 'floor_divide', 'pow', 'remainder', 'mod',
     'fmod', 'gcd', 'lcm', 'bitwise_and', 'bitwise_or', 'bitwise_xor',
-    'bitwise_not', 'left_shift', 'right_shift', 'arctan2', 'hypot',
+    'bitwise_not', 'atan2', 'hypot',
     'greater', 'greater_equal', 'less', 'less_equal', 'not_equal',
     'equal', 'logical_and', 'logical_or', 'logical_xor', 'maximum',
     'minimum', 'fmax', 'fmin', 'nextafter', 'ldexp', 'negative',
-    'positive', 'absolute', 'rint', 'sign', 'absolute', 'conj',
+    'positive', 'rint', 'sign', 'abs', 'conj',
     'conjugate', 'exp', 'exp2', 'log', 'log2', 'log10', 'expm1',
-    'log1p', 'sqrt', 'square', 'reciprocal', 'invert', 'sin', 'cos',
-    'tan', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
-    'arcsinh', 'arccosh', 'arctanh', 'degrees', 'radians', 'deg2rad',
+    'log1p', 'sqrt', 'square', 'reciprocal', 'bitwise_not', 'sin', 'cos',
+    'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh',
+    'asinh', 'acosh', 'atanh', 'degrees', 'radians', 'deg2rad',
     'rad2deg', 'logical_not', 'isfinite', 'isinf', 'isnan', 'fabs',
     'floor', 'ceil', 'trunc', 'signbit', 'copysign', 'spacing',
-    'heaviside'
+    'heaviside', 'bitwise_left_shift', 'bitwise_right_shift',
+    'round',
 ]
 
 
@@ -69,14 +70,14 @@ def _omnisci_ufunc_logaddexp(a, b):
     pass
 
 
-@binary_expose.implements(np.logaddexp2)
+@binary_expose.implements(np.logaddexp2, api=API.NUMPY_API)
 def _omnisci_ufunc_logaddexp2(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.true_divide)
+@binary_expose.implements(np.true_divide, api=API.NUMPY_API)
 def _omnisci_ufunc_true_divide(a, b):
     """
     """
@@ -90,7 +91,7 @@ def _omnisci_ufunc_floor_divide(a, b):
     pass
 
 
-@binary_expose.implements(np.power)
+@binary_expose.implements(np.power, ufunc_name='pow')
 def _omnisci_ufunc_power(a, b):
     """
     """
@@ -111,14 +112,14 @@ def _omnisci_ufunc_remainder(a, b):
     pass
 
 
-@binary_expose.implements(np.mod, ufunc_name='mod')
+@binary_expose.implements(np.mod, ufunc_name='mod', api=API.NUMPY_API)
 def _omnisci_ufunc_mod(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.fmod)
+@binary_expose.implements(np.fmod, api=API.NUMPY_API)
 def _omnisci_ufunc_fmod(a, b):
     """
     """
@@ -132,14 +133,14 @@ def _omnisci_ufunc_divmod(a, b):
     pass
 
 
-@binary_expose.implements(np.gcd)
+@binary_expose.implements(np.gcd, api=API.NUMPY_API)
 def _omnisci_ufunc_gcd(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.lcm)
+@binary_expose.implements(np.lcm, api=API.NUMPY_API)
 def _omnisci_ufunc_lcm(a, b):
     """
     """
@@ -175,14 +176,14 @@ def _omnisci_ufunc_bitwise_not(a, b):
     pass
 
 
-@binary_expose.implements(np.left_shift)
+@binary_expose.implements(np.left_shift, ufunc_name='bitwise_left_shift')
 def _omnisci_ufunc_left_shift(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.right_shift)
+@binary_expose.implements(np.right_shift, ufunc_name='bitwise_right_shift')
 def _omnisci_ufunc_right_shift(a, b):
     """
     """
@@ -190,14 +191,14 @@ def _omnisci_ufunc_right_shift(a, b):
 
 
 # trigonometric functions
-@binary_expose.implements(np.arctan2)
+@binary_expose.implements(np.arctan2, ufunc_name='atan2')
 def _omnisci_ufunc_arctan2(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.hypot)
+@binary_expose.implements(np.hypot, api=API.NUMPY_API)
 def _omnisci_ufunc_hypot(a, b):
     """
     """
@@ -268,28 +269,28 @@ def _omnisci_ufunc_logical_xor(a, b):
     pass
 
 
-@binary_expose.implements(np.maximum)
+@binary_expose.implements(np.maximum, api=API.NUMPY_API)
 def _omnisci_ufunc_maximum(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.minimum)
+@binary_expose.implements(np.minimum, api=API.NUMPY_API)
 def _omnisci_ufunc_minimum(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.fmax)
+@binary_expose.implements(np.fmax, api=API.NUMPY_API)
 def _omnisci_ufunc_fmax(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.fmin)
+@binary_expose.implements(np.fmin, api=API.NUMPY_API)
 def _omnisci_ufunc_fmin(a, b):
     """
     """
@@ -297,14 +298,14 @@ def _omnisci_ufunc_fmin(a, b):
 
 
 # Floating functions
-@binary_expose.implements(np.nextafter)
+@binary_expose.implements(np.nextafter, api=API.NUMPY_API)
 def _omnisci_ufunc_nextafter(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.ldexp)
+@binary_expose.implements(np.ldexp, api=API.NUMPY_API)
 def _omnisci_ufunc_ldexp(a, b):
     """
     """
@@ -312,6 +313,13 @@ def _omnisci_ufunc_ldexp(a, b):
 
 
 ##################################################################
+
+
+@unary_expose.implements(np.around, ufunc_name='round')
+def _omnisci_unary_round(a):
+    """
+    """
+    pass
 
 
 @unary_expose.implements(np.negative)
@@ -328,14 +336,14 @@ def _omnisci_unary_positive(a):
     pass
 
 
-@unary_expose.implements(np.absolute)
+@unary_expose.implements(np.absolute, ufunc_name='abs')
 def _omnisci_unary_absolute(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.rint)
+@unary_expose.implements(np.rint, api=API.NUMPY_API)
 def _omnisci_unary_rint(a):
     """
     """
@@ -349,14 +357,14 @@ def _omnisci_unary_sign(a):
     pass
 
 
-@unary_expose.implements(np.conj, ufunc_name='conj')
+@unary_expose.implements(np.conj, ufunc_name='conj', api=API.NUMPY_API)
 def _omnisci_unary_conj(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.conjugate)
+@unary_expose.implements(np.conjugate, api=API.NUMPY_API)
 def _omnisci_unary_conjugate(a):
     """
     """
@@ -370,7 +378,7 @@ def _omnisci_unary_exp(a):
     pass
 
 
-@unary_expose.implements(np.exp2)
+@unary_expose.implements(np.exp2, api=API.NUMPY_API)
 def _omnisci_unary_exp2(a):
     """
     """
@@ -434,7 +442,7 @@ def _omnisci_unary_cbrt(a):
     pass
 
 
-@unary_expose.implements(np.reciprocal)
+@unary_expose.implements(np.reciprocal, api=API.NUMPY_API)
 def _omnisci_unary_reciprocal(a):
     """
     """
@@ -442,7 +450,7 @@ def _omnisci_unary_reciprocal(a):
 
 
 # Bit-twiddling functions
-@unary_expose.implements(np.invert)
+@unary_expose.implements(np.invert, ufunc_name='bitwise_invert')
 def _omnisci_unary_invert(a):
     """
     """
@@ -471,21 +479,21 @@ def _omnisci_unary_tan(a):
     pass
 
 
-@unary_expose.implements(np.arcsin)
+@unary_expose.implements(np.arcsin, ufunc_name='asin')
 def _omnisci_unary_arcsin(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arccos)
+@unary_expose.implements(np.arccos, ufunc_name='acos')
 def _omnisci_unary_arccos(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arctan)
+@unary_expose.implements(np.arctan, ufunc_name='atan')
 def _omnisci_unary_arctan(a):
     """
     """
@@ -513,49 +521,49 @@ def _omnisci_unary_tanh(a):
     pass
 
 
-@unary_expose.implements(np.arcsinh)
+@unary_expose.implements(np.arcsinh, ufunc_name='asinh')
 def _omnisci_unary_arcsinh(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arccosh)
+@unary_expose.implements(np.arccosh, ufunc_name='acosh')
 def _omnisci_unary_arccosh(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arctanh)
+@unary_expose.implements(np.arctanh, ufunc_name='atanh')
 def _omnisci_unary_arctanh(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.degrees)
+@unary_expose.implements(np.degrees, api=API.NUMPY_API)
 def _omnisci_unary_degrees(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.radians)
+@unary_expose.implements(np.radians, api=API.NUMPY_API)
 def _omnisci_unary_radians(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.deg2rad)
+@unary_expose.implements(np.deg2rad, api=API.NUMPY_API)
 def _omnisci_unary_deg2rad(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.rad2deg)
+@unary_expose.implements(np.rad2deg, api=API.NUMPY_API)
 def _omnisci_unary_rad2deg(a):
     """
     """
@@ -592,7 +600,7 @@ def _omnisci_unary_isnan(a):
     pass
 
 
-@unary_expose.implements(np.fabs, dtype=types.double)
+@unary_expose.implements(np.fabs, dtype=types.double, api=API.NUMPY_API)
 def _omnisci_unary_fabs(a):
     """
     """
@@ -630,21 +638,21 @@ def _omnisci_unary_isnat(a):
 
 
 # issue 152:
-@unary_expose.implements(np.signbit, dtype=typesystem.boolean8)
+@unary_expose.implements(np.signbit, dtype=typesystem.boolean8, api=API.NUMPY_API)
 def _omnisci_unary_signbit(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.copysign)
+@unary_expose.implements(np.copysign, api=API.NUMPY_API)
 def _omnisci_unary_copysign(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.spacing, dtype=types.double)
+@unary_expose.implements(np.spacing, dtype=types.double, api=API.NUMPY_API)
 def _omnisci_unary_spacing(a):
     """
     docstring for np.spacing
@@ -652,8 +660,8 @@ def _omnisci_unary_spacing(a):
     pass
 
 
-@expose.implements('heaviside')
-def heaviside(x1, x2):
+@expose.implements('heaviside', api=API.NUMPY_API)
+def _impl_heaviside(x1, x2):
     """
     """
     nb_dtype = types.double
