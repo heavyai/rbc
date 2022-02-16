@@ -2,7 +2,7 @@
 https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html
 """
 
-from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose, API
+from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose, API, determine_input_type
 import numpy as np
 from rbc import typesystem
 from rbc.omnisci_backend import ArrayPointer, Array
@@ -26,6 +26,9 @@ __all__ = [
     'floor', 'ceil', 'trunc', 'signbit', 'copysign', 'spacing',
     'heaviside', 'bitwise_left_shift', 'bitwise_right_shift',
     'round',
+    # numpy specifics
+    'power', 'arctan2', 'left_shift', 'right_shift', 'absolute',
+    'invert', 'arcsin', 'arctan', 'arccos', 'arcsinh', 'arccosh', 'arctanh'
 ]
 
 
@@ -91,8 +94,15 @@ def _omnisci_ufunc_floor_divide(a, b):
     pass
 
 
-@binary_expose.implements(np.power, ufunc_name='pow')
+@binary_expose.implements(np.power, ufunc_name='power', api=API.NUMPY_API)
 def _omnisci_ufunc_power(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.power, ufunc_name='pow')
+def _omnisci_ufunc_pow(a, b):
     """
     """
     pass
@@ -176,23 +186,44 @@ def _omnisci_ufunc_bitwise_not(a, b):
     pass
 
 
-@binary_expose.implements(np.left_shift, ufunc_name='bitwise_left_shift')
+@binary_expose.implements(np.left_shift, api=API.NUMPY_API)
 def _omnisci_ufunc_left_shift(a, b):
     """
     """
     pass
 
 
-@binary_expose.implements(np.right_shift, ufunc_name='bitwise_right_shift')
+@binary_expose.implements(np.left_shift, ufunc_name='bitwise_left_shift')
+def _omnisci_ufunc_bitwise_left_shift(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.right_shift, api=API.NUMPY_API)
 def _omnisci_ufunc_right_shift(a, b):
     """
     """
     pass
 
 
+@binary_expose.implements(np.right_shift, ufunc_name='bitwise_right_shift')
+def _omnisci_ufunc_bitwise_right_shift(a, b):
+    """
+    """
+    pass
+
+
 # trigonometric functions
-@binary_expose.implements(np.arctan2, ufunc_name='atan2')
+@binary_expose.implements(np.arctan2, api=API.NUMPY_API)
 def _omnisci_ufunc_arctan2(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.arctan2, ufunc_name='atan2')
+def _omnisci_ufunc_atan2(a, b):
     """
     """
     pass
@@ -336,8 +367,15 @@ def _omnisci_unary_positive(a):
     pass
 
 
-@unary_expose.implements(np.absolute, ufunc_name='abs')
+@unary_expose.implements(np.absolute, api=API.NUMPY_API)
 def _omnisci_unary_absolute(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.absolute, ufunc_name='abs')
+def _omnisci_unary_abs(a):
     """
     """
     pass
@@ -450,8 +488,15 @@ def _omnisci_unary_reciprocal(a):
 
 
 # Bit-twiddling functions
-@unary_expose.implements(np.invert, ufunc_name='bitwise_invert')
+@unary_expose.implements(np.invert, api=API.NUMPY_API)
 def _omnisci_unary_invert(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.invert, ufunc_name='bitwise_invert')
+def _omnisci_unary_bitwise_invert(a):
     """
     """
     pass
@@ -479,22 +524,43 @@ def _omnisci_unary_tan(a):
     pass
 
 
-@unary_expose.implements(np.arcsin, ufunc_name='asin')
+@unary_expose.implements(np.arcsin, api=API.NUMPY_API)
 def _omnisci_unary_arcsin(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arccos, ufunc_name='acos')
+@unary_expose.implements(np.arcsin, ufunc_name='asin')
+def _omnisci_unary_asin(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arccos, api=API.NUMPY_API)
 def _omnisci_unary_arccos(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arctan, ufunc_name='atan')
+@unary_expose.implements(np.arccos, ufunc_name='acos')
+def _omnisci_unary_acos(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arctan, api=API.NUMPY_API)
 def _omnisci_unary_arctan(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arctan, ufunc_name='atan')
+def _omnisci_unary_atan(a):
     """
     """
     pass
@@ -521,22 +587,43 @@ def _omnisci_unary_tanh(a):
     pass
 
 
-@unary_expose.implements(np.arcsinh, ufunc_name='asinh')
+@unary_expose.implements(np.arcsinh, api=API.NUMPY_API)
 def _omnisci_unary_arcsinh(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arccosh, ufunc_name='acosh')
+@unary_expose.implements(np.arcsinh, ufunc_name='asinh')
+def _omnisci_unary_asinh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arccosh, api=API.NUMPY_API)
 def _omnisci_unary_arccosh(a):
     """
     """
     pass
 
 
-@unary_expose.implements(np.arctanh, ufunc_name='atanh')
+@unary_expose.implements(np.arccosh, ufunc_name='acosh')
+def _omnisci_unary_acosh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arctanh, api=API.NUMPY_API)
 def _omnisci_unary_arctanh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arctanh, ufunc_name='atanh')
+def _omnisci_unary_atanh(a):
     """
     """
     pass
@@ -665,14 +752,14 @@ def _impl_heaviside(x1, x2):
     """
     """
     nb_dtype = types.double
-    typA = binary_expose.determine_input_type(x1)
-    typB = binary_expose.determine_input_type(x2)
+    typA = determine_input_type(x1)
+    typB = determine_input_type(x2)
     if isinstance(x1, ArrayPointer):
         def impl(x1, x2):
             sz = len(x1)
             r = Array(sz, nb_dtype)
             for i in range(sz):
-                r[i] = heaviside(x1[i], x2)
+                r[i] = heaviside(x1[i], x2)  # noqa: F821
             return r
         return impl
     else:

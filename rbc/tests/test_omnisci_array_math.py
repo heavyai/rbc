@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import rbc.omnisci_backend as omni  # noqa: F401
+from rbc.stdlib import array_api
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')
@@ -113,7 +114,7 @@ binary_fns = [
 def test_omnisci_array_binary_math(omnisci, method, signature, columns):
     omnisci.reset()
 
-    s = f'def np_{method}(a, b): return omni.{method}(a, b)'
+    s = f'def np_{method}(a, b): return array_api.{method}(a, b)'
     exec(s, globals())
 
     omnisci(signature)(eval('np_{}'.format(method)))
@@ -175,7 +176,7 @@ binary_fn_scalar_input = [
 def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
     omnisci.reset()
 
-    s = f'def np_{method}(a, b): return omni.{method}(a, b)'
+    s = f'def np_{method}(a, b): return array_api.{method}(a, b)'
     exec(s, globals())
 
     omnisci(signature)(eval('np_{}'.format(method)))
@@ -258,7 +259,7 @@ unary_fns = [
 def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
     omnisci.reset()
 
-    s = f'def np_{method}(a): return omni.{method}(a)'
+    s = f'def np_{method}(a): return array_api.{method}(a)'
     exec(s, globals())
 
     omnisci(signature)(eval('np_{}'.format(method)))
@@ -282,7 +283,7 @@ def test_heaviside(omnisci):
 
     @omnisci('double[](int64[], int64)')
     def heaviside(x1, x2):
-        return omni.heaviside(x1, x2)
+        return array_api.heaviside(x1, x2)
 
     query = f'select i8, heaviside(i8, 1) from {omnisci.table_name}'
     _, result = omnisci.sql_execute(query)
