@@ -3,8 +3,8 @@ https://data-apis.org/array-api/latest/API_specification/statistical_functions.h
 """
 from rbc.externals.stdio import printf
 from rbc import typesystem
-from .omnisci_array import ArrayPointer
-from .helper import Expose
+from rbc.omnisci_backend import ArrayPointer
+from rbc.stdlib import Expose
 from numba.core import extending, types, errors
 from numba.np import numpy_support
 import numpy as np

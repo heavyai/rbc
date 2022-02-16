@@ -3,8 +3,8 @@ https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 """
 
 from rbc import typesystem
-from .omnisci_array import Array, ArrayPointer
-from .helper import Expose
+from rbc.omnisci_backend.omnisci_array import Array, ArrayPointer
+from rbc.stdlib import Expose
 from numba import njit
 from numba.core import extending, types
 

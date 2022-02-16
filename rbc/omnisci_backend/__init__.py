@@ -1,5 +1,3 @@
-from .creation_functions import *  # noqa: F401, F403
-from .statistical_functions import *  # noqa: F401, F403
 from .numpy_ufuncs import *  # noqa: F401, F403
 from .omnisci_array import *  # noqa: F401, F403
 from .omnisci_column import *  # noqa: F401, F403
@@ -13,5 +11,8 @@ from .omnisci_table_function_manager import *  # noqa: F401, F403
 import rbc.omnisci_backend.mathimpl as math  # noqa: F401
 import rbc.omnisci_backend.npyimpl as np  # noqa: F401
 import rbc.omnisci_backend.python_operators as operators  # noqa: F401
+
+# initialize the array api
+from rbc.stdlib import array_api  # noqa: F401
 
 __all__ = [s for s in dir() if not s.startswith('_')]
