@@ -709,12 +709,12 @@ class RemoteJIT:
             self._targets = self.retrieve_targets()
         return self._targets
 
-    def __call__(self, *signatures, **options):
+    def __call__(self, *signatures, devices=None, local=False, templates=None):
         """Define a remote JIT function signatures and template.
 
         Parameters
         ----------
-        signatures : tuple
+        signatures : str or object
           Specify signatures of a remote JIT function, or a Python
           function as a template from which the remote JIT function
           will be compiled.
@@ -741,12 +741,16 @@ class RemoteJIT:
         or any other object that can be converted to function type,
         see `Type.fromobject` for more information.
         """
-        if options.get('local'):
+        if local:
             s = Signature(self.local)
         else:
             s = Signature(self)
-        devices = options.get('devices')
-        options, templates = extract_templates(options)
+        options = {
+            "local": local,
+            "devices": devices,
+            "template": templates
+        }
+        _, templates = extract_templates(options)
         for sig in signatures:
             s = s(sig, devices=devices, templates=templates)
         return s
