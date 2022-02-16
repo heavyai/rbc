@@ -6,3 +6,4 @@ thriftpy2
 six
 netifaces
 sphinx_autodoc_typehints
+pydata-sphinx-theme

@@ -53,7 +53,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme',
+    'pydata_sphinx_theme',
     'numbadoc',
 ]
 
