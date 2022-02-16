@@ -53,7 +53,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'sphinx_autodoc_typehints',
-    'pydata_sphinx_theme',
+    'sphinx_rtd_theme',
     'numbadoc',
 ]
 
@@ -84,7 +84,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "pydata_sphinx_theme"
+html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
     # 'html_baseurl': 'https://xnd.io/',
