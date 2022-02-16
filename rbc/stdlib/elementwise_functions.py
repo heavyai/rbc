@@ -2,11 +2,11 @@
 https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html
 """
 
-from rbc.stdlib import UfuncExpose
+from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose
 import numpy as np
-from rbc.omnisci_backend import Array, ArrayPointer
 from rbc import typesystem
-from numba.core import extending, types
+from rbc.omnisci_backend import ArrayPointer, Array
+from numba.core import types
 
 
 __all__ = [
@@ -17,7 +17,7 @@ __all__ = [
     'greater', 'greater_equal', 'less', 'less_equal', 'not_equal',
     'equal', 'logical_and', 'logical_or', 'logical_xor', 'maximum',
     'minimum', 'fmax', 'fmin', 'nextafter', 'ldexp', 'negative',
-    'positive', 'absolute', 'fabs', 'rint', 'sign', 'absolute', 'conj',
+    'positive', 'absolute', 'rint', 'sign', 'absolute', 'conj',
     'conjugate', 'exp', 'exp2', 'log', 'log2', 'log10', 'expm1',
     'log1p', 'sqrt', 'square', 'reciprocal', 'invert', 'sin', 'cos',
     'tan', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh',
@@ -28,248 +28,637 @@ __all__ = [
 ]
 
 
-expose = UfuncExpose(globals(), 'elementwise_functions')
-
-
-def determine_dtype(a, dtype):
-    if isinstance(a, ArrayPointer):
-        return a.eltype if dtype is None else dtype
-    else:
-        return a if dtype is None else dtype
-
-
-def determine_input_type(argty):
-    if isinstance(argty, ArrayPointer):
-        return determine_input_type(argty.eltype)
-
-    if argty == typesystem.boolean8:
-        return bool
-    else:
-        return argty
-
-
-# def overload_elementwise_binary_ufunc(ufunc, name=None, dtype=None):
-#     """
-#     Wrapper for binary ufuncs that returns an array
-#     """
-#     if name is None:
-#         name = ufunc.__name__
-#     globals()[name] = ufunc
-
-#     def binary_ufunc_impl(a, b):
-#         typA = determine_input_type(a)
-#         typB = determine_input_type(b)
-
-#         # XXX: raise error if len(a) != len(b)
-#         @extending.register_jitable(_nrt=False)
-#         def binary_impl(a, b, nb_dtype):
-#             sz = len(a)
-#             x = Array(sz, nb_dtype)
-#             for i in range(sz):
-#                 cast_a = typA(a[i])
-#                 cast_b = typB(b[i])
-#                 x[i] = nb_dtype(ufunc(cast_a, cast_b))
-#             return x
-
-#         @extending.register_jitable(_nrt=False)
-#         def broadcast(e, sz, dtype):
-#             b = Array(sz, dtype)
-#             b.fill(e)
-#             return b
-
-#         if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
-#             nb_dtype = determine_dtype(a, dtype)
-
-#             def impl(a, b):
-#                 return binary_impl(a, b, nb_dtype)
-#             return impl
-#         elif isinstance(a, ArrayPointer):
-#             nb_dtype = determine_dtype(a, dtype)
-#             other_dtype = b
-
-#             def impl(a, b):
-#                 b = broadcast(b, len(a), other_dtype)
-#                 return binary_impl(a, b, nb_dtype)
-#             return impl
-#         elif isinstance(b, ArrayPointer):
-#             nb_dtype = determine_dtype(b, dtype)
-#             other_dtype = a
-
-#             def impl(a, b):
-#                 a = broadcast(a, len(b), other_dtype)
-#                 return binary_impl(a, b, nb_dtype)
-#             return impl
-#         else:
-#             nb_dtype = determine_dtype(a, dtype)
-
-#             def impl(a, b):
-#                 cast_a = typA(a)
-#                 cast_b = typB(b)
-#                 return nb_dtype(ufunc(cast_a, cast_b))
-#             return impl
-
-#     decorate = extending.overload(ufunc)
-
-#     def wrapper(overload_func):
-#         return decorate(binary_ufunc_impl)
-
-#     return wrapper
+expose = Expose(globals(), 'elementwise_functions')
+binary_expose = BinaryUfuncExpose(globals(), 'elementwise_functions')
+unary_expose = UnaryUfuncExpose(globals(), 'elementwise_functions')
 
 
 # math functions
-@expose.overload_elementwise_binary_ufunc(np.add)
-@expose.overload_elementwise_binary_ufunc(np.subtract)
-@expose.overload_elementwise_binary_ufunc(np.multiply)
-@expose.overload_elementwise_binary_ufunc(np.divide, ufunc_name='divide')
-@expose.overload_elementwise_binary_ufunc(np.logaddexp)
-@expose.overload_elementwise_binary_ufunc(np.logaddexp2)
-@expose.overload_elementwise_binary_ufunc(np.true_divide)
-@expose.overload_elementwise_binary_ufunc(np.floor_divide)
-@expose.overload_elementwise_binary_ufunc(np.power)
-# @expose.overload_elementwise_binary_ufunc(np.float_power)  # not supported by numba
-@expose.overload_elementwise_binary_ufunc(np.remainder)
-@expose.overload_elementwise_binary_ufunc(np.mod, ufunc_name='mod')
-@expose.overload_elementwise_binary_ufunc(np.fmod)
-# expose.overload_elementwise_binary_ufunc(np.divmod) # not supported by numba
-@expose.overload_elementwise_binary_ufunc(np.gcd)
-@expose.overload_elementwise_binary_ufunc(np.lcm)
-# Bit-twiddling functions
-@expose.overload_elementwise_binary_ufunc(np.bitwise_and)
-@expose.overload_elementwise_binary_ufunc(np.bitwise_or)
-@expose.overload_elementwise_binary_ufunc(np.bitwise_xor)
-@expose.overload_elementwise_binary_ufunc(np.bitwise_not, ufunc_name='bitwise_not')
-@expose.overload_elementwise_binary_ufunc(np.left_shift)
-@expose.overload_elementwise_binary_ufunc(np.right_shift)
-# trigonometric functions
-@expose.overload_elementwise_binary_ufunc(np.arctan2)
-@expose.overload_elementwise_binary_ufunc(np.hypot)
-# Comparison functions
-@expose.overload_elementwise_binary_ufunc(np.greater, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.greater_equal, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.less, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.less_equal, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.not_equal, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.equal, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.logical_and, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.logical_or, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.logical_xor, dtype=typesystem.boolean8)
-@expose.overload_elementwise_binary_ufunc(np.maximum)
-@expose.overload_elementwise_binary_ufunc(np.minimum)
-@expose.overload_elementwise_binary_ufunc(np.fmax)
-@expose.overload_elementwise_binary_ufunc(np.fmin)
-# Floating functions
-@expose.overload_elementwise_binary_ufunc(np.nextafter)
-@expose.overload_elementwise_binary_ufunc(np.ldexp)
-def _dummy_binary_ufunc(a, b):
+@binary_expose.implements(np.add)
+def _omnisci_add(a, b):
+    """
+    """
     pass
 
 
-def overload_elementwise_unary_ufunc(ufunc, name=None, dtype=None):
+@binary_expose.implements(np.subtract)
+def _omnisci_ufunc_subtract(a, b):
     """
-    Wrapper for unary ufuncs that returns an array
     """
-    if name is None:
-        name = ufunc.__name__
-    globals()[name] = ufunc
-
-    def unary_elementwise_ufunc_impl(a):
-        nb_dtype = determine_dtype(a, dtype)
-        typ = determine_input_type(a)
-
-        if isinstance(a, ArrayPointer):
-            def impl(a):
-                sz = len(a)
-                x = Array(sz, nb_dtype)
-                for i in range(sz):
-                    # Convert the value to type "typ"
-                    cast = typ(a[i])
-                    x[i] = nb_dtype(ufunc(cast))
-                return x
-            return impl
-        else:
-            def impl(a):
-                # Convert the value to type typ
-                cast = typ(a)
-                return nb_dtype(ufunc(cast))
-            return impl
-
-    decorate = extending.overload(ufunc)
-
-    def wrapper(overload_func):
-        return decorate(unary_elementwise_ufunc_impl)
-
-    return wrapper
+    pass
 
 
-# Math operations
-@overload_elementwise_unary_ufunc(np.negative)
-@overload_elementwise_unary_ufunc(np.positive)
-@overload_elementwise_unary_ufunc(np.absolute)
-@overload_elementwise_unary_ufunc(np.fabs)
-@overload_elementwise_unary_ufunc(np.rint)
-@overload_elementwise_unary_ufunc(np.sign)
-@overload_elementwise_unary_ufunc(np.absolute)
-@overload_elementwise_unary_ufunc(np.conj, name='conj')
-@overload_elementwise_unary_ufunc(np.conjugate)
-@overload_elementwise_unary_ufunc(np.exp)
-@overload_elementwise_unary_ufunc(np.exp2)
-@overload_elementwise_unary_ufunc(np.log)
-@overload_elementwise_unary_ufunc(np.log2)
-@overload_elementwise_unary_ufunc(np.log10)
-@overload_elementwise_unary_ufunc(np.expm1)
-@overload_elementwise_unary_ufunc(np.log1p)
-@overload_elementwise_unary_ufunc(np.sqrt)
-@overload_elementwise_unary_ufunc(np.square)
-# @overload_elementwise_unary_ufunc(np.cbrt)  # not supported by numba
-@overload_elementwise_unary_ufunc(np.reciprocal)
+@binary_expose.implements(np.multiply)
+def _omnisci_ufunc_multiply(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.divide, ufunc_name='divide')
+def _omnisci_ufunc_divide(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.logaddexp)
+def _omnisci_ufunc_logaddexp(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.logaddexp2)
+def _omnisci_ufunc_logaddexp2(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.true_divide)
+def _omnisci_ufunc_true_divide(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.floor_divide)
+def _omnisci_ufunc_floor_divide(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.power)
+def _omnisci_ufunc_power(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.not_implemented('float_power')  # not supported by Numba
+def _omnisci_ufunc_float_power(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.remainder)
+def _omnisci_ufunc_remainder(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.mod, ufunc_name='mod')
+def _omnisci_ufunc_mod(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.fmod)
+def _omnisci_ufunc_fmod(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.not_implemented('divmod')  # not supported by Numba
+def _omnisci_ufunc_divmod(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.gcd)
+def _omnisci_ufunc_gcd(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.lcm)
+def _omnisci_ufunc_lcm(a, b):
+    """
+    """
+    pass
+
+
 # Bit-twiddling functions
-@overload_elementwise_unary_ufunc(np.invert)
+@binary_expose.implements(np.bitwise_and)
+def _omnisci_ufunc_bitwise_and(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.bitwise_or)
+def _omnisci_ufunc_bitwise_or(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.bitwise_xor)
+def _omnisci_ufunc_bitwise_xor(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.bitwise_not, ufunc_name='bitwise_not')
+def _omnisci_ufunc_bitwise_not(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.left_shift)
+def _omnisci_ufunc_left_shift(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.right_shift)
+def _omnisci_ufunc_right_shift(a, b):
+    """
+    """
+    pass
+
+
 # trigonometric functions
-@overload_elementwise_unary_ufunc(np.sin)
-@overload_elementwise_unary_ufunc(np.cos)
-@overload_elementwise_unary_ufunc(np.tan)
-@overload_elementwise_unary_ufunc(np.arcsin)
-@overload_elementwise_unary_ufunc(np.arccos)
-@overload_elementwise_unary_ufunc(np.arctan)
-@overload_elementwise_unary_ufunc(np.sinh)
-@overload_elementwise_unary_ufunc(np.cosh)
-@overload_elementwise_unary_ufunc(np.tanh)
-@overload_elementwise_unary_ufunc(np.arcsinh)
-@overload_elementwise_unary_ufunc(np.arccosh)
-@overload_elementwise_unary_ufunc(np.arctanh)
-@overload_elementwise_unary_ufunc(np.degrees)
-@overload_elementwise_unary_ufunc(np.radians)
-@overload_elementwise_unary_ufunc(np.deg2rad)
-@overload_elementwise_unary_ufunc(np.rad2deg)
+@binary_expose.implements(np.arctan2)
+def _omnisci_ufunc_arctan2(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.hypot)
+def _omnisci_ufunc_hypot(a, b):
+    """
+    """
+    pass
+
+
 # Comparison functions
-@overload_elementwise_unary_ufunc(np.logical_not, dtype=typesystem.boolean8)
+@binary_expose.implements(np.greater, dtype=typesystem.boolean8)
+def _omnisci_ufunc_greater(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.greater_equal, dtype=typesystem.boolean8)
+def _omnisci_ufunc_greater_equal(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.less, dtype=typesystem.boolean8)
+def _omnisci_ufunc_less(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.less_equal, dtype=typesystem.boolean8)
+def _omnisci_ufunc_less_equal(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.not_equal, dtype=typesystem.boolean8)
+def _omnisci_ufunc_not_equal(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.equal, dtype=typesystem.boolean8)
+def _omnisci_ufunc_equal(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.logical_and, dtype=typesystem.boolean8)
+def _omnisci_ufunc_logical_and(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.logical_or, dtype=typesystem.boolean8)
+def _omnisci_ufunc_logical_or(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.logical_xor, dtype=typesystem.boolean8)
+def _omnisci_ufunc_logical_xor(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.maximum)
+def _omnisci_ufunc_maximum(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.minimum)
+def _omnisci_ufunc_minimum(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.fmax)
+def _omnisci_ufunc_fmax(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.fmin)
+def _omnisci_ufunc_fmin(a, b):
+    """
+    """
+    pass
+
+
 # Floating functions
-@overload_elementwise_unary_ufunc(np.isfinite, dtype=typesystem.boolean8)
-@overload_elementwise_unary_ufunc(np.isinf, dtype=typesystem.boolean8)
-@overload_elementwise_unary_ufunc(np.isnan, dtype=typesystem.boolean8)
-@overload_elementwise_unary_ufunc(np.fabs, dtype=types.double)
-@overload_elementwise_unary_ufunc(np.floor, dtype=types.double)
-@overload_elementwise_unary_ufunc(np.ceil, dtype=types.double)
-@overload_elementwise_unary_ufunc(np.trunc, dtype=types.double)
+@binary_expose.implements(np.nextafter)
+def _omnisci_ufunc_nextafter(a, b):
+    """
+    """
+    pass
+
+
+@binary_expose.implements(np.ldexp)
+def _omnisci_ufunc_ldexp(a, b):
+    """
+    """
+    pass
+
+
+##################################################################
+
+
+@unary_expose.implements(np.negative)
+def _omnisci_unary_negative(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.positive)
+def _omnisci_unary_positive(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.absolute)
+def _omnisci_unary_absolute(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.rint)
+def _omnisci_unary_rint(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.sign)
+def _omnisci_unary_sign(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.conj, ufunc_name='conj')
+def _omnisci_unary_conj(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.conjugate)
+def _omnisci_unary_conjugate(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.exp)
+def _omnisci_unary_exp(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.exp2)
+def _omnisci_unary_exp2(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.log)
+def _omnisci_unary_log(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.log2)
+def _omnisci_unary_log2(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.log10)
+def _omnisci_unary_log10(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.expm1)
+def _omnisci_unary_expm1(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.log1p)
+def _omnisci_unary_log1p(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.sqrt)
+def _omnisci_unary_sqrt(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.square)
+def _omnisci_unary_square(a):
+    """
+    """
+    pass
+
+
+# @unary_expose.implements(np.cbrt)  # not supported by numba
+@unary_expose.not_implemented('cbrt')
+def _omnisci_unary_cbrt(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.reciprocal)
+def _omnisci_unary_reciprocal(a):
+    """
+    """
+    pass
+
+
+# Bit-twiddling functions
+@unary_expose.implements(np.invert)
+def _omnisci_unary_invert(a):
+    """
+    """
+    pass
+
+
+# trigonometric functions
+@unary_expose.implements(np.sin)
+def _omnisci_unary_sin(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.cos)
+def _omnisci_unary_cos(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.tan)
+def _omnisci_unary_tan(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arcsin)
+def _omnisci_unary_arcsin(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arccos)
+def _omnisci_unary_arccos(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arctan)
+def _omnisci_unary_arctan(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.sinh)
+def _omnisci_unary_sinh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.cosh)
+def _omnisci_unary_cosh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.tanh)
+def _omnisci_unary_tanh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arcsinh)
+def _omnisci_unary_arcsinh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arccosh)
+def _omnisci_unary_arccosh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.arctanh)
+def _omnisci_unary_arctanh(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.degrees)
+def _omnisci_unary_degrees(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.radians)
+def _omnisci_unary_radians(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.deg2rad)
+def _omnisci_unary_deg2rad(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.rad2deg)
+def _omnisci_unary_rad2deg(a):
+    """
+    """
+    pass
+
+
+# Comparison functions
+@unary_expose.implements(np.logical_not, dtype=typesystem.boolean8)
+def _omnisci_unary_logical_not(a):
+    """
+    """
+    pass
+
+
+# Floating functions
+@unary_expose.implements(np.isfinite, dtype=typesystem.boolean8)
+def _omnisci_unary_isfinite(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.isinf, dtype=typesystem.boolean8)
+def _omnisci_unary_isinf(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.isnan, dtype=typesystem.boolean8)
+def _omnisci_unary_isnan(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.fabs, dtype=types.double)
+def _omnisci_unary_fabs(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.floor, dtype=types.double)
+def _omnisci_unary_floor(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.ceil, dtype=types.double)
+def _omnisci_unary_ceil(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.trunc, dtype=types.double)
+def _omnisci_unary_trunc(a):
+    """
+    """
+    pass
+
+
 # not supported?
-# @overload_elementwise_unary_ufunc(np.isnat, dtype=types.int8)
+# @unary_expose.implements(np.isnat, dtype=types.int8)
+@unary_expose.not_implemented('isnat')
+def _omnisci_unary_isnat(a):
+    """
+    """
+    pass
+
+
 # issue 152:
-@overload_elementwise_unary_ufunc(np.signbit, dtype=typesystem.boolean8)
-@overload_elementwise_unary_ufunc(np.copysign)
-@overload_elementwise_unary_ufunc(np.spacing, dtype=types.double)
-def dummy_unary_ufunc(a):
+@unary_expose.implements(np.signbit, dtype=typesystem.boolean8)
+def _omnisci_unary_signbit(a):
+    """
+    """
     pass
 
 
+@unary_expose.implements(np.copysign)
+def _omnisci_unary_copysign(a):
+    """
+    """
+    pass
+
+
+@unary_expose.implements(np.spacing, dtype=types.double)
+def _omnisci_unary_spacing(a):
+    """
+    docstring for np.spacing
+    """
+    pass
+
+
+@expose.implements('heaviside')
 def heaviside(x1, x2):
-    pass
-
-
-@extending.overload(heaviside)
-def impl_np_heaviside(x1, x2):
+    """
+    """
     nb_dtype = types.double
-    typA = determine_input_type(x1)
-    typB = determine_input_type(x2)
+    typA = binary_expose.determine_input_type(x1)
+    typB = binary_expose.determine_input_type(x2)
     if isinstance(x1, ArrayPointer):
         def impl(x1, x2):
             sz = len(x1)
