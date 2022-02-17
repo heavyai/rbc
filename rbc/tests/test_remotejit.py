@@ -42,27 +42,16 @@ def with_localjit(test_func):
 def test_devices_validation(ljit):
     # normal cases
 
-    @ljit('double(double, double)', devices=['cpu', 'gpu'])
-    def add(a, b):
-        return a + b
-
-    @ljit('double(double, double)', devices=['cpu', 'cpu', 'gpu'])
-    def add(a, b):
-        return a + b
+    _ = ljit('double(double, double)', devices=['cpu', 'gpu'])
+    _ = ljit('double(double, double)', devices=['cpu', 'cpu', 'gpu'])
 
     # failing cases
 
     with pytest.raises(ValueError, match="'devices' can only be a list"):
-        @ljit('double(double, double)', devices=['both'])
-        def add(a, b):
-            return a + b
-
-        add(1, 2).execute()
+        _ = ljit('double(double, double)', devices=['both'])
 
     with pytest.raises(ValueError, match="'devices' can only be a list"):
-        @ljit('double(double, double)', devices=['cpu', 'gpu', 'bob'])
-        def add(a, b):
-            return a + b
+        _ = ljit('double(double, double)', devices=['cpu', 'gpu', 'bob'])
 
 
 @with_localjit
