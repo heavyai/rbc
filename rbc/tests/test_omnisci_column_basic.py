@@ -869,5 +869,6 @@ def test_column_enumerate(omnisci):
     _, result = omnisci.sql_execute(
         f'select * from table(col_enumerate(cursor(select i4 from {omnisci.table_name})))')
     _, expected_result = omnisci.sql_execute(
-        f'select i4 from {omnisci.table_name}')
-    assert list(result) == list(expected_result)
+        f'select rowid, i4 from {omnisci.table_name} order by rowid;')
+    for (r,), (_, e) in zip(list(result), list(expected_result)):
+        assert r == e
