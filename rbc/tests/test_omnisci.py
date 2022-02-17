@@ -68,7 +68,7 @@ def omnisci():
 
 
 def test_direct_call_scalar(omnisci):
-    omnisci.reset()
+    omnisci.unregister()
 
     @omnisci('double(double)')
     def farhenheit2celcius(f):
@@ -80,7 +80,6 @@ def test_direct_call_scalar(omnisci):
 @pytest.mark.parametrize('dtype', ('float32', 'float64', 'int32', 'int64'))
 def test_direct_call_array(omnisci, dtype):
     from rbc.omnisci_backend import mean
-    omnisci.reset()
     omnisci.unregister()
 
     @omnisci('T(T[])', T=['float32', 'float64', 'int64', 'int32'], devices=['cpu'])
