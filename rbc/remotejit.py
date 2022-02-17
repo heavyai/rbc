@@ -723,7 +723,8 @@ class RemoteJIT:
         ------------------
         local : bool
         devices : list
-          Specify device names for the given set of signatures.
+          Specify device names for the given set of signatures. Possible
+          values are 'cpu', 'gpu'.
         templates : dict
           Specify template types mapping.
 
@@ -750,6 +751,10 @@ class RemoteJIT:
             "devices": devices,
             "templates": templates
         }
+        if devices is not None and not {'cpu', 'gpu'}.issuperset(devices):
+            raise ValueError("'devices' can only be a list with possible "
+                             f"values 'cpu', 'gpu' but got {devices}")
+
         _, templates = extract_templates(options)
         for sig in signatures:
             s = s(sig, devices=devices, templates=templates)
