@@ -67,7 +67,7 @@ def omnisci():
         yield o
 
 
-def test_direct_call(omnisci):
+def test_direct_call_scalar(omnisci):
     omnisci.reset()
 
     @omnisci('double(double)')
@@ -75,6 +75,17 @@ def test_direct_call(omnisci):
         return (f - 32) * 5 / 9
 
     assert_equal(farhenheit2celcius(40).execute(), np.float32(40 / 9))
+
+
+def test_direct_call_array(omnisci):
+    from rbc.omnisci_backend import mean
+    omnisci.reset()
+
+    @omnisci('double(double[])')
+    def farhenheit2celcius(f):
+        return (mean(f)-32) * 5 / 9
+
+    assert_equal(farhenheit2celcius([30.0, 50.0]).execute(), np.float32(40 / 9))
 
 
 def test_local_caller(omnisci):
