@@ -33,7 +33,7 @@ def eye(n_rows, n_cols=None, k=0, dtype=None, device=None):
 
 
 @expose.not_implemented('from_dlpack')
-def from_dlpack(x, /):
+def from_dlpack(x):
     pass
 
 
