@@ -1227,8 +1227,23 @@ class Type(tuple, metaclass=MetaType):
         raise NotImplementedError(repr((type(obj))))
 
     @classmethod
-    def fromtypes(cls, t):
-        """Consolidate a list of types into a single type."""
+    def reducetypes(cls, t, *, method='highest'):
+        """Reduce a list of types into a single type.
+
+        Parameters
+        ----------
+        t : list(Type)
+          List of types to reduce to a type.
+        method : {common}
+          Reduction method. Can be:
+
+          * 'common': reduce to the highest common denominator.
+
+        Returns
+        -------
+        t : Type
+          New Type instance.
+        """
         has_uint, has_int, has_float, has_other = True, False, False, False
         bit_int, bit_float = 8, 8
 
@@ -1254,6 +1269,8 @@ class Type(tuple, metaclass=MetaType):
                 if has_uint:
                     com_type = 'u' + com_type
             else:
+                if bit_float == 16 and bit_int >= 16:
+                    bit_float = 32
                 com_type = f'float{bit_float}'
 
             t = [Type.fromstring(com_type)]

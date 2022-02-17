@@ -1292,9 +1292,9 @@ class RemoteOmnisci(RemoteJIT):
         types = []
         for value in values:
 
-            if isinstance(value, list):
+            if isinstance(value, (list, numpy.ndarray)):
                 items_types = set(map(typesystem.Type.fromvalue, value))
-                com_type = typesystem.Type.fromtypes(items_types)
+                com_type = typesystem.Type.reducetypes(items_types)
                 array_type = OmnisciArrayType((com_type,))
                 types.append(array_type)
             elif isinstance(value, RemoteCallCapsule):
