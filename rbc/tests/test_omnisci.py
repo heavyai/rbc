@@ -77,15 +77,18 @@ def test_direct_call_scalar(omnisci):
     assert_equal(farhenheit2celcius(40).execute(), np.float32(40 / 9))
 
 
-def test_direct_call_array(omnisci):
+@pytest.mark.parametrize('dtype', ('float32', 'float64', 'int32', 'int64'))
+def test_direct_call_array(omnisci, dtype):
     from rbc.omnisci_backend import mean
     omnisci.reset()
 
-    @omnisci('double(double[])')
+    @omnisci('T(T[])', T=['float32', 'float64', 'int64', 'int32'], devices=['cpu'])
     def farhenheit2celcius(f):
         return (mean(f)-32) * 5 / 9
 
-    assert_equal(farhenheit2celcius([30.0, 50.0]).execute(), np.float32(40 / 9))
+    ref_value = np.dtype(dtype).type(40 / 9)
+    inp_array = np.array([30, 50], dtype=dtype)
+    assert farhenheit2celcius(inp_array).execute() == pytest.approx(ref_value)
 
 
 def test_local_caller(omnisci):
