@@ -709,7 +709,7 @@ class RemoteJIT:
             self._targets = self.retrieve_targets()
         return self._targets
 
-    def __call__(self, *signatures, devices=None, local=False, templates=None):
+    def __call__(self, *signatures, devices=None, local=False, **templates):
         """Define a remote JIT function signatures and template.
 
         Parameters
@@ -748,7 +748,7 @@ class RemoteJIT:
         options = {
             "local": local,
             "devices": devices,
-            "template": templates
+            "templates": templates
         }
         _, templates = extract_templates(options)
         for sig in signatures:
