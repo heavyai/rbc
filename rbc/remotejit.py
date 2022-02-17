@@ -725,7 +725,7 @@ class RemoteJIT:
         devices : list
           Specify device names for the given set of signatures. Possible
           values are 'cpu', 'gpu'.
-        templates : dict
+        templates : dict(str, list(str)) or list(str)
           Specify template types mapping.
 
         Returns
@@ -749,7 +749,7 @@ class RemoteJIT:
         options = {
             "local": local,
             "devices": devices,
-            "templates": templates
+            "templates": templates.get('templates') or templates
         }
         if devices is not None and not {'cpu', 'gpu'}.issuperset(devices):
             raise ValueError("'devices' can only be a list with possible "
