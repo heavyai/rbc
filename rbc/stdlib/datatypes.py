@@ -1,5 +1,5 @@
 """
-Array API for rbc.
+https://data-apis.org/array-api/latest/API_specification/data_types.html
 """
 
 __all__ = [
