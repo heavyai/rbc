@@ -73,6 +73,13 @@ def _omnisci_ufunc_logaddexp(a, b):
     pass
 
 
+@binary_expose.implements(np.copysign, api=API.NUMPY_API)
+def _omnisci_ufunc_copysign(a, b):
+    """
+    """
+    pass
+
+
 @binary_expose.implements(np.logaddexp2, api=API.NUMPY_API)
 def _omnisci_ufunc_logaddexp2(a, b):
     """
@@ -347,126 +354,126 @@ def _omnisci_ufunc_ldexp(a, b):
 
 
 @unary_expose.implements(np.around, ufunc_name='round')
-def _omnisci_unary_round(a):
+def _omnisci_ufunc_round(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.negative)
-def _omnisci_unary_negative(a):
+def _omnisci_ufunc_negative(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.positive)
-def _omnisci_unary_positive(a):
+def _omnisci_ufunc_positive(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.absolute, api=API.NUMPY_API)
-def _omnisci_unary_absolute(a):
+def _omnisci_ufunc_absolute(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.absolute, ufunc_name='abs')
-def _omnisci_unary_abs(a):
+def _omnisci_ufunc_abs(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.rint, api=API.NUMPY_API)
-def _omnisci_unary_rint(a):
+def _omnisci_ufunc_rint(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.sign)
-def _omnisci_unary_sign(a):
+def _omnisci_ufunc_sign(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.conj, ufunc_name='conj', api=API.NUMPY_API)
-def _omnisci_unary_conj(a):
+def _omnisci_ufunc_conj(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.conjugate, api=API.NUMPY_API)
-def _omnisci_unary_conjugate(a):
+def _omnisci_ufunc_conjugate(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.exp)
-def _omnisci_unary_exp(a):
+def _omnisci_ufunc_exp(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.exp2, api=API.NUMPY_API)
-def _omnisci_unary_exp2(a):
+def _omnisci_ufunc_exp2(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.log)
-def _omnisci_unary_log(a):
+def _omnisci_ufunc_log(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.log2)
-def _omnisci_unary_log2(a):
+def _omnisci_ufunc_log2(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.log10)
-def _omnisci_unary_log10(a):
+def _omnisci_ufunc_log10(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.expm1)
-def _omnisci_unary_expm1(a):
+def _omnisci_ufunc_expm1(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.log1p)
-def _omnisci_unary_log1p(a):
+def _omnisci_ufunc_log1p(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.sqrt)
-def _omnisci_unary_sqrt(a):
+def _omnisci_ufunc_sqrt(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.square)
-def _omnisci_unary_square(a):
+def _omnisci_ufunc_square(a):
     """
     """
     pass
@@ -474,14 +481,14 @@ def _omnisci_unary_square(a):
 
 # @unary_expose.implements(np.cbrt)  # not supported by numba
 @unary_expose.not_implemented('cbrt')
-def _omnisci_unary_cbrt(a):
+def _omnisci_ufunc_cbrt(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.reciprocal, api=API.NUMPY_API)
-def _omnisci_unary_reciprocal(a):
+def _omnisci_ufunc_reciprocal(a):
     """
     """
     pass
@@ -489,14 +496,14 @@ def _omnisci_unary_reciprocal(a):
 
 # Bit-twiddling functions
 @unary_expose.implements(np.invert, api=API.NUMPY_API)
-def _omnisci_unary_invert(a):
+def _omnisci_ufunc_invert(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.invert, ufunc_name='bitwise_invert')
-def _omnisci_unary_bitwise_invert(a):
+def _omnisci_ufunc_bitwise_invert(a):
     """
     """
     pass
@@ -504,154 +511,154 @@ def _omnisci_unary_bitwise_invert(a):
 
 # trigonometric functions
 @unary_expose.implements(np.sin)
-def _omnisci_unary_sin(a):
+def _omnisci_ufunc_sin(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.cos)
-def _omnisci_unary_cos(a):
+def _omnisci_ufunc_cos(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.tan)
-def _omnisci_unary_tan(a):
+def _omnisci_ufunc_tan(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arcsin, api=API.NUMPY_API)
-def _omnisci_unary_arcsin(a):
+def _omnisci_ufunc_arcsin(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arcsin, ufunc_name='asin')
-def _omnisci_unary_asin(a):
+def _omnisci_ufunc_asin(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arccos, api=API.NUMPY_API)
-def _omnisci_unary_arccos(a):
+def _omnisci_ufunc_arccos(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arccos, ufunc_name='acos')
-def _omnisci_unary_acos(a):
+def _omnisci_ufunc_acos(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arctan, api=API.NUMPY_API)
-def _omnisci_unary_arctan(a):
+def _omnisci_ufunc_arctan(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arctan, ufunc_name='atan')
-def _omnisci_unary_atan(a):
+def _omnisci_ufunc_atan(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.sinh)
-def _omnisci_unary_sinh(a):
+def _omnisci_ufunc_sinh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.cosh)
-def _omnisci_unary_cosh(a):
+def _omnisci_ufunc_cosh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.tanh)
-def _omnisci_unary_tanh(a):
+def _omnisci_ufunc_tanh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arcsinh, api=API.NUMPY_API)
-def _omnisci_unary_arcsinh(a):
+def _omnisci_ufunc_arcsinh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arcsinh, ufunc_name='asinh')
-def _omnisci_unary_asinh(a):
+def _omnisci_ufunc_asinh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arccosh, api=API.NUMPY_API)
-def _omnisci_unary_arccosh(a):
+def _omnisci_ufunc_arccosh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arccosh, ufunc_name='acosh')
-def _omnisci_unary_acosh(a):
+def _omnisci_ufunc_acosh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arctanh, api=API.NUMPY_API)
-def _omnisci_unary_arctanh(a):
+def _omnisci_ufunc_arctanh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.arctanh, ufunc_name='atanh')
-def _omnisci_unary_atanh(a):
+def _omnisci_ufunc_atanh(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.degrees, api=API.NUMPY_API)
-def _omnisci_unary_degrees(a):
+def _omnisci_ufunc_degrees(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.radians, api=API.NUMPY_API)
-def _omnisci_unary_radians(a):
+def _omnisci_ufunc_radians(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.deg2rad, api=API.NUMPY_API)
-def _omnisci_unary_deg2rad(a):
+def _omnisci_ufunc_deg2rad(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.rad2deg, api=API.NUMPY_API)
-def _omnisci_unary_rad2deg(a):
+def _omnisci_ufunc_rad2deg(a):
     """
     """
     pass
@@ -659,7 +666,7 @@ def _omnisci_unary_rad2deg(a):
 
 # Comparison functions
 @unary_expose.implements(np.logical_not, dtype=typesystem.boolean8)
-def _omnisci_unary_logical_not(a):
+def _omnisci_ufunc_logical_not(a):
     """
     """
     pass
@@ -667,49 +674,49 @@ def _omnisci_unary_logical_not(a):
 
 # Floating functions
 @unary_expose.implements(np.isfinite, dtype=typesystem.boolean8)
-def _omnisci_unary_isfinite(a):
+def _omnisci_ufunc_isfinite(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.isinf, dtype=typesystem.boolean8)
-def _omnisci_unary_isinf(a):
+def _omnisci_ufunc_isinf(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.isnan, dtype=typesystem.boolean8)
-def _omnisci_unary_isnan(a):
+def _omnisci_ufunc_isnan(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.fabs, dtype=types.double, api=API.NUMPY_API)
-def _omnisci_unary_fabs(a):
+def _omnisci_ufunc_fabs(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.floor, dtype=types.double)
-def _omnisci_unary_floor(a):
+def _omnisci_ufunc_floor(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.ceil, dtype=types.double)
-def _omnisci_unary_ceil(a):
+def _omnisci_ufunc_ceil(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.trunc, dtype=types.double)
-def _omnisci_unary_trunc(a):
+def _omnisci_ufunc_trunc(a):
     """
     """
     pass
@@ -718,7 +725,7 @@ def _omnisci_unary_trunc(a):
 # not supported?
 # @unary_expose.implements(np.isnat, dtype=types.int8)
 @unary_expose.not_implemented('isnat')
-def _omnisci_unary_isnat(a):
+def _omnisci_ufunc_isnat(a):
     """
     """
     pass
@@ -726,21 +733,14 @@ def _omnisci_unary_isnat(a):
 
 # issue 152:
 @unary_expose.implements(np.signbit, dtype=typesystem.boolean8, api=API.NUMPY_API)
-def _omnisci_unary_signbit(a):
-    """
-    """
-    pass
-
-
-@unary_expose.implements(np.copysign, api=API.NUMPY_API)
-def _omnisci_unary_copysign(a):
+def _omnisci_ufunc_signbit(a):
     """
     """
     pass
 
 
 @unary_expose.implements(np.spacing, dtype=types.double, api=API.NUMPY_API)
-def _omnisci_unary_spacing(a):
+def _omnisci_ufunc_spacing(a):
     """
     docstring for np.spacing
     """
