@@ -709,12 +709,12 @@ class RemoteJIT:
             self._targets = self.retrieve_targets()
         return self._targets
 
-    def __call__(self, *signatures, **options):
+    def __call__(self, *signatures, devices=None, local=False, **templates):
         """Define a remote JIT function signatures and template.
 
         Parameters
         ----------
-        signatures : tuple
+        signatures : str or object
           Specify signatures of a remote JIT function, or a Python
           function as a template from which the remote JIT function
           will be compiled.
@@ -723,8 +723,9 @@ class RemoteJIT:
         ------------------
         local : bool
         devices : list
-          Specify device names for the given set of signatures.
-        templates : dict
+          Specify device names for the given set of signatures. Possible
+          values are 'cpu', 'gpu'.
+        templates : dict(str, list(str))
           Specify template types mapping.
 
         Returns
@@ -741,12 +742,20 @@ class RemoteJIT:
         or any other object that can be converted to function type,
         see `Type.fromobject` for more information.
         """
-        if options.get('local'):
+        if local:
             s = Signature(self.local)
         else:
             s = Signature(self)
-        devices = options.get('devices')
-        options, templates = extract_templates(options)
+        options = dict(
+            local=local,
+            devices=devices,
+            templates=templates.get('templates') or templates
+        )
+        if devices is not None and not {'cpu', 'gpu'}.issuperset(devices):
+            raise ValueError("'devices' can only be a list with possible "
+                             f"values 'cpu', 'gpu' but got {devices}")
+
+        _, templates = extract_templates(options)
         for sig in signatures:
             s = s(sig, devices=devices, templates=templates)
         return s
