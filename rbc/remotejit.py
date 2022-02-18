@@ -725,7 +725,7 @@ class RemoteJIT:
         devices : list
           Specify device names for the given set of signatures. Possible
           values are 'cpu', 'gpu'.
-        templates : dict(str, list(str)) or list(str)
+        templates : dict(str, list(str))
           Specify template types mapping.
 
         Returns
