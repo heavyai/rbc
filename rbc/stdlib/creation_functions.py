@@ -98,18 +98,12 @@ def _omnisci_np_empty_like(a, dtype=None):
             nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
         def impl(a, dtype=None):
-            other = Array(0, nb_dtype)
-            other.set_null()
-            return other
+            return empty(len(a), nb_dtype)
         return impl
 
 
 @expose.implements('empty')
 def _omnisci_np_empty(shape, dtype=None):
-    """
-
-    """
-
     if dtype is None:
         nb_dtype = types.double
     else:
@@ -117,7 +111,8 @@ def _omnisci_np_empty(shape, dtype=None):
 
     def impl(shape, dtype=None):
         arr = Array(shape, nb_dtype)
-        arr.set_null()
+        for i in range(shape):
+            arr.set_null(i)
         return arr
     return impl
 

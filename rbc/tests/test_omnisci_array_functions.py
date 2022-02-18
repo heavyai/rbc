@@ -71,6 +71,18 @@ def np_ones_like(i4):
     return array_api.ones_like(i4)
 
 
+def np_empty(sz):
+    return array_api.empty(sz, np.int32)
+
+
+def np_empty_dtype(sz):
+    return array_api.empty(sz)
+
+
+def np_empty_like(i4):
+    return array_api.empty_like(i4)
+
+
 def np_zeros(sz):
     return array_api.zeros(sz, np.int32)
 
@@ -88,7 +100,7 @@ def np_zeros_like_dtype(i4):
 
 
 def np_full(sz, fill_value):
-    return array_api.full(sz, fill_value, types.double)
+    return array_api.full(sz, fill_value, dtype=types.double)
 
 
 def np_full_dtype(sz, fill_value):
@@ -121,6 +133,9 @@ array_methods = [
     ('zeros_like', 'int32[](int32[])', ('i4',), np.zeros(6, dtype='i')),
     ('zeros_like_dtype', 'double[](int32[])', ('i4',), np.zeros(6, dtype='q')),
     ('zeros_dtype', 'double[](int64)', (5,), np.zeros(5)),
+    ('empty', 'int32[](int64)', (5,), np.empty(5, dtype=np.int32)),
+    ('empty_like', 'int32[](int32[])', ('i4',), np.empty(6, dtype='i')),
+    ('empty_dtype', 'double[](int64)', (5,), np.empty(5)),
     ('cumsum', 'double[](int32)', (5,), np.arange(1, 6)),
 ]
 
@@ -139,7 +154,10 @@ def test_array_methods(omnisci, method, signature, args, expected):
     _, result = omnisci.sql_execute(query)
     out = list(result)[0]
 
-    assert np.array_equal(expected, out[0]), 'np_' + method
+    if 'empty' in method:
+        assert out == ([None] * len(expected),)
+    else:
+        assert np.array_equal(expected, out[0]), 'np_' + method
 
 
 @pytest.mark.parametrize('col', ('i4', 'i8', 'f4'))
