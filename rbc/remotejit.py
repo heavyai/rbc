@@ -746,11 +746,11 @@ class RemoteJIT:
             s = Signature(self.local)
         else:
             s = Signature(self)
-        options = {
-            "local": local,
-            "devices": devices,
-            "templates": templates.get('templates') or templates
-        }
+        options = dict(
+            local=local,
+            devices=devices,
+            templates=templates.get('templates') or templates
+        )
         if devices is not None and not {'cpu', 'gpu'}.issuperset(devices):
             raise ValueError("'devices' can only be a list with possible "
                              f"values 'cpu', 'gpu' but got {devices}")
