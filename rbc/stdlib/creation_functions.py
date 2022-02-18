@@ -98,7 +98,7 @@ def _omnisci_np_empty_like(a, dtype=None):
             nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
 
         def impl(a, dtype=None):
-            return empty(len(a), nb_dtype)
+            return empty(len(a), nb_dtype)  # noqa: F821
         return impl
 
 
