@@ -21,7 +21,7 @@ from rbc import __version__
 # -- Project information -----------------------------------------------------
 
 project = 'RBC'
-copyright = f'2018-{date.today().year}, Xnd-Project Developers'
+copyright = f'2018-{date.today().year}, Quansight RBC Developers'
 author = 'Xnd-Project Developers'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -87,13 +87,13 @@ html_logo = "images/xndlogo.png"
 
 html_theme_options = {
     "logo_link": "index",
-    "github_url": "https://github.com/quansight/rbc",
+    "github_url": "https://github.com/xnd-project/rbc",
     "use_edit_page_button": True,
 }
 
 html_context = {
-    "github_user": "quansight",
+    "github_user": "xnd-project",
     "github_repo": "rbc",
-    "github_version": "main",
+    "github_version": "master",
     "doc_path": "doc",
 }
