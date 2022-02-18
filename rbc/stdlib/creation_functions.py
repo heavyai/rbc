@@ -1,4 +1,6 @@
 """
+Array API specification for creation functions.
+
 https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 """
 
@@ -18,47 +20,73 @@ expose = Expose(globals(), 'creation_functions')
 
 
 @expose.not_implemented('arange')
-def _omnisci_arange(start, stop=None, step=1, dtype=None, device=None):
+def arange(start, stop=None, step=1, dtype=None, device=None):
+    """
+    Return evenly spaced values within a given interval.
+    """
     pass
 
 
 @expose.not_implemented('asarray')
 def asarray(obj, dtype=None, device=None, copy=None):
+    """
+    Convert the input to an array.
+    """
     pass
 
 
 @expose.not_implemented('eye')
 def eye(n_rows, n_cols=None, k=0, dtype=None, device=None):
+    """
+    Return a 2-D array with ones on the diagonal and zeros elsewhere.
+    """
     pass
 
 
 @expose.not_implemented('from_dlpack')
 def from_dlpack(x):
+    """
+    """
     pass
 
 
 @expose.not_implemented('linspace')
 def linspace(start, stop, num, dtype=None, device=None, endpoint=True):
+    """
+    Return evenly spaced numbers over a specified interval.
+    """
     pass
 
 
 @expose.not_implemented('meshgrid')
 def meshgrid(*arrays, indexing='xy'):
+    """
+    Return coordinate matrices from coordinate vectors.
+    """
     pass
 
 
 @expose.not_implemented('tril')
 def tril(x, k=0):
+    """
+    Lower triangle of an array.
+    """
     pass
 
 
 @expose.not_implemented('triu')
 def triu(x, k=0):
+    """
+    Upper triangle of an array.
+    """
     pass
 
 
 @expose.implements('full')
 def _omnisci_np_full(shape, fill_value, dtype=None):
+    """
+    Return a new array of given shape and type, filled with fill_value.
+    """
 
     # XXX: dtype should be infered from fill_value
     if dtype is None:
@@ -75,6 +103,9 @@ def _omnisci_np_full(shape, fill_value, dtype=None):
 
 @expose.implements('full_like')
 def _omnisci_np_full_like(a, fill_value, dtype=None):
+    """
+    Return a full array with the same shape and type as a given array.
+    """
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -91,6 +122,9 @@ def _omnisci_np_full_like(a, fill_value, dtype=None):
 
 @expose.implements('empty_like')
 def _omnisci_np_empty_like(a, dtype=None):
+    """
+    Return a new array with the same shape and type as a given array.
+    """
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -104,6 +138,9 @@ def _omnisci_np_empty_like(a, dtype=None):
 
 @expose.implements('empty')
 def _omnisci_np_empty(shape, dtype=None):
+    """
+    Return a new array of given shape and type, without initializing entries.
+    """
     if dtype is None:
         nb_dtype = types.double
     else:
@@ -119,6 +156,9 @@ def _omnisci_np_empty(shape, dtype=None):
 
 @expose.implements('zeros')
 def _omnisci_np_zeros(shape, dtype=None):
+    """
+    Return a new array of given shape and type, filled with zeros.
+    """
 
     if dtype is None:
         nb_dtype = types.double
@@ -134,6 +174,9 @@ def _omnisci_np_zeros(shape, dtype=None):
 
 @expose.implements('zeros_like')
 def _omnisci_np_zeros_like(a, dtype=None):
+    """
+    Return an array of zeros with the same shape and type as a given array.
+    """
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -149,6 +192,9 @@ def _omnisci_np_zeros_like(a, dtype=None):
 
 @expose.implements('ones')
 def _omnisci_np_ones(shape, dtype=None):
+    """
+    Return a new array of given shape and type, filled with ones.
+    """
 
     if dtype is None:
         nb_dtype = types.double
@@ -164,6 +210,9 @@ def _omnisci_np_ones(shape, dtype=None):
 
 @expose.implements('ones_like')
 def _omnisci_np_ones_like(a, dtype=None):
+    """
+    Return an array of ones with the same shape and type as a given array.
+    """
     if isinstance(a, ArrayPointer):
         if dtype is None:
             nb_dtype = a.eltype
@@ -179,6 +228,9 @@ def _omnisci_np_ones_like(a, dtype=None):
 
 @expose.implements('array')
 def _omnisci_np_array(a, dtype=None):
+    """
+    Create an array.
+    """
 
     @njit
     def _omnisci_array_non_empty_copy(a, nb_dtype):
@@ -206,6 +258,9 @@ def _omnisci_np_array(a, dtype=None):
 
 @extending.overload_method(ArrayPointer, 'fill')
 def _omnisci_array_fill(x, v):
+    """
+    Fill the array with a scalar value.
+    """
     if isinstance(x, ArrayPointer):
         def impl(x, v):
             for i in range(len(x)):
@@ -215,6 +270,9 @@ def _omnisci_array_fill(x, v):
 
 @expose.implements('cumsum')
 def _omnisci_np_cumsum(a):
+    """
+    Return the cumulative sum of the elements along a given axis.
+    """
     if isinstance(a, ArrayPointer):
         eltype = a.eltype
 

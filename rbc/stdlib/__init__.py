@@ -58,7 +58,10 @@ class Expose:
                 f"`Array-API '{func_name}' "
                 f"doc <{ARRAY_API_ADDRESS.format(self.module_name, func_name)}>`_")
 
-        new_doctring = f"{link}\n\n{original_docstring}"
+        if original_docstring is not None:
+            new_doctring = f"{original_docstring}\n\n{link}"
+        else:
+            new_doctring = link
         return new_doctring
 
     def implements(self, func_name, api=API.ARRAY_API):

@@ -1,4 +1,6 @@
 """
+Array API specification for statistical functions.
+
 https://data-apis.org/array-api/latest/API_specification/statistical_functions.html
 """
 from rbc.externals.stdio import printf
@@ -33,6 +35,9 @@ def _get_type_limits(eltype):
 @expose.implements('max')
 @extending.overload_method(ArrayPointer, 'max')
 def _omnisci_array_max(x):
+    """
+    Calculates the maximum value of the input array x
+    """
     if isinstance(x, ArrayPointer):
         # the array api standard says this is implementation specific
         limits = _get_type_limits(x.eltype)
@@ -61,6 +66,9 @@ def _omnisci_array_max(x):
 @expose.implements('min')
 @extending.overload_method(ArrayPointer, 'min')
 def _omnisci_array_min(x):
+    """
+    Calculates the minimum value of the input array x.
+    """
     if isinstance(x, ArrayPointer):
         max_value = _get_type_limits(x.eltype).max
 
@@ -81,6 +89,9 @@ def _omnisci_array_min(x):
 @expose.implements('sum')
 @extending.overload_method(ArrayPointer, 'sum')
 def _omnisci_np_sum(a):
+    """
+    Calculates the sum of the input array x.
+    """
     if isinstance(a, ArrayPointer):
         def impl(a):
             s = 0
@@ -94,6 +105,9 @@ def _omnisci_np_sum(a):
 @expose.implements('prod')
 @extending.overload_method(ArrayPointer, 'prod')
 def _omnisci_np_prod(a):
+    """
+    Calculates the product of input array x elements.
+    """
     if isinstance(a, ArrayPointer):
         def impl(a):
             s = 1
@@ -107,6 +121,9 @@ def _omnisci_np_prod(a):
 @expose.implements('mean')
 @extending.overload_method(ArrayPointer, 'mean')
 def _omnisci_array_mean(x):
+    """
+    Calculates the arithmetic mean of the input array x.
+    """
     zero_value = np.nan
 
     if isinstance(x, ArrayPointer):
