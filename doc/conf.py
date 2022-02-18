@@ -14,14 +14,14 @@
 #
 import os
 import sys
-import datetime
+from datetime import date
 from rbc import __version__
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'RBC'
-copyright = '2018-%s, Xnd-Project Developers' % datetime.datetime.now().year
+copyright = f'2018-{date.today().year}, Quansight RBC Developers'
 author = 'Xnd-Project Developers'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -53,7 +53,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme',
     'numbadoc',
 ]
 
@@ -66,9 +65,6 @@ html_copy_source = False
 # Napoleon configurations
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
-
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "sphinx"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -84,14 +80,20 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
-
-html_theme_options = {
-    # 'html_baseurl': 'https://xnd.io/',
-    # Toc options
-    'collapse_navigation': True,
-    # 'navigation_depth': 4,
-}
+html_theme = 'pydata_sphinx_theme'
 
 # The Xnd logo
 html_logo = "images/xndlogo.png"
+
+html_theme_options = {
+    "logo_link": "index",
+    "github_url": "https://github.com/xnd-project/rbc",
+    "use_edit_page_button": True,
+}
+
+html_context = {
+    "github_user": "xnd-project",
+    "github_repo": "rbc",
+    "github_version": "master",
+    "doc_path": "doc",
+}
