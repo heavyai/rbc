@@ -31,7 +31,7 @@ import numpy as np
 from rbc import typesystem, irutils
 from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
-from numba.core import datamodel, cgutils, extending, types
+from numba.core import datamodel, cgutils, extending, types, imputils
 from rbc.errors import UnsupportedError
 
 int8_t = ir.IntType(8)
@@ -97,7 +97,7 @@ class BufferType(types.Type):
         return self.members[0].dtype
 
 
-class BufferPointer(types.Type):
+class BufferPointer(types.IterableType):
     """Numba type class for pointers to Omnisci buffer structures.
 
     We are not deriving from CPointer because BufferPointer getitem is
@@ -115,6 +115,26 @@ class BufferPointer(types.Type):
     @property
     def key(self):
         return self.dtype
+
+    @property
+    def iterator_type(self):
+        return BufferPointerIteratorType(self)
+
+
+class BufferPointerIteratorType(types.SimpleIteratorType):
+
+    def __init__(self, buffer_type):
+        name = f"iter_buffer({buffer_type})"
+        self.buffer_type = buffer_type
+        super().__init__(name, self.buffer_type.eltype)
+
+
+@datamodel.register_default(BufferPointerIteratorType)
+class BufferPointerIteratorModel(datamodel.StructModel):
+    def __init__(self, dmm, fe_type):
+        members = [('index', types.EphemeralPointer(types.uintp)),
+                   ('buffer', fe_type.buffer_type)]
+        super(BufferPointerIteratorModel, self).__init__(dmm, fe_type, members)
 
 
 class BufferMeta(OmnisciMetaType):
@@ -610,3 +630,53 @@ def omnisci_buffer_dtype(x):
         def impl(x):
             return dtype
         return impl
+
+
+@extending.lower_builtin('iternext', BufferPointerIteratorType)
+@imputils.iternext_impl(imputils.RefType.UNTRACKED)
+def iternext_BufferPointer(context, builder, sig, args, result):
+    [iterbufty] = sig.args
+    [bufiter] = args
+
+    iterval = context.make_helper(builder, iterbufty, value=bufiter)
+
+    buf = iterval.buffer
+    idx = builder.load(iterval.index)
+
+    len_fn = context.typing_context.resolve_value_type(len)
+    len_sig = types.intp(sig.args[0].buffer_type)
+    # if the intrinsic was not called before, one need to "register" it first
+    len_fn.get_call_type(context.typing_context, len_sig.args, {})
+    count = context.get_function(len_fn, len_sig)(builder, [buf])
+
+    is_valid = builder.icmp_signed('<', idx, count)
+    result.set_valid(is_valid)
+
+    with builder.if_then(is_valid):
+        getitem_fn = context.typing_context.resolve_value_type(operator.getitem)
+        getitem_sig = iterbufty.buffer_type.eltype(iterbufty.buffer_type, types.intp)
+        # same here, "register" the intrinsic before calling it
+        getitem_fn.get_call_type(context.typing_context, getitem_sig.args, {})
+        getitem_out = context.get_function(getitem_fn, getitem_sig)(builder, [buf, idx])
+        result.yield_(getitem_out)
+        nidx = builder.add(idx, context.get_constant(types.intp, 1))
+        builder.store(nidx, iterval.index)
+
+
+@extending.lower_builtin('getiter', BufferPointer)
+def getiter_buffer_pointer(context, builder, sig, args):
+    [buffer] = args
+
+    iterobj = context.make_helper(builder, sig.return_type)
+
+    # set the index to zero
+    zero = context.get_constant(types.uintp, 0)
+    indexptr = cgutils.alloca_once_value(builder, zero)
+
+    iterobj.index = indexptr
+
+    # wire in the buffer type data
+    iterobj.buffer = buffer
+
+    res = iterobj._getvalue()
+    return imputils.impl_ret_new_ref(context, builder, sig.return_type, res)

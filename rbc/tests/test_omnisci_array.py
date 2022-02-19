@@ -486,3 +486,18 @@ def test_array_dtype(omnisci):
     for col, r in (('i4', 32), ('i8', 64)):
         _, result = omnisci.sql_execute(f'select array_dtype_fn({col}) from {table}')
         assert list(result) == [(r,)] * 5
+
+
+def test_array_enumerate(omnisci):
+    table = omnisci.table_name
+
+    @omnisci('T(T[])', T=['int32'])
+    def array_enumerate(x):
+        s = 0
+        for i, e in enumerate(x):
+            s += e
+        return s
+
+    _, result = omnisci.sql_execute(f'select i4, array_enumerate(i4) from {table}')
+    for arr, s in result:
+        assert sum(arr) == s
