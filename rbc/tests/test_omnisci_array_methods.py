@@ -28,7 +28,6 @@ ndarray_methods = [
     ('max_empty_int64', (0, ), np.iinfo(np.int64).min + 1),
     ('max_empty_float32', (0, ), np.finfo(np.float32).min),
     ('max_empty_float64', (0, ), np.finfo(np.float64).min),
-    ('max_initial', (5, 4.0, 30.0), 30.0),
     ('mean', (5, 2), 2.0),
     ('mean', (5, 2.0), 2.0),
     ('mean_empty_int8', (0, ), np.nan),
@@ -44,11 +43,8 @@ ndarray_methods = [
     ('min_empty_int64', (0, ), np.iinfo(np.int64).max),
     ('min_empty_float32', (0, ), np.finfo(np.float32).max),
     ('min_empty_float64', (0, ), np.finfo(np.float64).max),
-    ('min_initial', (5, 4.0, -3.0), -3.0),
     ('sum', (5, 2.0), 10.0),
-    ('sum_initial', (5, 2.0, 2.0), 12.0),
     ('prod', (5, 3.0), 243.0),
-    ('prod_initial', (5, 3.0, 2), 486.0),
 ]
 
 
@@ -79,12 +75,6 @@ def define(omnisci):
             else:
                 omnisci(f'{retty}(int32)')(fn)
 
-    @omnisci('double(int64, double, double)')
-    def ndarray_max_initial(size, v, initial):
-        a = Array(size, 'double')
-        a.fill(v)
-        return a.max(initial=initial)
-
     @omnisci('double(int64, double)')
     def ndarray_mean(size, v):
         a = Array(size, 'double')
@@ -97,35 +87,17 @@ def define(omnisci):
         a.fill(v)
         return a.min()
 
-    @omnisci('double(int64, double, double)')
-    def ndarray_min_initial(size, v, initial):
-        a = Array(size, 'double')
-        a.fill(v)
-        return a.min(initial=initial)
-
     @omnisci('double(int64, double)')
     def ndarray_sum(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.sum()
 
-    @omnisci('double(int64, double, double)')
-    def ndarray_sum_initial(size, v, initial):
-        a = Array(size, 'double')
-        a.fill(v)
-        return a.sum(initial=initial)
-
     @omnisci('double(int64, double)')
     def ndarray_prod(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.prod()
-
-    @omnisci('double(int64, double, double)')
-    def ndarray_prod_initial(size, v, initial):
-        a = Array(size, 'double')
-        a.fill(v)
-        return a.prod(initial=initial)
 
 
 @pytest.mark.parametrize("method, args, expected", ndarray_methods,

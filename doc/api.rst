@@ -26,6 +26,19 @@ Top-level functions
     utils
 
 
+Array API
+=========
+
+.. autosummary::
+    :toctree: generated/
+
+    stdlib.datatypes
+    stdlib.constants
+    stdlib.creation_functions
+    stdlib.elementwise_functions
+    stdlib.statistical_functions
+
+
 Externals
 =========
 

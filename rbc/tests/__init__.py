@@ -34,7 +34,7 @@ def sql_execute(query):
 
 def omnisci_fixture(caller_globals, minimal_version=(0, 0),
                     suffices=['', '10', 'null', 'array', 'arraynull'],
-                    load_columnar=True, debug=False):
+                    load_columnar=True, load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
     .. code-block:: python
@@ -165,6 +165,10 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
 
     config = rbc_omnisci.get_client_config(debug=debug)
     m = rbc_omnisci.RemoteOmnisci(**config)
+
+    if not load_test_data:
+        yield m
+        return
 
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN']

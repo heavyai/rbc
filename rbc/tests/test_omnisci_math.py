@@ -1,11 +1,11 @@
 import math
 import pytest
 import sys
-import rbc.omnisci_backend as omni  # noqa: F401
+import numpy as np
+import numba as nb
+import rbc.omniscidb as rbc_omnisci
+from rbc.stdlib import array_api
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-np = pytest.importorskip('numpy')
-nb = pytest.importorskip('numba')
 available_version, reason = rbc_omnisci.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
@@ -334,10 +334,10 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
     if isinstance(np_func, np.ufunc):
         # numba does not support jitting ufunc-s directly
         if arity == 1:
-            fn = eval(f'lambda x: omni.{np_func.__name__}(x)', dict(omni=omni))
+            fn = eval(f'lambda x: array_api.{np_func.__name__}(x)', dict(array_api=array_api))
         elif arity == 2:
-            fn = eval(f'lambda x, y: omni.{np_func.__name__}(x, y)',
-                      dict(omni=omni))
+            fn = eval(f'lambda x, y: array_api.{np_func.__name__}(x, y)',
+                      dict(array_api=array_api))
         else:
             raise NotImplementedError((signature, arity))
     else:

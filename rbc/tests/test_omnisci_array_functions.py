@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import rbc.omnisci_backend as omni
+from rbc.stdlib import array_api
 from numba.core import types
 
 
@@ -56,56 +56,68 @@ def omnisci():
 
 
 def np_ones(sz):
-    return omni.ones(sz, types.int32)
+    return array_api.ones(sz, types.int32)
 
 
 def np_ones_dtype(sz):
-    return omni.ones(sz)
+    return array_api.ones(sz)
 
 
 def np_ones_like_dtype(i4):
-    return omni.ones_like(i4, dtype=types.double)
+    return array_api.ones_like(i4, dtype=types.double)
 
 
 def np_ones_like(i4):
-    return omni.ones_like(i4)
+    return array_api.ones_like(i4)
+
+
+def np_empty(sz):
+    return array_api.empty(sz, np.int32)
+
+
+def np_empty_dtype(sz):
+    return array_api.empty(sz)
+
+
+def np_empty_like(i4):
+    return array_api.empty_like(i4)
 
 
 def np_zeros(sz):
-    return omni.zeros(sz, np.int32)
+    return array_api.zeros(sz, np.int32)
 
 
 def np_zeros_dtype(sz):
-    return omni.zeros(sz)
+    return array_api.zeros(sz)
 
 
 def np_zeros_like(i4):
-    return omni.zeros_like(i4)
+    return array_api.zeros_like(i4)
 
 
 def np_zeros_like_dtype(i4):
-    return omni.zeros_like(i4, dtype=types.double)
+    return array_api.zeros_like(i4, dtype=types.double)
 
 
 def np_full(sz, fill_value):
-    return omni.full(sz, fill_value, types.double)
+    return array_api.full(sz, fill_value, dtype=types.double)
 
 
 def np_full_dtype(sz, fill_value):
-    return omni.full(sz, fill_value)
+    return array_api.full(sz, fill_value)
 
 
 def np_full_like(i1, fill_value):
-    return omni.full_like(i1, fill_value)
+    return array_api.full_like(i1, fill_value)
 
 
 def np_full_like_dtype(i1, fill_value):
-    return omni.full_like(i1, fill_value, dtype=types.double)
+    return array_api.full_like(i1, fill_value, dtype=types.double)
 
 
 def np_cumsum(sz):
-    a = omni.ones(sz)
-    return omni.cumsum(a)
+    a = array_api.ones(sz)
+    return array_api.cumsum(a)
 
 
 array_methods = [
@@ -121,6 +133,9 @@ array_methods = [
     ('zeros_like', 'int32[](int32[])', ('i4',), np.zeros(6, dtype='i')),
     ('zeros_like_dtype', 'double[](int32[])', ('i4',), np.zeros(6, dtype='q')),
     ('zeros_dtype', 'double[](int64)', (5,), np.zeros(5)),
+    ('empty', 'int32[](int64)', (5,), np.empty(5, dtype=np.int32)),
+    ('empty_like', 'int32[](int32[])', ('i4',), np.empty(6, dtype='i')),
+    ('empty_dtype', 'double[](int64)', (5,), np.empty(5)),
     ('cumsum', 'double[](int32)', (5,), np.arange(1, 6)),
 ]
 
@@ -139,7 +154,10 @@ def test_array_methods(omnisci, method, signature, args, expected):
     _, result = omnisci.sql_execute(query)
     out = list(result)[0]
 
-    assert np.array_equal(expected, out[0]), 'np_' + method
+    if 'empty' in method:
+        assert out == ([None] * len(expected),)
+    else:
+        assert np.array_equal(expected, out[0]), 'np_' + method
 
 
 @pytest.mark.parametrize('col', ('i4', 'i8', 'f4'))
@@ -148,7 +166,7 @@ def test_dtype(omnisci, col):
 
     @omnisci('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
     def zeros_like(x):
-        z = omni.zeros(len(x), x.dtype)
+        z = array_api.zeros(len(x), x.dtype)
         return z
 
     query = f'select zeros_like({col}) from {omnisci.table_name} limit 1;'
