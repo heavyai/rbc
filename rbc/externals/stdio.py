@@ -11,7 +11,7 @@ from rbc.errors import NumbaTypeError  # some errors are available for Numba >= 
 int32_t = ir.IntType(32)
 
 
-def cg_fflush(builder):
+def _cg_fflush(builder):
     int8_t = ir.IntType(8)
     fflush_fnty = ir.FunctionType(int32_t, [int8_t.as_pointer()])
     fflush_fn = irutils.get_or_insert_function(builder.module, fflush_fnty, name="fflush")
@@ -31,7 +31,7 @@ def fflush(typingctx):
     def codegen(context, builder, signature, args):
         target_info = TargetInfo()
         if target_info.is_cpu:
-            cg_fflush(builder)
+            _cg_fflush(builder)
 
     return sig, codegen
 
@@ -51,7 +51,7 @@ def printf(typingctx, format_type, *args):
             target_info = TargetInfo()
             if target_info.is_cpu:
                 cgutils.printf(builder, format_type.literal_value, *args[1:])
-                cg_fflush(builder)
+                _cg_fflush(builder)
 
         return sig, codegen
 
