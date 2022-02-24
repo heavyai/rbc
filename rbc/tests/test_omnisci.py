@@ -79,12 +79,12 @@ def test_direct_call_scalar(omnisci):
 
 @pytest.mark.parametrize('dtype', ('float32', 'float64', 'int32', 'int64'))
 def test_direct_call_array(omnisci, dtype):
-    from rbc.omnisci_backend import mean
+    from rbc.omnisci_backend import array_api
     omnisci.unregister()
 
     @omnisci('T(T[])', T=['float32', 'float64', 'int64', 'int32'], devices=['cpu'])
     def farhenheit2celcius_arr(f):
-        return (mean(f)-32) * 5 / 9
+        return (array_api.mean(f)-32) * 5 / 9
 
     ref_value = np.dtype(dtype).type(40 / 9)
     inp_array = np.array([30, 50], dtype=dtype)
