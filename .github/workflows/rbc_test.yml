@@ -7,6 +7,11 @@ on:
     branches:
       - master
 
+env:
+  NUMBA_LOOP_VECTORIZE: 0
+  NUMBA_SLP_VECTORIZE: 0
+
+
 # kill any previous running job on a new commit
 concurrency:
   group: build-and-test-rbc-${{ github.head_ref }}
