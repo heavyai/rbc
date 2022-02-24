@@ -853,3 +853,22 @@ def test_column_dtype(omnisci):
         query = f'select * from table(col_dtype_fn(cursor(select {col} from {table}), 1))'
         _, result = omnisci.sql_execute(query)
         assert list(result) == [(r,)] * 5
+
+
+def test_column_enumerate(omnisci):
+    from rbc.externals.omniscidb import set_output_row_size
+
+    @omnisci('int32(Column<int32>, OutputColumn<int32>)')
+    def col_enumerate(x, y):
+        sz = len(x)
+        set_output_row_size(sz)
+        for i, e in enumerate(x):
+            y[i] = e
+        return sz
+
+    _, result = omnisci.sql_execute(
+        f'select * from table(col_enumerate(cursor(select i4 from {omnisci.table_name})))')
+    _, expected_result = omnisci.sql_execute(
+        f'select rowid, i4 from {omnisci.table_name} order by rowid;')
+    for (r,), (_, e) in zip(list(result), list(expected_result)):
+        assert r == e

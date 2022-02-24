@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 from rbc.omnisci_backend import Array
 from rbc.errors import OmnisciServerError
+from rbc.stdlib import array_api
 from numba import types as nb_types
 import pytest
 
@@ -276,13 +277,12 @@ def test_array_constructor_noreturn(omnisci):
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
-    from numba import types
 
     @omnisci('float64(int32)')
     def array_noreturn(size):
-        a = Array(size, types.float64)
-        b = Array(size, types.float64)
-        c = Array(size, types.float64)
+        a = Array(size, nb_types.float64)
+        b = Array(size, nb_types.float64)
+        c = Array(size, nb_types.float64)
         for i in range(size):
             a[i] = b[i] = c[i] = i + 3.0
         s = 0.0
@@ -300,14 +300,13 @@ def test_array_constructor_return(omnisci):
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
-    from numba import types
     from rbc.externals.stdio import printf
 
     @omnisci('float64[](int32)')
     def array_return(size):
         printf("entering array_return(%i)\n", size)
-        a = Array(size, types.float64)
-        b = Array(size, types.float64)
+        a = Array(size, nb_types.float64)
+        b = Array(size, nb_types.float64)
         for i in range(size):
             a[i] = float(i)
             b[i] = float(size - i - 1)
@@ -330,11 +329,10 @@ def test_array_constructor_len(omnisci):
     omnisci.reset()
 
     from rbc.omnisci_backend import Array
-    from numba import types
 
     @omnisci('int64(int32)')
     def array_len(size):
-        a = Array(size, types.float64)
+        a = Array(size, nb_types.float64)
         return len(a)
 
     query = 'select array_len(30)'
@@ -388,18 +386,15 @@ inps = [('int32', 'i4', 'trunc'), ('int32', 'i4', 'sext'),
 def test_issue197(omnisci, typ, col, suffix):
     omnisci.reset()
 
-    import rbc.omnisci_backend as np
-    from numba import types
-
     cast = dict(
-        trunc=types.int64,
-        sext=types.int8,
-        zext=types.uint8,
-        fptrunc=types.float64,
-        fpext=types.float32)[suffix]
+        trunc=nb_types.int64,
+        sext=nb_types.int8,
+        zext=nb_types.uint8,
+        fptrunc=nb_types.float64,
+        fpext=nb_types.float32)[suffix]
 
     def fn_issue197(x):
-        y = np.zeros_like(x)
+        y = array_api.zeros_like(x)
         for i in range(len(x)):
             y[i] = cast(x[i] + 3)
         return y
@@ -421,11 +416,9 @@ def test_issue197(omnisci, typ, col, suffix):
 def test_issue197_bool(omnisci):
     omnisci.reset()
 
-    import rbc.omnisci_backend as np
-
     @omnisci('bool[](bool[])')
     def fn_issue197_bool(x):
-        y = np.zeros_like(x)
+        y = array_api.zeros_like(x)
         for i in range(len(x)):
             y[i] = bool(x[i])
         return y
@@ -486,3 +479,18 @@ def test_array_dtype(omnisci):
     for col, r in (('i4', 32), ('i8', 64)):
         _, result = omnisci.sql_execute(f'select array_dtype_fn({col}) from {table}')
         assert list(result) == [(r,)] * 5
+
+
+def test_array_enumerate(omnisci):
+    table = omnisci.table_name
+
+    @omnisci('T(T[])', T=['int32'])
+    def array_enumerate(x):
+        s = 0
+        for i, e in enumerate(x):
+            s += e
+        return s
+
+    _, result = omnisci.sql_execute(f'select i4, array_enumerate(i4) from {table}')
+    for arr, s in result:
+        assert sum(arr) == s
