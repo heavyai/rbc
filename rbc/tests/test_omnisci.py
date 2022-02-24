@@ -83,12 +83,12 @@ def test_direct_call_array(omnisci, dtype):
     omnisci.unregister()
 
     @omnisci('T(T[])', T=['float32', 'float64', 'int64', 'int32'], devices=['cpu'])
-    def farhenheit2celcius_arr(f):
+    def func(f):
         return (array_api.mean(f)-32) * 5 / 9
 
     ref_value = np.dtype(dtype).type(40 / 9)
     inp_array = np.array([30, 50], dtype=dtype)
-    assert farhenheit2celcius_arr(inp_array).execute() == pytest.approx(ref_value)
+    assert func(inp_array).execute() == pytest.approx(ref_value)
 
 
 def test_local_caller(omnisci):
