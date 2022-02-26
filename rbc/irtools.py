@@ -244,7 +244,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                externals.stdio.cg_fflush(builder)
+                externals.stdio._cg_fflush(builder)
             builder.ret_void()
         builder.store(builder.load(out), wrapfn.args[0])
         builder.ret_void()
@@ -261,7 +261,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                externals.stdio.cg_fflush(builder)
+                externals.stdio._cg_fflush(builder)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
