@@ -83,73 +83,91 @@ def get_literal_return(func, verbose=False):
                 print(source)
 
 
+heavyai_brands = ['omnisci', 'heavyai']
+
+
+def get_heavyai_brand():
+    """Return HeavyAI brand as defined by HEAVYAI_BRAND environment
+    variable.
+    """
+    heavyai_brand = os.environ.get('HEAVYAI_BRAND', 'omnisci')
+    if heavyai_brand not in heavyai_brands:
+        raise ValueError(f'Unknown brand name (expected {" or ".join(heavyai_brands)}'
+                         f' but got {heavyai_brand})')
+    return heavyai_brand
+
+
 def _global_omnisci():
     """Implements singleton of a global RemoteOmnisci instance.
     """
     config = get_client_config()
-    omnisci = RemoteOmnisci(**config)
+    heavyai_brand = get_heavyai_brand()
+    remotedb = dict(heavyai=RemoteHeavyAI,
+                    omnisci=RemoteOmnisci)[heavyai_brand](**config)
     while True:
-        yield omnisci
+        yield remotedb
 
 
 global_omnisci_singleton = _global_omnisci()  # generator object
 
 
 def is_available(_cache={}):
-    """Return version tuple and None if OmnisciDB server is accessible or
-    recent enough. Otherwise return None and the reason about
-    unavailability.
+    """Return version tuple and None if HeavyDB/OmnisciDB server is
+    accessible or recent enough. Otherwise return None and the reason
+    about unavailability.
     """
 
     if not _cache:
-        omnisci = next(global_omnisci_singleton)
+        remotedb = next(global_omnisci_singleton)
         try:
-            version = omnisci.version
+            version = remotedb.version
         except Exception as msg:
-            _cache['reason'] = 'failed to get OmniSci version: %s' % (msg)
+            _cache['reason'] = f'failed to get {remotedb.brand} version: {msg}'
         else:
-            print(' OmnisciDB version', version)
+            print(f'  {remotedb.brand} version {version}')
             if version[:2] >= (4, 6):
                 _cache['version'] = version
             else:
                 _cache['reason'] = (
-                    'expected OmniSci version 4.6 or greater, got %s'
-                    % (version,))
+                    f'expected {remotedb.brand} version 4.6 or greater, got {version}')
     return _cache.get('version', ()), _cache.get('reason', '')
 
 
 def get_client_config(**config):
-    """Retrieve the omnisci client configuration parameters from a client
+    """Retrieve the HeavyAI client configuration parameters from a client
     home directory.
+
+    Two HeavyAI brands are supported --- heavyai and omnisci --- that
+    clients can specify in environment variable HEAVYAI_BRAND.
 
     Note that here the client configurations parameters are those that
     are used to configure the client software such as rbc or pymapd.
     This is different from omnisci instance configuration described in
     https://docs.omnisci.com/latest/4_configuration.html that is used
-    for configuring the omniscidb server software.
+    for configuring the heavydb server software.
 
-    In Linux clients, the omnisci client configuration is read from:
-    :code:`$HOME/.config/omnisci/client.conf`
+    In Linux clients, the remoteai client configuration is read from
+    :code:`$HOME/.config/$HEAVYAI_BRAND/client.conf`
 
     In Windows clients, the configuration is read from
-    :code:`%UserProfile/.config/omnisci/client.conf` or
-    :code:`%AllUsersProfile/.config/omnisci/client.conf`
+    :code:`%UserProfile/.config/%HEAVYAI_BRAND%/client.conf` or
+    :code:`%AllUsersProfile/.config/%HEAVYAI_BRAND%/client.conf`
 
-    When :code:`OMNISCI_CLIENT_CONF` environment variable is defined then
-    the configuration is read from the file specified in this
-    variable.
+    When :code:`HEAVYAI_CLIENT_CONF` or :code:`OMNISCI_CLIENT_CONF`
+    environment variable is defined then the configuration is read
+    from the file specified in this variable.
 
     The configuration file must use configuration language similar to
-    one used in MS Windows INI files. For omnisci client
+    one used in MS Windows INI files. For HeavyAI client
     configuration, the file may contain, for instance::
 
       [user]
-      name: <OmniSciDB user name, defaults to admin>
-      password: <OmniSciDB user password>
+      name: <HeavyDB user name, defaults to admin>
+      password: <HeavyDB user password>
 
       [server]
-      host: <OmniSciDB server host name or IP, defaults to localhost>
-      port: <OmniSciDB server port, defaults to 6274>
+      host: <HeavyDB server host name or IP, defaults to localhost>
+      port: <HeavyDB server port, defaults to 6274>
 
     Parameters
     ----------
@@ -164,19 +182,22 @@ def get_client_config(**config):
       other RemoteJIT options.
 
     """
+    heavyai_brand = get_heavyai_brand()
+
     _config = dict(user='admin', password='HyperInteractive',
-                   host='localhost', port=6274, dbname='omnisci')
+                   host='localhost', port=6274, dbname=heavyai_brand)
     _config.update(**config)
     config = _config
 
-    conf_file = os.environ.get('OMNISCI_CLIENT_CONF', None)
+    client_conf_env = f'{heavyai_brand.upper()}_CLIENT_CONF'
+    conf_file = os.environ.get(client_conf_env, None)
     if conf_file is not None and not os.path.isfile(conf_file):
-        print(f'rbc.omnisci.get_client_config:'  # noqa: F541
-              ' OMNISCI_CLIENT_CONF={conf_file!r}'
+        print('rbc.omnisci.get_client_config:'
+              f' {client_conf_env}={conf_file!r}'
               ' is not a file, ignoring.')
         conf_file = None
     if conf_file is None:
-        conf_file_base = os.path.join('.config', 'omnisci', 'client.conf')
+        conf_file_base = os.path.join('.config', heavyai_brand, 'client.conf')
         for prefix_env in ['UserProfile', 'AllUsersProfile', 'HOME']:
             prefix = os.environ.get(prefix_env, None)
             if prefix is not None:
@@ -314,7 +335,7 @@ class OmnisciQueryCapsule(RemoteCallCapsule):
         return f'{type(self).__name__}({str(self)!r})'
 
 
-class RemoteOmnisci(RemoteJIT):
+class RemoteHeavyAI(RemoteJIT):
 
     """Usage:
 
@@ -331,6 +352,7 @@ class RemoteOmnisci(RemoteJIT):
     Use pymapd, for instance, to make a SQL query `select add(c1,
     c2) from table`
     """
+    brand = 'heavyai'
     multiplexed = False
     mangle_prefix = ''
 
@@ -1417,3 +1439,9 @@ class RemoteOmnisci(RemoteJIT):
             return numpy.array(list(result), dtype).view(numpy.recarray)
         else:
             return dtype[0][1](list(result)[0][0])
+
+
+class RemoteOmnisci(RemoteHeavyAI):
+    """Omnisci - the previous brand of HeavyAI
+    """
+    brand = 'omnisci'
