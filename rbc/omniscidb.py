@@ -21,7 +21,7 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version
+from .utils import parse_version, version_date
 from . import ctools
 from . import typesystem
 
@@ -224,7 +224,11 @@ def get_client_config(**config):
     if 'dbname' not in config:
         version = get_heavydb_version(host=config['host'], port=config['port'])
         if version[:2] >= (6, 0):
-            config['dbname'] = 'heavyai'
+            if version[:3] == (6, 0, 0) and version_date(version) < 20220301:
+                # TODO: remove this if-block when heavydb 6.0 is released.
+                config['dbname'] = 'omnisci'
+            else:
+                config['dbname'] = 'heavyai'
         else:
             config['dbname'] = 'omnisci'
 
