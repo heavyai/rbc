@@ -355,8 +355,14 @@ service Omnisci {
         multiplexed=False,
         thrift_content=thrift_content,
         socket_timeout=60000)
-    version = client(Omnisci=dict(get_version=()))['Omnisci']['get_version']
-    _cache[host, port] = version = parse_version(version)
+    try:
+        version = client(Omnisci=dict(get_version=()))['Omnisci']['get_version']
+    except Exception as msg:
+        print(f'failed to get heavydb version[host={host}, port={port}]: {msg}')
+        version = None
+    else:
+        version = parse_version(version)
+    _cache[host, port] = version
     return version
 
 
