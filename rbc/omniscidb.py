@@ -223,7 +223,7 @@ def get_client_config(**config):
 
     if 'dbname' not in config:
         version = get_heavydb_version(host=config['host'], port=config['port'])
-        if version[:2] >= (6, 0):
+        if version is not None and version[:2] >= (6, 0):
             if version[:3] == (6, 0, 0) and version_date(version) < 20220301:
                 # TODO: remove this if-block when heavydb 6.0 is released.
                 config['dbname'] = 'omnisci'
