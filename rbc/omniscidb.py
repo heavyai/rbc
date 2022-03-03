@@ -850,6 +850,8 @@ class RemoteHeavyDB(RemoteJIT):
             'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
             'ColumnList<TextEncodingDict>': typemap['TExtArgumentType'].get(
                 'ColumnListTextEncodingDict'),
+            'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
+            'Column<Timestamp>': typemap['TExtArgumentType'].get('ColumnTimestamp'),
         }
 
         if self.version[:2] < (5, 4):
@@ -869,6 +871,7 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('OmnisciTextEncodingDictType<>', 'TextEncodingDict'),
+                ('TimeStamp', 'TimeStamp'),
         ]:
             ext_arguments_map['OmnisciArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
