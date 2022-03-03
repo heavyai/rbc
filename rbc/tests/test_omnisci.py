@@ -15,11 +15,11 @@ if "TRAVIS" in os.environ and not available_version:
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
-def test_get_client_config(tmpdir):
-    heavyai_brand = rbc_omnisci.get_heavyai_brand()
-    d = tmpdir.mkdir("omnisci")
+@pytest.mark.parametrize("heavydb_brand", ['omnisci', 'heavyai'])
+def test_get_client_config(tmpdir, heavydb_brand):
+    d = tmpdir.mkdir(heavydb_brand)
     fh = d.join("client.conf")
-    fh.write("""
+    fh.write(f"""
     [user]
 name  =  foo
 password = secret
@@ -27,6 +27,7 @@ password = secret
 [server]
 port: 1234
 host: example.com
+dbname: {heavydb_brand}
 
 [rbc]
 debug: False
@@ -36,8 +37,10 @@ use_host_target: False
 """)
     conf_file = os.path.join(fh.dirname, fh.basename)
 
-    old_conf = os.environ.get(f'{heavyai_brand.upper()}_CLIENT_CONF')
-    os.environ[f'{heavyai_brand.upper()}_CLIENT_CONF'] = conf_file
+    client_conf_env = dict(heavyai='HEAVYDB_CLIENT_CONF',
+                           omnisci='OMNISCI_CLIENT_CONF')[heavydb_brand]
+    old_conf = os.environ.get(client_conf_env)
+    os.environ[client_conf_env] = conf_file
 
     try:
         conf = rbc_omnisci.get_client_config()
@@ -45,15 +48,15 @@ use_host_target: False
         assert conf['password'] == 'secret'
         assert conf['port'] == 1234
         assert conf['host'] == 'example.com'
-        assert conf['dbname'] == heavyai_brand
+        assert conf['dbname'] == heavydb_brand
         assert conf['debug'] == bool(0)
         conf = rbc_omnisci.get_client_config(dbname='test')
         assert conf['dbname'] == 'test'
     finally:
         if old_conf is None:
-            del os.environ[f'{heavyai_brand.upper()}_CLIENT_CONF']
+            del os.environ[client_conf_env]
         else:
-            os.environ[f'{heavyai_brand.upper()}_CLIENT_CONF'] = old_conf
+            os.environ[client_conf_env] = old_conf
 
 
 @pytest.fixture(scope='module')
