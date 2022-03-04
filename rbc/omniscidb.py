@@ -11,6 +11,7 @@ import numpy
 from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
+from .thrift import Client as ThriftClient
 from . import omnisci_backend
 from .omnisci_backend import (
     OmnisciArrayType, OmnisciBytesType, OmnisciTextEncodingDictType,
@@ -20,7 +21,7 @@ from .omnisci_backend import (
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
 from .errors import ForbiddenNameError, OmnisciServerError
-from .utils import parse_version
+from .utils import parse_version, version_date
 from . import ctools
 from . import typesystem
 
@@ -87,69 +88,73 @@ def _global_omnisci():
     """Implements singleton of a global RemoteOmnisci instance.
     """
     config = get_client_config()
-    omnisci = RemoteOmnisci(**config)
+    remotedb = dict(heavyai=RemoteHeavyDB,
+                    omnisci=RemoteOmnisci)[config['dbname']](**config)
     while True:
-        yield omnisci
+        yield remotedb
 
 
 global_omnisci_singleton = _global_omnisci()  # generator object
 
 
 def is_available(_cache={}):
-    """Return version tuple and None if OmnisciDB server is accessible or
-    recent enough. Otherwise return None and the reason about
-    unavailability.
+    """Return version tuple and None if HeavyDB/OmnisciDB server is
+    accessible or recent enough. Otherwise return None and the reason
+    about unavailability.
     """
 
     if not _cache:
-        omnisci = next(global_omnisci_singleton)
+        remotedb = next(global_omnisci_singleton)
         try:
-            version = omnisci.version
+            version = remotedb.version
         except Exception as msg:
-            _cache['reason'] = 'failed to get OmniSci version: %s' % (msg)
+            _cache['reason'] = f'failed to get {type(remotedb).__name__} version: {msg}'
         else:
-            print(' OmnisciDB version', version)
+            print(f'  {type(remotedb).__name__} version {version}')
             if version[:2] >= (4, 6):
                 _cache['version'] = version
             else:
                 _cache['reason'] = (
-                    'expected OmniSci version 4.6 or greater, got %s'
-                    % (version,))
+                    f'expected {type(remotedb).__name__} version 4.6 or greater, got {version}')
     return _cache.get('version', ()), _cache.get('reason', '')
 
 
 def get_client_config(**config):
-    """Retrieve the omnisci client configuration parameters from a client
+    """Retrieve the HeavyDB client configuration parameters from a client
     home directory.
+
+    Two HeavyDB brands (HEAVYDB_BRAND) are supported: heavyai and
+    omnisci.
 
     Note that here the client configurations parameters are those that
     are used to configure the client software such as rbc or pymapd.
-    This is different from omnisci instance configuration described in
-    https://docs.omnisci.com/latest/4_configuration.html that is used
-    for configuring the omniscidb server software.
+    This is different from heavydb instance configuration described in
+    https://docs.heavy.ai/installation-and-configuration/config-parameters
+    that is used for configuring the heavydb server software.
 
-    In Linux clients, the omnisci client configuration is read from:
-    :code:`$HOME/.config/omnisci/client.conf`
+    In Linux clients, the HeavyDB client configuration is read from
+    :code:`$HOME/.config/$HEAVYDB_BRAND/client.conf`
 
     In Windows clients, the configuration is read from
-    :code:`%UserProfile/.config/omnisci/client.conf` or
-    :code:`%AllUsersProfile/.config/omnisci/client.conf`
+    :code:`%UserProfile/.config/%HEAVYDB_BRAND%/client.conf` or
+    :code:`%AllUsersProfile/.config/%HEAVYDB_BRAND%/client.conf`
 
-    When :code:`OMNISCI_CLIENT_CONF` environment variable is defined then
-    the configuration is read from the file specified in this
-    variable.
+    When :code:`HEAVYDB_CLIENT_CONF` or :code:`OMNISCI_CLIENT_CONF`
+    environment variable is defined then the configuration is read
+    from the file specified in this variable.
 
     The configuration file must use configuration language similar to
-    one used in MS Windows INI files. For omnisci client
+    one used in MS Windows INI files. For HeavyDB client
     configuration, the file may contain, for instance::
 
       [user]
-      name: <OmniSciDB user name, defaults to admin>
-      password: <OmniSciDB user password>
+      name: <HeavyDB user name, defaults to admin>
+      password: <HeavyDB user password>
 
       [server]
-      host: <OmniSciDB server host name or IP, defaults to localhost>
-      port: <OmniSciDB server port, defaults to 6274>
+      host: <HeavyDB server host name or IP, defaults to localhost>
+      port: <HeavyDB server port, defaults to 6274>
+      dbname: <HeavyDB database name, defaults to heavyai or omnisci>
 
     Parameters
     ----------
@@ -162,53 +167,70 @@ def get_client_config(**config):
     config : dict
       A dictionary of `user`, `password`, `host`, `port`, `dbname` and
       other RemoteJIT options.
-
     """
+    caller_config = config
     _config = dict(user='admin', password='HyperInteractive',
-                   host='localhost', port=6274, dbname='omnisci')
+                   host='localhost', port=6274)
     _config.update(**config)
     config = _config
 
-    conf_file = os.environ.get('OMNISCI_CLIENT_CONF', None)
-    if conf_file is not None and not os.path.isfile(conf_file):
-        print(f'rbc.omnisci.get_client_config:'  # noqa: F541
-              ' OMNISCI_CLIENT_CONF={conf_file!r}'
-              ' is not a file, ignoring.')
-        conf_file = None
-    if conf_file is None:
-        conf_file_base = os.path.join('.config', 'omnisci', 'client.conf')
-        for prefix_env in ['UserProfile', 'AllUsersProfile', 'HOME']:
-            prefix = os.environ.get(prefix_env, None)
-            if prefix is not None:
-                fn = os.path.join(prefix, conf_file_base)
-                if os.path.isfile(fn):
-                    conf_file = fn
-                    break
-    if conf_file is None:
-        return config
+    conf_file = None
+    for brand, client_conf_env in [('heavyai', 'HEAVYDB_CLIENT_CONF'),
+                                   ('omnisci', 'OMNISCI_CLIENT_CONF')]:
+        conf_file = os.environ.get(client_conf_env, None)
+        if conf_file is not None and not os.path.isfile(conf_file):
+            print('rbc.omnisci.get_client_config:'
+                  f' {client_conf_env}={conf_file!r}'
+                  ' is not a file, ignoring.')
+            conf_file = None
+        if conf_file is None:
+            conf_file_base = os.path.join('.config', brand, 'client.conf')
+            for prefix_env in ['UserProfile', 'AllUsersProfile', 'HOME']:
+                prefix = os.environ.get(prefix_env, None)
+                if prefix is not None:
+                    fn = os.path.join(prefix, conf_file_base)
+                    if os.path.isfile(fn):
+                        conf_file = fn
+                        break
+        if conf_file is not None:
+            break
 
-    conf = configparser.ConfigParser()
-    conf.read(conf_file)
+    if conf_file is not None:
+        conf = configparser.ConfigParser()
+        conf.read(conf_file)
 
-    if 'user' in conf:
-        user = conf['user']
-        if 'name' in user:
-            config['user'] = user['name']
-        if 'password' in user:
-            config['password'] = user['password']
+        if 'user' in conf:
+            user = conf['user']
+            if 'name' in user and 'name' not in caller_config:
+                config['user'] = user['name']
+            if 'password' in user and 'password' not in caller_config:
+                config['password'] = user['password']
 
-    if 'server' in conf:
-        server = conf['server']
-        if 'host' in server:
-            config['host'] = server['host']
-        if 'port' in server:
-            config['port'] = int(server['port'])
+        if 'server' in conf:
+            server = conf['server']
+            if 'host' in server and 'host' not in caller_config:
+                config['host'] = server['host']
+            if 'port' in server and 'port' not in caller_config:
+                config['port'] = int(server['port'])
+            if 'dbname' in server and 'dbname' not in caller_config:
+                config['dbname'] = server['dbname']
 
-    if 'rbc' in conf:
-        rbc = conf['rbc']
-        for k in ['debug', 'use_host_target']:
-            if k in rbc:
-                config[k] = rbc.getboolean(k)
+        if 'rbc' in conf:
+            rbc = conf['rbc']
+            for k in ['debug', 'use_host_target']:
+                if k in rbc and k not in caller_config:
+                    config[k] = rbc.getboolean(k)
+
+    if 'dbname' not in config:
+        version = get_heavydb_version(host=config['host'], port=config['port'])
+        if version is not None and version[:2] >= (6, 0):
+            if version[:3] == (6, 0, 0) and version_date(version) < 20220301:
+                # TODO: remove this if-block when heavydb 6.0 is released.
+                config['dbname'] = 'omnisci'
+            else:
+                config['dbname'] = 'heavyai'
+        else:
+            config['dbname'] = 'omnisci'
 
     return config
 
@@ -314,7 +336,37 @@ class OmnisciQueryCapsule(RemoteCallCapsule):
         return f'{type(self).__name__}({str(self)!r})'
 
 
-class RemoteOmnisci(RemoteJIT):
+def get_heavydb_version(host='localhost', port=6274, _cache={}):
+    """Acquires the version of heavydb server.
+    """
+    if (host, port) in _cache:
+        return _cache[host, port]
+    thrift_content = '''
+exception TMapDException {
+  1: string error_msg
+}
+service Omnisci {
+  string get_version() throws (1: TMapDException e)
+}
+'''
+    client = ThriftClient(
+        host=host,
+        port=port,
+        multiplexed=False,
+        thrift_content=thrift_content,
+        socket_timeout=60000)
+    try:
+        version = client(Omnisci=dict(get_version=()))['Omnisci']['get_version']
+    except Exception as msg:
+        print(f'failed to get heavydb version[host={host}, port={port}]: {msg}')
+        version = None
+    else:
+        version = parse_version(version)
+    _cache[host, port] = version
+    return version
+
+
+class RemoteHeavyDB(RemoteJIT):
 
     """Usage:
 
@@ -808,6 +860,8 @@ class RemoteOmnisci(RemoteJIT):
             'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
             'ColumnList<TextEncodingDict>': typemap['TExtArgumentType'].get(
                 'ColumnListTextEncodingDict'),
+            'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
+            'Column<Timestamp>': typemap['TExtArgumentType'].get('ColumnTimestamp'),
         }
 
         if self.version[:2] < (5, 4):
@@ -827,6 +881,7 @@ class RemoteOmnisci(RemoteJIT):
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('OmnisciTextEncodingDictType<>', 'TextEncodingDict'),
+                ('TimeStamp', 'TimeStamp'),
         ]:
             ext_arguments_map['OmnisciArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
@@ -1417,3 +1472,8 @@ class RemoteOmnisci(RemoteJIT):
             return numpy.array(list(result), dtype).view(numpy.recarray)
         else:
             return dtype[0][1](list(result)[0][0])
+
+
+class RemoteOmnisci(RemoteHeavyDB):
+    """Omnisci - the previous brand of HeavyAI
+    """
