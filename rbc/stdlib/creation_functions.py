@@ -4,11 +4,12 @@ Array API specification for creation functions.
 https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 """
 
-from rbc import typesystem
+from rbc import typesystem, errors
 from rbc.heavyai.array import Array, ArrayPointer
 from rbc.stdlib import Expose
 from numba import njit
 from numba.core import extending, types
+from numba.core.typing import asnumbatype
 
 __all__ = [
     'full', 'full_like', 'empty_like', 'empty', 'zeros', 'zeros_like',
@@ -18,6 +19,23 @@ __all__ = [
 
 
 expose = Expose(globals(), 'creation_functions')
+
+
+def _determine_dtype(dtype, fill_value):
+    if dtype is None:
+        # determine from fill_value
+        if fill_value is None:
+            # return the default floating-point data type
+            return types.double
+        else:
+            return asnumbatype.typeof(fill_value)
+    else:
+        if isinstance(dtype, types.UnicodeType):
+            raise errors.RequireLiteralValue(dtype)
+        elif isinstance(dtype, types.StringLiteral):
+            return typesystem.Type.fromstring(dtype.literal_value).tonumba()
+        else:
+            return typesystem.Type.fromobject(dtype).tonumba()
 
 
 @expose.not_implemented('arange')
@@ -88,12 +106,7 @@ def _omnisci_np_full(shape, fill_value, dtype=None):
     """
     Return a new array of given shape and type, filled with fill_value.
     """
-
-    # XXX: dtype should be infered from fill_value
-    if dtype is None:
-        nb_dtype = types.double
-    else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+    nb_dtype = _determine_dtype(dtype, fill_value)
 
     def impl(shape, fill_value, dtype=None):
         a = Array(shape, nb_dtype)
@@ -111,7 +124,7 @@ def _omnisci_np_full_like(a, fill_value, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         def impl(a, fill_value, dtype=None):
             sz = len(a)
@@ -130,7 +143,7 @@ def _omnisci_np_empty_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         def impl(a, dtype=None):
             return empty(len(a), nb_dtype)  # noqa: F821
@@ -145,7 +158,7 @@ def _omnisci_np_empty(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+        nb_dtype = _determine_dtype(dtype, fill_value=None)
 
     def impl(shape, dtype=None):
         arr = Array(shape, nb_dtype)
@@ -161,11 +174,7 @@ def _omnisci_np_zeros(shape, dtype=None):
     Return a new array of given shape and type, filled with zeros.
     """
 
-    if dtype is None:
-        nb_dtype = types.double
-    else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
-
+    nb_dtype = _determine_dtype(dtype, fill_value=None)
     fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
 
     def impl(shape, dtype=None):
@@ -182,7 +191,7 @@ def _omnisci_np_zeros_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
 
@@ -197,11 +206,7 @@ def _omnisci_np_ones(shape, dtype=None):
     Return a new array of given shape and type, filled with ones.
     """
 
-    if dtype is None:
-        nb_dtype = types.double
-    else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
-
+    nb_dtype = _determine_dtype(dtype, fill_value=None)
     fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
 
     def impl(shape, dtype=None):
@@ -218,7 +223,7 @@ def _omnisci_np_ones_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = dtype
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
 
@@ -247,7 +252,7 @@ def _omnisci_np_array(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = dtype
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         def impl(a, dtype=None):
             if a.is_null():

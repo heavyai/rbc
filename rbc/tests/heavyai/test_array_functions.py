@@ -57,7 +57,7 @@ def heavydb():
 
 
 def np_ones(sz):
-    return array_api.ones(sz, types.int32)
+    return array_api.ones(sz, 'int32')
 
 
 def np_ones_dtype(sz):

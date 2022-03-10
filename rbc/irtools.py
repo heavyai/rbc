@@ -1,6 +1,7 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
+import os
 import re
 import warnings
 from contextlib import contextmanager
@@ -14,7 +15,7 @@ from . import libfuncs
 from rbc import externals
 from numba.core import codegen, cpu, compiler_lock, \
     registry, typing, compiler, sigutils, cgutils, \
-    extending, imputils
+    extending, imputils, config
 from numba.core import errors as nb_errors
 
 
@@ -286,6 +287,11 @@ def compile_instance(func, sig,
         flags.set('no_compile')
         flags.set('no_cpython_wrapper')
         flags.set('no_cfunc_wrapper')
+
+    # set CAPTURED_ERROS to "new_style"
+    # https://github.com/numba/numba/pull/7397
+    os.environ["CAPTURED_ERRORS"] = "old_style"
+    config.reload_config()
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(
