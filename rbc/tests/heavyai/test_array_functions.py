@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 
 from rbc.stdlib import array_api
+from rbc.typesystem import Type
+from rbc.omniscidb import type_to_type_name
 from numba.core import types
 
 
@@ -57,7 +59,7 @@ def heavydb():
 
 
 def np_ones(sz):
-    return array_api.ones(sz, 'int32')
+    return array_api.ones(sz, dtype=types.int32)
 
 
 def np_ones_dtype(sz):
@@ -162,14 +164,95 @@ def test_array_methods(heavydb, method, signature, args, expected):
 
 
 @pytest.mark.parametrize('col', ('i4', 'i8', 'f4'))
-def test_dtype(heavydb, col):
-    heavydb.reset()
+def test_dtype_attribute(omnisci, col):
+    omnisci.reset()
 
-    @heavydb('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
-    def zeros_like(x):
+    @omnisci('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
+    def zeros(x):
         z = array_api.zeros(len(x), x.dtype)
         return z
 
-    query = f'select zeros_like({col}) from {heavydb.table_name} limit 1;'
-    _, result = heavydb.sql_execute(query)
+    query = f'select zeros({col}) from {omnisci.table_name} limit 1;'
+    _, result = omnisci.sql_execute(query)
     assert np.all(list(result)[0][0] == np.zeros(6, dtype=col))
+
+
+dtype_to_col = dict(int8_t='i1', int16_t='i2', int32_t='i4',
+                    int64_t='i8', float='f4', double='f8')
+functions = ('zeros', 'zeros_like',
+             'full', 'full_like',
+             'empty', 'empty_like',
+             'ones', 'ones_like',
+             'array')
+
+
+@pytest.mark.parametrize('dtype', ('int32_t', 'float'))  # test all dtypes?
+@pytest.mark.parametrize('func_name', functions)
+def test_literal_string_dtype(omnisci, dtype, func_name):
+    omnisci.reset()
+
+    if func_name == 'array':
+        return
+
+    func = getattr(array_api, func_name)
+
+    if func_name == 'full_like':
+        fill_value = 0.0 if dtype in ('float', 'double') else 0
+
+        @omnisci('T[](T[])', T=[dtype], devices=['cpu'])
+        def fn(arr):
+            return func(arr, fill_value, dtype=dtype)
+        query = f'select fn({dtype_to_col[dtype]}) from {omnisci.table_name} limit 1;'
+    elif func_name.endswith('_like'):
+
+        @omnisci('T[](T[])', T=[dtype], devices=['cpu'])
+        def fn(arr):
+            return func(arr, dtype=dtype)
+        query = f'select fn({dtype_to_col[dtype]}) from {omnisci.table_name} limit 1;'
+    elif func_name == 'full':
+
+        @omnisci('T[](int32, T)', T=[dtype], devices=['cpu'])
+        def fn(shape, fill_value):
+            return func(shape, fill_value, dtype)
+        query = f'{str(fn(5, 0))} limit 1;'
+    else:
+
+        @omnisci('T[](int32)', T=[dtype], devices=['cpu'])
+        def fn(sz):
+            z = func(sz, dtype)
+            return z
+        query = 'select fn(5) limit 1;'
+
+    _, result = omnisci.sql_execute(query)
+    # if the execution succeed, it means the return array has type specified by dtype
+    assert len(list(result)[0][0]) > 0
+
+
+dtypes = ('int8_t', 'int16_t', 'int32_t', 'int64_t', 'float', 'double')
+
+
+@pytest.mark.parametrize('dtype', dtypes)
+@pytest.mark.parametrize('func_name', ('full', 'full_like'))
+def test_detect_dtype_from_fill_value(omnisci, dtype, func_name):
+    omnisci.reset()
+
+    if func_name == 'full':
+
+        @omnisci('T[](int32, T)', T=[dtype], devices=['cpu'])
+        def fn(shape, fill_value):
+            return array_api.full(shape, fill_value)
+
+        query = str(fn(5, 3))
+    else:  # full_like
+
+        @omnisci('T[](T[], T)', T=[dtype], devices=['cpu'])
+        def fn(arr, fill_value):
+            return array_api.full_like(arr, fill_value)
+
+        datum_type = type_to_type_name(Type.fromstring(dtype))
+        query = (f'SELECT fn({dtype_to_col[dtype]}, CAST(3 as {datum_type})) '
+                 f'FROM {omnisci.table_name}')
+
+    _, result = omnisci.sql_execute(f'{query} limit 1;')
+    # if the execution succeed, it means the return array has type specified by fill_value
+    assert len(list(result)[0][0]) > 0

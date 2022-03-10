@@ -1109,6 +1109,8 @@ class Type(tuple, metaclass=MetaType):
         if isinstance(t, nb.types.misc.RawPointer):
             if t == nb.types.voidptr:
                 return cls(cls(), '*')
+        if isinstance(t, nb.types.StringLiteral):
+            return cls.fromstring(t.literal_value)
 
         raise NotImplementedError(repr((t, type(t).__bases__)))
 

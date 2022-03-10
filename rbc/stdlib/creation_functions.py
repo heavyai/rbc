@@ -32,8 +32,6 @@ def _determine_dtype(dtype, fill_value):
     else:
         if isinstance(dtype, types.UnicodeType):
             raise errors.RequireLiteralValue(dtype)
-        elif isinstance(dtype, types.StringLiteral):
-            return typesystem.Type.fromstring(dtype.literal_value).tonumba()
         else:
             return typesystem.Type.fromobject(dtype).tonumba()
 
@@ -124,7 +122,7 @@ def _omnisci_np_full_like(a, fill_value, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = _determine_dtype(dtype, fill_value=None)
+            nb_dtype = _determine_dtype(dtype, fill_value)
 
         def impl(a, fill_value, dtype=None):
             sz = len(a)
