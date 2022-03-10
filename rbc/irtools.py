@@ -290,7 +290,7 @@ def compile_instance(func, sig,
 
     # set CAPTURED_ERROS to "new_style"
     # https://github.com/numba/numba/pull/7397
-    os.environ["CAPTURED_ERRORS"] = "old_style"
+    os.environ["CAPTURED_ERRORS"] = "new_style"
     config.reload_config()
 
     fname = func.__name__ + sig.mangling()
