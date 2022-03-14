@@ -182,17 +182,13 @@ dtype_to_col = dict(int8_t='i1', int16_t='i2', int32_t='i4',
 functions = ('zeros', 'zeros_like',
              'full', 'full_like',
              'empty', 'empty_like',
-             'ones', 'ones_like',
-             'array')
+             'ones', 'ones_like',)
 
 
 @pytest.mark.parametrize('dtype', ('int32_t', 'float'))  # test all dtypes?
 @pytest.mark.parametrize('func_name', functions)
 def test_literal_string_dtype(omnisci, dtype, func_name):
     omnisci.reset()
-
-    if func_name == 'array':
-        return
 
     func = getattr(array_api, func_name)
 

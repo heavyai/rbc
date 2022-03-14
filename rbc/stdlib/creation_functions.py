@@ -6,8 +6,7 @@ https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 
 from rbc import typesystem, errors
 from rbc.heavyai.array import Array, ArrayPointer
-from rbc.stdlib import Expose
-from numba import njit
+from rbc.stdlib import Expose, API
 from numba.core import extending, types
 from numba.core.typing import asnumbatype
 
@@ -32,6 +31,8 @@ def _determine_dtype(dtype, fill_value):
     else:
         if isinstance(dtype, types.UnicodeType):
             raise errors.RequireLiteralValue(dtype)
+        elif isinstance(dtype, types.StringLiteral):
+            return typesystem.Type.fromstring(dtype.literal_value).tonumba()
         else:
             return typesystem.Type.fromobject(dtype).tonumba()
 
@@ -230,36 +231,6 @@ def _omnisci_np_ones_like(a, dtype=None):
         return impl
 
 
-@expose.implements('array')
-def _omnisci_np_array(a, dtype=None):
-    """
-    Create an array.
-    """
-
-    @njit
-    def _omnisci_array_non_empty_copy(a, nb_dtype):
-        """Implement this here rather than inside "impl".
-        LLVM DCE pass removes everything if we implement stuff inside "impl"
-        """
-        other = Array(len(a), nb_dtype)
-        for i in range(len(a)):
-            other[i] = a[i]
-        return other
-
-    if isinstance(a, ArrayPointer):
-        if dtype is None:
-            nb_dtype = a.eltype
-        else:
-            nb_dtype = _determine_dtype(dtype, fill_value=None)
-
-        def impl(a, dtype=None):
-            if a.is_null():
-                return empty_like(a)  # noqa: F821
-            else:
-                return _omnisci_array_non_empty_copy(a, nb_dtype)
-        return impl
-
-
 @extending.overload_method(ArrayPointer, 'fill')
 def _omnisci_array_fill(x, v):
     """
@@ -272,7 +243,7 @@ def _omnisci_array_fill(x, v):
         return impl
 
 
-@expose.implements('cumsum')
+@expose.implements('cumsum', api=API.NUMPY_API)
 def _omnisci_np_cumsum(a):
     """
     Return the cumulative sum of the elements along a given axis.
