@@ -28,7 +28,8 @@ def _array_api_concat(arrays, /, *, axis=0):
 @expose.not_implemented("expand_dims")
 def _array_api_expand_dims(x, /, *, axis=0):
     """
-    Expands the shape of an array by inserting a new axis (dimension) of size one at the position specified by
+    Expands the shape of an array by inserting a new axis (dimension)
+    of size one at the position specified by
     """
     pass
 
