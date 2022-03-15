@@ -1,6 +1,6 @@
 import operator
 from llvmlite import ir
-from .omnisci_array import ArrayPointer, Array
+from .array import ArrayPointer, Array
 from rbc import typesystem
 from numba.core import extending, types
 

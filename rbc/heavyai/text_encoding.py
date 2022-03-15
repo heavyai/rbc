@@ -3,7 +3,7 @@
 
 __all__ = ['OmnisciTextEncodingDictType', 'TextEncodingDict']
 
-from .omnisci_metatype import OmnisciMetaType
+from .metatype import OmnisciMetaType
 from rbc import typesystem
 
 

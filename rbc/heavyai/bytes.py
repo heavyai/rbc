@@ -11,7 +11,7 @@ Omnisci Bytes represents the following structure:
 __all__ = ['BytesPointer', 'Bytes', 'OmnisciBytesType']
 
 from rbc import typesystem
-from .omnisci_buffer import (
+from .buffer import (
     BufferPointer, Buffer, OmnisciBufferType,
     omnisci_buffer_constructor)
 from numba.core import types, extending

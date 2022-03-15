@@ -25,7 +25,7 @@ Omnisci buffer objects from UDF/UDTFs.
 
 import operator
 from collections import defaultdict
-from .omnisci_metatype import OmnisciMetaType
+from .metatype import OmnisciMetaType
 from llvmlite import ir
 import numpy as np
 from rbc import typesystem, irutils
@@ -195,7 +195,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
     alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, alloc_fn_name)
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     # remember possible temporary allocations so that when leaving a
-    # UDF/UDTF, these will be deallocated, see omnisci_pipeline.py.
+    # UDF/UDTF, these will be deallocated, see pipeline.py.
     builder_buffers[builder].append(ptr8)
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
 

@@ -4,9 +4,9 @@
 __all__ = ['ArrayPointer', 'Array', 'OmnisciArrayType']
 
 from rbc import typesystem, errors
-from .omnisci_buffer import (BufferPointer, Buffer,
-                             OmnisciBufferType,
-                             omnisci_buffer_constructor)
+from .buffer import (BufferPointer, Buffer,
+                     OmnisciBufferType,
+                     omnisci_buffer_constructor)
 from numba.core import extending, types
 
 
