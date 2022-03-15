@@ -2,7 +2,7 @@ import functools
 from enum import Enum
 from numba.core import extending
 from rbc.omnisci_backend import Array, ArrayPointer
-from rbc import typesystem
+from rbc import typesystem, errors
 
 
 ARRAY_API_ADDRESS = ("https://data-apis.org/array-api/latest/API_specification"
@@ -76,16 +76,20 @@ class Expose:
         return wrapper
 
     def not_implemented(self, func_name, api=API.ARRAY_API):
-        s = f'def {func_name}(*args, **kwargs): pass'
-        exec(s, self._globals)
+        fn = self.create_function(func_name)
+        decorate = extending.overload(fn)
 
-        fn = self._globals.get(func_name)
+        def unimplemented(*args, **kwargs):
+            raise errors.NumbaNotImplementedError(f'Function "{func_name}" is not supported.\n'
+                                                  'Please, open a ticket on the RBC project '
+                                                  'and report this error if you need support for '
+                                                  'this function.')
 
         def wraps(overload_func):
             original_doc = self.format_docstring(overload_func, func_name, api)
             overload_func.__doc__ = f"❌ Not implemented\n{original_doc}"
             functools.update_wrapper(fn, overload_func)
-            return overload_func
+            return decorate(unimplemented)
         return wraps
 
 
