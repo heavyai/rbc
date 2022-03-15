@@ -3,7 +3,7 @@ import pytest
 import sys
 import numpy as np
 import numba as nb
-import rbc.omniscidb as rbc_omnisci
+import rbc.heavydb as rbc_omnisci
 from rbc.stdlib import array_api
 
 available_version, reason = rbc_omnisci.is_available()
