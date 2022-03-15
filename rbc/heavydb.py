@@ -12,8 +12,8 @@ from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
 from .thrift import Client as ThriftClient
-from . import omnisci_backend
-from .omnisci_backend import (
+from . import heavyai
+from .heavyai import (
     OmnisciArrayType, OmnisciBytesType, OmnisciTextEncodingDictType,
     OmnisciOutputColumnType, OmnisciColumnType,
     OmnisciCompilerPipeline, OmnisciCursorType,
@@ -1284,15 +1284,15 @@ class RemoteHeavyDB(RemoteJIT):
 
     def preprocess_callable(self, func):
         func = super().preprocess_callable(func)
-        if 'omnisci_backend' not in func.__code__.co_names:
+        if 'heavyai' not in func.__code__.co_names:
             for symbol in BufferMeta.class_names:
                 if symbol in func.__code__.co_names and symbol not in func.__globals__:
                     warnings.warn(
                         f'{func.__name__} uses {symbol} that may be undefined.'
                         f' Inserting {symbol} to global namespace.'
-                        f' Use `from rbc.omnisci_backend import {symbol}`'
+                        f' Use `from rbc.heavyai import {symbol}`'
                         ' to remove this warning.')
-                    func.__globals__[symbol] = omnisci_backend.__dict__.get(symbol)
+                    func.__globals__[symbol] = heavyai.__dict__.get(symbol)
         return func
 
     _compiler = None

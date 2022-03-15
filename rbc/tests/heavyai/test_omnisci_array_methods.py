@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from rbc.tests import omnisci_fixture
-from rbc.omnisci_backend import Array
+from rbc.heavyai import Array
 
 
 rbc_omnisci = pytest.importorskip('rbc.omniscidb')

@@ -7,7 +7,7 @@ https://data-apis.org/array- api/latest/API_specification/elementwise_functions.
 from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose, API, determine_input_type
 import numpy as np
 from rbc import typesystem
-from rbc.omnisci_backend import ArrayPointer, Array
+from rbc.heavyai import ArrayPointer, Array
 from numba.core import types
 
 

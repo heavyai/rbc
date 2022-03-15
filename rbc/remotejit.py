@@ -19,7 +19,7 @@ from .rbclib import tracing_allocator
 # XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
 # we support Arrays even without omnisci, so it must be renamed and moved
 # somewhere elsef
-from .omnisci_backend import OmnisciCompilerPipeline
+from .heavyai import OmnisciCompilerPipeline
 
 
 def isfunctionlike(obj):

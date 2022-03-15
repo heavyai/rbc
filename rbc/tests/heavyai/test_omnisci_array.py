@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from rbc.omnisci_backend import Array
+from rbc.heavyai import Array
 from rbc.errors import OmnisciServerError
 from rbc.stdlib import array_api
 from numba import types as nb_types
@@ -276,7 +276,7 @@ def test_array_setitem(omnisci):
 def test_array_constructor_noreturn(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Array
+    from rbc.heavyai import Array
 
     @omnisci('float64(int32)')
     def array_noreturn(size):
@@ -299,7 +299,7 @@ def test_array_constructor_noreturn(omnisci):
 def test_array_constructor_return(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Array
+    from rbc.heavyai import Array
     from rbc.externals.stdio import printf
 
     @omnisci('float64[](int32)')
@@ -328,7 +328,7 @@ def test_array_constructor_return(omnisci):
 def test_array_constructor_len(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Array
+    from rbc.heavyai import Array
 
     @omnisci('int64(int32)')
     def array_len(size):
@@ -344,7 +344,7 @@ def test_array_constructor_len(omnisci):
 def test_array_constructor_getitem(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Array
+    from rbc.heavyai import Array
     import numpy as np
 
     @omnisci('double(int32, int32)')
@@ -363,7 +363,7 @@ def test_array_constructor_getitem(omnisci):
 def test_array_constructor_is_null(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Array
+    from rbc.heavyai import Array
 
     @omnisci('int8(int64)')
     def array_is_null(size):

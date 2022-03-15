@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from rbc.omnisci_backend import Array
+from rbc.heavyai import Array
 from rbc.tests import omnisci_fixture
 from numba import types as nb_types
 import operator

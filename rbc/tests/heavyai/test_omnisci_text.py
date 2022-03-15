@@ -101,7 +101,7 @@ def test_bytes_ord(omnisci):
 def test_bytes_return(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Bytes
+    from rbc.heavyai import Bytes
 
     @omnisci('Bytes(int32, int32)')
     def make_abc(first, n):
@@ -120,7 +120,7 @@ def test_bytes_return(omnisci):
 def test_bytes_upper(omnisci):
     omnisci.reset()
 
-    from rbc.omnisci_backend import Bytes
+    from rbc.heavyai import Bytes
 
     @omnisci('Bytes(Bytes)')
     def myupper(s):
