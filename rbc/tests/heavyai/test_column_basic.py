@@ -856,7 +856,7 @@ def test_column_dtype(omnisci):
 
 
 def test_column_enumerate(omnisci):
-    from rbc.externals.omniscidb import set_output_row_size
+    from rbc.externals.heavydb import set_output_row_size
 
     @omnisci('int32(Column<int32>, OutputColumn<int32>)')
     def col_enumerate(x, y):

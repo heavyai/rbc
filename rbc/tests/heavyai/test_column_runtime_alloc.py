@@ -1,6 +1,6 @@
 import pytest
 from rbc.tests import omnisci_fixture
-from rbc.externals.omniscidb import set_output_row_size
+from rbc.externals.heavydb import set_output_row_size
 
 
 scalar_types = ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']

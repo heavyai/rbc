@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from rbc.externals.omniscidb import set_output_row_size
+from rbc.externals.heavydb import set_output_row_size
 from rbc.heavyai import Bytes
 from rbc.tests import omnisci_fixture, assert_equal
 

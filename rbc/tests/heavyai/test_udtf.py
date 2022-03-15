@@ -1,7 +1,7 @@
 import pytest
 from rbc.errors import NumbaTypeError
 from rbc.tests import omnisci_fixture, sql_execute
-from rbc.externals.omniscidb import table_function_error
+from rbc.externals.heavydb import table_function_error
 import numpy as np
 
 
