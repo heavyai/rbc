@@ -27,10 +27,11 @@ __all__ = [
     'rad2deg', 'logical_not', 'isfinite', 'isinf', 'isnan', 'fabs',
     'floor', 'ceil', 'trunc', 'signbit', 'copysign', 'spacing',
     'heaviside', 'bitwise_left_shift', 'bitwise_right_shift',
-    'round',
+    'round', 'isnat',
     # numpy specifics
     'power', 'arctan2', 'left_shift', 'right_shift', 'absolute',
-    'invert', 'arcsin', 'arctan', 'arccos', 'arcsinh', 'arccosh', 'arctanh'
+    'invert', 'arcsin', 'arctan', 'arccos', 'arcsinh', 'arccosh', 'arctanh',
+    'float_power', 'divmod', 'cbrt',
 ]
 
 

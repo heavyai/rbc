@@ -19,7 +19,7 @@ def _array_api_argsort(x, *, axis=-1, descending=False, stable=True):
 
 
 @expose.not_implemented("sort")
-def _array_api_any(x, *, axis=-1, descending=False, stable=True):
+def _array_api_sort(x, *, axis=-1, descending=False, stable=True):
     """
     Returns a sorted copy of an input array `x`.
     """
