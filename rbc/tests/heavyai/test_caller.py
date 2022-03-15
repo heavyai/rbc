@@ -173,7 +173,7 @@ def test_remote_composite_udtf_udf(heavydb):
     assert_equal(str(r), ('SELECT x FROM TABLE(arange(CAST(3 AS INT),'
                           ' CAST(myincr(CAST(2 AS BIGINT)) AS BIGINT)))'))
 
-    pytest.xfail('udtf(udf) crashes heavydbdb server')
+    pytest.xfail('udtf(udf) crashes heavydb server')
     assert_equal(r['x'], np.arange(3, dtype=np.int64) + 2 + 1)
 
 

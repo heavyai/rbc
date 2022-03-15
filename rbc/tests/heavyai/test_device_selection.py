@@ -213,7 +213,7 @@ def test_device_selection_pair(heavydb, func12, ext, kind2, kind1):
         pytest.skip('Load-time UDTFs not supported')
 
     # Omniscidb server option --allow-query-step-cpu-retry=1 was
-    # introduced in heavydbdb-internal PR 5798, here assuming the
+    # introduced in heavydb-internal PR 5798, here assuming the
     # default value.
     allow_query_step_cpu_retry = heavydb.version[:2] >= (5, 8)
 

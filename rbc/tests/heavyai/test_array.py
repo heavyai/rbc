@@ -56,7 +56,7 @@ def heavydb():
 def test_ptr(heavydb, c_name, device):
     heavydb.reset()
     if not heavydb.has_cuda and device == 'gpu':
-        pytest.skip('test requires CUDA-enabled heavydbdb server')
+        pytest.skip('test requires CUDA-enabled heavydb server')
     from rbc.external import external
 
     if heavydb.compiler is None:
@@ -137,7 +137,7 @@ def test_len_f64(heavydb):
 
 
 @pytest.mark.skipif(available_version[:2] == (5, 1),
-                    reason="skip due to a bug in heavydbdb 5.1 (got %s)" % (
+                    reason="skip due to a bug in heavydb 5.1 (got %s)" % (
                         available_version,))
 def test_getitem_bool(heavydb):
     heavydb.reset()
@@ -233,7 +233,7 @@ def test_sum(heavydb):
 
 
 @pytest.mark.skipif(available_version[:2] == (5, 1),
-                    reason="skip due to a bug in heavydbdb 5.1 (got %s)" % (
+                    reason="skip due to a bug in heavydb 5.1 (got %s)" % (
                         available_version,))
 def test_even_sum(heavydb):
     heavydb.reset()

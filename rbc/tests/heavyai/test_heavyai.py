@@ -7,7 +7,7 @@ from rbc.errors import UnsupportedError, OmnisciServerError
 from rbc.tests import heavydb_fixture, assert_equal
 from rbc.typesystem import Type
 
-rbc_heavydb = pytest.importorskip('rbc.heavydbdb')
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
 # Throw an error on Travis CI if the server is not available
 if "TRAVIS" in os.environ and not available_version:
@@ -272,7 +272,7 @@ def test_binding(heavydb):
         column_vars_types = argument_types
 
     if available_version[:2] >= (5, 9):
-        heavydb.require_version((5, 9), 'Requires heavydbdb-internal PR 6003')
+        heavydb.require_version((5, 9), 'Requires heavydb-internal PR 6003')
 
         def get_result(overload_types, input_type, is_literal):
             overload_types_ = overload_types[::-1 if is_literal else 1]
@@ -621,7 +621,7 @@ def test_casting(heavydb):
                 (r'TINYINT', 'i1', (8.5,)),
         ]:
             if available_version[:2] >= (5, 9):
-                # heavydbdb-internal PR 6003 changed the casting table
+                # heavydb-internal PR 6003 changed the casting table
                 if f == r'f32':
                     r = r[0] - 4,
                 descr, result = heavydb.sql_execute(
@@ -629,7 +629,7 @@ def test_casting(heavydb):
                 assert list(result)[0] == r, (f, at, av, r)
 
             elif available_version[:2] == (5, 8):
-                # heavydbdb-internal PR 5814 changed the casting table
+                # heavydb-internal PR 5814 changed the casting table
                 if f == r'f32' and at == r'BIGINT':
                     with pytest.raises(
                             Exception,
@@ -695,7 +695,7 @@ def test_truncate_issue(heavydb):
         'select bits(truncate(2016, 1)) from {heavydb.table_name} limit 1'
         .format(**locals()))
     if available_version[:2] >= (5, 8):
-        # heavydbdb-internal PR 5915 changes the casting table
+        # heavydb-internal PR 5915 changes the casting table
         assert list(result)[0] in [(64,)]
     else:
         assert list(result)[0] in [(16,), (32,)]

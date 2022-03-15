@@ -70,7 +70,7 @@ def define(heavydb):
 
 @pytest.fixture(scope="function")
 def create_columns(heavydb):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     for size in (8, 16, 32):
         table_name = f"{heavydb.base_name}_{size}"
@@ -111,7 +111,7 @@ def create_columns(heavydb):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_text_encoding_shared_dict(heavydb, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
@@ -134,7 +134,7 @@ def test_text_encoding_shared_dict(heavydb, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_shared_dict2(heavydb, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5719")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = "test_shared_dict_copy2"
     table = f"{heavydb.base_name}_{size}"
@@ -159,7 +159,7 @@ def test_text_encoding_shared_dict2(heavydb, size):
 @pytest.mark.parametrize("col_name", ("base", "other", "another"))
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_text_encoding_shared_dict3(heavydb, col_name, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
@@ -178,7 +178,7 @@ def test_text_encoding_shared_dict3(heavydb, col_name, size):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("num_column_list", (1, 2, 3))
 def test_text_encoding_column_list(heavydb, size, num_column_list):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = "test_copy_column_list"
     table = f"{heavydb.base_name}_{size}"
@@ -201,7 +201,7 @@ def test_text_encoding_column_list(heavydb, size, num_column_list):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (32,))
 def test_text_encoding_column_list2(heavydb, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5719")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = "test_copy_column_list2"
     table = f"{heavydb.base_name}_{size}"
@@ -228,7 +228,7 @@ def test_text_encoding_column_list2(heavydb, size):
 @pytest.mark.parametrize("size", (32,))
 @pytest.mark.parametrize("num_cols", (1, 2, 3, 4))
 def test_text_encoding_column_list3(heavydb, size, num_cols):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5719")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = "test_copy_column_list3"
     table = f"{heavydb.base_name}_{size}"
@@ -250,7 +250,7 @@ def test_text_encoding_column_list3(heavydb, size, num_cols):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_count(heavydb, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
@@ -265,7 +265,7 @@ def test_text_encoding_count(heavydb, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_order_by(heavydb, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
@@ -290,7 +290,7 @@ def test_text_encoding_order_by(heavydb, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_ct_binding_dict_encoded1(heavydb, size):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5492")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = 'ct_binding_dict_encoded1'
     table = f"{heavydb.base_name}_{size}"
@@ -313,7 +313,7 @@ def test_ct_binding_dict_encoded1(heavydb, size):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("fn_suffix", ("2", "3",))
 def test_ct_binding_dict_encoded23(heavydb, size, fn_suffix):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5719")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = f"ct_binding_dict_encoded{fn_suffix}"
     table = f"{heavydb.base_name}_{size}"
@@ -336,7 +336,7 @@ def test_ct_binding_dict_encoded23(heavydb, size, fn_suffix):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("fn_suffix", ("4", "5", "6"))
 def test_ct_binding_dict_encoded45(heavydb, size, fn_suffix):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5719")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = f"ct_binding_dict_encoded{fn_suffix}"
     table = f"{heavydb.base_name}_{size}"

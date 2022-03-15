@@ -63,7 +63,7 @@ def test_columns_sum(heavydb, T, variant):
     _, result = heavydb.sql_execute(query)
     expected = list(zip(*result))[1]
 
-    # using `.. ORDER BY rowid LIMIT ALL` will crash heavydbdb server
+    # using `.. ORDER BY rowid LIMIT ALL` will crash heavydb server
     query = (f'select * from table(columns_sum{variant}(cursor('
              f'select rowid, {v}, CAST({v}+1 as {c}) '
              f'from {heavydb.table_name} ORDER BY rowid LIMIT 1000), 1))')

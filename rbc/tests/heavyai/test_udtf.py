@@ -63,7 +63,7 @@ def define(heavydb):
 
 @pytest.mark.parametrize("kind", ['i8', 'i4', 'i2', 'i1', 'f8', 'f4'])
 def test_composition(heavydb, kind):
-    heavydb.require_version((5, 6), 'Requires heavydbdb-internal PR 5440')
+    heavydb.require_version((5, 6), 'Requires heavydb-internal PR 5440')
 
     def tonp(query):
         _, result = heavydb.sql_execute(query)
@@ -131,7 +131,7 @@ def test_composition(heavydb, kind):
 
 
 def test_table_function_manager(heavydb):
-    heavydb.require_version((5, 9), 'Requires heavydbdb-internal PR 6035')
+    heavydb.require_version((5, 9), 'Requires heavydb-internal PR 6035')
 
     @heavydb('int32(TableFunctionManager, Column<double>, OutputColumn<double>)')
     def my_manager_error(mgr, col, out):
@@ -163,13 +163,13 @@ def test_table_function_manager(heavydb):
 @pytest.mark.parametrize("sleep", ['ct_sleep1', 'ct_sleep2'])
 @pytest.mark.parametrize("mode", [0, 1, 2, 3, 4])
 def test_parallel_execution(heavydb, sleep, mode):
-    """This test is affected by heavydbdb server option --num-executors.
+    """This test is affected by heavydb server option --num-executors.
     Here we start a number of identical tasks at the same time and
     observe if the tasks are run in-parallel (ct_sleep2) or not
     (ct_sleep1).
 
     """
-    heavydb.require_version((5, 9), 'Requires heavydbdb-internal PR 5901')
+    heavydb.require_version((5, 9), 'Requires heavydb-internal PR 5901')
     from multiprocessing import Process, Array
 
     def func(seconds, mode, a):
@@ -194,9 +194,9 @@ def test_parallel_execution(heavydb, sleep, mode):
             a[i] = v[0]
 
     # mode > 1 correspond to exception tests. Increasing nof_jobs for
-    # such tests and rerunning pytest many times may lead to heavydbdb
+    # such tests and rerunning pytest many times may lead to heavydb
     # server crash if num-executors>1. This may indicate that
-    # heavydbdb error handling is not completely thread-save.
+    # heavydb error handling is not completely thread-save.
     nof_jobs = 5 if mode <= 1 else 1
     sleep_seconds = 1
 
@@ -231,7 +231,7 @@ def test_parallel_execution(heavydb, sleep, mode):
 
 
 def test_table_function_error(heavydb):
-    heavydb.require_version((5, 8), 'Requires heavydbdb-internal PR 5879')
+    heavydb.require_version((5, 8), 'Requires heavydb-internal PR 5879')
     heavydb.reset()
 
     @heavydb('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
@@ -261,7 +261,7 @@ def test_table_function_error(heavydb):
 
 
 def test_raise_error(heavydb):
-    heavydb.require_version((5, 8), 'Requires heavydbdb-internal PR 5879')
+    heavydb.require_version((5, 8), 'Requires heavydb-internal PR 5879')
     heavydb.reset()
 
     with pytest.raises(NumbaTypeError) as exc:

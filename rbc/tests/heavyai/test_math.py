@@ -127,7 +127,7 @@ def test_math_function(heavydb, device, nb_version, fn_name, signature):
     heavydb.reset()
 
     if not heavydb.has_cuda and device == 'gpu':
-        pytest.skip('test requires CUDA-enabled heavydbdb server')
+        pytest.skip('test requires CUDA-enabled heavydb server')
 
     math_func = getattr(math, fn_name, None)
     if math_func is None:
@@ -324,7 +324,7 @@ def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func
     heavydb.reset()
 
     if not heavydb.has_cuda and device == 'gpu':
-        pytest.skip('Test requires CUDA-enabled heavydbdb server')
+        pytest.skip('Test requires CUDA-enabled heavydb server')
 
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')

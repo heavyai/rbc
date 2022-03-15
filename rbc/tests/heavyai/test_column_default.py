@@ -17,7 +17,7 @@ def define(heavydb):
 
 
 def test_python_fn_with_default_sizer(heavydb):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5403")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5403")
 
     table = heavydb.table_name
     fn = "rbc_udtf_default_sizer_1"
@@ -66,7 +66,7 @@ typs = (
 
 @pytest.mark.parametrize("suffix,kind,expected", typs)
 def test_default_sizer(heavydb, suffix, kind, expected):
-    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5403")
+    heavydb.require_version((5, 7), "Requires heavydb-internal PR 5403")
 
     codes = {
         "1": "i4",
