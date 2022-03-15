@@ -5,16 +5,16 @@ import pytest
 import numpy as np
 
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteHeavyDB(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -42,14 +42,14 @@ def omnisci():
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
 
-def test_sizer_row_multiplier_orig(omnisci):
-    omnisci.reset()
+def test_sizer_row_multiplier_orig(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
     def my_row_copier_mul(x, m, y):
         input_row_count = len(x)
         for i in range(input_row_count):
@@ -58,22 +58,22 @@ def test_sizer_row_multiplier_orig(omnisci):
                 y[j] = x[i] * 2
         return m * input_row_count
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(my_row_copier_mul(cursor(select f8 '
-        f'from {omnisci.table_name}), 2));')
+        f'from {heavydb.table_name}), 2));')
 
     for i, r in enumerate(result):
         assert r == (float((i % 5) * 2),)
 
 
-def test_sizer_row_multiplier_param1(omnisci):
-    omnisci.reset()
+def test_sizer_row_multiplier_param1(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, double, int32, RowMultiplier,'
+    @heavydb('int32(Column<double>, double, int32, RowMultiplier,'
              'OutputColumn<double>)')
     def my_row_copier_mul_param1(x, alpha, beta, m, y):
         input_row_count = len(x)
@@ -85,9 +85,9 @@ def test_sizer_row_multiplier_param1(omnisci):
 
     alpha = 3
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(my_row_copier_mul_param1('
-        f'cursor(select f8 from {omnisci.table_name}),'
+        f'cursor(select f8 from {heavydb.table_name}),'
         f'cast({alpha} as double),'
         'cast(4 as int), 2));')
 
@@ -95,14 +95,14 @@ def test_sizer_row_multiplier_param1(omnisci):
         assert r == ((i % 5) * alpha + 4,)
 
 
-def test_sizer_row_multiplier_param2(omnisci):
-    omnisci.reset()
+def test_sizer_row_multiplier_param2(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(double, Column<double>, int32, RowMultiplier,'
+    @heavydb('int32(double, Column<double>, int32, RowMultiplier,'
              'OutputColumn<double>)')
     def my_row_copier_mul_param2(alpha, x, beta, m, y):
         input_row_count = len(x)
@@ -114,24 +114,24 @@ def test_sizer_row_multiplier_param2(omnisci):
 
     alpha = 3
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(my_row_copier_mul_param2('
         f'cast({alpha} as double),'
-        f'cursor(select f8 from {omnisci.table_name}),'
+        f'cursor(select f8 from {heavydb.table_name}),'
         'cast(4 as int), 2));')
 
     for i, r in enumerate(result):
         assert r == ((i % 5) * alpha + 4,)
 
 
-def test_sizer_constant_parameter(omnisci):
-    omnisci.reset()
+def test_sizer_constant_parameter(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, ConstantParameter, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, ConstantParameter, OutputColumn<double>)')
     def my_row_copier_cp(x, m, y):
         n = len(x)
         for i in range(m):
@@ -139,54 +139,54 @@ def test_sizer_constant_parameter(omnisci):
             y[i] = x[j] * 2
         return m
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        f'from {omnisci.table_name}), 3));')
+        f'from {heavydb.table_name}), 3));')
     result = list(result)
     assert len(result) == 3
     for i, r in enumerate(result):
         assert r == (i * 2,)
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(my_row_copier_cp(cursor(select f8 '
-        f'from {omnisci.table_name}), 8));')
+        f'from {heavydb.table_name}), 8));')
     result = list(result)
     assert len(result) == 8
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2,)
 
 
-def test_sizer_return_size(omnisci):
-    omnisci.reset()
+def test_sizer_return_size(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, OutputColumn<double>)')
     def my_row_copier_c(x, y):
         for i in range(13):
             j = i % len(x)
             y[i] = x[j] * 2
         return 13
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(my_row_copier_c(cursor(select f8 '
-        f'from {omnisci.table_name})));')
+        f'from {heavydb.table_name})));')
     result = list(result)
     assert len(result) == 13
     for i, r in enumerate(result):
         assert r == ((i % 5) * 2,), repr((i, r))
 
 
-def test_rowmul_add_columns(omnisci):
-    omnisci.reset()
+def test_rowmul_add_columns(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, Column<double>, double,'
+    @heavydb('int32(Column<double>, Column<double>, double,'
              ' RowMultiplier, OutputColumn<double>)')
     def add_columns(x, y, alpha, m, r):
         input_row_count = len(x)
@@ -198,24 +198,24 @@ def test_rowmul_add_columns(omnisci):
 
     alpha = 2.5
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(add_columns('
-        f'cursor(select f8 from {omnisci.table_name}),'
-        f' cursor(select d from {omnisci.table_name}),'
+        f'cursor(select f8 from {heavydb.table_name}),'
+        f' cursor(select d from {heavydb.table_name}),'
         f' cast({alpha} as double), 1));')
 
     for i, r in enumerate(result):
         assert r == (i + alpha * (i + 1.5),)
 
 
-def test_rowmul_return_mixed_columns(omnisci):
-    omnisci.reset()
+def test_rowmul_return_mixed_columns(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, RowMultiplier,'
+    @heavydb('int32(Column<double>, RowMultiplier,'
              ' OutputColumn<double>, OutputColumn<float>)')
     def ret_mixed_columns(x, m, y, z):
         input_row_count = len(x)
@@ -226,25 +226,25 @@ def test_rowmul_return_mixed_columns(omnisci):
                 z[j] = np.float32(3 * x[i])
         return m * input_row_count
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(ret_mixed_columns('
-        f'cursor(select f8 from {omnisci.table_name}), 1));')
+        f'cursor(select f8 from {heavydb.table_name}), 1));')
 
     for i, r in enumerate(result):
         assert r[0] == float(2 * i)
         assert r[1] == float(3 * i)
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(ret_mixed_columns('
-        f'cursor(select f8 from {omnisci.table_name}), 2));')
+        f'cursor(select f8 from {heavydb.table_name}), 2));')
 
     for i, r in enumerate(result):
         assert r[0] == float(2 * (i % 5))
         assert r[1] == float(3 * (i % 5))
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select out1, out0 from table(ret_mixed_columns('
-        f'cursor(select f8 from {omnisci.table_name}), 1));')
+        f'cursor(select f8 from {heavydb.table_name}), 1));')
 
     for i, r in enumerate(result):
         assert r[1] == float(2 * i)
@@ -254,15 +254,15 @@ def test_rowmul_return_mixed_columns(omnisci):
 @pytest.mark.parametrize("max_n", [-1, 3])
 @pytest.mark.parametrize("sizer", [1, 2])
 @pytest.mark.parametrize("num_columns", [1, 2, 3, 4])
-def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
-    omnisci.reset()
+def test_rowmul_return_multi_columns(heavydb, num_columns, sizer, max_n):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
     if num_columns == 1:
-        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
                  ' OutputColumn<double>)')
         def ret_1_columns(n, x1, m, y1):
             input_row_count = len(x1)
@@ -275,7 +275,7 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
             return n
 
     if num_columns == 2:
-        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
                  ' OutputColumn<double>, OutputColumn<double>)')
         def ret_2_columns(n, x1, m, y1, y2):
             input_row_count = len(x1)
@@ -289,7 +289,7 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
             return n
 
     if num_columns == 3:
-        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
                  ' OutputColumn<double>, OutputColumn<double>,'
                  ' OutputColumn<double>)')
         def ret_3_columns(n, x1, m, y1, y2, y3):
@@ -305,7 +305,7 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
             return n
 
     if num_columns == 4:
-        @omnisci('int32(int32, Column<double>, RowMultiplier,'
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
                  ' OutputColumn<double>, OutputColumn<double>,'
                  ' OutputColumn<double>, OutputColumn<double>)')
         def ret_4_columns(n, x1, m, y1, y2, y3, y4):
@@ -321,9 +321,9 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
                 return m * input_row_count
             return n
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         f'select * from table(ret_{num_columns}_columns({max_n}, '
-        f'cursor(select f8 from {omnisci.table_name}), {sizer}));')
+        f'cursor(select f8 from {heavydb.table_name}), {sizer}));')
 
     result = list(result)
 
@@ -337,9 +337,9 @@ def test_rowmul_return_multi_columns(omnisci, num_columns, sizer, max_n):
 
 
 @pytest.mark.parametrize("variant", [1, 2, 3])
-def test_issue173(omnisci, variant):
-    omnisci.reset()
-    omnisci.register()
+def test_issue173(heavydb, variant):
+    heavydb.reset()
+    heavydb.register()
 
     def mask_zero(x, b, m, y):
         for i in range(len(x)):
@@ -349,34 +349,34 @@ def test_issue173(omnisci, variant):
                 y[i] = x[i]
         return len(x)
 
-    descr, result = omnisci.sql_execute(
-        f'select f8, b from {omnisci.table_name}')
+    descr, result = heavydb.sql_execute(
+        f'select f8, b from {heavydb.table_name}')
     f8, b = zip(*list(result))
 
     # remove after resolving rbc issue 175:
     mask_zero.__name__ += f'_{variant}'
 
     if variant == 1:
-        omnisci('int32(Column<double>, Column<bool>, RowMultiplier,'
+        heavydb('int32(Column<double>, Column<bool>, RowMultiplier,'
                 ' OutputColumn<double>)')(mask_zero)
-        descr, result = omnisci.sql_execute(
+        descr, result = heavydb.sql_execute(
             f'select * from table({mask_zero.__name__}('
-            f'cursor(select f8 from {omnisci.table_name}),'
-            f'cursor(select b from {omnisci.table_name}), 1))')
+            f'cursor(select f8 from {heavydb.table_name}),'
+            f'cursor(select b from {heavydb.table_name}), 1))')
     elif variant == 2:
-        omnisci('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
+        heavydb('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
                 ' OutputColumn<double>)')(mask_zero)
 
-        descr, result = omnisci.sql_execute(
+        descr, result = heavydb.sql_execute(
             f'select * from table({mask_zero.__name__}('
-            f'cursor(select f8, b from {omnisci.table_name}), 1))')
+            f'cursor(select f8, b from {heavydb.table_name}), 1))')
     elif variant == 3:
-        omnisci('int32(Cursor<double, bool>, RowMultiplier,'
+        heavydb('int32(Cursor<double, bool>, RowMultiplier,'
                 ' OutputColumn<double>)')(mask_zero)
 
-        descr, result = omnisci.sql_execute(
+        descr, result = heavydb.sql_execute(
             f'select * from table({mask_zero.__name__}('
-            f'cursor(select f8, b from {omnisci.table_name}), 1))')
+            f'cursor(select f8, b from {heavydb.table_name}), 1))')
     else:
         raise ValueError(variant)
 
@@ -386,104 +386,104 @@ def test_issue173(omnisci, variant):
         assert result[i][0] == (0.0 if b[i] else f8[i])
 
 
-def test_redefine(omnisci):
-    omnisci.reset()
+def test_redefine(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    descr, result = omnisci.sql_execute(
-        f'select f8, i4 from {omnisci.table_name}')
+    descr, result = heavydb.sql_execute(
+        f'select f8, i4 from {heavydb.table_name}')
 
     f8, i4 = zip(*result)
 
-    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
     def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = x[i] + 1
         return len(x)
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(redefined_udtf(cursor('
-        f'select f8 from {omnisci.table_name}), 1))')
+        f'select f8 from {heavydb.table_name}), 1))')
     result = list(result)
     for i in range(len(result)):
         assert result[i][0] == f8[i] + 1
 
     # redefine implementation
-    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
     def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = x[i] + 2
         return len(x)
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(redefined_udtf(cursor('
-        f'select f8 from {omnisci.table_name}), 1))')
+        f'select f8 from {heavydb.table_name}), 1))')
     result = list(result)
     for i in range(len(result)):
         assert result[i][0] == f8[i] + 2
 
     # overload with another type
-    @omnisci('int32(Column<int32>, RowMultiplier, OutputColumn<int32>)')  # noqa: E501, F811
+    @heavydb('int32(Column<int32>, RowMultiplier, OutputColumn<int32>)')  # noqa: E501, F811
     def redefined_udtf(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
             y[i] = x[i] + 3
         return len(x)
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(redefined_udtf(cursor('
-        f'select i4 from {omnisci.table_name}), 1))')
+        f'select i4 from {heavydb.table_name}), 1))')
     result = list(result)
     for i in range(len(result)):
         assert result[i][0] == i4[i] + 3
 
     # check overload
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         'select * from table(redefined_udtf(cursor('
-        f'select f8 from {omnisci.table_name}), 1))')
+        f'select f8 from {heavydb.table_name}), 1))')
     result = list(result)
     for i in range(len(result)):
         assert result[i][0] == f8[i] + 2
 
 
 @pytest.mark.parametrize("step", [1, 2, 3])
-def test_overload_nonuniform(omnisci, step):
+def test_overload_nonuniform(heavydb, step):
     pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
 
-    omnisci.reset()
-    omnisci.register()
+    heavydb.reset()
+    heavydb.register()
 
     if step > 0:
-        @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
         def overloaded_udtf(x, m, y):  # noqa: E501, F811
             y[0] = 64
             return 1
 
     if step > 1:
-        @omnisci('int32(Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        @heavydb('int32(Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
         def overloaded_udtf(x, m, y):  # noqa: E501, F811
             y[0] = 32
             return 1
 
     if step > 2:
-        @omnisci('int32(Cursor<Column<float>, Column<float>>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        @heavydb('int32(Cursor<Column<float>, Column<float>>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
         def overloaded_udtf(x1, x2, m, y):  # noqa: E501, F811
             y[0] = 132
             return 1
 
     sql_query = ('select * from table(overloaded_udtf(cursor('
-                 f'select f8 from {omnisci.table_name}), 1))')
+                 f'select f8 from {heavydb.table_name}), 1))')
     if step > 0:
-        descr, result = omnisci.sql_execute(sql_query)
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         assert result[0][0] == 64
 
     sql_query = ('select * from table(overloaded_udtf(cursor('
-                 f'select f4 from {omnisci.table_name}), 1))')
+                 f'select f4 from {heavydb.table_name}), 1))')
     if step > 1:
-        descr, result = omnisci.sql_execute(sql_query)
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         assert result[0][0] == 32
     else:
@@ -491,12 +491,12 @@ def test_overload_nonuniform(omnisci, step):
                 Exception,
                 match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\) not supported"
                        r"|Could not bind overloaded_udtf\(COLUMN<FLOAT>, INTEGER\))")):
-            descr, result = omnisci.sql_execute(sql_query)
+            descr, result = heavydb.sql_execute(sql_query)
 
     sql_query = ('select * from table(overloaded_udtf(cursor('
-                 f'select f4, f4 from {omnisci.table_name}), 1))')
+                 f'select f4, f4 from {heavydb.table_name}), 1))')
     if step > 2:
-        descr, result = omnisci.sql_execute(sql_query)
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         assert result[0][0] == 132
     else:
@@ -505,14 +505,14 @@ def test_overload_nonuniform(omnisci, step):
                 match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>,"
                        r" COLUMN<FLOAT>, INTEGER\) not supported|Could not bind"
                        r" overloaded_udtf\(COLUMN<FLOAT>, COLUMN<FLOAT>, INTEGER\))")):
-            descr, result = omnisci.sql_execute(sql_query)
+            descr, result = heavydb.sql_execute(sql_query)
 
 
-def test_overload_uniform(omnisci):
-    omnisci.reset()
-    omnisci.register()
+def test_overload_uniform(heavydb):
+    heavydb.reset()
+    heavydb.register()
 
-    @omnisci('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
+    @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
              T=['double', 'float', 'int64', 'int32', 'int16', 'int8'])
     def mycopy(x, m, y):  # noqa: E501, F811
         for i in range(len(x)):
@@ -520,68 +520,68 @@ def test_overload_uniform(omnisci):
         return len(x)
 
     for colname in ['f8', 'f4', 'i8', 'i4', 'i2', 'i1', 'b']:
-        sql_query = (f'select {colname} from {omnisci.table_name}')
-        descr, result = omnisci.sql_execute(sql_query)
+        sql_query = (f'select {colname} from {heavydb.table_name}')
+        descr, result = heavydb.sql_execute(sql_query)
         expected = list(result)
         sql_query = ('select * from table(mycopy(cursor('
-                     f'select {colname} from {omnisci.table_name}), 1))')
-        descr, result = omnisci.sql_execute(sql_query)
+                     f'select {colname} from {heavydb.table_name}), 1))')
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         assert result == expected
 
 
-omnisci_aggregators = [
+heavydb_aggregators = [
     'avg', 'min', 'max', 'sum', 'count',
     'approx_count_distinct', 'sample', 'single_value', 'stddev',
     'stddev_pop', 'stddev_samp', 'variance', 'var_pop', 'var_samp',
 ]
-omnisci_aggregators2 = ['correlation', 'corr', 'covar_pop', 'covar_samp']
+heavydb_aggregators2 = ['correlation', 'corr', 'covar_pop', 'covar_samp']
 # TODO: round_to_digit, mod, truncate
-omnisci_functions = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'abs', 'ceil', 'degrees',
+heavydb_functions = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'abs', 'ceil', 'degrees',
                      'exp', 'floor', 'ln', 'log', 'log10', 'radians', 'round', 'sign', 'sqrt']
-omnisci_functions2 = ['atan2', 'power']
-omnisci_unary_operations = ['+', '-']
-omnisci_binary_operations = ['+', '-', '*', '/']
+heavydb_functions2 = ['atan2', 'power']
+heavydb_unary_operations = ['+', '-']
+heavydb_binary_operations = ['+', '-', '*', '/']
 
 
 @pytest.mark.parametrize("prop", ['', 'groupby'])
-@pytest.mark.parametrize("oper", omnisci_aggregators + omnisci_aggregators2)
-def test_column_aggregate(omnisci, prop, oper):
-    omnisci.reset()
-    omnisci.register()
+@pytest.mark.parametrize("oper", heavydb_aggregators + heavydb_aggregators2)
+def test_column_aggregate(heavydb, prop, oper):
+    heavydb.reset()
+    heavydb.register()
 
     if prop == 'groupby':
-        pytest.skip('omniscidb server crashes')
+        pytest.skip('heavydb server crashes')
 
     if oper == 'single_value':
         if prop:
             return
 
-        @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+        @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
         def test_rbc_last(x, m, y):
             y[0] = x[len(x)-1]
             return 1
 
-        sql_query = (f'select f8 from {omnisci.table_name}')
-        descr, result = omnisci.sql_execute(sql_query)
+        sql_query = (f'select f8 from {heavydb.table_name}')
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         expected_result = result[-1:]
 
         sql_query = (f'select {oper}(out0) from table(test_rbc_last(cursor('
-                     f'select f8 from {omnisci.table_name}), 1))')
-        descr, result = omnisci.sql_execute(sql_query)
+                     f'select f8 from {heavydb.table_name}), 1))')
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
 
         assert result == expected_result
         return
 
-    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
     def test_rbc_mycopy(x, m, y):
         for i in range(len(x)):
             y[i] = x[i]
         return len(x)
 
-    @omnisci('int32(Cursor<double, double>, RowMultiplier,'
+    @heavydb('int32(Cursor<double, double>, RowMultiplier,'
              ' OutputColumn<double>, OutputColumn<double>)')
     def test_rbc_mycopy2(x1, x2, m, y1, y2):
         for i in range(len(x1)):
@@ -589,7 +589,7 @@ def test_column_aggregate(omnisci, prop, oper):
             y2[i] = x2[i]
         return len(x1)
 
-    @omnisci('int32(Cursor<double, bool>, RowMultiplier,'
+    @heavydb('int32(Cursor<double, bool>, RowMultiplier,'
              ' OutputColumn<double>, OutputColumn<bool>)')
     def test_rbc_mycopy2b(x1, x2, m, y1, y2):
         for i in range(len(x1)):
@@ -597,7 +597,7 @@ def test_column_aggregate(omnisci, prop, oper):
             y2[i] = x2[i]
         return len(x1)
 
-    @omnisci('int32(Cursor<double, double, bool>, RowMultiplier,'
+    @heavydb('int32(Cursor<double, double, bool>, RowMultiplier,'
              'OutputColumn<double>, OutputColumn<double>, OutputColumn<bool>)')
     def test_rbc_mycopy3(x1, x2, x3, m, y1, y2, y3):
         for i in range(len(x1)):
@@ -612,51 +612,51 @@ def test_column_aggregate(omnisci, prop, oper):
 
     mycopy = 'test_rbc_mycopy'
 
-    if oper in omnisci_aggregators2:
+    if oper in heavydb_aggregators2:
         if prop == 'groupby':
             sql_query_expected = (
-                f'select {oper}(f8, d) from {omnisci.table_name} group by b')
+                f'select {oper}(f8, d) from {heavydb.table_name} group by b')
             sql_query = (
                 f'select {oper}(out0, out1) from table({mycopy}3(cursor('
-                f'select f8, d, b from {omnisci.table_name}), 1)) group by out2')
+                f'select f8, d, b from {heavydb.table_name}), 1)) group by out2')
         else:
-            sql_query_expected = (f'select {oper}(f8, d) from {omnisci.table_name}')
+            sql_query_expected = (f'select {oper}(f8, d) from {heavydb.table_name}')
             sql_query = (
                 f'select {oper}(out0, out1) from table({mycopy}2(cursor('
-                f'select f8, d from {omnisci.table_name}), 1))')
+                f'select f8, d from {heavydb.table_name}), 1))')
     else:
         if prop == 'groupby':
             sql_query_expected = (
-                f'select {oper}(f8{extra_args}) from {omnisci.table_name} group by b')
+                f'select {oper}(f8{extra_args}) from {heavydb.table_name} group by b')
             sql_query = (
                 f'select {oper}(out0) from table({mycopy}2b(cursor('
-                f'select f8, b from {omnisci.table_name}), 1)) group by out1')
+                f'select f8, b from {heavydb.table_name}), 1)) group by out1')
         else:
-            sql_query_expected = (f'select {oper}(f8{extra_args}) from {omnisci.table_name}')
+            sql_query_expected = (f'select {oper}(f8{extra_args}) from {heavydb.table_name}')
             sql_query = (
                 f'select {oper}(out0) from table({mycopy}(cursor('
-                f'select f8 from {omnisci.table_name}), 1))')
+                f'select f8 from {heavydb.table_name}), 1))')
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
-    descr, result = omnisci.sql_execute(sql_query)
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     assert result == result_expected
 
 
-@pytest.mark.parametrize("oper", omnisci_functions + omnisci_functions2)
-def test_column_function(omnisci, oper):
-    omnisci.reset()
-    omnisci.register()
+@pytest.mark.parametrize("oper", heavydb_functions + heavydb_functions2)
+def test_column_function(heavydb, oper):
+    heavydb.reset()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
     def test_rbc_mycopy(x, m, y):
         for i in range(len(x)):
             y[i] = x[i]
         return len(x)
 
-    @omnisci('int32(Cursor<double, double>, RowMultiplier,'
+    @heavydb('int32(Cursor<double, double>, RowMultiplier,'
              ' OutputColumn<double>, OutputColumn<double>)')
     def test_rbc_mycopy2(x1, x2, m, y1, y2):
         for i in range(len(x1)):
@@ -666,21 +666,21 @@ def test_column_function(omnisci, oper):
 
     mycopy = 'test_rbc_mycopy'
 
-    if oper in omnisci_functions2:
-        sql_query_expected = (f'select {oper}(f8, d) from {omnisci.table_name}')
+    if oper in heavydb_functions2:
+        sql_query_expected = (f'select {oper}(f8, d) from {heavydb.table_name}')
         sql_query = (
             f'select {oper}(out0, out1) from table({mycopy}2(cursor('
-            f'select f8, d from {omnisci.table_name}), 1))')
+            f'select f8, d from {heavydb.table_name}), 1))')
     else:
-        sql_query_expected = (f'select {oper}(f8) from {omnisci.table_name}')
+        sql_query_expected = (f'select {oper}(f8) from {heavydb.table_name}')
         sql_query = (
             f'select {oper}(out0) from table({mycopy}(cursor('
-            f'select f8 from {omnisci.table_name}), 1))')
+            f'select f8 from {heavydb.table_name}), 1))')
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
 
-    descr, result = omnisci.sql_execute(sql_query)
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     if oper in ['asin', 'acos']:
@@ -690,12 +690,12 @@ def test_column_function(omnisci, oper):
         assert result == result_expected
 
 
-@pytest.mark.parametrize("oper", omnisci_binary_operations)
-def test_column_binary_operation(omnisci, oper):
-    omnisci.reset()
-    omnisci.register()
+@pytest.mark.parametrize("oper", heavydb_binary_operations)
+def test_column_binary_operation(heavydb, oper):
+    heavydb.reset()
+    heavydb.register()
 
-    @omnisci('int32(Cursor<double, double>, RowMultiplier,'
+    @heavydb('int32(Cursor<double, double>, RowMultiplier,'
              ' OutputColumn<double>, OutputColumn<double>)')
     def test_rbc_mycopy2(x1, x2, m, y1, y2):
         for i in range(len(x1)):
@@ -705,26 +705,26 @@ def test_column_binary_operation(omnisci, oper):
 
     mycopy = 'test_rbc_mycopy'
 
-    sql_query_expected = (f'select f8 {oper} d from {omnisci.table_name}')
+    sql_query_expected = (f'select f8 {oper} d from {heavydb.table_name}')
     sql_query = (
         f'select out0 {oper} out1 from table({mycopy}2(cursor('
-        f'select f8, d from {omnisci.table_name}), 1))')
+        f'select f8, d from {heavydb.table_name}), 1))')
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
 
-    descr, result = omnisci.sql_execute(sql_query)
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     assert result == result_expected
 
 
-@pytest.mark.parametrize("oper", omnisci_unary_operations)
-def test_column_unary_operation(omnisci, oper):
-    omnisci.reset()
-    omnisci.register()
+@pytest.mark.parametrize("oper", heavydb_unary_operations)
+def test_column_unary_operation(heavydb, oper):
+    heavydb.reset()
+    heavydb.register()
 
-    @omnisci('int32(Cursor<double>, RowMultiplier,'
+    @heavydb('int32(Cursor<double>, RowMultiplier,'
              ' OutputColumn<double>)')
     def test_rbc_mycopy(x1, m, y1):
         for i in range(len(x1)):
@@ -733,25 +733,25 @@ def test_column_unary_operation(omnisci, oper):
 
     mycopy = 'test_rbc_mycopy'
 
-    sql_query_expected = (f'select {oper} f8 from {omnisci.table_name}')
+    sql_query_expected = (f'select {oper} f8 from {heavydb.table_name}')
     sql_query = (
         f'select {oper} out0 from table({mycopy}(cursor('
-        f'select f8 from {omnisci.table_name}), 1))')
+        f'select f8 from {heavydb.table_name}), 1))')
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
 
-    descr, result = omnisci.sql_execute(sql_query)
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     assert result == result_expected
 
 
-def test_create_as(omnisci):
-    omnisci.reset()
-    omnisci.register()
+def test_create_as(heavydb):
+    heavydb.reset()
+    heavydb.register()
 
-    @omnisci('int32(Cursor<double>, RowMultiplier,'
+    @heavydb('int32(Cursor<double>, RowMultiplier,'
              ' OutputColumn<double>)')
     def test_rbc_mycopy(x1, m, y1):
         for i in range(len(x1)):
@@ -760,48 +760,48 @@ def test_create_as(omnisci):
 
     mycopy = 'test_rbc_mycopy'
 
-    sql_query_expected = (f'select f8 from {omnisci.table_name}')
+    sql_query_expected = (f'select f8 from {heavydb.table_name}')
     sql_queries = [
-        f'DROP TABLE IF EXISTS {omnisci.table_name}_f8',
-        (f'CREATE TABLE {omnisci.table_name}_f8 AS SELECT out0 FROM TABLE({mycopy}(CURSOR('
-         f'SELECT f8 FROM {omnisci.table_name}), 1))'),
-        f'SELECT * FROM {omnisci.table_name}_f8']
+        f'DROP TABLE IF EXISTS {heavydb.table_name}_f8',
+        (f'CREATE TABLE {heavydb.table_name}_f8 AS SELECT out0 FROM TABLE({mycopy}(CURSOR('
+         f'SELECT f8 FROM {heavydb.table_name}), 1))'),
+        f'SELECT * FROM {heavydb.table_name}_f8']
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
 
     for sql_query in sql_queries:
-        descr, result = omnisci.sql_execute(sql_query)
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
 
     assert result == result_expected
 
 
 @pytest.fixture(scope='function')
-def create_columns(omnisci):
+def create_columns(heavydb):
 
     # delete tables
-    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
-    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    heavydb.sql_execute('DROP TABLE IF EXISTS datatable;')
+    heavydb.sql_execute('DROP TABLE IF EXISTS kerneltable;')
     # create tables
-    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
-    omnisci.sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
+    heavydb.sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
+    heavydb.sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
     # add data
-    omnisci.load_table_columnar('datatable', **{'x': [1.0, 2.0, 3.0, 4.0, 5.0]})
-    omnisci.load_table_columnar('kerneltable', **{'kernel': [10.0, 20.0, 30.0]})
-    yield omnisci
+    heavydb.load_table_columnar('datatable', **{'x': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    heavydb.load_table_columnar('kerneltable', **{'kernel': [10.0, 20.0, 30.0]})
+    yield heavydb
     # delete tables
-    omnisci.sql_execute('DROP TABLE IF EXISTS datatable;')
-    omnisci.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    heavydb.sql_execute('DROP TABLE IF EXISTS datatable;')
+    heavydb.sql_execute('DROP TABLE IF EXISTS kerneltable;')
 
 
 @pytest.mark.usefixtures('create_columns')
-def test_column_different_sizes(omnisci):
+def test_column_different_sizes(heavydb):
 
-    if omnisci.has_cuda and omnisci.version[:2] == (5, 10):
+    if heavydb.has_cuda and heavydb.version[:2] == (5, 10):
         pytest.xfail('Different result')
 
-    @omnisci('int32(Column<double>, Column<double>, RowMultiplier, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, Column<double>, RowMultiplier, OutputColumn<double>)')
     def convolve(x, kernel, m, y):
         for i in range(len(y)):
             y[i] = 0.0
@@ -813,7 +813,7 @@ def test_column_different_sizes(omnisci):
         # output has the same size as @x
         return len(x)
 
-    _, result = omnisci.sql_execute(
+    _, result = heavydb.sql_execute(
         'select * from table('
         'convolve(cursor(select x from datatable),'
         'cursor(select kernel from kerneltable), 1))')
@@ -822,11 +822,11 @@ def test_column_different_sizes(omnisci):
     assert list(result) == expected
 
 
-def test_column_dtype(omnisci):
+def test_column_dtype(heavydb):
     from numba import types
-    table = omnisci.table_name
+    table = heavydb.table_name
 
-    @omnisci('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
+    @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
              T=['int32', 'int64', 'float', 'double'])
     def col_dtype_fn(x, m, y):
         sz = len(x)
@@ -851,14 +851,14 @@ def test_column_dtype(omnisci):
     )
     for col, r in inpts:
         query = f'select * from table(col_dtype_fn(cursor(select {col} from {table}), 1))'
-        _, result = omnisci.sql_execute(query)
+        _, result = heavydb.sql_execute(query)
         assert list(result) == [(r,)] * 5
 
 
-def test_column_enumerate(omnisci):
+def test_column_enumerate(heavydb):
     from rbc.externals.heavydb import set_output_row_size
 
-    @omnisci('int32(Column<int32>, OutputColumn<int32>)')
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)')
     def col_enumerate(x, y):
         sz = len(x)
         set_output_row_size(sz)
@@ -866,9 +866,9 @@ def test_column_enumerate(omnisci):
             y[i] = e
         return sz
 
-    _, result = omnisci.sql_execute(
-        f'select * from table(col_enumerate(cursor(select i4 from {omnisci.table_name})))')
-    _, expected_result = omnisci.sql_execute(
-        f'select rowid, i4 from {omnisci.table_name} order by rowid;')
+    _, result = heavydb.sql_execute(
+        f'select * from table(col_enumerate(cursor(select i4 from {heavydb.table_name})))')
+    _, expected_result = heavydb.sql_execute(
+        f'select rowid, i4 from {heavydb.table_name} order by rowid;')
     for (r,), (_, e) in zip(list(result), list(expected_result)):
         assert r == e

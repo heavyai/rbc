@@ -1,5 +1,5 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 
 ARRAY_NULL = 0
 ARRAY_IDX_IS_NULL = 1
@@ -7,15 +7,15 @@ ARRAY_NOT_NULL = 2
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+def heavydb():
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
         define(o)
         yield o
 
 
-def define(omnisci):
+def define(heavydb):
 
-    @omnisci('int64(T[], int64)', T=['bool', 'int8', 'int16', 'int32', 'int64', 'float', 'double'])
+    @heavydb('int64(T[], int64)', T=['bool', 'int8', 'int16', 'int32', 'int64', 'float', 'double'])
     def array_null_check(x, index):
         if x.is_null():  # array row is null
             return ARRAY_NULL
@@ -28,20 +28,20 @@ colnames = ['b', 'i1', 'i2', 'i4', 'i8', 'f4', 'f8']
 
 
 @pytest.mark.parametrize('col', colnames)
-def test_array_null(omnisci, col):
+def test_array_null(heavydb, col):
     if col in ['i2', 'i8', 'f8']:
-        omnisci.require_version((5, 7, 0),
-                                'Requires omniscidb-internal PR 5465 [rbc PR 330]')
+        heavydb.require_version((5, 7, 0),
+                                'Requires heavydb-internal PR 5465 [rbc PR 330]')
     if col == 'b':
-        omnisci.require_version((5, 7, 0),
-                                'Requires omniscidb-internal PR 5492 [rbc issue 245]')
+        heavydb.require_version((5, 7, 0),
+                                'Requires heavydb-internal PR 5492 [rbc issue 245]')
 
     # Query null value
-    _, result = omnisci.sql_execute(f'''
+    _, result = heavydb.sql_execute(f'''
         SELECT
             array_null_check({col}, 0)
         FROM
-            {omnisci.table_name}arraynull
+            {heavydb.table_name}arraynull
     ''')
     result = list(result)
 

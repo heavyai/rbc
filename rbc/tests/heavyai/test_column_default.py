@@ -1,28 +1,28 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 
 
 @pytest.fixture(scope="module")
-def omnisci():
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+def heavydb():
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
         define(o)
         yield o
 
 
-def define(omnisci):
-    @omnisci("int32(Column<int64>, RowMultiplier, OutputColumn<int64>)")
+def define(heavydb):
+    @heavydb("int32(Column<int64>, RowMultiplier, OutputColumn<int64>)")
     def rbc_udtf_default_sizer_1(c, sizer, o):
         o[0] = 3
         return 1
 
 
-def test_python_fn_with_default_sizer(omnisci):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5403")
+def test_python_fn_with_default_sizer(heavydb):
+    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5403")
 
-    table = omnisci.table_name
+    table = heavydb.table_name
     fn = "rbc_udtf_default_sizer_1"
     query = f"select * from table({fn}(cursor(select i8 from {table})));"
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     assert list(result) == [(3,)]
 
@@ -65,8 +65,8 @@ typs = (
 
 
 @pytest.mark.parametrize("suffix,kind,expected", typs)
-def test_default_sizer(omnisci, suffix, kind, expected):
-    omnisci.require_version((5, 7), "Requires omniscidb-internal PR 5403")
+def test_default_sizer(heavydb, suffix, kind, expected):
+    heavydb.require_version((5, 7), "Requires heavydbdb-internal PR 5403")
 
     codes = {
         "1": "i4",
@@ -78,7 +78,7 @@ def test_default_sizer(omnisci, suffix, kind, expected):
         "R": "4",  # another sizer
     }
 
-    table = omnisci.table_name
+    table = heavydb.table_name
     fn = f"ct_udtf_default_sizer{suffix}"
     query = f"select * from table({fn}("
     for i, n in enumerate(kind):
@@ -90,7 +90,7 @@ def test_default_sizer(omnisci, suffix, kind, expected):
         query += ", " if i + 1 < len(kind) else ""
     query += "));"
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
     result = list(result)
 
     assert result == [(expected,)], (result, query, kind)

@@ -1,4 +1,4 @@
-__all__ = ['omnisci_fixture', 'sql_execute']
+__all__ = ['heavydb_fixture', 'sql_execute']
 
 
 import os
@@ -23,16 +23,16 @@ def assert_equal(actual, desired):
 
 
 def sql_execute(query):
-    """Execute a SQL statement to omniscidb server using global instance.
+    """Execute a SQL statement to heavydb server using global instance.
 
     Use when the query does not require registration of new UDF/UDTFs.
     """
-    rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-    omnisci = next(rbc_omnisci.global_omnisci_singleton)
-    return omnisci.sql_execute(query)
+    rbc_heavydb = pytest.importorskip('rbc.heavydb')
+    heavydb = next(rbc_heavydb.global_heavydb_singleton)
+    return heavydb.sql_execute(query)
 
 
-def omnisci_fixture(caller_globals, minimal_version=(0, 0),
+def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                     suffices=['', '10', 'null', 'array', 'arraynull'],
                     load_columnar=True, load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
@@ -40,72 +40,72 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     .. code-block:: python
 
        import pytest
-       from rbc.tests import omnisci_fixture
+       from rbc.tests import heavydb_fixture
 
        @pytest.fixture(scope='module')
        def omnisci():
-           from o in omnisci_fixture(globals()):
+           from o in heavydb_fixture(globals()):
                # do some customization here
                yield o
 
     This fixture creates the following tables:
 
-    f'{omnisci.table_name}' - contains columns f8, f4, i8, i4, i2, i1,
+    f'{heavydb.table_name}' - contains columns f8, f4, i8, i4, i2, i1,
                               b with row size 5.
 
-    f'{omnisci.table_name}10' - contains columns f8, f4, i8, i4, i2,
+    f'{heavydb.table_name}10' - contains columns f8, f4, i8, i4, i2,
                                 i1, b with row size 10.
 
-    f'{omnisci.table_name}null' - contains columns f8, f4, i8, i4, i2,
+    f'{heavydb.table_name}null' - contains columns f8, f4, i8, i4, i2,
                                   i1, b with row size 5, contains null
                                   values
 
-    f'{omnisci.table_name}array' - contains arrays f8, f4, i8, i4, i2,
+    f'{heavydb.table_name}array' - contains arrays f8, f4, i8, i4, i2,
                                    i1, b with row size 5
 
-    f'{omnisci.table_name}arraynull' - contains arrays f8, f4, i8, i4, i2,
+    f'{heavydb.table_name}arraynull' - contains arrays f8, f4, i8, i4, i2,
                                        i1, b with row size 5, contains null
                                        values.
     """
-    rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-    available_version, reason = rbc_omnisci.is_available()
+    rbc_heavydb = pytest.importorskip('rbc.heavydb')
+    available_version, reason = rbc_heavydb.is_available()
 
     def require_version(version, message=None, label=None):
         """Execute pytest.skip(...) if version is older than available_version.
 
-        Some tests can be run only when using omniscidb server built
-        from a particular branch of omniscidb.  So, when the specified
-        version and the omniscidb version match exactly and these
+        Some tests can be run only when using heavydb server built
+        from a particular branch of heavydb.  So, when the specified
+        version and the heavydb version match exactly and these
         correspond to the current development version, if the
         specified label does not match with the value of envrinment
         variable OMNISCIDB_DEV_LABEL, then the corresponing test will
-        be skipped. Use label 'docker-dev' when using omniscidb dev
+        be skipped. Use label 'docker-dev' when using heavydb dev
         docker image.
 
         """
-        # The available version (of the omniscidb server) has date and
+        # The available version (of the heavydb server) has date and
         # hash bits, however, these are useless for determining the
         # version ordering (in the case of available_version[:3] ==
         # version) because the date corresponds to the date of
         # building the server and the hash corresponds to some commit
-        # of some repository (omniscidb or omniscidb-internal) and it
+        # of some repository (heavydb or heavydb-internal) and it
         # does not provide easy date information.
         #
         # The condition available_version[:3] == version can appear in
         # the following cases (given in the order of from newer to
         # older):
-        # 1. omniscidb is built against a omniscidb-internal PR branch
+        # 1. heavydb is built against a heavydb-internal PR branch
         # (assuming it is rebased against master)
-        # 2. omniscidb is built against omniscidb-internal master branch
-        # 3. omniscidb is built against omniscidb master branch
-        # 4. omniscidb is built against omniscidb dev docker
-        # 5. omniscidb is built against omniscidb/omniscidb-internal release tag
+        # 2. heavydb is built against heavydb-internal master branch
+        # 3. heavydb is built against heavydb master branch
+        # 4. heavydb is built against heavydb dev docker
+        # 5. heavydb is built against heavydb/heavydb-internal release tag
         #
         # rbc testing suite may use features that exists in the head
         # of the above list but not in the tail of it. So we have a
         # problem of deciding if a particular test should be disabled
         # or not for a given case while there is no reliable way to
-        # tell from omniscidb version if the server has the particular
+        # tell from heavydb version if the server has the particular
         # feature or not. To resolve this, we use label concept as
         # explained in the doc-string.
         #
@@ -113,7 +113,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
         if not available_version:
             pytest.skip(reason)
 
-        # Requires update when omniscidb-internal bumps up version number:
+        # Requires update when heavydb-internal bumps up version number:
         current_development_version = (6, 0, 0)
         if available_version[:3] > current_development_version:
             warnings.warn(f'{available_version}) is newer than development version'
@@ -163,8 +163,8 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     filename = caller_globals['__file__']
     table_name = os.path.splitext(os.path.basename(filename))[0]
 
-    config = rbc_omnisci.get_client_config(debug=debug)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+    config = rbc_heavydb.get_client_config(debug=debug)
+    m = rbc_heavydb.RemoteHeavyDB(**config)
 
     if not load_test_data:
         yield m
@@ -176,7 +176,7 @@ def omnisci_fixture(caller_globals, minimal_version=(0, 0),
     # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
-    # https://www.omnisci.com/docs/latest/5_datatypes.html
+    # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))

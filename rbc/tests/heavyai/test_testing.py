@@ -1,5 +1,5 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 
 
 @pytest.mark.parametrize('mth', ['columnar', 'query'])
@@ -9,14 +9,14 @@ def test_table_load(mth, suffix):
     load_columnar = mth == 'columnar'
 
     count = 0
-    for omnisci in omnisci_fixture(globals(), load_columnar=load_columnar):
-        omnisci.require_version((5, 7, 0),
-                                'Requires omniscidb-internal PR 5465 [rbc PR 330]')
+    for heavydb in heavydb_fixture(globals(), load_columnar=load_columnar):
+        heavydb.require_version((5, 7, 0),
+                                'Requires heavydb-internal PR 5465 [rbc PR 330]')
         if load_columnar and suffix == 'arraynull':
-            omnisci.require_version((5, 7, 0),
-                                    'Requires omniscidb-internal PR 5492 [rbc issue 245]')
+            heavydb.require_version((5, 7, 0),
+                                    'Requires heavydb-internal PR 5492 [rbc issue 245]')
         count += 1
-        descr, result = omnisci.sql_execute(f'select * from {omnisci.table_name}{suffix}')
+        descr, result = heavydb.sql_execute(f'select * from {heavydb.table_name}{suffix}')
         result = list(result)
         colnames = [d.name for d in descr]
 

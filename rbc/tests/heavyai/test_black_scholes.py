@@ -4,8 +4,8 @@ from collections import defaultdict
 import numpy as np
 import math
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -22,10 +22,10 @@ def read_csv(filename):
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteHeavyDB(**config)
     table_name = 'rbc_test_black_scholes'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -71,14 +71,14 @@ def cnd_numba(d):
     return ret_val
 
 
-def test_black_scholes_udf(omnisci):
-    omnisci.reset()
+def test_black_scholes_udf(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('double(double, double, double, double, double)')
+    @heavydb('double(double, double, double, double, double)')
     def black_scholes_UDF(S, X, T, r, sigma):
         d1 = (np.log(S/X) + (r + 0.5 * sigma**2)*T) / (sigma * np.sqrt(T))
         d2 = d1 - sigma * np.sqrt(T)
@@ -94,23 +94,23 @@ def test_black_scholes_udf(omnisci):
     S = 100.0
     r = 0.0
 
-    descr, result = omnisci.sql_execute(
+    descr, result = heavydb.sql_execute(
         f'select OPRICE, black_scholes_UDF('
         f'cast({S} as DOUBLE), X, T, cast({r} as DOUBLE), sigma)'
-        f' from {omnisci.table_name}')
+        f' from {heavydb.table_name}')
 
     for _, (expected, out) in enumerate(result):
         assert math.isclose(expected, out, abs_tol=0.0001)
 
 
-def test_black_scholes_udtf(omnisci):
-    omnisci.reset()
+def test_black_scholes_udtf(heavydb):
+    heavydb.reset()
     # register an empty set of UDFs in order to avoid unregistering
     # UDFs created directly from LLVM IR strings when executing SQL
     # queries:
-    omnisci.register()
+    heavydb.register()
 
-    @omnisci('int32(Column<double>, Column<double>, Column<double>, Column<double>, Column<double>,'  # noqa: E501
+    @heavydb('int32(Column<double>, Column<double>, Column<double>, Column<double>, Column<double>,'  # noqa: E501
              ' RowMultiplier, OutputColumn<double>)')
     def black_scholes_udtf(S, X, T, r, sigma, m, out):
         input_row_count = len(X)
@@ -129,17 +129,17 @@ def test_black_scholes_udtf(omnisci):
 
         return m * input_row_count
 
-    _, result = omnisci.sql_execute(
+    _, result = heavydb.sql_execute(
         'select * from table(black_scholes_udtf('
-        ' cursor(select S from {omnisci.table_name}),'
-        ' cursor(select X from {omnisci.table_name}),'
-        ' cursor(select T from {omnisci.table_name}),'
-        ' cursor(select r from {omnisci.table_name}),'
-        ' cursor(select sigma from {omnisci.table_name}),'
+        ' cursor(select S from {heavydb.table_name}),'
+        ' cursor(select X from {heavydb.table_name}),'
+        ' cursor(select T from {heavydb.table_name}),'
+        ' cursor(select r from {heavydb.table_name}),'
+        ' cursor(select sigma from {heavydb.table_name}),'
         ' 1));'
         .format(**locals()))
 
-    _, oprice = omnisci.sql_execute(f'select OPRICE from {omnisci.table_name}')
+    _, oprice = heavydb.sql_execute(f'select OPRICE from {heavydb.table_name}')
 
     for r, o in zip(result, oprice):
         assert math.isclose(o[0], r[0], abs_tol=0.0001)

@@ -1,7 +1,7 @@
 import sys
 import atexit
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.remotejit import RemoteJIT
 from rbc.externals import cmath
 from rbc.typesystem import Type
@@ -29,9 +29,9 @@ def ljit(request):
 
 
 @pytest.fixture(scope="module")
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals()):
+    for o in heavydb_fixture(globals()):
         define(o)
         yield o
 
@@ -181,18 +181,18 @@ def _get_pyfunc(fname):
 
 
 @pytest.mark.parametrize("fname,sig", cmath_funcs, ids=[item[0] for item in cmath_funcs])
-def test_external_cmath_omnisci(omnisci, fname, sig):
+def test_external_cmath_heavydb(heavydb, fname, sig):
 
     if fname in ["logb", "ilogb", "modf"]:
         pytest.skip(f"cmath function {fname} not supported")
 
     if fname in ["frexp", "nan"]:
-        pytest.xfail(f"cmath function {fname} crashes omniscidb server")
+        pytest.xfail(f"cmath function {fname} crashes heavydb server")
 
     if fname in ["remainder"]:
         pytest.xfail(f"cmath.{fname} wrong output!")
 
-    table = omnisci.table_name
+    table = heavydb.table_name
     query_func = _get_query_func(fname)
     pyfunc = _get_pyfunc(fname)
 
@@ -225,7 +225,7 @@ def test_external_cmath_omnisci(omnisci, fname, sig):
     else:
         query = f"SELECT f8+10.0, {query_func}(f8+10.0) from {table}"
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     for values in result:
         if len(values) == 3:

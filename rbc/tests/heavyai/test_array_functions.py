@@ -4,17 +4,17 @@ from rbc.stdlib import array_api
 from numba.core import types
 
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci_array'
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteOmnisci(**config)
+    table_name = 'rbc_test_heavydb_array'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
@@ -23,7 +23,7 @@ def omnisci():
     # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
-    # https://www.omnisci.com/docs/latest/5_datatypes.html
+    # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
@@ -142,16 +142,16 @@ array_methods = [
 
 @pytest.mark.parametrize("method, signature, args, expected", array_methods,
                          ids=[item[0] for item in array_methods])
-def test_array_methods(omnisci, method, signature, args, expected):
-    omnisci.reset()
+def test_array_methods(heavydb, method, signature, args, expected):
+    heavydb.reset()
 
-    fn = omnisci(signature)(eval('np_{}'.format(method)))
+    fn = heavydb(signature)(eval('np_{}'.format(method)))
 
     query = 'select np_{method}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')' + \
-            ' from {omnisci.table_name};'.format(**locals())
+            ' from {heavydb.table_name};'.format(**locals())
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
     out = list(result)[0]
 
     if 'empty' in method:
@@ -161,14 +161,14 @@ def test_array_methods(omnisci, method, signature, args, expected):
 
 
 @pytest.mark.parametrize('col', ('i4', 'i8', 'f4'))
-def test_dtype(omnisci, col):
-    omnisci.reset()
+def test_dtype(heavydb, col):
+    heavydb.reset()
 
-    @omnisci('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
+    @heavydb('T[](T[])', T=['int32', 'int64', 'float32'], devices=['cpu'])
     def zeros_like(x):
         z = array_api.zeros(len(x), x.dtype)
         return z
 
-    query = f'select zeros_like({col}) from {omnisci.table_name} limit 1;'
-    _, result = omnisci.sql_execute(query)
+    query = f'select zeros_like({col}) from {heavydb.table_name} limit 1;'
+    _, result = heavydb.sql_execute(query)
     assert np.all(list(result)[0][0] == np.zeros(6, dtype=col))

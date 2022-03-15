@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.heavyai import Array
 
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -13,8 +13,8 @@ NUMERIC_TYPES = ['int8', 'int16', 'int32', 'int64', 'float32', 'float64']
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    for o in omnisci_fixture(globals()):
+def heavydb():
+    for o in heavydb_fixture(globals()):
         define(o)
         yield o
 
@@ -48,15 +48,15 @@ ndarray_methods = [
 ]
 
 
-def define(omnisci):
+def define(heavydb):
 
-    @omnisci('double[](int64, double)')
+    @heavydb('double[](int64, double)')
     def ndarray_fill(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a
 
-    @omnisci('double(int64, double)')
+    @heavydb('double(int64, double)')
     def ndarray_max(size, v):
         a = Array(size, 'double')
         a.fill(v)
@@ -71,29 +71,29 @@ def define(omnisci):
             exec(fn)
             fn = locals()[fn_name]
             if op == 'mean':
-                omnisci('float64(int32)')(fn)
+                heavydb('float64(int32)')(fn)
             else:
-                omnisci(f'{retty}(int32)')(fn)
+                heavydb(f'{retty}(int32)')(fn)
 
-    @omnisci('double(int64, double)')
+    @heavydb('double(int64, double)')
     def ndarray_mean(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.mean()
 
-    @omnisci('double(int64, double)')
+    @heavydb('double(int64, double)')
     def ndarray_min(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.min()
 
-    @omnisci('double(int64, double)')
+    @heavydb('double(int64, double)')
     def ndarray_sum(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.sum()
 
-    @omnisci('double(int64, double)')
+    @heavydb('double(int64, double)')
     def ndarray_prod(size, v):
         a = Array(size, 'double')
         a.fill(v)
@@ -102,11 +102,11 @@ def define(omnisci):
 
 @pytest.mark.parametrize("method, args, expected", ndarray_methods,
                          ids=[item[0] for item in ndarray_methods])
-def test_ndarray_methods(omnisci, method, args, expected):
+def test_ndarray_methods(heavydb, method, args, expected):
     query_args = ', '.join(map(str, args))
     query = f'SELECT ndarray_{method}({query_args})'
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
     out = list(result)[0]
 
     if method == 'fill':

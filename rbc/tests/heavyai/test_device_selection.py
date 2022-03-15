@@ -1,11 +1,11 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 
 
 @pytest.fixture(scope='module')
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
         define(o)
 
         def require_loadtime(kind, _cache=[None]):
@@ -44,24 +44,24 @@ def decode(c):
             err_device_code: 'err'}[c]
 
 
-def get_single_result(omnisci, kind, func):
+def get_single_result(heavydb, kind, func):
     if func == 'any':
         if kind == 'rt':
             return any_device_code
-        return gpu_device_code if omnisci.has_cuda else cpu_device_code
+        return gpu_device_code if heavydb.has_cuda else cpu_device_code
     if func == 'cpu':
         return cpu_device_code
     if func == 'gpu':
-        return gpu_device_code if omnisci.has_cuda else err_device_code
+        return gpu_device_code if heavydb.has_cuda else err_device_code
     if func == 'both':
-        return gpu_device_code if omnisci.has_cuda else cpu_device_code
+        return gpu_device_code if heavydb.has_cuda else cpu_device_code
     raise NotImplementedError(repr((kind, func)))
 
 
-def get_pair_result(omnisci, ext, kind1, func1, kind2, func2,
+def get_pair_result(heavydb, ext, kind1, func1, kind2, func2,
                     allow_query_step_cpu_retry=False):
-    r1 = get_single_result(omnisci, kind1, func1)
-    r2 = get_single_result(omnisci, kind2, func2)
+    r1 = get_single_result(heavydb, kind1, func1)
+    r2 = get_single_result(heavydb, kind2, func2)
     if r1 == err_device_code or r2 == err_device_code:
         return err_device_code
     if allow_query_step_cpu_retry and ext in {'udtf/udf', 'udf/udtf'}:
@@ -78,9 +78,9 @@ def get_pair_result(omnisci, ext, kind1, func1, kind2, func2,
     return r1, r2
 
 
-def execute1(omnisci, query):
+def execute1(heavydb, query):
     try:
-        _, result = omnisci.sql_execute(query)
+        _, result = heavydb.sql_execute(query)
     except Exception as msg:
         return msg
     else:
@@ -88,9 +88,9 @@ def execute1(omnisci, query):
         return decode(result[0][0])
 
 
-def execute2(omnisci, query):
+def execute2(heavydb, query):
     try:
-        _, result = omnisci.sql_execute(query)
+        _, result = heavydb.sql_execute(query)
     except Exception as msg:
         return msg
     else:
@@ -98,21 +98,21 @@ def execute2(omnisci, query):
         return decode(result[0][0]), decode(result[0][1])
 
 
-def get_worker1(omnisci, ext, kind, func):
-    expected = decode(get_single_result(omnisci, kind, func))
+def get_worker1(heavydb, ext, kind, func):
+    expected = decode(get_single_result(heavydb, kind, func))
     if ext == 'udf':
         query = f'select {kind}_device_selection_{ext}_{func}(0)'
         return execute1, query, expected
     if ext == 'udtf':
         query = (f'select out0 from table({kind}_device_selection_{ext}_{func}'
-                 f'(cursor(select i4 from {omnisci.table_name})))')
+                 f'(cursor(select i4 from {heavydb.table_name})))')
         return execute1, query, expected
     raise NotImplementedError(repr((ext, kind, func)))
 
 
-def get_worker2(omnisci, ext, kind1, func1, kind2, func2,
+def get_worker2(heavydb, ext, kind1, func1, kind2, func2,
                 allow_query_step_cpu_retry=False):
-    expected = get_pair_result(omnisci, ext, kind1, func1, kind2, func2,
+    expected = get_pair_result(heavydb, ext, kind1, func1, kind2, func2,
                                allow_query_step_cpu_retry=allow_query_step_cpu_retry)
     if isinstance(expected, tuple):
         expected = tuple(map(decode, expected))
@@ -125,56 +125,56 @@ def get_worker2(omnisci, ext, kind1, func1, kind2, func2,
     if ext == 'udtf/udf':
         query = (f'select out0 from table({kind1}_device_selection_udtf_{func1}'
                  f'(cursor(select {kind2}_device_selection_udf_{func2}(i4)'
-                 f' from {omnisci.table_name})))')
+                 f' from {heavydb.table_name})))')
         return execute1, query, expected[0] if isinstance(expected, tuple) else expected
     raise NotImplementedError(repr((ext, kind1, func1, kind2, func2)))
 
 
-def define(omnisci):
+def define(heavydb):
 
-    @omnisci('int32(int32)')
+    @heavydb('int32(int32)')
     def rt_device_selection_udf_any(x):
         # cannot determine which device is actually used
         return any_device_code
 
-    @omnisci('int32(int32)', devices=['cpu'])
+    @heavydb('int32(int32)', devices=['cpu'])
     def rt_device_selection_udf_cpu(x):
         return cpu_device_code
 
-    @omnisci('int32(int32)', devices=['gpu'])
+    @heavydb('int32(int32)', devices=['gpu'])
     def rt_device_selection_udf_gpu(x):
         return gpu_device_code
 
-    @omnisci('int32(int32)', devices=['cpu'])  # NOQA
+    @heavydb('int32(int32)', devices=['cpu'])  # NOQA
     def rt_device_selection_udf_both(x):  # NOQA
         return cpu_device_code
 
-    @omnisci('int32(int32)', devices=['gpu'])  # NOQA
+    @heavydb('int32(int32)', devices=['gpu'])  # NOQA
     def rt_device_selection_udf_both(x):  # NOQA
         return gpu_device_code
 
-    @omnisci('int32(Column<int32>, OutputColumn<int32>)')
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)')
     def rt_device_selection_udtf_any(x, out):
         # cannot determine which device is actually used
         out[0] = any_device_code
         return 1
 
-    @omnisci('int32(Column<int32>, OutputColumn<int32>)', devices=['cpu'])
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)', devices=['cpu'])
     def rt_device_selection_udtf_cpu(x, out):
         out[0] = cpu_device_code
         return 1
 
-    @omnisci('int32(Column<int32>, OutputColumn<int32>)', devices=['gpu'])
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)', devices=['gpu'])
     def rt_device_selection_udtf_gpu(x, out):
         out[0] = gpu_device_code
         return 1
 
-    @omnisci('int32(Column<int32>, OutputColumn<int32>)', devices=['cpu'])  # NOQA
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)', devices=['cpu'])  # NOQA
     def rt_device_selection_udtf_both(x, out):  # NOQA
         out[0] = cpu_device_code
         return 1
 
-    @omnisci('int32(Column<int32>, OutputColumn<int32>)', devices=['gpu'])  # NOQA
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)', devices=['gpu'])  # NOQA
     def rt_device_selection_udtf_both(x, out):  # NOQA
         out[0] = gpu_device_code
         return 1
@@ -183,14 +183,14 @@ def define(omnisci):
 @pytest.mark.parametrize("func", funcs)
 @pytest.mark.parametrize("ext", ['udf', 'udtf'])
 @pytest.mark.parametrize("kind", ['rt', 'ct', 'lt'])
-def test_device_selection_single(omnisci, func, ext, kind):
-    omnisci.require_loadtime(kind)
+def test_device_selection_single(heavydb, func, ext, kind):
+    heavydb.require_loadtime(kind)
 
     if kind == 'lt' and ext == 'udtf':
         pytest.skip('Load-time UDTFs not supported')
 
-    execute, query, expected = get_worker1(omnisci, ext, kind, func)
-    result = execute(omnisci, query)
+    execute, query, expected = get_worker1(heavydb, ext, kind, func)
+    result = execute(heavydb, query)
     if isinstance(result, Exception):
         assert expected == decode(err_device_code), str(result)
     else:
@@ -203,24 +203,24 @@ def test_device_selection_single(omnisci, func, ext, kind):
 @pytest.mark.parametrize("ext", ['udf/udf', 'udtf/udf'])
 @pytest.mark.parametrize("kind2", kinds)
 @pytest.mark.parametrize("kind1", kinds)
-def test_device_selection_pair(omnisci, func12, ext, kind2, kind1):
+def test_device_selection_pair(heavydb, func12, ext, kind2, kind1):
     func12 = tuple(func12.split('/'))
     func1, func2 = func12
 
-    omnisci.require_loadtime(kind1)
-    omnisci.require_loadtime(kind2)
+    heavydb.require_loadtime(kind1)
+    heavydb.require_loadtime(kind2)
     if 'udtf' in ext and kind1 == 'lt':
         pytest.skip('Load-time UDTFs not supported')
 
     # Omniscidb server option --allow-query-step-cpu-retry=1 was
-    # introduced in omniscidb-internal PR 5798, here assuming the
+    # introduced in heavydbdb-internal PR 5798, here assuming the
     # default value.
-    allow_query_step_cpu_retry = omnisci.version[:2] >= (5, 8)
+    allow_query_step_cpu_retry = heavydb.version[:2] >= (5, 8)
 
     execute, query, expected = get_worker2(
-        omnisci, ext, kind1, func1, kind2, func2,
+        heavydb, ext, kind1, func1, kind2, func2,
         allow_query_step_cpu_retry=allow_query_step_cpu_retry)
-    result = execute(omnisci, query)
+    result = execute(heavydb, query)
     if isinstance(result, Exception):
         assert expected == decode(err_device_code), str(result)
     else:

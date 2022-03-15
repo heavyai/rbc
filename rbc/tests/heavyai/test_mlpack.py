@@ -1,34 +1,34 @@
 import pytest
 import re
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.errors import OmnisciServerError
 
 
 @pytest.fixture(scope='module')
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 6)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
         yield o
 
 
 @pytest.mark.parametrize("func", ['dbscan', 'kmeans'])
-def test_mlpack(omnisci, func):
-    omnisci.require_version(
+def test_mlpack(heavydb, func):
+    heavydb.require_version(
         (5, 6),
-        'Requires omniscidb-internal PR 5430 and omniscidb built with -DENABLE_MLPACK')
+        'Requires heavydb-internal PR 5430 and heavydb built with -DENABLE_MLPACK')
 
     extra_args = dict(dbscan='cast(1 as float), 1',
                       kmeans='1')[func]
     query = (f'select * from table({func}(cursor(select cast(rowid as int), f8, f8, f8 '
-             f'from {omnisci.table_name}), {extra_args}, 1))')
+             f'from {heavydb.table_name}), {extra_args}, 1))')
 
     try:
-        _, result = omnisci.sql_execute(query)
+        _, result = heavydb.sql_execute(query)
     except OmnisciServerError as msg:
         m = re.match(fr'.*Undefined function call {func!r}',
                      msg.args[0])
         if m is not None:
-            pytest.skip(f'test requires omniscidb server with MLPACK support: {msg}')
+            pytest.skip(f'test requires heavydb server with MLPACK support: {msg}')
         raise
 
     result = list(result)

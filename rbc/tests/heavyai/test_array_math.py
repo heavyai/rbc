@@ -4,17 +4,17 @@ import rbc.heavyai as omni  # noqa: F401
 from rbc.stdlib import array_api
 
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci_array'
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteOmnisci(**config)
+    table_name = 'rbc_test_heavydb_array'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
     sqltypes = ['FLOAT[]', 'DOUBLE[]',
@@ -23,7 +23,7 @@ def omnisci():
     # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
-    # https://www.omnisci.com/docs/latest/5_datatypes.html
+    # https://www.heavydb.com/docs/latest/5_datatypes.html
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'u8']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
@@ -111,21 +111,21 @@ binary_fns = [
 
 @pytest.mark.parametrize("method, signature, columns", binary_fns,
                          ids=[item[0] for item in binary_fns])
-def test_omnisci_array_binary_math(omnisci, method, signature, columns):
-    omnisci.reset()
+def test_heavydb_array_binary_math(heavydb, method, signature, columns):
+    heavydb.reset()
 
     s = f'def np_{method}(a, b): return array_api.{method}(a, b)'
     exec(s, globals())
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    heavydb(signature)(eval('np_{}'.format(method)))
 
     ca, cb = columns.split(',')
 
     query = f'select {ca}, {cb}, ' + \
             f'np_{method}({ca}, {cb})' + \
-            f' from {omnisci.table_name};'
+            f' from {heavydb.table_name};'
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     row_a, row_b, out = list(result)[0]
     expected = getattr(np, method)(row_a, row_b)
@@ -135,7 +135,7 @@ def test_omnisci_array_binary_math(omnisci, method, signature, columns):
 binary_fn_scalar_input = [
     ('add', 'int32[](int32[], int32)', 'i4,3'),
     ('subtract', 'double[](double[], double)', 'f8,5.0'),
-    # omnisci server crashes:
+    # heavydb server crashes:
     # ('subtract', 'double[](double, double[])', '5.0,f8'),
     ('multiply', 'double[](double[], double)', 'f8,5.0'),
     ('divide', 'double[](double[], double)', 'f8,2.0'),
@@ -173,13 +173,13 @@ binary_fn_scalar_input = [
 
 @pytest.mark.parametrize("method, signature, args", binary_fn_scalar_input,
                          ids=[item[0] for item in binary_fn_scalar_input])
-def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
-    omnisci.reset()
+def test_heavydb_array_binary_math_scalar(heavydb, method, signature, args):
+    heavydb.reset()
 
     s = f'def np_{method}(a, b): return array_api.{method}(a, b)'
     exec(s, globals())
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    heavydb(signature)(eval('np_{}'.format(method)))
 
     t = tuple(args.split(','))
     a, b = t[0], t[1]
@@ -188,9 +188,9 @@ def test_omnisci_array_binary_math_scalar(omnisci, method, signature, args):
 
     query = f'select {column}, ' + \
             f'np_{method}({a}, {b})' + \
-            f' from {omnisci.table_name};'
+            f' from {heavydb.table_name};'
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     row, out = list(result)[0]
     expected = getattr(np, method)(row, num(scalar))
@@ -256,19 +256,19 @@ unary_fns = [
 
 @pytest.mark.parametrize("method, signature, column", unary_fns,
                          ids=[item[0] for item in unary_fns])
-def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
-    omnisci.reset()
+def test_heavydb_array_unary_math_fns(heavydb, method, signature, column):
+    heavydb.reset()
 
     s = f'def np_{method}(a): return array_api.{method}(a)'
     exec(s, globals())
 
-    omnisci(signature)(eval('np_{}'.format(method)))
+    heavydb(signature)(eval('np_{}'.format(method)))
 
     query = f'select {column}, ' + \
             f'np_{method}({column})' + \
-            f' from {omnisci.table_name};'
+            f' from {heavydb.table_name};'
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     row, out = list(result)[0]
     if method == 'invert' and column == 'b':
@@ -279,14 +279,14 @@ def test_omnisci_array_unary_math_fns(omnisci, method, signature, column):
     assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
 
 
-def test_heaviside(omnisci):
+def test_heaviside(heavydb):
 
-    @omnisci('double[](int64[], int64)')
+    @heavydb('double[](int64[], int64)')
     def heaviside(x1, x2):
         return array_api.heaviside(x1, x2)
 
-    query = f'select i8, heaviside(i8, 1) from {omnisci.table_name}'
-    _, result = omnisci.sql_execute(query)
+    query = f'select i8, heaviside(i8, 1) from {heavydb.table_name}'
+    _, result = heavydb.sql_execute(query)
     result = list(result)
 
     for inp, out in result:

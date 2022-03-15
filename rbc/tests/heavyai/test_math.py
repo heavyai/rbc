@@ -3,10 +3,10 @@ import pytest
 import sys
 import numpy as np
 import numba as nb
-import rbc.heavydb as rbc_omnisci
+import rbc.heavydb as rbc_heavydb
 from rbc.stdlib import array_api
 
-available_version, reason = rbc_omnisci.is_available()
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -17,11 +17,11 @@ def nb_version():
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
-    table_name = 'rbc_test_omnisci_math'
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteOmnisci(**config)
+    table_name = 'rbc_test_heavydb_math'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
 
@@ -123,11 +123,11 @@ devices = ('cpu', 'gpu')
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=["math." + item[0] for item in math_functions])
-def test_math_function(omnisci, device, nb_version, fn_name, signature):
-    omnisci.reset()
+def test_math_function(heavydb, device, nb_version, fn_name, signature):
+    heavydb.reset()
 
-    if not omnisci.has_cuda and device == 'gpu':
-        pytest.skip('test requires CUDA-enabled omniscidb server')
+    if not heavydb.has_cuda and device == 'gpu':
+        pytest.skip('test requires CUDA-enabled heavydbdb server')
 
     math_func = getattr(math, fn_name, None)
     if math_func is None:
@@ -162,9 +162,9 @@ def test_math_function(omnisci, device, nb_version, fn_name, signature):
 
     fn.__name__ = fprefix + fn.__name__
 
-    omnisci(signature, devices=[device])(fn)
+    heavydb(signature, devices=[device])(fn)
 
-    omnisci.register()
+    heavydb.register()
 
     if kind == 'double':
         assert arity <= 3, arity
@@ -186,8 +186,8 @@ def test_math_function(omnisci, device, nb_version, fn_name, signature):
     if fn_name in ['ldexp']:
         xs = 'x, i'
 
-    query = f'select {xs}, {fprefix}{fn_name}({xs}) from {omnisci.table_name}'
-    descr, result = omnisci.sql_execute(query)
+    query = f'select {xs}, {fprefix}{fn_name}({xs}) from {heavydb.table_name}'
+    descr, result = heavydb.sql_execute(query)
     for args in list(result):
         result = args[-1]
         if fn_name in ['pi', 'e', 'tau', 'inf', 'nan']:
@@ -320,11 +320,11 @@ if np is not None:
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
                          ids=["np." + item[0] for item in numpy_functions])
-def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func):
-    omnisci.reset()
+def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func):
+    heavydb.reset()
 
-    if not omnisci.has_cuda and device == 'gpu':
-        pytest.skip('Test requires CUDA-enabled omniscidb server')
+    if not heavydb.has_cuda and device == 'gpu':
+        pytest.skip('Test requires CUDA-enabled heavydbdb server')
 
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')
@@ -364,9 +364,9 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
     if device == 'gpu' and fn_name in ['floor_divide', 'around', 'round2', 'round_']:
         pytest.skip(f'Missing libdevice bindigs for {fn_name}')
 
-    omnisci(signature, devices=[device])(fn)
+    heavydb(signature, devices=[device])(fn)
 
-    omnisci.register()
+    heavydb.register()
 
     if fn_name == 'ldexp':
         xs = ', '.join('xi')
@@ -384,8 +384,8 @@ def test_numpy_function(omnisci, device, nb_version, fn_name, signature, np_func
     else:
         raise NotImplementedError(kind)
 
-    query = f'select {xs}, {fn_name}({xs}) from {omnisci.table_name}'
-    descr, result = omnisci.sql_execute(query)
+    query = f'select {xs}, {fn_name}({xs}) from {heavydb.table_name}'
+    descr, result = heavydb.sql_execute(query)
     for args in list(result):
         result = args[-1]
         expected = np_func(*args[:-1])

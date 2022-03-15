@@ -2,16 +2,16 @@ import os
 from collections import defaultdict
 import pytest
 
-rbc_omnisci = pytest.importorskip('rbc.omniscidb')
-available_version, reason = rbc_omnisci.is_available()
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    # TODO: use omnisci_fixture from rbc/tests/__init__.py
-    config = rbc_omnisci.get_client_config(debug=not True)
-    m = rbc_omnisci.RemoteOmnisci(**config)
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteHeavyDB(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
@@ -47,11 +47,11 @@ def omnisci():
         print('%s in deardown' % (type(msg)))
 
 
-def test_table_data(omnisci):
-    omnisci.reset()
+def test_table_data(heavydb):
+    heavydb.reset()
 
-    descr, result = omnisci.sql_execute(
-        f'select t4, t2, t1, s, n from {omnisci.table_name}')
+    descr, result = heavydb.sql_execute(
+        f'select t4, t2, t1, s, n from {heavydb.table_name}')
     result = list(result)
 
     assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun'),
@@ -61,49 +61,49 @@ def test_table_data(omnisci):
                       ('foo', 'foo', 'foooo', ['fun', 'bar'], 'foooo')]
 
 
-def test_bytes_len(omnisci):
-    omnisci.reset()
+def test_bytes_len(heavydb):
+    heavydb.reset()
 
-    @omnisci('int32(Bytes, Bytes)')
+    @heavydb('int32(Bytes, Bytes)')
     def mystrlen(s, s2):
         return len(s) * 100 + len(s2)
 
-    sql_query_expected = f"select length(n) * 100 + length(n2) from {omnisci.table_name}"
-    sql_query = f"select mystrlen(n, n2) from {omnisci.table_name}"
+    sql_query_expected = f"select length(n) * 100 + length(n2) from {heavydb.table_name}"
+    sql_query = f"select mystrlen(n, n2) from {heavydb.table_name}"
 
-    descr, result_expected = omnisci.sql_execute(sql_query_expected)
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
-    descr, result = omnisci.sql_execute(sql_query)
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     assert result == result_expected
 
 
-def test_bytes_ord(omnisci):
-    omnisci.reset()
+def test_bytes_ord(heavydb):
+    heavydb.reset()
 
-    @omnisci('int64(Bytes, int32)', devices=['gpu', 'cpu'])
+    @heavydb('int64(Bytes, int32)', devices=['gpu', 'cpu'])
     def myord(s, i):
         return s[i] if i < len(s) else 0
 
-    sql_query_data = f"select n from {omnisci.table_name}"
-    descr, data = omnisci.sql_execute(sql_query_data)
+    sql_query_data = f"select n from {heavydb.table_name}"
+    descr, data = heavydb.sql_execute(sql_query_data)
     data = list(data)
 
     for i in range(5):
         result_expected = [(ord(d[0][i]) if i < len(d[0]) else 0, ) for d in data]
-        sql_query = f"select myord(n, {i}) from {omnisci.table_name}"
-        descr, result = omnisci.sql_execute(sql_query)
+        sql_query = f"select myord(n, {i}) from {heavydb.table_name}"
+        descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         assert result == result_expected
 
 
-def test_bytes_return(omnisci):
-    omnisci.reset()
+def test_bytes_return(heavydb):
+    heavydb.reset()
 
     from rbc.heavyai import Bytes
 
-    @omnisci('Bytes(int32, int32)')
+    @heavydb('Bytes(int32, int32)')
     def make_abc(first, n):
         r = Bytes(n)
         for i in range(n):
@@ -111,18 +111,18 @@ def test_bytes_return(omnisci):
         return r
 
     sql_query = "select make_abc(97, 10)"
-    descr, result = omnisci.sql_execute(sql_query)
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     assert result == [('abcdefghij', )]
 
 
-def test_bytes_upper(omnisci):
-    omnisci.reset()
+def test_bytes_upper(heavydb):
+    heavydb.reset()
 
     from rbc.heavyai import Bytes
 
-    @omnisci('Bytes(Bytes)')
+    @heavydb('Bytes(Bytes)')
     def myupper(s):
         r = Bytes(len(s))
         for i in range(len(s)):
@@ -132,8 +132,8 @@ def test_bytes_upper(omnisci):
             r[i] = c
         return r
 
-    sql_query = f"select n, myupper(n) from {omnisci.table_name}"
-    descr, result = omnisci.sql_execute(sql_query)
+    sql_query = f"select n, myupper(n) from {heavydb.table_name}"
+    descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     for n, u in result:

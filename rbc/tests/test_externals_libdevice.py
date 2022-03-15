@@ -1,7 +1,7 @@
 import pytest
 from functools import reduce
 from typing import Tuple
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.externals import libdevice
 
 libdevicefuncs = pytest.importorskip("numba.cuda.libdevicefuncs")
@@ -16,21 +16,21 @@ for fname, (retty, args) in libdevicefuncs.functions.items():
 
 
 @pytest.fixture(scope="module")
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals()):
+    for o in heavydb_fixture(globals()):
         if not o.has_cuda:
             pytest.skip("cuda is not enabled")
         define(o)
         yield o
 
 
-def define(omnisci):
+def define(heavydb):
     def inner(fname: str, retty: str, argtypes: Tuple[str]):
         cmath_fn = getattr(libdevice, fname)
         arity = len(argtypes)
 
-        # define omnisci callable
+        # define heavydb callable
         if arity == 1:
 
             def fn(a):
@@ -46,8 +46,8 @@ def define(omnisci):
             def fn(a, b, c):
                 return cmath_fn(a, b, c)
 
-        fn.__name__ = f"{omnisci.table_name}_{fname[5:]}"
-        fn = omnisci(f"{retty}({', '.join(argtypes)})", devices=["gpu"])(fn)
+        fn.__name__ = f"{heavydb.table_name}_{fname[5:]}"
+        fn = heavydb(f"{retty}({', '.join(argtypes)})", devices=["gpu"])(fn)
 
     for fname, retty, argtys, has_ptr_arg in funcs:
         if has_ptr_arg:
@@ -68,12 +68,12 @@ cols_dict = {
 @pytest.mark.parametrize(
     "fname,retty,argtys,has_ptr_arg", funcs, ids=[item[0] for item in funcs]
 )
-def test_externals_libdevice(omnisci, fname, retty, argtys, has_ptr_arg):
+def test_externals_libdevice(heavydb, fname, retty, argtys, has_ptr_arg):
     if has_ptr_arg:
         pytest.skip(f"{fname} has a pointer argument")
 
-    func_name = f"{omnisci.table_name}_{fname[5:]}"
-    table = f"{omnisci.table_name}"
+    func_name = f"{heavydb.table_name}_{fname[5:]}"
+    table = f"{heavydb.table_name}"
 
     if fname[5:] in ["brev", "brevll"]:
         query = f"SELECT {func_name}(i4+4) FROM {table}"
@@ -83,4 +83,4 @@ def test_externals_libdevice(omnisci, fname, retty, argtys, has_ptr_arg):
         cols = ", ".join(tuple(map(lambda x: cols_dict[x], argtys)))
         query = f"SELECT {func_name}({cols}) FROM {table}"
 
-    _, _ = omnisci.sql_execute(query)
+    _, _ = heavydb.sql_execute(query)

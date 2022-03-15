@@ -1,5 +1,5 @@
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.externals.heavydb import set_output_row_size
 
 
@@ -9,16 +9,16 @@ table_columns_map = dict(int64='i8', int32='i4', int16='i2', int8='i1',
 
 
 @pytest.fixture(scope='module')
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals(), minimal_version=(5, 7, 1)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 7, 1)):
         define(o)
         yield o
 
 
-def define(omnisci):
+def define(heavydb):
 
-    @omnisci('int32(Column<T>, OutputColumn<T>)', T=scalar_types, devices=['cpu'])
+    @heavydb('int32(Column<T>, OutputColumn<T>)', T=scalar_types, devices=['cpu'])
     def column_set_output_row_size(inp, out):
         sz = len(inp)
         set_output_row_size(sz)
@@ -26,7 +26,7 @@ def define(omnisci):
             out[i] = inp[i]
         return sz
 
-    @omnisci('int32(ColumnList<T>, OutputColumn<T>)', T=['int32'], devices=['cpu'])
+    @heavydb('int32(ColumnList<T>, OutputColumn<T>)', T=['int32'], devices=['cpu'])
     def columnlist_set_output_row_size(lst, out):
         set_output_row_size(lst.ncols)
         for j in range(lst.ncols):
@@ -38,14 +38,14 @@ def define(omnisci):
 
 
 @pytest.mark.parametrize('T', table_columns_map)
-def test_column_alloc(omnisci, T):
+def test_column_alloc(heavydb, T):
     fn = 'column_set_output_row_size'
     col = table_columns_map[T]
 
     query = (f'select * from table({fn}(cursor('
-             f'select {col} from {omnisci.table_name})));')
+             f'select {col} from {heavydb.table_name})));')
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     if 'f' in col:
         expected = [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
@@ -55,11 +55,11 @@ def test_column_alloc(omnisci, T):
 
 
 @pytest.mark.parametrize("fn", ('column_list_row_sum', 'columnlist_set_output_row_size'))
-def test_columnlist_alloc(omnisci, fn):
+def test_columnlist_alloc(heavydb, fn):
 
     query = (f'select * from table({fn}(cursor('
-             f'select i4, i4+1, i4+2 from {omnisci.table_name})));')
+             f'select i4, i4+1, i4+2 from {heavydb.table_name})));')
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     assert list(result) == [(10,), (15,), (20,)]
