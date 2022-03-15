@@ -1,10 +1,6 @@
-import warnings
+import warnings  # noqa: F401
+from .heavydb import *  # noqa: F401, F403
 
-from rbc.heavydb import RemoteHeavyDB
 
-
-class RemoteOmnisci(RemoteHeavyDB):
-    """Omnisci - the previous brand of HeavyAI
-    """
-    msg = "`RemoteOmnisci` is deprecated, use `RemoteHeavyDB` instead."
-    warnings.warn(msg, PendingDeprecationWarning)
+msg = "`RemoteOmnisci` is deprecated, use `RemoteHeavyDB` instead."
+warnings.warn(msg, PendingDeprecationWarning)
