@@ -13,7 +13,7 @@ expose = Expose(globals(), "utility_functions")
 @expose.not_implemented("all")
 def _array_api_all(x, *, axis=None, keepdims=False):
     """
-    Tests whether all input array elements evaluate to True along a specified axis.
+    Tests whether all input array elements evaluate to `True` along a specified axis.
     """
     pass
 
@@ -21,6 +21,6 @@ def _array_api_all(x, *, axis=None, keepdims=False):
 @expose.not_implemented("any")
 def _array_api_any(x, *, axis=None, keepdims=False):
     """
-    Tests whether any input array element evaluates to True along a specified axis.
+    Tests whether any input array element evaluates to `True` along a specified axis.
     """
     pass

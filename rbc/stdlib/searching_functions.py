@@ -37,6 +37,6 @@ def _array_api_nonzero(x):
 @expose.not_implemented("where")
 def _array_api_where(condition, x1, x2):
     """
-    Returns elements chosen from
+    Returns elements chosen from `x1` or `x2` depending on `condition`.
     """
     pass

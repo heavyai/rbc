@@ -11,9 +11,9 @@ expose = Expose(globals(), "sorting_functions")
 
 
 @expose.not_implemented("argsort")
-def _array_api_all(x, *, axis=-1, descending=False, stable=True):
+def _array_api_argsort(x, *, axis=-1, descending=False, stable=True):
     """
-    Returns the indices that sort an array x along a specified axis.
+    Returns the indices that sort an array `x` along a specified axis.
     """
     pass
 
@@ -21,6 +21,6 @@ def _array_api_all(x, *, axis=-1, descending=False, stable=True):
 @expose.not_implemented("sort")
 def _array_api_any(x, *, axis=-1, descending=False, stable=True):
     """
-    Returns the indices that sort an array x along a specified axis.
+    Returns a sorted copy of an input array `x`.
     """
     pass

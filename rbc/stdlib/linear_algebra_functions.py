@@ -21,7 +21,7 @@ def _array_api_matmul(x1, x2):
 @expose.not_implemented("matrix_transpose")
 def _array_api_matrix_transpose(x):
     """
-    Transposes a matrix (or a stack of matrices)
+    Transposes a matrix (or a stack of matrices) x.
     """
     pass
 
@@ -29,7 +29,7 @@ def _array_api_matrix_transpose(x):
 @expose.not_implemented("tensordot")
 def _array_api_tensordot(x1, x2, *, axes=2):
     """
-    Returns a tensor contraction of
+    Returns a tensor contraction of x1 and x2 over specific axis.
     """
     pass
 

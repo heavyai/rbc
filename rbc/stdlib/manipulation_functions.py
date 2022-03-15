@@ -31,7 +31,7 @@ def _array_api_concat(arrays, *, axis=0):
 def _array_api_expand_dims(x, *, axis=0):
     """
     Expands the shape of an array by inserting a new axis (dimension)
-    of size one at the position specified by
+    of size one at the position specified by axis
     """
     pass
 
@@ -47,7 +47,7 @@ def _array_api_flip(x, *, axis=None):
 @expose.not_implemented("permute_dims")
 def _array_api_permute_dims(x, axes):
     """
-    Permutes the axes (dimensions) of an array
+    Permutes the axes (dimensions) of an array x.
     """
     pass
 
@@ -71,7 +71,7 @@ def _array_api_roll(x, shift, *, axis=None):
 @expose.not_implemented("squeeze")
 def _array_api_squeeze(x, axis):
     """
-    Removes singleton dimensions (axes) from
+    Removes singleton dimensions (axes) from x.
     """
     pass
 
