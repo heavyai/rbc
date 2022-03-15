@@ -75,16 +75,17 @@ class Expose:
 
         return wrapper
 
-    def not_implemented(self, func_name):
+    def not_implemented(self, func_name, api=API.ARRAY_API):
         s = f'def {func_name}(*args, **kwargs): pass'
         exec(s, self._globals)
 
         fn = self._globals.get(func_name)
 
-        def wraps(func):
-            func.__doc__ = "❌ Not implemented"
-            functools.update_wrapper(fn, func)
-            return func
+        def wraps(overload_func):
+            original_doc = self.format_docstring(overload_func, func_name, api)
+            overload_func.__doc__ = f"❌ Not implemented\n{original_doc}"
+            functools.update_wrapper(fn, overload_func)
+            return overload_func
         return wraps
 
 

@@ -1,4 +1,6 @@
 """
+Array API specification for linear algebra functions.
+
 https://data-apis.org/array-api/latest/API_specification/linear_algebra_functions.html
 """
 from rbc.stdlib import Expose
@@ -9,7 +11,7 @@ expose = Expose(globals(), "linear_algebra_functions")
 
 
 @expose.not_implemented("matmul")
-def _array_api_matmul(x1, x2, /):
+def _array_api_matmul(x1, x2):
     """
     Computes the matrix product.
     """
@@ -17,7 +19,7 @@ def _array_api_matmul(x1, x2, /):
 
 
 @expose.not_implemented("matrix_transpose")
-def _array_api_matrix_transpose(x, /):
+def _array_api_matrix_transpose(x):
     """
     Transposes a matrix (or a stack of matrices)
     """
@@ -25,7 +27,7 @@ def _array_api_matrix_transpose(x, /):
 
 
 @expose.not_implemented("tensordot")
-def _array_api_tensordot(x1, x2, /, *, axes=2):
+def _array_api_tensordot(x1, x2, *, axes=2):
     """
     Returns a tensor contraction of
     """
@@ -33,7 +35,7 @@ def _array_api_tensordot(x1, x2, /, *, axes=2):
 
 
 @expose.not_implemented("vecdot")
-def _array_api_vecdot(x1, x2, /, *, axis=-1):
+def _array_api_vecdot(x1, x2, *, axis=-1):
     """
     Computes the (vector) dot product of two arrays.
     """

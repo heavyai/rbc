@@ -15,15 +15,6 @@ Top-level functions
     :toctree: generated/
 
     ctools
-    external
-    errors
-    libfuncs
-    omniscidb
-    remotejit
-    structure_type
-    targetinfo
-    typesystem
-    utils
 
 
 Array API
@@ -32,11 +23,18 @@ Array API
 .. autosummary::
     :toctree: generated/
 
-    stdlib.datatypes
     stdlib.constants
     stdlib.creation_functions
+    stdlib.datatypes
+    stdlib.data_type_functions
     stdlib.elementwise_functions
+    stdlib.linear_algebra_functions
+    stdlib.manipulation_functions
+    stdlib.searching_functions
+    stdlib.set_functions
+    stdlib.sorting_functions
     stdlib.statistical_functions
+    stdlib.utility_functions
 
 
 Externals
@@ -45,11 +43,6 @@ Externals
 .. autosummary::
     :toctree: generated/
 
-    externals.cmath
-    externals.libdevice
-    externals.macros
-    externals.omniscidb
-    externals.stdio
 
 
 OmniSciDB Backend

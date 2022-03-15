@@ -1,4 +1,6 @@
 """
+Array API specification for manipulation functions.
+
 https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html
 """
 from rbc.stdlib import Expose
@@ -18,7 +20,7 @@ expose = Expose(globals(), "manipulation_functions")
 
 
 @expose.not_implemented("concat")
-def _array_api_concat(arrays, /, *, axis=0):
+def _array_api_concat(arrays, *, axis=0):
     """
     Joins a sequence of arrays along an existing axis.
     """
@@ -26,7 +28,7 @@ def _array_api_concat(arrays, /, *, axis=0):
 
 
 @expose.not_implemented("expand_dims")
-def _array_api_expand_dims(x, /, *, axis=0):
+def _array_api_expand_dims(x, *, axis=0):
     """
     Expands the shape of an array by inserting a new axis (dimension)
     of size one at the position specified by
@@ -35,7 +37,7 @@ def _array_api_expand_dims(x, /, *, axis=0):
 
 
 @expose.not_implemented("flip")
-def _array_api_flip(x, /, *, axis=None):
+def _array_api_flip(x, *, axis=None):
     """
     Reverses the order of elements in an array along the given axis.
     """
@@ -43,7 +45,7 @@ def _array_api_flip(x, /, *, axis=None):
 
 
 @expose.not_implemented("permute_dims")
-def _array_api_permute_dims(x, /, axes):
+def _array_api_permute_dims(x, axes):
     """
     Permutes the axes (dimensions) of an array
     """
@@ -51,7 +53,7 @@ def _array_api_permute_dims(x, /, axes):
 
 
 @expose.not_implemented("reshape")
-def _array_api_reshape(x, /, shape, *, copy=None):
+def _array_api_reshape(x, shape, *, copy=None):
     """
     Reshapes an array without changing its data.
     """
@@ -59,7 +61,7 @@ def _array_api_reshape(x, /, shape, *, copy=None):
 
 
 @expose.not_implemented("roll")
-def _array_api_roll(x, /, shift, *, axis=None):
+def _array_api_roll(x, shift, *, axis=None):
     """
     Rolls array elements along a specified axis.
     """
@@ -67,7 +69,7 @@ def _array_api_roll(x, /, shift, *, axis=None):
 
 
 @expose.not_implemented("squeeze")
-def _array_api_squeeze(x, /, axis):
+def _array_api_squeeze(x, axis):
     """
     Removes singleton dimensions (axes) from
     """
@@ -75,7 +77,7 @@ def _array_api_squeeze(x, /, axis):
 
 
 @expose.not_implemented("stack")
-def _array_api_stack(arrays, /, *, axis=0):
+def _array_api_stack(arrays, *, axis=0):
     """
     Joins a sequence of arrays along a new axis.
     """

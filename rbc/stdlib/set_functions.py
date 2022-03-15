@@ -1,4 +1,6 @@
 """
+Array API specification for set functions.
+
 https://data-apis.org/array-api/latest/API_specification/set_functions.html
 """
 from rbc.stdlib import Expose
@@ -9,7 +11,7 @@ expose = Expose(globals(), "set_functions")
 
 
 @expose.not_implemented("unique_all")
-def _array_api_unique_all(x, /):
+def _array_api_unique_all(x):
     """
     Returns the unique elements of an input array
     """
@@ -17,7 +19,7 @@ def _array_api_unique_all(x, /):
 
 
 @expose.not_implemented("unique_counts")
-def _array_api_unique_counts(x, /):
+def _array_api_unique_counts(x):
     """
     Returns the unique elements of an input array
     """
@@ -25,7 +27,7 @@ def _array_api_unique_counts(x, /):
 
 
 @expose.not_implemented("unique_inverse")
-def _array_api_unique_inverse(x, /):
+def _array_api_unique_inverse(x):
     """
     Returns the unique elements of an input array
     """
@@ -33,7 +35,7 @@ def _array_api_unique_inverse(x, /):
 
 
 @expose.not_implemented("unique_values")
-def _array_api_unique_values(x, /):
+def _array_api_unique_values(x):
     """
     Returns the unique elements of an input array
     """

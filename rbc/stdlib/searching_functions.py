@@ -1,4 +1,6 @@
 """
+Array API specification for searching functions.
+
 https://data-apis.org/array-api/latest/API_specification/searching_functions.html
 """
 from rbc.stdlib import Expose
@@ -9,7 +11,7 @@ expose = Expose(globals(), "searching_functions")
 
 
 @expose.not_implemented("argmax")
-def _array_api_argmax(x, /, *, axis=None, keepdims=False):
+def _array_api_argmax(x, *, axis=None, keepdims=False):
     """
     Returns the indices of the maximum values along a specified axis.
     """
@@ -17,7 +19,7 @@ def _array_api_argmax(x, /, *, axis=None, keepdims=False):
 
 
 @expose.not_implemented("argmin")
-def _array_api_argmin(x, /, *, axis=None, keepdims=False):
+def _array_api_argmin(x, *, axis=None, keepdims=False):
     """
     Returns the indices of the minimum values along a specified axis.
     """
@@ -25,7 +27,7 @@ def _array_api_argmin(x, /, *, axis=None, keepdims=False):
 
 
 @expose.not_implemented("nonzero")
-def _array_api_nonzero(x, /):
+def _array_api_nonzero(x):
     """
     Returns the indices of the array elements which are non-zero.
     """
@@ -33,7 +35,7 @@ def _array_api_nonzero(x, /):
 
 
 @expose.not_implemented("where")
-def _array_api_where(condition, x1, x2, /):
+def _array_api_where(condition, x1, x2):
     """
     Returns elements chosen from
     """

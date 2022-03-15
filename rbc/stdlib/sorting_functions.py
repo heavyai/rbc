@@ -1,4 +1,6 @@
 """
+Array API specification for sorting functions.
+
 https://data-apis.org/array-api/latest/API_specification/sorting_functions.html
 """
 from rbc.stdlib import Expose
@@ -9,7 +11,7 @@ expose = Expose(globals(), "sorting_functions")
 
 
 @expose.not_implemented("argsort")
-def _array_api_all(x, /, *, axis=-1, descending=False, stable=True):
+def _array_api_all(x, *, axis=-1, descending=False, stable=True):
     """
     Returns the indices that sort an array x along a specified axis.
     """
@@ -17,7 +19,7 @@ def _array_api_all(x, /, *, axis=-1, descending=False, stable=True):
 
 
 @expose.not_implemented("sort")
-def _array_api_any(x, /, *, axis=-1, descending=False, stable=True):
+def _array_api_any(x, *, axis=-1, descending=False, stable=True):
     """
     Returns the indices that sort an array x along a specified axis.
     """
