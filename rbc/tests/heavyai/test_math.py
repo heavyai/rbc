@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import numba as nb
 import rbc.heavydb as rbc_heavydb
+import rbc.omniscidb
 from rbc.stdlib import array_api
 
 available_version, reason = rbc_heavydb.is_available()
@@ -20,7 +21,7 @@ def nb_version():
 def heavydb():
     # TODO: use heavydb_fixture from rbc/tests/__init__.py
     config = rbc_heavydb.get_client_config(debug=not True)
-    m = rbc_heavydb.RemoteOmnisci(**config)
+    m = rbc.omniscidb.RemoteOmnisci(**config)
     table_name = 'rbc_test_heavydb_math'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')

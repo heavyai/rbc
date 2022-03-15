@@ -1,5 +1,7 @@
 import os
 from collections import defaultdict
+
+import rbc.omniscidb
 from rbc.heavyai import Array
 from rbc.errors import OmnisciServerError
 from rbc.stdlib import array_api
@@ -15,7 +17,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def heavydb():
     # TODO: use heavydb_fixture from rbc/tests/__init__.py
     config = rbc_heavydb.get_client_config(debug=not True)
-    m = rbc_heavydb.RemoteOmnisci(**config)
+    m = rbc.omniscidb.RemoteOmnisci(**config)
     table_name = os.path.splitext(os.path.basename(__file__))[0]
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')

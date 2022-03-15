@@ -1,4 +1,4 @@
-"""OmniSciDB client config functions
+"""HeavyDB client config functions
 """
 
 import ast
@@ -13,6 +13,7 @@ from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
 from .thrift import Client as ThriftClient
 from . import heavyai
+from .omniscidb import RemoteOmnisci
 from .heavyai import (
     OmnisciArrayType, OmnisciBytesType, OmnisciTextEncodingDictType,
     OmnisciOutputColumnType, OmnisciColumnType,
@@ -1472,10 +1473,3 @@ class RemoteHeavyDB(RemoteJIT):
             return numpy.array(list(result), dtype).view(numpy.recarray)
         else:
             return dtype[0][1](list(result)[0][0])
-
-
-class RemoteOmnisci(RemoteHeavyDB):
-    """Omnisci - the previous brand of HeavyAI
-    """
-    msg = "`RemoteOmnisci` is deprecated, use `RemoteHeavyDB` instead."
-    warnings.warn(msg, PendingDeprecationWarning)

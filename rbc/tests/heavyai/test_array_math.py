@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import rbc.heavyai as omni  # noqa: F401
+import rbc.omniscidb
 from rbc.stdlib import array_api
 
 
@@ -13,7 +14,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def heavydb():
     # TODO: use heavydb_fixture from rbc/tests/__init__.py
     config = rbc_heavydb.get_client_config(debug=not True)
-    m = rbc_heavydb.RemoteOmnisci(**config)
+    m = rbc.omniscidb.RemoteOmnisci(**config)
     table_name = 'rbc_test_heavydb_array'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
