@@ -1,7 +1,7 @@
-# set CAPTURED_ERROS to "new_style"
+# set CAPTURED_ERROS to "new_style" after issue #457 gets resolved
 # https://github.com/numba/numba/pull/7397
 import os
-os.environ["NUMBA_CAPTURED_ERRORS"] = "new_style"
+os.environ["NUMBA_CAPTURED_ERRORS"] = "old_style"
 
 # Expose a temporary prototype. It will be replaced by proper
 # implementation soon.

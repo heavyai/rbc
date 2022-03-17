@@ -12,7 +12,7 @@ from numba.core.typing import asnumbatype
 
 __all__ = [
     'full', 'full_like', 'empty_like', 'empty', 'zeros', 'zeros_like',
-    'ones', 'ones_like', 'array', 'cumsum', 'arange', 'asarray',
+    'ones', 'ones_like', 'cumsum', 'arange', 'asarray',
     'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu'
 ]
 
