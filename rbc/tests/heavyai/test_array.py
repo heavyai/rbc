@@ -492,6 +492,7 @@ def test_array_invalid_dtype(heavydb):
                "<class 'numba.core.types.scalars.Integer'>")
     with pytest.raises(TypeError, match=err_msg):
         heavydb.register()
+    heavydb.reset()
 
 
 def test_array_enumerate(heavydb):
