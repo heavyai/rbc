@@ -5,6 +5,7 @@ from rbc.heavyai import Array
 from rbc.errors import OmnisciServerError
 from rbc.stdlib import array_api
 from numba import types as nb_types
+from numba import TypingError
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')

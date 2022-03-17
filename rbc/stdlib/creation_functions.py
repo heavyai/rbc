@@ -8,6 +8,7 @@ from rbc import typesystem, errors
 from rbc.heavyai.array import Array, ArrayPointer
 from rbc.stdlib import Expose, API
 from numba.core import extending, types
+from numba import TypingError
 from numba.core.typing import asnumbatype
 
 __all__ = [
@@ -35,8 +36,8 @@ def _determine_dtype(dtype, fill_value):
             return typesystem.Type.fromstring(dtype.literal_value).tonumba()
         else:
             if not isinstance(dtype, types.DTypeSpec):
-                raise TypeError('Expected dtype derived from numba.types.DTypeSpec '
-                                f'but got {type(dtype)}')
+                raise TypingError('Expected dtype derived from numba.types.DTypeSpec '
+                                  f'but got {type(dtype)}')
             return typesystem.Type.fromobject(dtype).tonumba()
 
 
