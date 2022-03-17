@@ -13,7 +13,7 @@ import numpy as np
 
 
 __all__ = [
-    'min', 'max', 'mean', 'prod', 'sum'
+    'min', 'max', 'mean', 'prod', 'sum', 'std', 'var'
 ]
 
 

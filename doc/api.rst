@@ -32,11 +32,18 @@ Array API
 .. autosummary::
     :toctree: generated/
 
-    stdlib.datatypes
     stdlib.constants
     stdlib.creation_functions
+    stdlib.datatypes
+    stdlib.data_type_functions
     stdlib.elementwise_functions
+    stdlib.linear_algebra_functions
+    stdlib.manipulation_functions
+    stdlib.searching_functions
+    stdlib.set_functions
+    stdlib.sorting_functions
     stdlib.statistical_functions
+    stdlib.utility_functions
 
 
 Externals
@@ -63,58 +70,7 @@ The set of types below are only materialize inside the OmniSciDB SQL Engine. Thu
 one cannot create and use them inside the REPL, for instance.
 
 
-.. raw:: html
+.. autosummary::
+    :toctree: generated/
 
-    <table class="longtable docutils align-default">
-        <colgroup>
-        <col style="width: 10%">
-        <col style="width: 90%">
-        </colgroup>
-        <tbody>
-            <tr class="row-odd">
-                <td>
-                    <p><a class="reference internal" href="omnisci/array.html" title="rbc.omnisci_backend.Array">
-                            <code class="xref py py-obj docutils literal notranslate">
-                                <span class="pre">rbc.omnisci_backend.Array</span>
-                            </code></a></p>
-                </td>
-                <td><p></p></td>
-            </tr>
-            <tr class="row-even">
-                <td>
-                    <p><a class="reference internal" href="omnisci/bytes.html" title="rbc.omnisci_backend.Bytes">
-                            <code class="xref py py-obj docutils literal notranslate">
-                                <span class="pre">rbc.omnisci_backend.Bytes</span>
-                            </code></a></p>
-                </td>
-                <td><p></p></td>
-            </tr>
-            <tr class="row-odd">
-                <td>
-                    <p><a class="reference internal" href="omnisci/column.html" title="rbc.omnisci_backend.Column">
-                            <code class="xref py py-obj docutils literal notranslate">
-                                <span class="pre">rbc.omnisci_backend.Column</span>
-                            </code></a></p>
-                </td>
-                <td><p></p></td>
-            </tr>
-            <tr class="row-even">
-                <td>
-                    <p><a class="reference internal" href="omnisci/outputcolumn.html" title="rbc.omnisci_backend.OutputColumn">
-                            <code class="xref py py-obj docutils literal notranslate">
-                                <span class="pre">rbc.omnisci_backend.OutputColumn</span>
-                            </code></a></p>
-                </td>
-                <td><p></p></td>
-            </tr>
-            <tr class="row-odd">
-                <td>
-                    <p><a class="reference internal" href="omnisci/columnlist.html" title="rbc.omnisci_backend.ColumnList">
-                            <code class="xref py py-obj docutils literal notranslate">
-                                <span class="pre">rbc.omnisci_backend.ColumnList</span>
-                            </code></a></p>
-                </td>
-                <td><p></p></td>
-            </tr>
-        </tbody>
-    </table>
+    rbc.omnisci_backend.Array

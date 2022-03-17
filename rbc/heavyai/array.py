@@ -8,6 +8,10 @@ from .buffer import (BufferPointer, Buffer,
                      OmnisciBufferType,
                      omnisci_buffer_constructor)
 from numba.core import extending, types
+from typing import Union, TypeVar
+
+
+T = TypeVar('T')
 
 
 class OmnisciArrayType(OmnisciBufferType):
@@ -31,7 +35,101 @@ ArrayPointer = BufferPointer
 
 
 class Array(Buffer):
-    pass
+    """
+    In HeavyDB, an Array of type `T` is represented as follows:
+
+    .. code-block:: C
+
+        {
+            T* data,
+            int64_t size,
+            int8_t is_null
+        }
+
+    Array holds a contiguous block of memory and it implements a
+    subset of the array protocol.
+
+    Example
+
+    .. code-block:: python
+
+        from numba import types
+        from rbc.omnisci_backend import Array
+
+        @omnisci('int64[](int64)')
+        def my_arange(size):
+            arr = Array(size, types.int64)
+            for i in range(size):
+                a[i] = i
+            return a
+    """
+
+    def __init__(self, size: int, dtype: Union[str, types.Type]) -> None:
+        pass
+
+    def is_null(self) -> bool:
+        pass
+
+    @property
+    def dtype(self):
+        """
+        Data type of the array elements.
+        """
+        pass
+
+    @property
+    def device(self):
+        """
+        ❌ Not implemented
+
+        Hardware device the array data resides on.
+        """
+        pass
+
+    @property
+    def mT(self):
+        """
+        ❌ Not implemented
+
+        Transpose of a matrix (or a stack of matrices).
+        """
+        pass
+
+    @property
+    def ndim(self):
+        """
+        ❌ Not implemented
+
+        Number of array dimensions (axes).
+        """
+        pass
+
+    @property
+    def shape(self):
+        """
+        ❌ Not implemented
+
+        Array dimensions.
+        """
+        pass
+
+    @property
+    def size(self):
+        """
+        ❌ Not implemented
+
+        Number of elements in an array.
+        """
+        pass
+
+    @property
+    def T(self):
+        """
+        ❌ Not implemented
+
+        Transpose of the array.
+        """
+        pass
 
 
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
