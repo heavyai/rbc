@@ -15,7 +15,7 @@ def boston_house_prices(heavydb):
     # Upload Boston house prices to server, notice that we collect all
     # row values expect the last one (MEDV) to a FLOAT array.
 
-    csv_file = os.path.join(os.path.dirname(__file__), 'boston_house_prices.csv')
+    csv_file = os.path.join(os.path.dirname(__file__), '..', 'boston_house_prices.csv')
     data0 = []
     medv0 = []
     for i, line in enumerate(open(csv_file).readlines()):
