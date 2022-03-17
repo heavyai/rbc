@@ -353,6 +353,16 @@ def add_byval_metadata(main_library):
     main_library.add_ir_module(module)
 
 
+def add_manage_buffer_memory_metadata(main_library):
+    module = ir.Module()
+    flag_name = "manage_buffer_memory"
+    mflags = module.add_named_metadata('llvm.module.flags')
+    override_flag = int32_t(4)
+    flag = module.add_metadata([override_flag, flag_name, int1_t(1)])
+    mflags.add(flag)
+    main_library.add_ir_module(module)
+
+
 def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
@@ -409,6 +419,7 @@ def compile_to_LLVM(functions_and_signatures,
                     function_names.append(fname)
 
         add_byval_metadata(main_library)
+        add_manage_buffer_memory_metadata(main_library)
         main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
