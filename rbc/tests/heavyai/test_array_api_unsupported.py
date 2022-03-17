@@ -1,13 +1,13 @@
 import pytest
 from rbc.stdlib import array_api
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from numba import TypingError
 
 
 @pytest.fixture(scope="module")
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals()):
+    for o in heavydb_fixture(globals()):
         yield o
 
 
@@ -37,14 +37,14 @@ unsupported_functions = [
 
 # ensure unimplemented functions raise a meaninful exception
 @pytest.mark.parametrize('func_name', unsupported_functions)
-def test_unimplemented(omnisci, func_name):
+def test_unimplemented(heavydb, func_name):
 
     func = getattr(array_api, func_name)
 
-    @omnisci('int64(int64)')
+    @heavydb('int64(int64)')
     def test_exception_raised(x):
         return func(x)
 
     # NumbaNotSupportedError is captured and a TypingError is returned instead
     with pytest.raises(TypingError, match=f'Function "{func_name}" is not supported.'):
-        omnisci.register()
+        heavydb.register()
