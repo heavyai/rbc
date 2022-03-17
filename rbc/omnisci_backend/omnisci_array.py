@@ -46,10 +46,10 @@ class Array(Buffer):
             int8_t is_null
         }
 
-    Array is a contiguous block of memory that behaves like a python list.
+    Array holds a contiguous block of memory and it implements a
+    subset of the array protocol.
 
     Example
-
 
     .. code-block:: python
 
@@ -57,7 +57,7 @@ class Array(Buffer):
         from rbc.omnisci_backend import Array
 
         @omnisci('int64[](int64)')
-        def create_and_fill_array(size):
+        def my_arange(size):
             arr = Array(size, types.int64)
             for i in range(size):
                 a[i] = i
@@ -91,7 +91,7 @@ class Array(Buffer):
         """
         ❌ Not implemented
 
-        Transpose of a amtrix (or a stack of matrices).
+        Transpose of a matrix (or a stack of matrices).
         """
         pass
 
