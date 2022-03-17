@@ -7,9 +7,9 @@ from .pipeline import *  # noqa: F401, F403
 from .column_list import *  # noqa: F401, F403
 from .table_function_manager import *  # noqa: F401, F403
 
-import .mathimpl as math  # noqa: F401
-import .npyimpl as np  # noqa: F401
-import .python_operators as operators  # noqa: F401
+from . import mathimpl as math  # noqa: F401
+from . import npyimpl as np  # noqa: F401
+from . import python_operators as operators  # noqa: F401
 
 # initialize the array api
 from rbc.stdlib import array_api  # noqa: F401
