@@ -12,7 +12,8 @@ from numba.core import extending, types
 
 __all__ = [
     'full', 'full_like', 'empty_like', 'empty', 'zeros', 'zeros_like',
-    'ones', 'ones_like', 'array', 'cumsum'
+    'ones', 'ones_like', 'array', 'cumsum', 'arange', 'asarray',
+    'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu'
 ]
 
 
@@ -20,7 +21,7 @@ expose = Expose(globals(), 'creation_functions')
 
 
 @expose.not_implemented('arange')
-def arange(start, stop=None, step=1, dtype=None, device=None):
+def _array_api_arange(start, stop=None, step=1, dtype=None, device=None):
     """
     Return evenly spaced values within a given interval.
     """
@@ -28,7 +29,7 @@ def arange(start, stop=None, step=1, dtype=None, device=None):
 
 
 @expose.not_implemented('asarray')
-def asarray(obj, dtype=None, device=None, copy=None):
+def _array_api_asarray(obj, dtype=None, device=None, copy=None):
     """
     Convert the input to an array.
     """
@@ -36,7 +37,7 @@ def asarray(obj, dtype=None, device=None, copy=None):
 
 
 @expose.not_implemented('eye')
-def eye(n_rows, n_cols=None, k=0, dtype=None, device=None):
+def _array_api_eye(n_rows, n_cols=None, k=0, dtype=None, device=None):
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.
     """
@@ -44,14 +45,14 @@ def eye(n_rows, n_cols=None, k=0, dtype=None, device=None):
 
 
 @expose.not_implemented('from_dlpack')
-def from_dlpack(x):
+def _array_api_from_dlpack(x):
     """
     """
     pass
 
 
 @expose.not_implemented('linspace')
-def linspace(start, stop, num, dtype=None, device=None, endpoint=True):
+def _array_api_linspace(start, stop, num, dtype=None, device=None, endpoint=True):
     """
     Return evenly spaced numbers over a specified interval.
     """
@@ -59,7 +60,7 @@ def linspace(start, stop, num, dtype=None, device=None, endpoint=True):
 
 
 @expose.not_implemented('meshgrid')
-def meshgrid(*arrays, indexing='xy'):
+def _array_api_meshgrid(*arrays, indexing='xy'):
     """
     Return coordinate matrices from coordinate vectors.
     """
@@ -67,7 +68,7 @@ def meshgrid(*arrays, indexing='xy'):
 
 
 @expose.not_implemented('tril')
-def tril(x, k=0):
+def _array_api_tril(x, k=0):
     """
     Lower triangle of an array.
     """
@@ -75,7 +76,7 @@ def tril(x, k=0):
 
 
 @expose.not_implemented('triu')
-def triu(x, k=0):
+def _array_api_triu(x, k=0):
     """
     Upper triangle of an array.
     """
