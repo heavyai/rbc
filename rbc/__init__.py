@@ -8,6 +8,6 @@ os.environ["NUMBA_CAPTURED_ERRORS"] = "new_style"
 from .remotejit import RemoteJIT  # noqa: F401
 from .heavydb import RemoteHeavyDB  # noqa: F401
 
-from ._version import get_versions
+from ._version import get_versions  # noqa: E402
 __version__ = get_versions()['version']
 del get_versions

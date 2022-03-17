@@ -482,6 +482,18 @@ def test_array_dtype(heavydb):
         assert list(result) == [(r,)] * 5
 
 
+def test_array_invalid_dtype(heavydb):
+
+    @heavydb('int64[](int64)')
+    def array_invalid_dtype(sz):
+        return array_api.zeros(sz, dtype=123)
+
+    err_msg = ("Expected dtype derived from numba.types.DTypeSpec but got "
+               "<class 'numba.core.types.scalars.Integer'>")
+    with pytest.raises(TypeError, match=err_msg):
+        heavydb.register()
+
+
 def test_array_enumerate(heavydb):
     table = heavydb.table_name
 

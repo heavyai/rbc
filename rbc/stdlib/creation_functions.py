@@ -34,6 +34,9 @@ def _determine_dtype(dtype, fill_value):
         elif isinstance(dtype, types.StringLiteral):
             return typesystem.Type.fromstring(dtype.literal_value).tonumba()
         else:
+            if not isinstance(dtype, types.DTypeSpec):
+                raise TypeError('Expected dtype derived from numba.types.DTypeSpec '
+                                f'but got {type(dtype)}')
             return typesystem.Type.fromobject(dtype).tonumba()
 
 
