@@ -225,7 +225,7 @@ jobs:
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
           RBC_TESTS_FULL: TRUE
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
+          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k heavyai
 
       - name: Run rbc tests
         shell: bash -l {0}
@@ -236,7 +236,7 @@ jobs:
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
           RBC_TESTS_FULL: TRUE
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k omnisci
+          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k heavyai
 
       - name: Show Omniscidb conda logs on failure [conda]
         shell: bash -l {0}
