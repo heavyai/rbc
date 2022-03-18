@@ -5,7 +5,7 @@ from rbc.heavyai import Array
 from rbc.errors import OmnisciServerError
 from rbc.stdlib import array_api
 from numba import types as nb_types
-from numba import TypingError
+from numba.core.errors import TypingError
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
@@ -406,13 +406,18 @@ def test_issue197(heavydb, typ, col, suffix):
 
     heavydb(f'{typ}[]({typ}[])')(fn_issue197)
 
-    _, result = heavydb.sql_execute(
-        f'SELECT {col}, {fn_name}({col}) FROM {heavydb.table_name};'
-    )
+    if 'trunc' in suffix:
+        with pytest.raises(TypingError, match='mismatching types'):
+            heavydb.register()
+        heavydb.reset()
+    else:
+        _, result = heavydb.sql_execute(
+            f'SELECT {col}, {fn_name}({col}) FROM {heavydb.table_name};'
+        )
 
-    column, ret = list(result)[0]
-    for x, y in zip(column, ret):
-        assert y == x + 3
+        column, ret = list(result)[0]
+        for x, y in zip(column, ret):
+            assert y == x + 3
 
 
 def test_issue197_bool(heavydb):

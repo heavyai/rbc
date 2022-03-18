@@ -425,25 +425,19 @@ def omnisci_buffer_getitem(x, i):
 
 # [rbc issue-197] Numba promotes operations like
 # int32(a) + int32(b) to int64
-def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
+def promote_type_if_needed(builder, nb_value, eltype, value, buf_typ):
     # buf[pos] = val
 
-    if isinstance(nb_value, types.Integer):  # Integer
-        if eltype.bitwidth < nb_value.bitwidth:
-            return builder.trunc(value, buf_typ)  # truncate
-        elif eltype.bitwidth > nb_value.bitwidth:
+    if isinstance(nb_value, types.Integer) and isinstance(eltype, types.Integer):  # Integer
+        if eltype.bitwidth > nb_value.bitwidth:
             is_signed = nb_value.signed
             return builder.sext(value, buf_typ) if is_signed else \
                 builder.zext(value, buf_typ)  # extend
-    elif isinstance(nb_value, types.Float):  # Floating-point
-        if eltype.bitwidth < nb_value.bitwidth:
-            return builder.fptrunc(value, buf_typ)  # truncate
-        elif eltype.bitwidth > nb_value.bitwidth:
+    elif isinstance(nb_value, types.Float) and isinstance(eltype, types.Float):  # Floating-point
+        if eltype.bitwidth > nb_value.bitwidth:
             return builder.fpext(value, buf_typ)  # extend
     elif isinstance(nb_value, types.Boolean):
-        if buf_typ.width < value.type.width:
-            return builder.trunc(value, buf_typ)
-        elif buf_typ.width > value.type.width:
+        if buf_typ.width > value.type.width:
             return builder.zext(value, buf_typ)
 
     return value
@@ -465,7 +459,7 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
         ptr = builder.load(rawptr)
 
         buf = builder.load(builder.gep(ptr, [zero, zero]))
-        value = truncate_or_extend(builder, nb_value, eltype, value, buf.type.pointee)
+        value = promote_type_if_needed(builder, nb_value, eltype, value, buf.type.pointee)
         builder.store(value, builder.gep(buf, [index]))
 
     return sig, codegen
@@ -481,7 +475,7 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
     def codegen(context, builder, signature, args):
         data, index, value = args
         ptr = irutils.get_member_value(builder, data, 0)
-        value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
+        value = promote_type_if_needed(builder, nb_value, eltype, value, ptr.type.pointee)
 
         builder.store(value, builder.gep(ptr, [index]))
 
