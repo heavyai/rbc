@@ -15,7 +15,7 @@ from llvmlite import ir
 from rbc import typesystem
 from .buffer import (
     BufferPointer, Buffer, OmnisciBufferType,
-    omnisci_buffer_constructor)
+    omnisci_buffer_constructor, BufferType)
 from numba.core import types, extending, cgutils
 
 
@@ -39,6 +39,22 @@ class OmnisciBytesType(OmnisciBufferType):
             return 1
         if other.is_string:
             return 2
+
+    def tonumba(self, bool_is_int8=None):
+        ptr_t = typesystem.Type(self.element_type, '*', name='ptr')
+        size_t = typesystem.Type.fromstring('size_t sz')
+        extra_members = tuple(map(typesystem.Type.fromobject, self.buffer_extra_members))
+        buffer_type = typesystem.Type(
+            ptr_t,
+            size_t,
+            *extra_members
+        )
+        buffer_type._params['NumbaType'] = BufferType
+        buffer_type._params['NumbaPointerType'] = BytesPointer
+        numba_type = buffer_type.tonumba(bool_is_int8=True)
+        if self.pass_by_value:
+            return numba_type
+        return BytesPointer(numba_type)
 
 
 class BytesPointer(BufferPointer):

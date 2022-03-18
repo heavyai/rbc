@@ -33,6 +33,7 @@ from rbc.targetinfo import TargetInfo
 from llvmlite import ir as llvm_ir
 from numba.core import datamodel, cgutils, extending, types, imputils
 from rbc.errors import UnsupportedError
+import warnings
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -429,15 +430,24 @@ def promote_type_if_needed(builder, nb_value, eltype, value, buf_typ):
     # buf[pos] = val
 
     if isinstance(nb_value, types.Integer) and isinstance(eltype, types.Integer):  # Integer
-        if eltype.bitwidth > nb_value.bitwidth:
+        if eltype.bitwidth < nb_value.bitwidth:
+            warnings.warn(f'Truncating {nb_value} to {eltype}')
+            return builder.trunc(value, buf_typ)
+        elif eltype.bitwidth > nb_value.bitwidth:
             is_signed = nb_value.signed
             return builder.sext(value, buf_typ) if is_signed else \
                 builder.zext(value, buf_typ)  # extend
     elif isinstance(nb_value, types.Float) and isinstance(eltype, types.Float):  # Floating-point
-        if eltype.bitwidth > nb_value.bitwidth:
+        if eltype.bitwidth < nb_value.bitwidth:
+            warnings.warn(f'Truncating {nb_value} to {eltype}')
+            return builder.fptrunc(value, buf_typ)
+        elif eltype.bitwidth > nb_value.bitwidth:
             return builder.fpext(value, buf_typ)  # extend
     elif isinstance(nb_value, types.Boolean):
-        if buf_typ.width > value.type.width:
+        if buf_typ.width < value.type.width:
+            warnings.warn(f'Truncating {nb_value} to {eltype}')
+            return builder.trunc(value, buf_typ)
+        elif buf_typ.width > value.type.width:
             return builder.zext(value, buf_typ)
 
     return value
