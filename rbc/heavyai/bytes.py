@@ -10,11 +10,18 @@ Omnisci Bytes represents the following structure:
 
 __all__ = ['BytesPointer', 'Bytes', 'OmnisciBytesType']
 
+import operator
+from llvmlite import ir
 from rbc import typesystem
 from .buffer import (
     BufferPointer, Buffer, OmnisciBufferType,
     omnisci_buffer_constructor)
-from numba.core import types, extending
+from numba.core import types, extending, cgutils
+
+
+int8_t = ir.IntType(8)
+int32_t = ir.IntType(32)
+int64_t = ir.IntType(64)
 
 
 class OmnisciBytesType(OmnisciBufferType):
@@ -34,11 +41,31 @@ class OmnisciBytesType(OmnisciBufferType):
             return 2
 
 
-BytesPointer = BufferPointer
+class BytesPointer(BufferPointer):
+    pass
 
 
 class Bytes(Buffer):
     pass
+
+
+@extending.intrinsic
+def omnisci_bytes_ptr_setitem_(typingctx, data, index, value):
+    sig = types.none(data, index, value)
+
+    def codegen(context, builder, signature, args):
+        zero = int32_t(0)
+
+        data, index, value = args
+
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        ptr = builder.load(rawptr)
+
+        buf = builder.load(builder.gep(ptr, [zero, zero]))
+        trunc = builder.trunc(value, buf.type.pointee)
+        builder.store(trunc, builder.gep(buf, [index]))
+
+    return sig, codegen
 
 
 @extending.lower_builtin(Bytes, types.Integer)
@@ -51,3 +78,9 @@ def type_omnisci_bytes(context):
     def typer(size):
         return typesystem.Type.fromobject('Bytes').tonumba()
     return typer
+
+
+@extending.overload(operator.setitem)
+def omnisci_bytes_setitem(a, i, v):
+    if isinstance(a, BytesPointer):
+        return lambda a, i, v: omnisci_bytes_ptr_setitem_(a, i, v)
