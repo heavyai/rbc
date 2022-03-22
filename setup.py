@@ -37,15 +37,6 @@ def setup_package():
         install_requires = []
         setup_requires = []
         tests_require = []
-        # manually check that cffi is available, else _rbclib is silently
-        # ignored and result in an ImportError at runtime
-        try:
-            import cffi  # noqa: F401
-        except ImportError as e:
-            msg = (f'{e}\n'
-                   f'cffi is a required build-time dependency, please do:\n'
-                   f'    conda install -c conda-forge cffi')
-            raise RuntimeError(msg)
     else:
         # Get requirements via PyPI. Use at your own risk as more than
         # once the numba and llvmlite have not matched.
@@ -77,8 +68,7 @@ def setup_package():
             "Topic :: Software Development",
         ],
         packages=find_packages(),
-        package_data={'': ['*.thrift'], 'rbc.rbclib': ['*.c', '*.h']},
-        cffi_modules=['rbc/rbclib//_rbclib_build.py:ffibuilder'],
+        package_data={'': ['*.thrift']},
         install_requires=install_requires,
         setup_requires=setup_requires,
         tests_require=tests_require,

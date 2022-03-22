@@ -79,8 +79,7 @@ class TargetInfo(object):
         obj._init(*args, **kwargs)
         return obj
 
-    def _init(self, name: str, strict: bool = False, nested: bool = False,
-              use_tracing_allocator: bool = False):
+    def _init(self, name: str, strict: bool = False, nested: bool = False):
         """
         Parameters
         ----------
@@ -91,13 +90,10 @@ class TargetInfo(object):
           typesystem.
         nested: bool
           When True, allow nested target info contexts.
-        use_tracing_allocator: bool
-          When True, use the tracing allocator, to enable the LeakDetector
         """
         self.name = name
         self.strict = strict
         self.nested = nested
-        self.use_tracing_allocator = use_tracing_allocator
         self._parent = None
         self.info = {}
         self.type_sizeof = {}
@@ -131,7 +127,6 @@ class TargetInfo(object):
 
     def todict(self):
         return dict(name=self.name, strict=self.strict,
-                    use_tracing_allocator=self.use_tracing_allocator,
                     info=self.info,
                     type_sizeof=self.type_sizeof,
                     libraries=[lib.name for lib in self._supported_libraries],
@@ -140,8 +135,7 @@ class TargetInfo(object):
     @classmethod
     def fromdict(cls, data):
         target_info = cls(data.get('name', 'somedevice'),
-                          strict=data.get('strict', False),
-                          use_tracing_allocator=data.get('use_tracing_allocator', False))
+                          strict=data.get('strict', False))
         target_info.update(data)
         return target_info
 
@@ -178,18 +172,17 @@ class TargetInfo(object):
     _host_target_info_cache = {}
 
     @classmethod
-    def host(cls, name='host_cpu', strict=False, use_tracing_allocator=False):
+    def host(cls, name='host_cpu', strict=False):
         """Return target info for host CPU.
         """
-        key = (name, strict, use_tracing_allocator)
+        key = (name, strict)
 
         target_info = TargetInfo._host_target_info_cache.get(key)
         if target_info is not None:
             return target_info
 
         import llvmlite.binding as ll
-        target_info = cls(name=name, strict=strict,
-                          use_tracing_allocator=use_tracing_allocator)
+        target_info = cls(name=name, strict=strict)
         target_info.set('name', ll.get_host_cpu_name())
         target_info.set('triple', ll.get_default_triple())
         features = ','.join(['-+'[int(v)] + k
@@ -224,15 +217,6 @@ class TargetInfo(object):
         target_info.add_library('m')
         target_info.add_library('stdio')
         target_info.add_library('stdlib')
-        target_info.add_library('rbclib')
-        if use_tracing_allocator:
-            target_info.set('fn_allocate_varlen_buffer',
-                            'rbclib_tracing_allocate_varlen_buffer')
-            target_info.set('fn_free_buffer',
-                            'rbclib_tracing_free_buffer')
-        else:
-            target_info.set('fn_allocate_varlen_buffer', 'rbclib_allocate_varlen_buffer')
-            target_info.set('fn_free_buffer', 'rbclib_free_buffer')
         cls._host_target_info_cache[key] = target_info
 
         return target_info
@@ -243,8 +227,7 @@ class TargetInfo(object):
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
                           'has_cpython', 'has_numba', 'driver', 'software',
-                          'llvm_version', 'null_values',
-                          'fn_allocate_varlen_buffer', 'fn_free_buffer')
+                          'llvm_version', 'null_values')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
