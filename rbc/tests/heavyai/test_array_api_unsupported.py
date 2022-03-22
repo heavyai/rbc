@@ -37,6 +37,7 @@ unsupported_functions = [
 
 # ensure unimplemented functions raise a meaninful exception
 @pytest.mark.parametrize('func_name', unsupported_functions)
+@pytest.mark.skip()
 def test_unimplemented(heavydb, func_name):
 
     func = getattr(array_api, func_name)
@@ -48,3 +49,4 @@ def test_unimplemented(heavydb, func_name):
     # NumbaNotSupportedError is captured and a TypingError is returned instead
     with pytest.raises(TypingError, match=f'Function "{func_name}" is not supported.'):
         heavydb.register()
+    heavydb.unregister()
