@@ -84,7 +84,7 @@ def get_literal_return(func, verbose=False):
                 print(source)
 
 
-def _global_omnisci():
+def _global_heavydb():
     """Implements singleton of a global RemoteOmnisci instance.
     """
     config = get_client_config()
@@ -94,7 +94,7 @@ def _global_omnisci():
         yield remotedb
 
 
-global_omnisci_singleton = _global_omnisci()  # generator object
+global_heavydb_singleton = _global_heavydb()  # generator object
 
 
 def is_available(_cache={}):
@@ -104,7 +104,7 @@ def is_available(_cache={}):
     """
 
     if not _cache:
-        remotedb = next(global_omnisci_singleton)
+        remotedb = next(global_heavydb_singleton)
         try:
             version = remotedb.version
         except Exception as msg:
