@@ -355,7 +355,7 @@ def add_byval_metadata(main_library):
 
 def add_manage_buffer_memory_metadata(main_library):
     module = ir.Module()
-    flag_name = "manage_buffer_memory"
+    flag_name = "manage_memory_buffer"
     mflags = module.add_named_metadata('llvm.module.flags')
     override_flag = int32_t(4)
     flag = module.add_metadata([override_flag, flag_name, int1_t(1)])

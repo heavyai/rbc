@@ -129,7 +129,7 @@ def _omnisci_array_mean(x):
     if isinstance(x, ArrayPointer):
         def impl(x):
             if len(x) == 0:
-                printf("Mean of empty array")
+                printf("Mean of empty array\n")
                 return zero_value
             return sum(x) / len(x)
         return impl

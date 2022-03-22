@@ -1,7 +1,6 @@
 import operator
 
 from rbc.errors import NumbaTypeError
-from .buffer import BufferMeta, free_all_other_buffers
 from numba.core import ir, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.compiler_machinery import FunctionPass, register_pass
