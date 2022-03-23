@@ -5,7 +5,7 @@ Array
 
 .. py:class:: Array<T>
     
-    In OmniSciDB, an Array with a type `T` is represented as follows:
+    In HeavyDB, an Array with a type `T` is represented as follows:
 
     .. code-block:: C
 

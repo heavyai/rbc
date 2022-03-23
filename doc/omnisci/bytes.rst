@@ -5,7 +5,7 @@ Bytes
 
 .. py:class:: Bytes
 
-    In OmniSciDB, Bytes is represented as follows:
+    In HeavyDB, Bytes is represented as follows:
 
     .. code-block:: C
 

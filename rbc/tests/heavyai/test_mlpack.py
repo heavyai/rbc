@@ -1,7 +1,7 @@
 import pytest
 import re
 from rbc.tests import heavydb_fixture
-from rbc.errors import OmnisciServerError
+from rbc.errors import HeavyDBServerError
 
 
 @pytest.fixture(scope='module')
@@ -24,7 +24,7 @@ def test_mlpack(heavydb, func):
 
     try:
         _, result = heavydb.sql_execute(query)
-    except OmnisciServerError as msg:
+    except HeavyDBServerError as msg:
         m = re.match(fr'.*Undefined function call {func!r}',
                      msg.args[0])
         if m is not None:

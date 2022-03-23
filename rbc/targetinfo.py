@@ -362,7 +362,7 @@ class TargetInfo(object):
         """
         null_values = self.info.get('null_values', {})
         if not null_values:
-            raise RuntimeError('null value support requires omniscidb-internal PR 5104')
+            raise RuntimeError('null value support requires heavydb-internal PR 5104')
         return null_values
 
     # TODO: info may also contain: count, threads, cores

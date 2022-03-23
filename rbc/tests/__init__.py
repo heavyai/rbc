@@ -43,7 +43,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
        from rbc.tests import heavydb_fixture
 
        @pytest.fixture(scope='module')
-       def omnisci():
+       def heavydb():
            from o in heavydb_fixture(globals()):
                # do some customization here
                yield o
@@ -78,7 +78,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
         version and the heavydb version match exactly and these
         correspond to the current development version, if the
         specified label does not match with the value of envrinment
-        variable OMNISCIDB_DEV_LABEL, then the corresponing test will
+        variable HEAVYDB_DEV_LABEL, then the corresponing test will
         be skipped. Use label 'docker-dev' when using heavydb dev
         docker image.
 
@@ -126,7 +126,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
             pytest.skip(_reason)
 
         if label is not None:
-            env_label = os.environ.get('OMNISCIDB_DEV_LABEL')
+            env_label = os.environ.get('HEAVYDB_DEV_LABEL')
             if env_label and label == 'docker-dev':
                 # docker-dev is some older master, so it must work
                 # with the current master as well as with branches based on the current master.
@@ -138,7 +138,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                 # master.
                 label = env_label
             if env_label is None:
-                warnings.warn('Environment does not specify label (OMNISCIDB_DEV_LABEL is unset).'
+                warnings.warn('Environment does not specify label (HEAVYDB_DEV_LABEL is unset).'
                               ' Tests with development labels will not be run.')
             if env_label != label:
                 _reason = (f'test requires version {version} with label {label},'

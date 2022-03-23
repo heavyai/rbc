@@ -3,7 +3,7 @@ import itertools
 import pytest
 import numpy as np
 
-from rbc.errors import UnsupportedError, OmnisciServerError
+from rbc.errors import UnsupportedError, HeavyDBServerError
 from rbc.tests import heavydb_fixture, assert_equal
 from rbc.typesystem import Type
 
@@ -753,7 +753,7 @@ def test_unregistering(heavydb):
     heavydb.unregister()
 
     msg = "Undefined function call"
-    with pytest.raises(OmnisciServerError, match=msg):
+    with pytest.raises(HeavyDBServerError, match=msg):
         heavydb.sql_execute('select fahrenheit2celsius(40)')
 
 

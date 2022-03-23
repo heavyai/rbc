@@ -7,9 +7,9 @@ from rbc.utils import get_version
 from numba.core.errors import TypingError
 
 
-class OmnisciServerError(Exception):
+class HeavyDBServerError(Exception):
     """
-    Raised when OmnisciDB server raises a runtime error that RBC knows
+    Raised when HeavyDB server raises a runtime error that RBC knows
     how to interpret.
     """
     pass

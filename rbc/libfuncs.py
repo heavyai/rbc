@@ -22,8 +22,8 @@ class Library:
             r = NVVMIntrinsics()
         elif libname == 'llvm':
             r = LLVMIntrinsics()
-        elif libname == 'omniscidb':
-            r = OmnisciDB()
+        elif libname == 'heavydb':
+            r = HeavyDB()
         else:
             raise ValueError(f'Unknown library {libname}')
         _cache[libname] = r
@@ -46,9 +46,9 @@ class Library:
         return False
 
 
-class OmnisciDB(Library):
+class HeavyDB(Library):
 
-    name = 'omniscidb'
+    name = 'heavydb'
 
     _function_names = list('''
     allocate_varlen_buffer set_output_row_size

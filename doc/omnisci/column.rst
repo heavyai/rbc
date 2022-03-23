@@ -8,7 +8,7 @@ Column
 
 .. py:class:: Column 
     
-    In OmniSciDB, a Column with a type `T` is represented as follows:
+    In HeavyDB, a Column with a type `T` is represented as follows:
 
     .. code-block:: C
 

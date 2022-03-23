@@ -1,4 +1,4 @@
-"""External functions defined by the OmniSciDB server
+"""External functions defined by the HeavyDB server
 """
 
 from rbc import irutils
@@ -15,7 +15,7 @@ def set_output_row_size(typingctx, set_output_row_size):
     allocates the corresponding column buffers
 
     .. note::
-        ``set_output_row_size`` is available only for CPU target and OmniSciDB v5.7 or newer
+        ``set_output_row_size`` is available only for CPU target and HeavyDB v5.7 or newer
     """
     # void is declared as 'none' in Numba and 'none' is converted to a void* (int8*). See:
     # https://github.com/numba/numba/blob/6881dfe3883d1344014ea16185ed87de4b75b9a1/numba/core/types/__init__.py#L95
@@ -24,7 +24,7 @@ def set_output_row_size(typingctx, set_output_row_size):
     def codegen(context, builder, sig, args):
         target_info = TargetInfo()
         if target_info.software[1][:3] < (5, 7, 0):
-            msg = 'set_output_row_size is only available in OmniSciDB 5.7 or newer'
+            msg = 'set_output_row_size is only available in HeavyDB 5.7 or newer'
             raise UnsupportedError(msg)
 
         fnty = ir.FunctionType(ir.VoidType(), [ir.IntType(64)])

@@ -1,14 +1,14 @@
-'''Omnisci Bytes type that corresponds to Omnisci type TEXT ENCODED NONE.
+'''HeavyDB Bytes type that corresponds to HeavyDB type TEXT ENCODED NONE.
 '''
 
-__all__ = ['OmnisciTextEncodingDictType', 'TextEncodingDict']
+__all__ = ['HeavyDBTextEncodingDictType', 'TextEncodingDict']
 
-from .metatype import OmnisciMetaType
+from .metatype import HeavyDBMetaType
 from rbc import typesystem
 
 
-class OmnisciTextEncodingDictType(typesystem.Type):
-    """Omnisci Text Encoding Dict type for RBC typesystem.
+class HeavyDBTextEncodingDictType(typesystem.Type):
+    """HeavyDB Text Encoding Dict type for RBC typesystem.
     """
 
     @property
@@ -16,5 +16,5 @@ class OmnisciTextEncodingDictType(typesystem.Type):
         return typesystem.Type('int32')
 
 
-class TextEncodingDict(object, metaclass=OmnisciMetaType):
+class TextEncodingDict(object, metaclass=HeavyDBMetaType):
     pass

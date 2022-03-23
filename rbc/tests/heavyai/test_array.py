@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 
 from rbc.heavyai import Array
-from rbc.errors import OmnisciServerError
+from rbc.errors import HeavyDBServerError
 from rbc.stdlib import array_api
 from numba import types as nb_types
 from numba import TypingError
@@ -462,7 +462,7 @@ def test_issue77(heavydb):
         _, result = heavydb.sql_execute('select issue77();')
         assert list(result)[0][0] == [1, 1, 1, 1, 1]
     else:
-        with pytest.raises(OmnisciServerError) as exc:
+        with pytest.raises(HeavyDBServerError) as exc:
             _, result = heavydb.sql_execute('select issue77();')
 
         assert exc.match('Could not bind issue77()')

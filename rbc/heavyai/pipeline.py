@@ -92,7 +92,7 @@ class DTypeComparison(FunctionPass):
         return mutated
 
 
-class OmnisciCompilerPipeline(CompilerBase):
+class HeavyDBCompilerPipeline(CompilerBase):
     def define_pipelines(self):
         # define a new set of pipelines (just one in this case) and for ease
         # base it on an existing pipeline from the DefaultPassBuilder,
