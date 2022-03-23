@@ -2,7 +2,6 @@ import math
 import pytest
 import sys
 import numpy as np
-import numba as nb
 
 import rbc.heavydb as rbc_heavydb
 from rbc.stdlib import array_api

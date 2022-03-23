@@ -491,7 +491,7 @@ def test_array_invalid_dtype(heavydb):
 
     err_msg = ("Expected dtype derived from numba.types.DTypeSpec but got "
                "<class 'numba.core.types.scalars.Integer'>")
-    with pytest.raises(TypeError, match=err_msg):
+    with pytest.raises(TypingError, match=err_msg):
         heavydb.register()
     heavydb.reset()
 
