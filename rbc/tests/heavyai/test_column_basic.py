@@ -1,0 +1,874 @@
+
+import os
+from collections import defaultdict
+import pytest
+import numpy as np
+
+
+rbc_heavydb = pytest.importorskip('rbc.heavydb')
+available_version, reason = rbc_heavydb.is_available()
+pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+
+
+@pytest.fixture(scope='module')
+def heavydb():
+    # TODO: use heavydb_fixture from rbc/tests/__init__.py
+    config = rbc_heavydb.get_client_config(debug=not True)
+    m = rbc_heavydb.RemoteHeavyDB(**config)
+    table_name = os.path.splitext(os.path.basename(__file__))[0]
+
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+
+    sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
+                'BOOLEAN', 'DOUBLE']
+    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b', 'd']
+    table_defn = ',\n'.join('%s %s' % (n, t)
+                            for t, n in zip(sqltypes, colnames))
+    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
+
+    data = defaultdict(list)
+    for i in range(5):
+        for j, n in enumerate(colnames):
+            if n == 'b':
+                data[n].append(i % 2 == 0)
+            elif n == 'd':
+                data[n].append(i + 1.5)
+            else:
+                data[n].append(i)
+
+    m.load_table_columnar(table_name, **data)
+    m.table_name = table_name
+    yield m
+    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+
+
+def test_sizer_row_multiplier_orig(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def my_row_copier_mul(x, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i] * 2
+        return m * input_row_count
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(my_row_copier_mul(cursor(select f8 '
+        f'from {heavydb.table_name}), 2));')
+
+    for i, r in enumerate(result):
+        assert r == (float((i % 5) * 2),)
+
+
+def test_sizer_row_multiplier_param1(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, double, int32, RowMultiplier,'
+             'OutputColumn<double>)')
+    def my_row_copier_mul_param1(x, alpha, beta, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i] * alpha + beta
+        return m * input_row_count
+
+    alpha = 3
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(my_row_copier_mul_param1('
+        f'cursor(select f8 from {heavydb.table_name}),'
+        f'cast({alpha} as double),'
+        'cast(4 as int), 2));')
+
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * alpha + 4,)
+
+
+def test_sizer_row_multiplier_param2(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(double, Column<double>, int32, RowMultiplier,'
+             'OutputColumn<double>)')
+    def my_row_copier_mul_param2(alpha, x, beta, m, y):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = x[i] * alpha + beta
+        return m * input_row_count
+
+    alpha = 3
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(my_row_copier_mul_param2('
+        f'cast({alpha} as double),'
+        f'cursor(select f8 from {heavydb.table_name}),'
+        'cast(4 as int), 2));')
+
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * alpha + 4,)
+
+
+def test_sizer_constant_parameter(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, ConstantParameter, OutputColumn<double>)')
+    def my_row_copier_cp(x, m, y):
+        n = len(x)
+        for i in range(m):
+            j = i % n
+            y[i] = x[j] * 2
+        return m
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(my_row_copier_cp(cursor(select f8 '
+        f'from {heavydb.table_name}), 3));')
+    result = list(result)
+    assert len(result) == 3
+    for i, r in enumerate(result):
+        assert r == (i * 2,)
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(my_row_copier_cp(cursor(select f8 '
+        f'from {heavydb.table_name}), 8));')
+    result = list(result)
+    assert len(result) == 8
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * 2,)
+
+
+def test_sizer_return_size(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, OutputColumn<double>)')
+    def my_row_copier_c(x, y):
+        for i in range(13):
+            j = i % len(x)
+            y[i] = x[j] * 2
+        return 13
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(my_row_copier_c(cursor(select f8 '
+        f'from {heavydb.table_name})));')
+    result = list(result)
+    assert len(result) == 13
+    for i, r in enumerate(result):
+        assert r == ((i % 5) * 2,), repr((i, r))
+
+
+def test_rowmul_add_columns(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, Column<double>, double,'
+             ' RowMultiplier, OutputColumn<double>)')
+    def add_columns(x, y, alpha, m, r):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                r[j] = x[i] + alpha * float(y[i])
+        return m * input_row_count
+
+    alpha = 2.5
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(add_columns('
+        f'cursor(select f8 from {heavydb.table_name}),'
+        f' cursor(select d from {heavydb.table_name}),'
+        f' cast({alpha} as double), 1));')
+
+    for i, r in enumerate(result):
+        assert r == (i + alpha * (i + 1.5),)
+
+
+def test_rowmul_return_mixed_columns(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<float>)')
+    def ret_mixed_columns(x, m, y, z):
+        input_row_count = len(x)
+        for i in range(input_row_count):
+            for c in range(m):
+                j = i + c * input_row_count
+                y[j] = 2 * x[i]
+                z[j] = np.float32(3 * x[i])
+        return m * input_row_count
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(ret_mixed_columns('
+        f'cursor(select f8 from {heavydb.table_name}), 1));')
+
+    for i, r in enumerate(result):
+        assert r[0] == float(2 * i)
+        assert r[1] == float(3 * i)
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(ret_mixed_columns('
+        f'cursor(select f8 from {heavydb.table_name}), 2));')
+
+    for i, r in enumerate(result):
+        assert r[0] == float(2 * (i % 5))
+        assert r[1] == float(3 * (i % 5))
+
+    descr, result = heavydb.sql_execute(
+        'select out1, out0 from table(ret_mixed_columns('
+        f'cursor(select f8 from {heavydb.table_name}), 1));')
+
+    for i, r in enumerate(result):
+        assert r[1] == float(2 * i)
+        assert r[0] == float(3 * i)
+
+
+@pytest.mark.parametrize("max_n", [-1, 3])
+@pytest.mark.parametrize("sizer", [1, 2])
+@pytest.mark.parametrize("num_columns", [1, 2, 3, 4])
+def test_rowmul_return_multi_columns(heavydb, num_columns, sizer, max_n):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    if num_columns == 1:
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>)')
+        def ret_1_columns(n, x1, m, y1):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    if num_columns == 2:
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>, OutputColumn<double>)')
+        def ret_2_columns(n, x1, m, y1, y2):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+                    y2[j] = float(2*(j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    if num_columns == 3:
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>, OutputColumn<double>,'
+                 ' OutputColumn<double>)')
+        def ret_3_columns(n, x1, m, y1, y2, y3):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+                    y2[j] = float(2*(j+1))
+                    y3[j] = float(3*(j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    if num_columns == 4:
+        @heavydb('int32(int32, Column<double>, RowMultiplier,'
+                 ' OutputColumn<double>, OutputColumn<double>,'
+                 ' OutputColumn<double>, OutputColumn<double>)')
+        def ret_4_columns(n, x1, m, y1, y2, y3, y4):
+            input_row_count = len(x1)
+            for i in range(input_row_count):
+                for c in range(m):
+                    j = i + c * input_row_count
+                    y1[j] = float((j+1))
+                    y2[j] = float(2*(j+1))
+                    y3[j] = float(3*(j+1))
+                    y4[j] = float(4*(j+1))
+            if n < 0:
+                return m * input_row_count
+            return n
+
+    descr, result = heavydb.sql_execute(
+        f'select * from table(ret_{num_columns}_columns({max_n}, '
+        f'cursor(select f8 from {heavydb.table_name}), {sizer}));')
+
+    result = list(result)
+
+    if max_n == -1:
+        assert len(result) == sizer * 5
+    else:
+        assert len(result) == max_n
+    for i, r in enumerate(result):
+        for j, v in enumerate(r):
+            assert v == float((i+1) * (j+1))
+
+
+@pytest.mark.parametrize("variant", [1, 2, 3])
+def test_issue173(heavydb, variant):
+    heavydb.reset()
+    heavydb.register()
+
+    def mask_zero(x, b, m, y):
+        for i in range(len(x)):
+            if b[i]:
+                y[i] = 0.0
+            else:
+                y[i] = x[i]
+        return len(x)
+
+    descr, result = heavydb.sql_execute(
+        f'select f8, b from {heavydb.table_name}')
+    f8, b = zip(*list(result))
+
+    # remove after resolving rbc issue 175:
+    mask_zero.__name__ += f'_{variant}'
+
+    if variant == 1:
+        heavydb('int32(Column<double>, Column<bool>, RowMultiplier,'
+                ' OutputColumn<double>)')(mask_zero)
+        descr, result = heavydb.sql_execute(
+            f'select * from table({mask_zero.__name__}('
+            f'cursor(select f8 from {heavydb.table_name}),'
+            f'cursor(select b from {heavydb.table_name}), 1))')
+    elif variant == 2:
+        heavydb('int32(Cursor<Column<double>, Column<bool>>, RowMultiplier,'
+                ' OutputColumn<double>)')(mask_zero)
+
+        descr, result = heavydb.sql_execute(
+            f'select * from table({mask_zero.__name__}('
+            f'cursor(select f8, b from {heavydb.table_name}), 1))')
+    elif variant == 3:
+        heavydb('int32(Cursor<double, bool>, RowMultiplier,'
+                ' OutputColumn<double>)')(mask_zero)
+
+        descr, result = heavydb.sql_execute(
+            f'select * from table({mask_zero.__name__}('
+            f'cursor(select f8, b from {heavydb.table_name}), 1))')
+    else:
+        raise ValueError(variant)
+
+    result = list(result)
+
+    for i in range(len(result)):
+        assert result[i][0] == (0.0 if b[i] else f8[i])
+
+
+def test_redefine(heavydb):
+    heavydb.reset()
+    # register an empty set of UDFs in order to avoid unregistering
+    # UDFs created directly from LLVM IR strings when executing SQL
+    # queries:
+    heavydb.register()
+
+    descr, result = heavydb.sql_execute(
+        f'select f8, i4 from {heavydb.table_name}')
+
+    f8, i4 = zip(*result)
+
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
+    def redefined_udtf(x, m, y):  # noqa: E501, F811
+        for i in range(len(x)):
+            y[i] = x[i] + 1
+        return len(x)
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select f8 from {heavydb.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == f8[i] + 1
+
+    # redefine implementation
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')  # noqa: E501, F811
+    def redefined_udtf(x, m, y):  # noqa: E501, F811
+        for i in range(len(x)):
+            y[i] = x[i] + 2
+        return len(x)
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select f8 from {heavydb.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == f8[i] + 2
+
+    # overload with another type
+    @heavydb('int32(Column<int32>, RowMultiplier, OutputColumn<int32>)')  # noqa: E501, F811
+    def redefined_udtf(x, m, y):  # noqa: E501, F811
+        for i in range(len(x)):
+            y[i] = x[i] + 3
+        return len(x)
+
+    descr, result = heavydb.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select i4 from {heavydb.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == i4[i] + 3
+
+    # check overload
+    descr, result = heavydb.sql_execute(
+        'select * from table(redefined_udtf(cursor('
+        f'select f8 from {heavydb.table_name}), 1))')
+    result = list(result)
+    for i in range(len(result)):
+        assert result[i][0] == f8[i] + 2
+
+
+@pytest.mark.parametrize("step", [1, 2, 3])
+def test_overload_nonuniform(heavydb, step):
+    pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
+
+    heavydb.reset()
+    heavydb.register()
+
+    if step > 0:
+        @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        def overloaded_udtf(x, m, y):  # noqa: E501, F811
+            y[0] = 64
+            return 1
+
+    if step > 1:
+        @heavydb('int32(Column<float>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        def overloaded_udtf(x, m, y):  # noqa: E501, F811
+            y[0] = 32
+            return 1
+
+    if step > 2:
+        @heavydb('int32(Cursor<Column<float>, Column<float>>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
+        def overloaded_udtf(x1, x2, m, y):  # noqa: E501, F811
+            y[0] = 132
+            return 1
+
+    sql_query = ('select * from table(overloaded_udtf(cursor('
+                 f'select f8 from {heavydb.table_name}), 1))')
+    if step > 0:
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+        assert result[0][0] == 64
+
+    sql_query = ('select * from table(overloaded_udtf(cursor('
+                 f'select f4 from {heavydb.table_name}), 1))')
+    if step > 1:
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+        assert result[0][0] == 32
+    else:
+        with pytest.raises(
+                Exception,
+                match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>, INTEGER\) not supported"
+                       r"|Could not bind overloaded_udtf\(COLUMN<FLOAT>, INTEGER\))")):
+            descr, result = heavydb.sql_execute(sql_query)
+
+    sql_query = ('select * from table(overloaded_udtf(cursor('
+                 f'select f4, f4 from {heavydb.table_name}), 1))')
+    if step > 2:
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+        assert result[0][0] == 132
+    else:
+        with pytest.raises(
+                Exception,
+                match=(r".*(Function overloaded_udtf\(COLUMN<FLOAT>,"
+                       r" COLUMN<FLOAT>, INTEGER\) not supported|Could not bind"
+                       r" overloaded_udtf\(COLUMN<FLOAT>, COLUMN<FLOAT>, INTEGER\))")):
+            descr, result = heavydb.sql_execute(sql_query)
+
+
+def test_overload_uniform(heavydb):
+    heavydb.reset()
+    heavydb.register()
+
+    @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
+             T=['double', 'float', 'int64', 'int32', 'int16', 'int8'])
+    def mycopy(x, m, y):  # noqa: E501, F811
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    for colname in ['f8', 'f4', 'i8', 'i4', 'i2', 'i1', 'b']:
+        sql_query = (f'select {colname} from {heavydb.table_name}')
+        descr, result = heavydb.sql_execute(sql_query)
+        expected = list(result)
+        sql_query = ('select * from table(mycopy(cursor('
+                     f'select {colname} from {heavydb.table_name}), 1))')
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+        assert result == expected
+
+
+heavydb_aggregators = [
+    'avg', 'min', 'max', 'sum', 'count',
+    'approx_count_distinct', 'sample', 'single_value', 'stddev',
+    'stddev_pop', 'stddev_samp', 'variance', 'var_pop', 'var_samp',
+]
+heavydb_aggregators2 = ['correlation', 'corr', 'covar_pop', 'covar_samp']
+# TODO: round_to_digit, mod, truncate
+heavydb_functions = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'abs', 'ceil', 'degrees',
+                     'exp', 'floor', 'ln', 'log', 'log10', 'radians', 'round', 'sign', 'sqrt']
+heavydb_functions2 = ['atan2', 'power']
+heavydb_unary_operations = ['+', '-']
+heavydb_binary_operations = ['+', '-', '*', '/']
+
+
+@pytest.mark.parametrize("prop", ['', 'groupby'])
+@pytest.mark.parametrize("oper", heavydb_aggregators + heavydb_aggregators2)
+def test_column_aggregate(heavydb, prop, oper):
+    heavydb.reset()
+    heavydb.register()
+
+    if prop == 'groupby':
+        pytest.skip('heavydb server crashes')
+
+    if oper == 'single_value':
+        if prop:
+            return
+
+        @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+        def test_rbc_last(x, m, y):
+            y[0] = x[len(x)-1]
+            return 1
+
+        sql_query = (f'select f8 from {heavydb.table_name}')
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+        expected_result = result[-1:]
+
+        sql_query = (f'select {oper}(out0) from table(test_rbc_last(cursor('
+                     f'select f8 from {heavydb.table_name}), 1))')
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+
+        assert result == expected_result
+        return
+
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def test_rbc_mycopy(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    @heavydb('int32(Cursor<double, double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<double>)')
+    def test_rbc_mycopy2(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    @heavydb('int32(Cursor<double, bool>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<bool>)')
+    def test_rbc_mycopy2b(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    @heavydb('int32(Cursor<double, double, bool>, RowMultiplier,'
+             'OutputColumn<double>, OutputColumn<double>, OutputColumn<bool>)')
+    def test_rbc_mycopy3(x1, x2, x3, m, y1, y2, y3):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+            y3[i] = x3[i]
+        return len(x1)
+
+    extra_args = ''
+    if oper == 'approx_count_distinct':
+        extra_args = ', 1'
+
+    mycopy = 'test_rbc_mycopy'
+
+    if oper in heavydb_aggregators2:
+        if prop == 'groupby':
+            sql_query_expected = (
+                f'select {oper}(f8, d) from {heavydb.table_name} group by b')
+            sql_query = (
+                f'select {oper}(out0, out1) from table({mycopy}3(cursor('
+                f'select f8, d, b from {heavydb.table_name}), 1)) group by out2')
+        else:
+            sql_query_expected = (f'select {oper}(f8, d) from {heavydb.table_name}')
+            sql_query = (
+                f'select {oper}(out0, out1) from table({mycopy}2(cursor('
+                f'select f8, d from {heavydb.table_name}), 1))')
+    else:
+        if prop == 'groupby':
+            sql_query_expected = (
+                f'select {oper}(f8{extra_args}) from {heavydb.table_name} group by b')
+            sql_query = (
+                f'select {oper}(out0) from table({mycopy}2b(cursor('
+                f'select f8, b from {heavydb.table_name}), 1)) group by out1')
+        else:
+            sql_query_expected = (f'select {oper}(f8{extra_args}) from {heavydb.table_name}')
+            sql_query = (
+                f'select {oper}(out0) from table({mycopy}(cursor('
+                f'select f8 from {heavydb.table_name}), 1))')
+
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+    descr, result = heavydb.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == result_expected
+
+
+@pytest.mark.parametrize("oper", heavydb_functions + heavydb_functions2)
+def test_column_function(heavydb, oper):
+    heavydb.reset()
+    heavydb.register()
+
+    @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<double>)')
+    def test_rbc_mycopy(x, m, y):
+        for i in range(len(x)):
+            y[i] = x[i]
+        return len(x)
+
+    @heavydb('int32(Cursor<double, double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<double>)')
+    def test_rbc_mycopy2(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    if oper in heavydb_functions2:
+        sql_query_expected = (f'select {oper}(f8, d) from {heavydb.table_name}')
+        sql_query = (
+            f'select {oper}(out0, out1) from table({mycopy}2(cursor('
+            f'select f8, d from {heavydb.table_name}), 1))')
+    else:
+        sql_query_expected = (f'select {oper}(f8) from {heavydb.table_name}')
+        sql_query = (
+            f'select {oper}(out0) from table({mycopy}(cursor('
+            f'select f8 from {heavydb.table_name}), 1))')
+
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    descr, result = heavydb.sql_execute(sql_query)
+    result = list(result)
+
+    if oper in ['asin', 'acos']:
+        # result contains nan
+        assert repr(result) == repr(result_expected)
+    else:
+        assert result == result_expected
+
+
+@pytest.mark.parametrize("oper", heavydb_binary_operations)
+def test_column_binary_operation(heavydb, oper):
+    heavydb.reset()
+    heavydb.register()
+
+    @heavydb('int32(Cursor<double, double>, RowMultiplier,'
+             ' OutputColumn<double>, OutputColumn<double>)')
+    def test_rbc_mycopy2(x1, x2, m, y1, y2):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+            y2[i] = x2[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select f8 {oper} d from {heavydb.table_name}')
+    sql_query = (
+        f'select out0 {oper} out1 from table({mycopy}2(cursor('
+        f'select f8, d from {heavydb.table_name}), 1))')
+
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    descr, result = heavydb.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == result_expected
+
+
+@pytest.mark.parametrize("oper", heavydb_unary_operations)
+def test_column_unary_operation(heavydb, oper):
+    heavydb.reset()
+    heavydb.register()
+
+    @heavydb('int32(Cursor<double>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def test_rbc_mycopy(x1, m, y1):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select {oper} f8 from {heavydb.table_name}')
+    sql_query = (
+        f'select {oper} out0 from table({mycopy}(cursor('
+        f'select f8 from {heavydb.table_name}), 1))')
+
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    descr, result = heavydb.sql_execute(sql_query)
+    result = list(result)
+
+    assert result == result_expected
+
+
+def test_create_as(heavydb):
+    heavydb.reset()
+    heavydb.register()
+
+    @heavydb('int32(Cursor<double>, RowMultiplier,'
+             ' OutputColumn<double>)')
+    def test_rbc_mycopy(x1, m, y1):
+        for i in range(len(x1)):
+            y1[i] = x1[i]
+        return len(x1)
+
+    mycopy = 'test_rbc_mycopy'
+
+    sql_query_expected = (f'select f8 from {heavydb.table_name}')
+    sql_queries = [
+        f'DROP TABLE IF EXISTS {heavydb.table_name}_f8',
+        (f'CREATE TABLE {heavydb.table_name}_f8 AS SELECT out0 FROM TABLE({mycopy}(CURSOR('
+         f'SELECT f8 FROM {heavydb.table_name}), 1))'),
+        f'SELECT * FROM {heavydb.table_name}_f8']
+
+    descr, result_expected = heavydb.sql_execute(sql_query_expected)
+    result_expected = list(result_expected)
+
+    for sql_query in sql_queries:
+        descr, result = heavydb.sql_execute(sql_query)
+        result = list(result)
+
+    assert result == result_expected
+
+
+@pytest.fixture(scope='function')
+def create_columns(heavydb):
+
+    # delete tables
+    heavydb.sql_execute('DROP TABLE IF EXISTS datatable;')
+    heavydb.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+    # create tables
+    heavydb.sql_execute('CREATE TABLE IF NOT EXISTS datatable (x DOUBLE);')
+    heavydb.sql_execute('CREATE TABLE IF NOT EXISTS kerneltable (kernel DOUBLE);')
+    # add data
+    heavydb.load_table_columnar('datatable', **{'x': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    heavydb.load_table_columnar('kerneltable', **{'kernel': [10.0, 20.0, 30.0]})
+    yield heavydb
+    # delete tables
+    heavydb.sql_execute('DROP TABLE IF EXISTS datatable;')
+    heavydb.sql_execute('DROP TABLE IF EXISTS kerneltable;')
+
+
+@pytest.mark.usefixtures('create_columns')
+def test_column_different_sizes(heavydb):
+
+    if heavydb.has_cuda and heavydb.version[:2] == (5, 10):
+        pytest.xfail('Different result')
+
+    @heavydb('int32(Column<double>, Column<double>, RowMultiplier, OutputColumn<double>)')
+    def convolve(x, kernel, m, y):
+        for i in range(len(y)):
+            y[i] = 0.0
+        for i in range(len(x)):
+            for j in range(len(kernel)):
+                k = i + j
+                if (k < len(x)):
+                    y[k] += kernel[j] * x[k]
+        # output has the same size as @x
+        return len(x)
+
+    _, result = heavydb.sql_execute(
+        'select * from table('
+        'convolve(cursor(select x from datatable),'
+        'cursor(select kernel from kerneltable), 1))')
+
+    expected = [(10.0,), (60.0,), (180.0,), (240.0,), (300.0,)]
+    assert list(result) == expected
+
+
+def test_column_dtype(heavydb):
+    from numba import types
+    table = heavydb.table_name
+
+    @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<T>)',
+             T=['int32', 'int64', 'float', 'double'])
+    def col_dtype_fn(x, m, y):
+        sz = len(x)
+        for i in range(sz):
+            if x.dtype == types.int32:
+                y[i] = 1
+            elif x.dtype == types.int64:
+                y[i] = 2
+            elif x.dtype == types.float32:
+                y[i] = 3.0
+            elif x.dtype == types.float64:
+                y[i] = 4.0
+            else:
+                y[i] = 'hello world'  # this ought be removed by DCE
+        return sz
+
+    inpts = (
+        ('i4', 1),
+        ('i8', 2),
+        ('f4', 3.0),
+        ('f8', 4.0),
+    )
+    for col, r in inpts:
+        query = f'select * from table(col_dtype_fn(cursor(select {col} from {table}), 1))'
+        _, result = heavydb.sql_execute(query)
+        assert list(result) == [(r,)] * 5
+
+
+def test_column_enumerate(heavydb):
+    from rbc.externals.heavydb import set_output_row_size
+
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)')
+    def col_enumerate(x, y):
+        sz = len(x)
+        set_output_row_size(sz)
+        for i, e in enumerate(x):
+            y[i] = e
+        return sz
+
+    _, result = heavydb.sql_execute(
+        f'select * from table(col_enumerate(cursor(select i4 from {heavydb.table_name})))')
+    _, expected_result = heavydb.sql_execute(
+        f'select rowid, i4 from {heavydb.table_name} order by rowid;')
+    for (r,), (_, e) in zip(list(result), list(expected_result)):
+        assert r == e
