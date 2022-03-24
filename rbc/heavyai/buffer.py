@@ -66,6 +66,10 @@ class OmnisciBufferType(typesystem.Type):
         return self[0][0]
 
     @property
+    def numba_pointer_type(self):
+        return BufferPointer
+
+    @property
     def buffer_extra_members(self):
         return ()
 
@@ -79,7 +83,7 @@ class OmnisciBufferType(typesystem.Type):
             *extra_members
         )
         buffer_type._params['NumbaType'] = BufferType
-        buffer_type._params['NumbaPointerType'] = BufferPointer
+        buffer_type._params['NumbaPointerType'] = self.numba_pointer_type
         numba_type = buffer_type.tonumba(bool_is_int8=True)
         if self.pass_by_value:
             return numba_type
