@@ -1,4 +1,4 @@
-'''HeavyDB Bytes type that corresponds to HeavyDB type TEXT ENCODED NONE.
+'''HeavyDB TextEncodingDict type that corresponds to HeavyDB type TEXT ENCODED DICT.
 '''
 
 __all__ = ['HeavyDBTextEncodingDictType', 'TextEncodingDict']

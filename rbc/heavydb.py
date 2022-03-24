@@ -14,7 +14,7 @@ from .thrift.utils import resolve_includes
 from .thrift import Client as ThriftClient
 from . import heavyai
 from .heavyai import (
-    HeavyDBArrayType, HeavyDBBytesType, HeavyDBTextEncodingDictType,
+    HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType)
@@ -399,6 +399,7 @@ class RemoteHeavyDB(RemoteJIT):
         Constant='int32|sizer=Constant',
         PreFlight='int32|sizer=PreFlight',
         ColumnList='HeavyDBColumnListType',
+        TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
         TableFunctionManager='HeavyDBTableFunctionManagerType<>',
         UDTF='int32|kind=UDTF'
@@ -869,7 +870,7 @@ class RemoteHeavyDB(RemoteJIT):
             'GeoPolygon': typemap['TExtArgumentType'].get('GeoPolygon'),
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
-            'Bytes': typemap['TExtArgumentType'].get('TextEncodingNone'),
+            'TextEncodingNone': typemap['TExtArgumentType'].get('TextEncodingNone'),
             'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
             'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
             'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
@@ -914,7 +915,8 @@ class RemoteHeavyDB(RemoteJIT):
             ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
 
-        ext_arguments_map['HeavyDBBytesType<char8>'] = ext_arguments_map.get('Bytes')
+        ext_arguments_map['HeavyDBTextEncodingNoneType<char8>'] = \
+            ext_arguments_map.get('TextEncodingNone')
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
@@ -1366,8 +1368,8 @@ class RemoteHeavyDB(RemoteJIT):
         elif isinstance(typ, HeavyDBCursorType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('Cursor',) + p, **typ._params)
-        elif isinstance(typ, HeavyDBBytesType):
-            typ = typ.copy().params(typename='Bytes')
+        elif isinstance(typ, HeavyDBTextEncodingNoneType):
+            typ = typ.copy().params(typename='TextEncodingNone')
             use_typename = True
         elif isinstance(typ, HeavyDBTextEncodingDictType):
             typ = typ.copy().params(typename='TextEncodingDict')
@@ -1412,7 +1414,7 @@ class RemoteHeavyDB(RemoteJIT):
 
             if isinstance(atype, (HeavyDBColumnType, HeavyDBColumnListType)):
                 args.append(f'CURSOR({a})')
-            elif isinstance(atype, HeavyDBBytesType):
+            elif isinstance(atype, HeavyDBTextEncodingNoneType):
                 if isinstance(a, bytes):
                     a = repr(a.decode())
                 elif isinstance(a, str):

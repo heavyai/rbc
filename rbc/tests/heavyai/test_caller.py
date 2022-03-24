@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from rbc.externals.heavydb import set_output_row_size
-from rbc.heavyai import Bytes
+from rbc.heavyai import TextEncodingNone
 from rbc.tests import heavydb_fixture, assert_equal
 
 
@@ -37,9 +37,9 @@ def define(heavydb):
             y[i] = x[i] + dx
         return size
 
-    @heavydb('Bytes(Bytes)')
+    @heavydb('TextEncodingNone(TextEncodingNone)')
     def myupper(s):
-        r = Bytes(len(s))
+        r = TextEncodingNone(len(s))
         for i in range(len(s)):
             c = s[i]
             if c >= 97 and c <= 122:
@@ -112,9 +112,9 @@ def test_remote_float64_evaluation(heavydb):
     assert_equal(arange(3, np.float64(1))['x'], np.arange(3, dtype=np.float64) + 1)
 
 
-def test_remote_bytes_evaluation(heavydb):
+def test_remote_TextEncodingNone_evaluation(heavydb):
     myupper = heavydb.get_caller('myupper')
-    assert str(myupper) == "myupper['Bytes(Bytes)']"
+    assert str(myupper) == "myupper['TextEncodingNone(TextEncodingNone)']"
     assert str(myupper("abc")) == "SELECT myupper('abc')"
     assert str(myupper("abc").execute()) == 'ABC'
     assert str(myupper(b"abc")) == "SELECT myupper('abc')"

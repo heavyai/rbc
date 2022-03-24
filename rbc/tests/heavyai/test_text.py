@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from rbc.heavyai import TextEncodingNone
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
@@ -61,10 +62,10 @@ def test_table_data(heavydb):
                       ('foo', 'foo', 'foooo', ['fun', 'bar'], 'foooo')]
 
 
-def test_bytes_len(heavydb):
+def test_TextEncodingNone_len(heavydb):
     heavydb.reset()
 
-    @heavydb('int32(Bytes, Bytes)')
+    @heavydb('int32(TextEncodingNone, TextEncodingNone)')
     def mystrlen(s, s2):
         return len(s) * 100 + len(s2)
 
@@ -79,10 +80,10 @@ def test_bytes_len(heavydb):
     assert result == result_expected
 
 
-def test_bytes_ord(heavydb):
+def test_TextEncodingNone_ord(heavydb):
     heavydb.reset()
 
-    @heavydb('int64(Bytes, int32)', devices=['gpu', 'cpu'])
+    @heavydb('int64(TextEncodingNone, int32)', devices=['gpu', 'cpu'])
     def myord(s, i):
         return s[i] if i < len(s) else 0
 
@@ -98,14 +99,12 @@ def test_bytes_ord(heavydb):
         assert result == result_expected
 
 
-def test_bytes_return(heavydb):
+def test_TextEncodingNone_return(heavydb):
     heavydb.reset()
 
-    from rbc.heavyai import Bytes
-
-    @heavydb('Bytes(int32, int32)')
+    @heavydb('TextEncodingNone(int32, int32)')
     def make_abc(first, n):
-        r = Bytes(n)
+        r = TextEncodingNone(n)
         for i in range(n):
             r[i] = first + i
         return r
@@ -117,14 +116,12 @@ def test_bytes_return(heavydb):
     assert result == [('abcdefghij', )]
 
 
-def test_bytes_upper(heavydb):
+def test_TextEncodingNone_upper(heavydb):
     heavydb.reset()
 
-    from rbc.heavyai import Bytes
-
-    @heavydb('Bytes(Bytes)')
+    @heavydb('TextEncodingNone(TextEncodingNone)')
     def myupper(s):
-        r = Bytes(len(s))
+        r = TextEncodingNone(len(s))
         for i in range(len(s)):
             c = s[i]
             if c >= 97 and c <= 122:
