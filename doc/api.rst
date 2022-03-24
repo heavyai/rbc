@@ -74,3 +74,5 @@ one cannot create and use them inside the REPL, for instance.
     :toctree: generated/
 
     rbc.heavyai.Array
+    rbc.heavyai.TextEncodingDict
+    rbc.heavyai.TextEncodingNone

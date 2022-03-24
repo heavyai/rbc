@@ -36,19 +36,22 @@ TextEncodingNonePointer = BufferPointer
 
 
 class TextEncodingNone(Buffer):
-    '''Omnisci TextEncodingNone type that corresponds to Omnisci type TEXT ENCODED NONE.
+    '''HeavyDB TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
 
-    Omnisci TextEncodingNone represents the following structure:
+    HeavyDB TextEncodingNone represents the following structure:
 
-    struct TextEncodingNone {
-        char* ptr;
-        size_t sz;  // when non-negative, TextEncodingNone has fixed width.
-    }
+    .. code-block:: c
+
+        struct TextEncodingNone {
+            char* ptr;
+            size_t sz;  // when non-negative, TextEncodingNone has fixed width.
+            int8_t is_null;
+        }
 
 
     .. code-block:: python
 
-        from rbc.omnisci_backend import TextEncodingNone
+        from rbc.heavydb import TextEncodingNone
 
         @omnisci('TextEncodingNone(int32, int32)')
         def make_abc(first, n):
@@ -57,7 +60,9 @@ class TextEncodingNone(Buffer):
                 r[i] = first + i
             return r
     '''
-    pass
+
+    def __init__(self, size: int):
+        pass
 
 
 @extending.lower_builtin(TextEncodingNone, types.Integer)
