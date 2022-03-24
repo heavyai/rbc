@@ -56,11 +56,11 @@ def test_udf_string_repr(heavydb):
     assert_equal(str(myincr), "myincr['T(T), T=int32|int64|float32|float64']")
 
     assert_equal(repr(myincr(5)),
-                 "OmnisciQueryCapsule('SELECT myincr(CAST(5 AS BIGINT))')")
+                 "HeavyDBQueryCapsule('SELECT myincr(CAST(5 AS BIGINT))')")
     assert_equal(str(myincr(5)), "SELECT myincr(CAST(5 AS BIGINT))")
 
     assert_equal(repr(myincr(myincr(5))),
-                 "OmnisciQueryCapsule('SELECT myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))')")
+                 "HeavyDBQueryCapsule('SELECT myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))')")
     assert_equal(str(myincr(myincr(5))),
                  "SELECT myincr(CAST(myincr(CAST(5 AS BIGINT)) AS BIGINT))")
 
@@ -76,7 +76,7 @@ def test_udtf_string_repr(heavydb):
                   " T=int64|float64|int32, device=cpu']"))
 
     assert_equal(repr(arange(5, 0)),
-                 ("OmnisciQueryCapsule('SELECT x FROM"
+                 ("HeavyDBQueryCapsule('SELECT x FROM"
                   " TABLE(arange(CAST(5 AS INT), CAST(0 AS BIGINT)))')"))
     assert_equal(str(arange(5, 0)),
                  "SELECT x FROM TABLE(arange(CAST(5 AS INT), CAST(0 AS BIGINT)))")
