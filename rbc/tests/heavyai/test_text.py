@@ -135,3 +135,53 @@ def test_TextEncodingNone_upper(heavydb):
 
     for n, u in result:
         assert n.upper() == u
+
+
+def test_TextEncodingNone_str_constructor(heavydb):
+    heavydb.reset()
+
+    @heavydb('TextEncodingNone(int32)')
+    def constructor(_):
+        return TextEncodingNone('hello world')
+
+    assert constructor(3).execute() == 'hello world'
+
+
+def test_TextEncodingNone_eq(heavydb):
+
+    heavydb.reset()
+
+    @heavydb('int32(TextEncodingNone, TextEncodingNone)')
+    def eq1(a, b):
+        return a == b
+
+    @heavydb('int32(TextEncodingNone)')
+    def eq2(a):
+        return a == 'world'
+
+    assert eq1('hello', 'hello').execute() == 1
+    assert eq1('c', 'c').execute() == 1
+    assert eq1('hello', 'h').execute() == 0
+    assert eq1('hello', 'hello2').execute() == 0
+
+    assert eq2('world').execute() == 1
+
+
+def test_TextEncodingNone_ne(heavydb):
+
+    heavydb.reset()
+
+    @heavydb('int32(TextEncodingNone, TextEncodingNone)')
+    def ne1(a, b):
+        return a != b
+
+    @heavydb('int32(TextEncodingNone)')
+    def ne2(a):
+        return a != 'world'
+
+    assert ne1('hello', 'hello').execute() == 0
+    assert ne1('c', 'c').execute() == 0
+    assert ne1('hello', 'h').execute() == 1
+    assert ne1('hello', 'hello2').execute() == 1
+
+    assert ne2('world').execute() == 0

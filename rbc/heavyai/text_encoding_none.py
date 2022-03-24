@@ -1,18 +1,27 @@
 '''Omnisci TextEncodingNone type that corresponds to Omnisci type TEXT ENCODED NONE.
 '''
 
-__all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'OmnisciTextEncodingNoneType']
+__all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'HeavyDBTextEncodingNoneType']
 
+import operator
 from rbc import typesystem
+from rbc.targetinfo import TargetInfo
+from rbc.errors import RequireLiteralValue
 from .buffer import (
     BufferPointer, Buffer, OmnisciBufferType,
     omnisci_buffer_constructor)
-from numba.core import types, extending
+from numba.core import types, extending, cgutils
+from llvmlite import ir
+from typing import Union
 
 
-class OmnisciTextEncodingNoneType(OmnisciBufferType):
+class HeavyDBTextEncodingNoneType(OmnisciBufferType):
     """Omnisci TextEncodingNone type for RBC typesystem.
     """
+
+    @property
+    def numba_pointer_type(self):
+        return TextEncodingNonePointer
 
     @classmethod
     def preprocess_args(cls, args):
@@ -32,7 +41,8 @@ class OmnisciTextEncodingNoneType(OmnisciBufferType):
             return 2
 
 
-TextEncodingNonePointer = BufferPointer
+class TextEncodingNonePointer(BufferPointer):
+    pass
 
 
 class TextEncodingNone(Buffer):
@@ -53,16 +63,58 @@ class TextEncodingNone(Buffer):
 
         from rbc.heavydb import TextEncodingNone
 
-        @omnisci('TextEncodingNone(int32, int32)')
+        @heavydb('TextEncodingNone(int32, int32)')
         def make_abc(first, n):
             r = TextEncodingNone(n)
             for i in range(n):
                 r[i] = first + i
             return r
+
+
+    .. code-block:: python
+
+        from rbc.heavydb import TextEncodingNone
+        @heavydb('TextEncodingNone()')
+        def make_text():
+            return TextEncodingNone('some text here')
+
     '''
 
-    def __init__(self, size: int):
+    def __init__(self, size: Union[int, str]):
         pass
+
+
+@extending.overload(operator.eq)
+def text_encoding_none_eq(a, b):
+    if isinstance(a, TextEncodingNonePointer) and isinstance(b, TextEncodingNonePointer):
+
+        def impl(a, b):
+            if len(a) != len(b):
+                return False
+            for i in range(0, len(a)):
+                if a[i] != b[i]:
+                    return False
+            return True
+        return impl
+    elif isinstance(a, TextEncodingNonePointer) and isinstance(b, types.StringLiteral):
+        lv = b.literal_value
+        sz = len(lv)
+
+        def impl(a, b):
+            if len(a) != sz:
+                return False
+            t = TextEncodingNone(lv)
+            return a == t
+        return impl
+
+
+@extending.overload(operator.ne)
+def text_encoding_none_ne(a, b):
+    if isinstance(a, TextEncodingNonePointer):
+        if isinstance(b, (TextEncodingNonePointer, types.StringLiteral)):
+            def impl(a, b):
+                return not(a == b)
+            return impl
 
 
 @extending.lower_builtin(TextEncodingNone, types.Integer)
@@ -70,8 +122,32 @@ def omnisci_text_encoding_none_constructor(context, builder, sig, args):
     return omnisci_buffer_constructor(context, builder, sig, args)
 
 
+@extending.lower_builtin(TextEncodingNone, types.StringLiteral)
+def omnisci_text_encoding_none_constructor_literal(context, builder, sig, args):
+    int64_t = ir.IntType(64)
+    int8_t_ptr = ir.IntType(8).as_pointer()
+
+    literal_value = sig.args[0].literal_value
+    sz = int64_t(len(literal_value))
+
+    # arr = {ptr, size, is_null}*
+    arr = omnisci_buffer_constructor(context, builder, sig.return_type(types.int64), [sz])
+    ptr = builder.extract_value(builder.load(arr), [0])
+
+    msg_bytes = literal_value.encode('utf-8')
+    msg_const = cgutils.make_bytearray(msg_bytes)
+    msg_global_var = cgutils.global_constant(builder.module, f"Text({literal_value})", msg_const)
+    msg_ptr = builder.bitcast(msg_global_var, int8_t_ptr)
+    sizeof_char = TargetInfo().sizeof('char')
+    cgutils.raw_memcpy(builder, ptr, msg_ptr, sz, sizeof_char)
+    return arr
+
+
 @extending.type_callable(TextEncodingNone)
 def type_omnisci_text_encoding_none(context):
-    def typer(size):
-        return typesystem.Type.fromobject('TextEncodingNone').tonumba()
+    def typer(arg):
+        if isinstance(arg, types.UnicodeType):
+            raise RequireLiteralValue()
+        if isinstance(arg, (types.Integer, types.StringLiteral)):
+            return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer

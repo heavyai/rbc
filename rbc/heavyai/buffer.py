@@ -48,6 +48,10 @@ class HeavyDBBufferType(typesystem.Type):
     def pass_by_value(self):
         return False
 
+    @property
+    def numba_pointer_type(self):
+        return BufferPointer
+
     @classmethod
     def preprocess_args(cls, args):
         assert len(args) == 1, args
@@ -75,11 +79,11 @@ class HeavyDBBufferType(typesystem.Type):
             *extra_members
         )
         buffer_type._params['NumbaType'] = BufferType
-        buffer_type._params['NumbaPointerType'] = BufferPointer
+        buffer_type._params['NumbaPointerType'] = self.numba_pointer_type
         numba_type = buffer_type.tonumba(bool_is_int8=True)
         if self.pass_by_value:
             return numba_type
-        return BufferPointer(numba_type)
+        return self.numba_pointer_type(numba_type)
 
 
 class BufferType(types.Type):
