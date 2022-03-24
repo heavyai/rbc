@@ -4,20 +4,41 @@ Array API specification for creation functions.
 https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 """
 
-from rbc import typesystem
+from rbc import typesystem, errors
 from rbc.heavyai.array import Array, ArrayPointer
-from rbc.stdlib import Expose
-from numba import njit
+from rbc.stdlib import Expose, API
 from numba.core import extending, types
+from numba import TypingError
+from numba.core.typing import asnumbatype
 
 __all__ = [
     'full', 'full_like', 'empty_like', 'empty', 'zeros', 'zeros_like',
-    'ones', 'ones_like', 'array', 'cumsum', 'arange', 'asarray',
+    'ones', 'ones_like', 'cumsum', 'arange', 'asarray',
     'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu'
 ]
 
 
 expose = Expose(globals(), 'creation_functions')
+
+
+def _determine_dtype(dtype, fill_value):
+    if dtype is None:
+        # determine from fill_value
+        if fill_value is None:
+            # return the default floating-point data type
+            return types.double
+        else:
+            return asnumbatype.typeof(fill_value)
+    else:
+        if isinstance(dtype, types.UnicodeType):
+            raise errors.RequireLiteralValue(dtype)
+        elif isinstance(dtype, types.StringLiteral):
+            return typesystem.Type.fromstring(dtype.literal_value).tonumba()
+        else:
+            if not isinstance(dtype, types.DTypeSpec):
+                raise TypingError('Expected dtype derived from numba.types.DTypeSpec '
+                                  f'but got {type(dtype)}')
+            return typesystem.Type.fromobject(dtype).tonumba()
 
 
 @expose.not_implemented('arange')
@@ -88,12 +109,7 @@ def _omnisci_np_full(shape, fill_value, dtype=None):
     """
     Return a new array of given shape and type, filled with fill_value.
     """
-
-    # XXX: dtype should be infered from fill_value
-    if dtype is None:
-        nb_dtype = types.double
-    else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+    nb_dtype = _determine_dtype(dtype, fill_value)
 
     def impl(shape, fill_value, dtype=None):
         a = Array(shape, nb_dtype)
@@ -111,7 +127,7 @@ def _omnisci_np_full_like(a, fill_value, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+            nb_dtype = _determine_dtype(dtype, fill_value)
 
         def impl(a, fill_value, dtype=None):
             sz = len(a)
@@ -130,7 +146,7 @@ def _omnisci_np_empty_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         def impl(a, dtype=None):
             return empty(len(a), nb_dtype)  # noqa: F821
@@ -145,7 +161,7 @@ def _omnisci_np_empty(shape, dtype=None):
     if dtype is None:
         nb_dtype = types.double
     else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+        nb_dtype = _determine_dtype(dtype, fill_value=None)
 
     def impl(shape, dtype=None):
         arr = Array(shape, nb_dtype)
@@ -161,11 +177,7 @@ def _omnisci_np_zeros(shape, dtype=None):
     Return a new array of given shape and type, filled with zeros.
     """
 
-    if dtype is None:
-        nb_dtype = types.double
-    else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
-
+    nb_dtype = _determine_dtype(dtype, fill_value=None)
     fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
 
     def impl(shape, dtype=None):
@@ -182,7 +194,7 @@ def _omnisci_np_zeros_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         fill_value = False if isinstance(nb_dtype, types.Boolean) else 0
 
@@ -197,11 +209,7 @@ def _omnisci_np_ones(shape, dtype=None):
     Return a new array of given shape and type, filled with ones.
     """
 
-    if dtype is None:
-        nb_dtype = types.double
-    else:
-        nb_dtype = typesystem.Type.fromobject(dtype).tonumba()
-
+    nb_dtype = _determine_dtype(dtype, fill_value=None)
     fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
 
     def impl(shape, dtype=None):
@@ -218,42 +226,12 @@ def _omnisci_np_ones_like(a, dtype=None):
         if dtype is None:
             nb_dtype = a.eltype
         else:
-            nb_dtype = dtype
+            nb_dtype = _determine_dtype(dtype, fill_value=None)
 
         fill_value = True if isinstance(nb_dtype, types.Boolean) else 1
 
         def impl(a, dtype=None):
             return full_like(a, fill_value, nb_dtype)  # noqa: F821
-        return impl
-
-
-@expose.implements('array')
-def _omnisci_np_array(a, dtype=None):
-    """
-    Create an array.
-    """
-
-    @njit
-    def _omnisci_array_non_empty_copy(a, nb_dtype):
-        """Implement this here rather than inside "impl".
-        LLVM DCE pass removes everything if we implement stuff inside "impl"
-        """
-        other = Array(len(a), nb_dtype)
-        for i in range(len(a)):
-            other[i] = a[i]
-        return other
-
-    if isinstance(a, ArrayPointer):
-        if dtype is None:
-            nb_dtype = a.eltype
-        else:
-            nb_dtype = dtype
-
-        def impl(a, dtype=None):
-            if a.is_null():
-                return empty_like(a)  # noqa: F821
-            else:
-                return _omnisci_array_non_empty_copy(a, nb_dtype)
         return impl
 
 
@@ -269,7 +247,7 @@ def _omnisci_array_fill(x, v):
         return impl
 
 
-@expose.implements('cumsum')
+@expose.implements('cumsum', api=API.NUMPY_API)
 def _omnisci_np_cumsum(a):
     """
     Return the cumulative sum of the elements along a given axis.

@@ -2,7 +2,6 @@ import math
 import pytest
 import sys
 import numpy as np
-import numba as nb
 
 import rbc.heavydb as rbc_heavydb
 from rbc.stdlib import array_api
@@ -348,15 +347,8 @@ def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func
         # give lambda function a name
         fn.__name__ = fn_name
 
-    if fn_name in ['positive', 'divmod0', 'frexp0']:
-        try:
-            if arity == 1:
-                nb.njit(fn)(0.5)
-            elif arity == 2:
-                nb.njit(fn)(0.5, 0.5)
-        except nb.errors.TypingError as msg:
-            msg = str(msg).splitlines()[1]
-            pytest.skip(msg)
+    if fn_name in ['divmod0', 'frexp0']:
+        pytest.skip(f'Function {fn_name} not supported.')
 
     if fn_name in ['spacing']:
         # Skipping spacing__cpu_0 that uses undefined function `npy_spacing`

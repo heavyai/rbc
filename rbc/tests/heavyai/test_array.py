@@ -5,6 +5,7 @@ from rbc.heavyai import Array
 from rbc.errors import OmnisciServerError
 from rbc.stdlib import array_api
 from numba import types as nb_types
+from numba import TypingError
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
@@ -480,6 +481,19 @@ def test_array_dtype(heavydb):
     for col, r in (('i4', 32), ('i8', 64)):
         _, result = heavydb.sql_execute(f'select array_dtype_fn({col}) from {table}')
         assert list(result) == [(r,)] * 5
+
+
+def test_array_invalid_dtype(heavydb):
+
+    @heavydb('int64[](int64)')
+    def array_invalid_dtype(sz):
+        return array_api.zeros(sz, dtype=123)
+
+    err_msg = ("Expected dtype derived from numba.types.DTypeSpec but got "
+               "<class 'numba.core.types.scalars.Integer'>")
+    with pytest.raises(TypingError, match=err_msg):
+        heavydb.register()
+    heavydb.reset()
 
 
 def test_array_enumerate(heavydb):
