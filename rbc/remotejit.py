@@ -583,6 +583,9 @@ class RemoteJIT:
         else:
             self._client = None
 
+    def __repr__(self):
+        return f'{type(self).__name__}(host={self.host!r}, port={self.port})'
+
     @property
     def local(self):
         localjit = type(self)(local=True, debug=self.debug)

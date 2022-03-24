@@ -827,3 +827,45 @@ def test_format_type(heavydb):
 
     assert test2('UDTF(Cursor<int32>)') == '(Cursor<Column<int32>>) -> void'
     assert test2('UDTF(Cursor<int32 x>)') == '(Cursor<Column<int32> x>) -> void'
+
+
+def test_reconnect(heavydb):
+
+    heavydb2 = heavydb.reconnect()
+
+    assert heavydb.session_id != heavydb2.session_id
+    assert heavydb2.host == heavydb.host
+    assert heavydb2.port == heavydb.port
+
+
+def test_non_admin_user(heavydb):
+
+    user = 'rbc_test_non_admin_user'
+    password = 'Xy2kq_3lM'
+    dbname = 'rbc_test_non_admin_user_db'
+
+    # create user and user's database:
+    heavydb.sql_execute(f'DROP DATABASE IF EXISTS {dbname};')
+    heavydb.sql_execute(f'DROP USER IF EXISTS "{user}";')
+
+    heavydb.sql_execute(
+        f"CREATE USER {user} (password = '{password}', is_super = 'false', can_login='true');")
+    heavydb.sql_execute(f"CREATE DATABASE {dbname} (owner = '{user}');")
+    heavydb.sql_execute(f"ALTER USER {user} (default_db = '{dbname}');")
+
+    # test the ability to register and use UDFs as a non-admin user:
+    userdb = heavydb.reconnect(user=user, password=password, dbname=dbname)
+
+    assert userdb.user == user
+    assert userdb.password == password
+    assert userdb.dbname == dbname
+
+    @userdb('int(int)')
+    def rbc_test_non_admin_user_udf(x):
+        return x + 1
+
+    assert rbc_test_non_admin_user_udf(1).execute() == 2
+
+    # clean up:
+    heavydb.sql_execute(f'DROP DATABASE IF EXISTS {dbname};')
+    heavydb.sql_execute(f'DROP USER IF EXISTS "{user}";')
