@@ -343,23 +343,13 @@ def compile_instance(func, sig,
     return fname
 
 
-def add_byval_metadata(main_library):
+def add_metadata_flag(main_library, **kwargs):
     module = ir.Module()
-    flag_name = "pass_column_arguments_by_value"
     mflags = module.add_named_metadata('llvm.module.flags')
     override_flag = int32_t(4)
-    flag = module.add_metadata([override_flag, flag_name, int1_t(0)])
-    mflags.add(flag)
-    main_library.add_ir_module(module)
-
-
-def add_manage_buffer_memory_metadata(main_library):
-    module = ir.Module()
-    flag_name = "manage_memory_buffer"
-    mflags = module.add_named_metadata('llvm.module.flags')
-    override_flag = int32_t(4)
-    flag = module.add_metadata([override_flag, flag_name, int1_t(1)])
-    mflags.add(flag)
+    for flag_name, flag_value in kwargs.items():
+        flag = module.add_metadata([override_flag, flag_name, int1_t(flag_value)])
+        mflags.add(flag)
     main_library.add_ir_module(module)
 
 
@@ -418,8 +408,9 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
-        add_byval_metadata(main_library)
-        add_manage_buffer_memory_metadata(main_library)
+        add_metadata_flag(main_library,
+                          pass_column_arguments_by_value=0,
+                          manage_memory_buffer=1)
         main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations

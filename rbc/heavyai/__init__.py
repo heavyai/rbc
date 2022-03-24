@@ -1,5 +1,6 @@
 from .array import *  # noqa: F401, F403
 from .column import *  # noqa: F401, F403
+from .buffer import *  # noqa: F401, F403
 from .bytes import *  # noqa: F401, F403
 from .metatype import *  # noqa: F401, F403
 from .text_encoding import *  # noqa: F401, F403
