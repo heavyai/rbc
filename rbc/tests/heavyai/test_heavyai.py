@@ -839,6 +839,7 @@ def test_reconnect(heavydb):
 
 
 def test_non_admin_user(heavydb):
+    heavydb.require_version((5, 9), 'Requires omniscidb 5.9 or newer')
 
     user = 'rbc_test_non_admin_user'
     password = 'Xy2kq_3lM'
