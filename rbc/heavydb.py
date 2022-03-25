@@ -447,6 +447,21 @@ class RemoteHeavyDB(RemoteJIT):
         # An user-defined device-LLVM IR mapping.
         self.user_defined_llvm_ir = {}
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(user={self.user!r}, password="{"*"*len(self.password)}",'
+                f' host={self.host!r}, port={self.port}, dbname={self.dbname!r})')
+
+    def reconnect(self, user=None, password=None, dbname=None):
+        """Return another RemoteHeavyDB instance with possibly different
+        connection credentials.
+        """
+        return type(self)(
+            user=user if user is not None else self.user,
+            password=password if password is not None else self.password,
+            dbname=dbname if dbname is not None else self.dbname,
+            host=self.host,
+            port=self.port)
+
     def _init_thrift_typemap(self):
         """Initialize thrift type map using client thrift configuration.
         """
