@@ -86,11 +86,6 @@ jobs:
       - name: Develop rbc
         shell: bash -l {0}
         run: |
-          if [ "$RUNNER_OS" == "macOS" ]; then
-              # workaround for
-              # https://github.com/conda-forge/clangdev-feedstock/issues/96
-              export SDKROOT=`xcrun --sdk macosx --show-sdk-path`
-          fi
           mamba run -n rbc python setup.py develop
       - name: Run rbc tests
         shell: bash -l {0}

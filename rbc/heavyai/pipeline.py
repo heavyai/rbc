@@ -1,7 +1,6 @@
 import operator
 
 from rbc.errors import NumbaTypeError
-from .buffer import BufferMeta, free_all_other_buffers
 from numba.core import ir, types
 from numba.core.compiler import CompilerBase, DefaultPassBuilder
 from numba.core.compiler_machinery import FunctionPass, register_pass
@@ -10,64 +9,6 @@ from numba.core.untyped_passes import (IRProcessing,
                                        ReconstructSSA,
                                        DeadBranchPrune,)
 from numba.core.typed_passes import PartialTypeInference, DeadCodeElimination
-
-
-# Register this pass with the compiler framework, declare that it will not
-# mutate the control flow graph and that it is not an analysis_only pass (it
-# potentially mutates the IR).
-@register_pass(mutates_CFG=False, analysis_only=False)
-class AutoFreeBuffers(FunctionPass):
-    """
-    Black magic at work.
-
-    The goal of this pass is to "automagically" free all the buffers which
-    were allocated, apart the one which is used as a return value (if any).
-
-    NOTE: at the moment of writing there are very few tests for this and it's
-    likely that it is broken and/or does not work properly in the general
-    case. [Remove this note once we are confident that it works well]
-    """
-    _name = "auto_free_buffers"  # the common name for the pass
-
-    def __init__(self):
-        FunctionPass.__init__(self)
-
-    # implement method to do the work, "state" is the internal compiler
-    # state from the CompilerBase instance.
-    def run_pass(self, state):
-        func_ir = state.func_ir  # get the FunctionIR object
-
-        for blk in func_ir.blocks.values():
-            for stmt in blk.find_insts(ir.Assign):
-                if (
-                    isinstance(stmt.value, ir.FreeVar)
-                    and stmt.value.name in BufferMeta.class_names
-                ):
-                    break
-            else:
-                continue
-            break
-        else:
-            return False  # one does not changes the IR
-
-        for blk in func_ir.blocks.values():
-            loc = blk.loc
-            scope = blk.scope
-            for ret in blk.find_insts(ir.Return):
-
-                name = "free_all_other_buffers_fn"
-                value = ir.Global(name, free_all_other_buffers, loc)
-                target = scope.make_temp(loc)
-                stmt = ir.Assign(value, target, loc)
-                blk.insert_before_terminator(stmt)
-
-                fn_call = ir.Expr.call(func=target, args=[ret.value], kws=(), loc=loc)
-                lhs = scope.make_temp(loc)
-                var = ir.Assign(fn_call, lhs, blk.loc)
-                blk.insert_before_terminator(var)
-                break
-
-        return True  # we changed the IR
 
 
 @register_pass(mutates_CFG=False, analysis_only=False)
@@ -158,7 +99,6 @@ class OmnisciCompilerPipeline(CompilerBase):
         # namely the "nopython" pipeline
         pm = DefaultPassBuilder.define_nopython_pipeline(self.state)
         # Add the new pass to run after IRProcessing
-        pm.add_pass_after(AutoFreeBuffers, IRProcessing)
         pm.add_pass_after(CheckRaiseStmts, IRProcessing)
         pm.add_pass_after(DTypeComparison, ReconstructSSA)
         # finalize
