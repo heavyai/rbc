@@ -51,7 +51,7 @@ def _impl_array_max(x):
 
         def impl(x):
             if len(x) <= 0:
-                printf("omnisci_array_max: cannot find max of zero-sized array")  # noqa: E501
+                printf("impl_array_max: cannot find max of zero-sized array")  # noqa: E501
                 return min_value
             m = x[0]
             for i in range(len(x)):
@@ -74,7 +74,7 @@ def _impl_array_min(x):
 
         def impl(x):
             if len(x) <= 0:
-                printf("omnisci_array_min: cannot find min of zero-sized array")  # noqa: E501
+                printf("impl_array_min: cannot find min of zero-sized array")  # noqa: E501
                 return max_value
             m = x[0]
             for i in range(len(x)):

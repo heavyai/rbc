@@ -24,7 +24,6 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 
 import operator
-from collections import defaultdict
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
@@ -202,7 +201,7 @@ def heavydb_buffer_constructor(context, builder, sig, args):
 
 
 @extending.intrinsic
-def omnisci_buffer_ptr_get_ptr_(typingctx, data):
+def heavydb_buffer_ptr_get_ptr_(typingctx, data):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
     sig = ptrtype(data)
