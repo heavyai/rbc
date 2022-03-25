@@ -558,7 +558,10 @@ class RemoteJIT:
         if host == 'localhost':
             host = get_local_ip()
 
-        self.debug = debug
+        if int(os.environ.get('RBC_DEBUG', False)):
+            self.debug = True
+        else:
+            self.debug = debug
         self.host = host
         self.port = int(port)
         self.server_process = None

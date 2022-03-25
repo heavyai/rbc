@@ -21,3 +21,4 @@ and llvmlite tools.
    design
    api
    releases
+   envvars
