@@ -417,7 +417,11 @@ class RemoteHeavyDB(RemoteJIT):
                  **options):
         self.user = user
         self.password = password
-        # To-Do: change dbname to 'omnisci' if server version < (6, 0)
+
+        # To-Do: Remove this once we stop supporting HeavyDB 5.9
+        _version = get_heavydb_version()
+        if _version < (6, 0, 0) and dbname == 'heavyai':
+            dbname = 'omnisci'
         self.dbname = dbname
 
         thrift_filename = os.path.join(os.path.dirname(__file__),
