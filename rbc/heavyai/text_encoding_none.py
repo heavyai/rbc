@@ -1,4 +1,4 @@
-'''Omnisci TextEncodingNone type that corresponds to Omnisci type TEXT ENCODED NONE.
+'''HeavyDB TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
 '''
 
 __all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'HeavyDBTextEncodingNoneType']
@@ -8,15 +8,15 @@ from rbc import typesystem
 from rbc.targetinfo import TargetInfo
 from rbc.errors import RequireLiteralValue
 from .buffer import (
-    BufferPointer, Buffer, OmnisciBufferType,
-    omnisci_buffer_constructor)
+    BufferPointer, Buffer, HeavyDBBufferType,
+    heavydb_buffer_constructor)
 from numba.core import types, extending, cgutils
 from llvmlite import ir
 from typing import Union
 
 
-class HeavyDBTextEncodingNoneType(OmnisciBufferType):
-    """Omnisci TextEncodingNone type for RBC typesystem.
+class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
+    """HeavyDB TextEncodingNone type for RBC typesystem.
     """
 
     @property
@@ -118,12 +118,12 @@ def text_encoding_none_ne(a, b):
 
 
 @extending.lower_builtin(TextEncodingNone, types.Integer)
-def omnisci_text_encoding_none_constructor(context, builder, sig, args):
-    return omnisci_buffer_constructor(context, builder, sig, args)
+def heavydb_text_encoding_none_constructor(context, builder, sig, args):
+    return heavydb_buffer_constructor(context, builder, sig, args)
 
 
 @extending.lower_builtin(TextEncodingNone, types.StringLiteral)
-def omnisci_text_encoding_none_constructor_literal(context, builder, sig, args):
+def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
     int64_t = ir.IntType(64)
     int8_t_ptr = ir.IntType(8).as_pointer()
 
@@ -131,7 +131,7 @@ def omnisci_text_encoding_none_constructor_literal(context, builder, sig, args):
     sz = int64_t(len(literal_value))
 
     # arr = {ptr, size, is_null}*
-    arr = omnisci_buffer_constructor(context, builder, sig.return_type(types.int64), [sz])
+    arr = heavydb_buffer_constructor(context, builder, sig.return_type(types.int64), [sz])
     ptr = builder.extract_value(builder.load(arr), [0])
 
     msg_bytes = literal_value.encode('utf-8')
@@ -144,7 +144,7 @@ def omnisci_text_encoding_none_constructor_literal(context, builder, sig, args):
 
 
 @extending.type_callable(TextEncodingNone)
-def type_omnisci_text_encoding_none(context):
+def type_heavydb_text_encoding_none(context):
     def typer(arg):
         if isinstance(arg, types.UnicodeType):
             raise RequireLiteralValue()

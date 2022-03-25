@@ -60,7 +60,7 @@ Externals
 
 
 HeavyDB Backend
-=================
+===============
 
 The table below contains the data structures available for the HeavyDB backend.
 It should be noticed that the following types are not regular Python types but
