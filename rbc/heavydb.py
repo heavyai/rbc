@@ -420,7 +420,7 @@ class RemoteHeavyDB(RemoteJIT):
 
         # To-Do: Remove this once we stop supporting HeavyDB 5.9
         _version = get_heavydb_version()
-        if _version < (6, 0, 0) and dbname == 'heavyai':
+        if _version and _version < (6, 0, 0) and dbname == 'heavyai':
             dbname = 'omnisci'
         self.dbname = dbname
 
