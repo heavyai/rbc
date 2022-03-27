@@ -1,16 +1,16 @@
-"""Implement Omnisci Column type support
+"""Implement Heavydb Column type support
 
-Omnisci Column type is the type of input/output column arguments in
+Heavydb Column type is the type of input/output column arguments in
 UDTFs.
 """
 
-__all__ = ['OutputColumn', 'Column', 'OmnisciOutputColumnType', 'OmnisciColumnType',
-           'OmnisciCursorType']
+__all__ = ['OutputColumn', 'Column', 'HeavyDBOutputColumnType', 'HeavyDBColumnType',
+           'HeavyDBCursorType']
 
 from llvmlite import ir
 from rbc import typesystem, irutils
-from .buffer import Buffer, OmnisciBufferType, BufferType
-from .column_list import OmnisciColumnListType
+from .buffer import Buffer, HeavyDBBufferType, BufferType
+from .column_list import HeavyDBColumnListType
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types
 
@@ -18,21 +18,21 @@ from numba.core import extending, types
 int32_t = ir.IntType(32)
 
 
-class OmnisciColumnType(OmnisciBufferType):
-    """Omnisci Column type for RBC typesystem.
+class HeavyDBColumnType(HeavyDBBufferType):
+    """Heavydb Column type for RBC typesystem.
     """
     @property
     def pass_by_value(self):
-        omnisci_version = TargetInfo().software[1][:3]
-        return omnisci_version <= (5, 7, 0)
+        heavydb_version = TargetInfo().software[1][:3]
+        return heavydb_version <= (5, 7, 0)
 
     def match(self, other):
         if type(self) is type(other):
             return self[0] == other[0]
 
 
-class OmnisciOutputColumnType(OmnisciColumnType):
-    """Omnisci OutputColumn type for RBC typesystem.
+class HeavyDBOutputColumnType(HeavyDBColumnType):
+    """Heavydb OutputColumn type for RBC typesystem.
 
     OutputColumn is the same as Column but introduced to distinguish
     the input and output arguments of UDTFs.
@@ -48,8 +48,8 @@ class OutputColumn(Column):
 
 
 @extending.intrinsic
-def omnisci_column_set_null_(typingctx, col_var, row_idx):
-    # Float values are serialized as integers by OmniSciDB
+def heavydb_column_set_null_(typingctx, col_var, row_idx):
+    # Float values are serialized as integers by HeavyDB
     # For reference, here is the conversion table for float and double
     #   FLOAT:  1.1754944e-38            -> 8388608
     #   DOUBLE: 2.2250738585072014e-308  -> 4503599627370496
@@ -75,14 +75,14 @@ def omnisci_column_set_null_(typingctx, col_var, row_idx):
 
 
 @extending.overload_method(BufferType, 'set_null')
-def omnisci_column_set_null(col_var, index):
+def heavydb_column_set_null(col_var, index):
     def impl(col_var, index):
-        return omnisci_column_set_null_(col_var, index)
+        return heavydb_column_set_null_(col_var, index)
     return impl
 
 
 @extending.intrinsic
-def omnisci_column_is_null_(typingctx, col_var, row_idx):
+def heavydb_column_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
     sig = types.boolean(col_var, row_idx)
 
@@ -104,23 +104,23 @@ def omnisci_column_is_null_(typingctx, col_var, row_idx):
 
 
 @extending.overload_method(BufferType, 'is_null')
-def omnisci_column_is_null(col_var, row_idx):
+def heavydb_column_is_null(col_var, row_idx):
     def impl(col_var, row_idx):
-        return omnisci_column_is_null_(col_var, row_idx)
+        return heavydb_column_is_null_(col_var, row_idx)
     return impl
 
 
-class OmnisciCursorType(typesystem.Type):
+class HeavyDBCursorType(typesystem.Type):
 
     @classmethod
     def preprocess_args(cls, args):
         assert len(args) == 1
         params = []
         for p in args[0]:
-            if not isinstance(p, (OmnisciColumnType, OmnisciColumnListType)):
+            if not isinstance(p, (HeavyDBColumnType, HeavyDBColumnListType)):
                 # map Cursor<T ...> to Cursor<Column<T> ...>
                 c = p.copy()
-                p = OmnisciColumnType((c,), **c._params)
+                p = HeavyDBColumnType((c,), **c._params)
                 c._params.clear()
             params.append(p)
         return (tuple(params),)

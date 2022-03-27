@@ -27,11 +27,11 @@ def test_python_version():
 
 
 def test_heavydb_version(heavydb):
-    varname = 'EXPECTED_OMNISCIDB_VERSION'
+    varname = 'EXPECTED_HEAVYDB_VERSION'
     current = heavydb.version
     expected = os.environ.get(varname)
     if 'CI' in os.environ and expected is None:
-        pytest.fail("OmniSciDB server is not running")
+        pytest.fail("HeavyDB server is not running")
     if expected is None:
         pytest.skip(
             f'Undefined environment variable {varname},'

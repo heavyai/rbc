@@ -34,7 +34,7 @@ def _get_type_limits(eltype):
 @extending.overload(max)
 @expose.implements('max')
 @extending.overload_method(ArrayPointer, 'max')
-def _omnisci_array_max(x):
+def _impl_array_max(x):
     """
     Calculates the maximum value of the input array x
     """
@@ -51,7 +51,7 @@ def _omnisci_array_max(x):
 
         def impl(x):
             if len(x) <= 0:
-                printf("omnisci_array_max: cannot find max of zero-sized array")  # noqa: E501
+                printf("impl_array_max: cannot find max of zero-sized array")  # noqa: E501
                 return min_value
             m = x[0]
             for i in range(len(x)):
@@ -65,7 +65,7 @@ def _omnisci_array_max(x):
 @extending.overload(min)
 @expose.implements('min')
 @extending.overload_method(ArrayPointer, 'min')
-def _omnisci_array_min(x):
+def _impl_array_min(x):
     """
     Calculates the minimum value of the input array x.
     """
@@ -74,7 +74,7 @@ def _omnisci_array_min(x):
 
         def impl(x):
             if len(x) <= 0:
-                printf("omnisci_array_min: cannot find min of zero-sized array")  # noqa: E501
+                printf("impl_array_min: cannot find min of zero-sized array")  # noqa: E501
                 return max_value
             m = x[0]
             for i in range(len(x)):
@@ -88,7 +88,7 @@ def _omnisci_array_min(x):
 @extending.overload(sum)
 @expose.implements('sum')
 @extending.overload_method(ArrayPointer, 'sum')
-def _omnisci_np_sum(a):
+def _impl_np_sum(a):
     """
     Calculates the sum of the input array x.
     """
@@ -104,7 +104,7 @@ def _omnisci_np_sum(a):
 
 @expose.implements('prod')
 @extending.overload_method(ArrayPointer, 'prod')
-def _omnisci_np_prod(a):
+def _impl_np_prod(a):
     """
     Calculates the product of input array x elements.
     """
@@ -120,7 +120,7 @@ def _omnisci_np_prod(a):
 
 @expose.implements('mean')
 @extending.overload_method(ArrayPointer, 'mean')
-def _omnisci_array_mean(x):
+def _impl_array_mean(x):
     """
     Calculates the arithmetic mean of the input array x.
     """
@@ -136,7 +136,7 @@ def _omnisci_array_mean(x):
 
 
 @expose.not_implemented('std')
-def _omnisci_array_std(x, axis=None, correction=0.0, keepdims=False):
+def _impl_array_std(x, axis=None, correction=0.0, keepdims=False):
     """
     Calculates the standard deviation of the input array x.
     """
@@ -144,7 +144,7 @@ def _omnisci_array_std(x, axis=None, correction=0.0, keepdims=False):
 
 
 @expose.not_implemented('var')
-def _omnisci_array_var(x, axis=None, correction=0.0, keepdims=False):
+def _impl_array_var(x, axis=None, correction=0.0, keepdims=False):
     """
     Calculates the variance of the input array x.
     """

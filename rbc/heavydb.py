@@ -14,13 +14,13 @@ from .thrift.utils import resolve_includes
 from .thrift import Client as ThriftClient
 from . import heavyai
 from .heavyai import (
-    OmnisciArrayType, OmnisciBytesType, OmnisciTextEncodingDictType,
-    OmnisciOutputColumnType, OmnisciColumnType,
-    OmnisciCompilerPipeline, OmnisciCursorType,
-    BufferMeta, OmnisciColumnListType, OmnisciTableFunctionManagerType)
+    HeavyDBArrayType, HeavyDBBytesType, HeavyDBTextEncodingDictType,
+    HeavyDBOutputColumnType, HeavyDBColumnType,
+    HeavyDBCompilerPipeline, HeavyDBCursorType,
+    BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType)
 from .targetinfo import TargetInfo
 from .irtools import compile_to_LLVM
-from .errors import ForbiddenNameError, OmnisciServerError
+from .errors import ForbiddenNameError, HeavyDBServerError
 from .utils import parse_version, version_date
 from . import ctools
 from . import typesystem
@@ -85,11 +85,11 @@ def get_literal_return(func, verbose=False):
 
 
 def _global_heavydb():
-    """Implements singleton of a global RemoteOmnisci instance.
+    """Implements singleton of a global RemoteHeavyDB instance.
     """
     config = get_client_config()
     remotedb = dict(heavyai=RemoteHeavyDB,
-                    omnisci=RemoteOmnisci)[config['dbname']](**config)
+                    omnisci=RemoteHeavyDB)[config['dbname']](**config)
     while True:
         yield remotedb
 
@@ -179,7 +179,7 @@ def get_client_config(**config):
                                    ('omnisci', 'OMNISCI_CLIENT_CONF')]:
         conf_file = os.environ.get(client_conf_env, None)
         if conf_file is not None and not os.path.isfile(conf_file):
-            print('rbc.omnisci.get_client_config:'
+            print('rbc.heavydb.get_client_config:'
                   f' {client_conf_env}={conf_file!r}'
                   ' is not a file, ignoring.')
             conf_file = None
@@ -241,8 +241,8 @@ def is_udtf(sig):
     if sig[0].annotation().get('kind') == 'UDTF':
         return True
     for a in sig[1]:
-        if isinstance(a, (OmnisciOutputColumnType, OmnisciColumnType,
-                          OmnisciColumnListType, OmnisciTableFunctionManagerType)):
+        if isinstance(a, (HeavyDBOutputColumnType, HeavyDBColumnType,
+                          HeavyDBColumnListType, HeavyDBTableFunctionManagerType)):
             return True
     return False
 
@@ -328,7 +328,7 @@ def type_name_to_dtype(type_name):
         f'convert DatumType `{type_name}` to numpy dtype')
 
 
-class OmnisciQueryCapsule(RemoteCallCapsule):
+class HeavyDBQueryCapsule(RemoteCallCapsule):
 
     use_execute_cache = True
 
@@ -372,13 +372,13 @@ class RemoteHeavyDB(RemoteJIT):
 
     .. code:: python
 
-        omnisci = RemoteOmnisci(host=..., port=...)
+        heavydb = RemoteHeavyDB(host=..., port=...)
 
-        @omnisci('int(int, int)')
+        @heavydb('int(int, int)')
         def add(a, b):
             return a + b
 
-        omnisci.register()
+        heavydb.register()
 
     Use pymapd, for instance, to make a SQL query `select add(c1,
     c2) from table`
@@ -388,23 +388,23 @@ class RemoteHeavyDB(RemoteJIT):
 
     typesystem_aliases = dict(
         bool='bool8',
-        Array='OmnisciArrayType',
-        Bytes='OmnisciBytesType<char8>',
-        Cursor='OmnisciCursorType',
-        Column='OmnisciColumnType',
-        OutputColumn='OmnisciOutputColumnType',
+        Array='HeavyDBArrayType',
+        Bytes='HeavyDBBytesType<char8>',
+        Cursor='HeavyDBCursorType',
+        Column='HeavyDBColumnType',
+        OutputColumn='HeavyDBOutputColumnType',
         RowMultiplier='int32|sizer=RowMultiplier',
         ConstantParameter='int32|sizer=ConstantParameter',
         SpecifiedParameter='int32|sizer=SpecifiedParameter',
         Constant='int32|sizer=Constant',
         PreFlight='int32|sizer=PreFlight',
-        ColumnList='OmnisciColumnListType',
-        TextEncodingDict='OmnisciTextEncodingDictType',
-        TableFunctionManager='OmnisciTableFunctionManagerType<>',
+        ColumnList='HeavyDBColumnListType',
+        TextEncodingDict='HeavyDBTextEncodingDictType',
+        TableFunctionManager='HeavyDBTableFunctionManagerType<>',
         UDTF='int32|kind=UDTF'
     )
 
-    remote_call_capsule_cls = OmnisciQueryCapsule
+    remote_call_capsule_cls = HeavyDBQueryCapsule
     default_remote_call_hold = True
     supports_local_caller = False
 
@@ -413,10 +413,15 @@ class RemoteHeavyDB(RemoteJIT):
                  password='HyperInteractive',
                  host='localhost',
                  port=6274,
-                 dbname='omnisci',
+                 dbname='heavyai',
                  **options):
         self.user = user
         self.password = password
+
+        # To-Do: Remove this once we stop supporting HeavyDB 5.9
+        _version = get_heavydb_version()
+        if _version and _version < (6, 0, 0) and dbname == 'heavyai':
+            dbname = 'omnisci'
         self.dbname = dbname
 
         thrift_filename = os.path.join(os.path.dirname(__file__),
@@ -473,7 +478,7 @@ class RemoteHeavyDB(RemoteJIT):
             version = self.thrift_call('get_version')
             self._version = parse_version(version)
             if self._version[:2] < (5, 6):
-                msg = (f'OmniSciDB server v.{version} is too old (expected v.5.6 or newer) '
+                msg = (f'HeavyDB server v.{version} is too old (expected v.5.6 or newer) '
                        'and some features might not be available.')
                 warnings.warn(msg, PendingDeprecationWarning)
         return self._version
@@ -534,10 +539,10 @@ class RemoteHeavyDB(RemoteJIT):
                          r'|Cannot apply.*)',
                          msg.error_msg)
             if m:
-                raise OmnisciServerError(f'[Calcite] {m.group(1)}')
+                raise HeavyDBServerError(f'[Calcite] {m.group(1)}')
             m = re.match(r'.*Exception: (.*)', msg.error_msg)
             if m:
-                raise OmnisciServerError(f'{m.group(1)}')
+                raise HeavyDBServerError(f'{m.group(1)}')
             m = re.match(
                 r'(.*)\: No match found for function signature (.*)\(.*\)',
                 msg.error_msg
@@ -545,38 +550,38 @@ class RemoteHeavyDB(RemoteJIT):
             if m:
                 msg = (f"Undefined function call {m.group(2)!r} in"
                        f" SQL statement: {m.group(1)}")
-                raise OmnisciServerError(msg)
+                raise HeavyDBServerError(msg)
             m = re.match(r'.*SQL Error: (.*)', msg.error_msg)
             if m:
-                raise OmnisciServerError(f'{m.group(1)}')
+                raise HeavyDBServerError(f'{m.group(1)}')
             m = re.match(r'Could not bind *', msg.error_msg)
             if m:
-                raise OmnisciServerError(msg.error_msg)
+                raise HeavyDBServerError(msg.error_msg)
             m = re.match(r'Runtime extension functions registration is disabled.',
                          msg.error_msg)
             if m:
                 msg = (f"{msg.error_msg} Please use server options --enable-runtime-udf"
                        " and/or --enable-table-functions")
-                raise OmnisciServerError(msg)
+                raise HeavyDBServerError(msg)
 
             # TODO: catch more known server failures here.
             raise
 
     def get_tables(self):
-        """Return a list of table names stored in the OmnisciDB server.
+        """Return a list of table names stored in the HeavyDB server.
         """
         return self.thrift_call('get_tables', self.session_id)
 
     def get_table_details(self, table_name):
-        """Return details about OmnisciDB table.
+        """Return details about HeavyDB table.
         """
         return self.thrift_call('get_table_details',
                                 self.session_id, table_name)
 
     def load_table_columnar(self, table_name, **columnar_data):
-        """Load columnar data to OmnisciDB table.
+        """Load columnar data to HeavyDB table.
 
-        Warning: when connected to OmnisciDB < 5.3, the data is loaded
+        Warning: when connected to HeavyDB < 5.3, the data is loaded
           row-wise that will be very slow for large data sets.
 
         Parameters
@@ -683,7 +688,7 @@ class RemoteHeavyDB(RemoteJIT):
                     break
             if typeinfo is None:
                 raise ValueError(
-                    f'OmnisciDB `{table_name}` has no column `{column_name}`')
+                    f'HeavyDB `{table_name}` has no column `{column_name}`')
             datumtype = thrift.TDatumType._VALUES_TO_NAMES[typeinfo.type]
             nulls = [v is None for v in column_data]
             if typeinfo.is_array:
@@ -727,7 +732,7 @@ class RemoteHeavyDB(RemoteJIT):
                          self.session_id, table_name, columns)
 
     def _make_row_results_set(self, data):
-        # The following code is a stripped copy from omnisci/pymapd
+        # The following code is a stripped copy from heavyai/pymapd
 
         _typeattr = {
             'SMALLINT': 'int',
@@ -785,7 +790,7 @@ class RemoteHeavyDB(RemoteJIT):
         return names and re.search(r'\b(' + names + r')\b', query, re.I) is not None
 
     def sql_execute(self, query):
-        """Execute SQL query in OmnisciDB server.
+        """Execute SQL query in HeavyDB server.
 
         Parameters
         ----------
@@ -895,21 +900,21 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
-                ('OmnisciTextEncodingDictType<>', 'TextEncodingDict'),
+                ('HeavyDBTextEncodingDictType<>', 'TextEncodingDict'),
                 ('TimeStamp', 'TimeStamp'),
         ]:
-            ext_arguments_map['OmnisciArrayType<%s>' % ptr_type] \
+            ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
-            ext_arguments_map['OmnisciColumnType<%s>' % ptr_type] \
+            ext_arguments_map['HeavyDBColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
-            ext_arguments_map['OmnisciOutputColumnType<%s>' % ptr_type] \
+            ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
-            ext_arguments_map['OmnisciColumnListType<%s>' % ptr_type] \
+            ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
-            ext_arguments_map['OmnisciOutputColumnListType<%s>' % ptr_type] \
+            ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
 
-        ext_arguments_map['OmnisciBytesType<char8>'] = ext_arguments_map.get('Bytes')
+        ext_arguments_map['HeavyDBBytesType<char8>'] = ext_arguments_map.get('Bytes')
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
@@ -1022,12 +1027,12 @@ class RemoteHeavyDB(RemoteJIT):
                 target_info.add_library('m')
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
-                target_info.add_library('omniscidb')
+                target_info.add_library('heavydb')
             elif target_info.is_gpu and self.version >= (5, 5):
                 target_info.add_library('libdevice')
 
             version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
-            target_info.set('software', f'OmnisciDB {version_str}')
+            target_info.set('software', f'HeavyDB {version_str}')
 
             llvm_version = device_params.get('llvm_version')
             if llvm_version is not None:
@@ -1054,7 +1059,7 @@ class RemoteHeavyDB(RemoteJIT):
             v = '.'.join(map(str, self.version))
             raise RuntimeError(
                 'UDTFs with Column arguments require '
-                'omniscidb 5.4 or newer, currently '
+                'heavydb 5.4 or newer, currently '
                 'connected to ', v)
         thrift = self.thrift_client.thrift
 
@@ -1078,28 +1083,28 @@ class RemoteHeavyDB(RemoteJIT):
             annot = a.annotation()
 
             # process function annotations first to avoid appending annotations twice
-            if isinstance(a, OmnisciTableFunctionManagerType):
+            if isinstance(a, HeavyDBTableFunctionManagerType):
                 function_annotations['uses_manager'] = 'True'
                 consumed_index += 1
                 continue
 
             annotations.append(annot)
 
-            if isinstance(a, OmnisciCursorType):
+            if isinstance(a, HeavyDBCursorType):
                 sqlArgTypes.append(self.type_to_extarg('Cursor'))
                 for a_ in a.as_consumed_args:
                     assert not isinstance(
-                        a_, OmnisciOutputColumnType), (a_)
+                        a_, HeavyDBOutputColumnType), (a_)
                     inputArgTypes.append(self.type_to_extarg(a_))
                     consumed_index += 1
 
             else:
-                if isinstance(a, OmnisciOutputColumnType):
+                if isinstance(a, HeavyDBOutputColumnType):
                     atype = self.type_to_extarg(a)
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
-                    if isinstance(a, (OmnisciColumnType, OmnisciColumnListType)):
+                    if isinstance(a, (HeavyDBColumnType, HeavyDBColumnListType)):
                         sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:
@@ -1127,12 +1132,12 @@ class RemoteHeavyDB(RemoteJIT):
             annotations)
 
     def _make_udtf_old(self, caller, orig_sig, sig):
-        # old style UDTF for omniscidb <= 5.3, to be deprecated
+        # old style UDTF for heavydb <= 5.3, to be deprecated
         if self.version >= (5, 4):
             v = '.'.join(map(str, self.version))
             raise RuntimeError(
                 'Old-style UDTFs require '
-                'omniscidb 5.3 or older, currently '
+                'heavydb 5.3 or older, currently '
                 'connected to ', v)
         thrift = self.thrift_client.thrift
 
@@ -1234,10 +1239,10 @@ class RemoteHeavyDB(RemoteJIT):
                                 sig.set_mangling('__%s_%s' % (device, i))
 
                         if sig_is_udtf:
-                            # new style UDTF, requires omniscidb version >= 5.4
+                            # new style UDTF, requires heavydb version >= 5.4
                             udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
                         elif is_old_udtf:
-                            # old style UDTF for omniscidb <= 5.3, to be deprecated
+                            # old style UDTF for heavydb <= 5.3, to be deprecated
                             udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
                         else:
                             udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
@@ -1247,7 +1252,7 @@ class RemoteHeavyDB(RemoteJIT):
                 llvm_module, succesful_fids = compile_to_LLVM(
                     functions_and_signatures,
                     target_info,
-                    pipeline_class=OmnisciCompilerPipeline,
+                    pipeline_class=HeavyDBCompilerPipeline,
                     user_defined_llvm_ir=self.user_defined_llvm_ir.get(device),
                     debug=self.debug)
 
@@ -1338,10 +1343,10 @@ class RemoteHeavyDB(RemoteJIT):
                     if sizer not in user_specified_output_buffer_sizers:
                         continue
                     atype.annotation(sizer=sizer)
-                elif isinstance(atype, OmnisciTableFunctionManagerType):
+                elif isinstance(atype, HeavyDBTableFunctionManagerType):
                     continue
-                elif isinstance(atype, OmnisciOutputColumnType):
-                    rtypes.append(atype.copy(OmnisciColumnType))
+                elif isinstance(atype, HeavyDBOutputColumnType):
+                    rtypes.append(atype.copy(HeavyDBColumnType))
                     continue
                 atypes.append(atype)
             rtype = typesystem.Type(*rtypes, **dict(struct_is_tuple=True))
@@ -1392,28 +1397,28 @@ class RemoteHeavyDB(RemoteJIT):
         use_typename = False
         if typ.is_struct and typ._params.get('struct_is_tuple'):
             return f'({", ".join(map(self.format_type, typ))})'
-        if isinstance(typ, OmnisciOutputColumnType):
+        if isinstance(typ, HeavyDBOutputColumnType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('OutputColumn',) + p, **typ._params)
-        elif isinstance(typ, OmnisciColumnType):
+        elif isinstance(typ, HeavyDBColumnType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('Column',) + p, **typ._params)
-        elif isinstance(typ, OmnisciColumnListType):
+        elif isinstance(typ, HeavyDBColumnListType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('ColumnList',) + p, **typ._params)
-        elif isinstance(typ, OmnisciArrayType):
+        elif isinstance(typ, HeavyDBArrayType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('Array',) + p, **typ._params)
-        elif isinstance(typ, OmnisciCursorType):
+        elif isinstance(typ, HeavyDBCursorType):
             p = tuple(map(self.format_type, typ[0]))
             typ = typesystem.Type(('Cursor',) + p, **typ._params)
-        elif isinstance(typ, OmnisciBytesType):
+        elif isinstance(typ, HeavyDBBytesType):
             typ = typ.copy().params(typename='Bytes')
             use_typename = True
-        elif isinstance(typ, OmnisciTextEncodingDictType):
+        elif isinstance(typ, HeavyDBTextEncodingDictType):
             typ = typ.copy().params(typename='TextEncodingDict')
             use_typename = True
-        elif isinstance(typ, OmnisciTableFunctionManagerType):
+        elif isinstance(typ, HeavyDBTableFunctionManagerType):
             typ = typ.copy().params(typename='TableFunctionManager')
             use_typename = True
         elif is_sizer(typ):
@@ -1451,9 +1456,9 @@ class RemoteHeavyDB(RemoteJIT):
                 else:
                     a = a.execute(hold=True).lstrip('SELECT ')
 
-            if isinstance(atype, (OmnisciColumnType, OmnisciColumnListType)):
+            if isinstance(atype, (HeavyDBColumnType, HeavyDBColumnListType)):
                 args.append(f'CURSOR({a})')
-            elif isinstance(atype, OmnisciBytesType):
+            elif isinstance(atype, HeavyDBBytesType):
                 if isinstance(a, bytes):
                     a = repr(a.decode())
                 elif isinstance(a, str):

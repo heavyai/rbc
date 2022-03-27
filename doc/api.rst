@@ -18,7 +18,7 @@ Top-level functions
     external
     errors
     libfuncs
-    omniscidb
+    heavydb
     remotejit
     structure_type
     targetinfo
@@ -55,22 +55,22 @@ Externals
     externals.cmath
     externals.libdevice
     externals.macros
-    externals.omniscidb
+    externals.heavydb
     externals.stdio
 
 
-OmniSciDB Backend
+HeavyDB Backend
 =================
 
-The table below contains the data structures available for the OmniSciDB backend.
+The table below contains the data structures available for the HeavyDB backend.
 It should be noticed that the following types are not regular Python types but
 `Numba types <https://numba.readthedocs.io/en/stable/reference/types.html>`__.
 
-The set of types below are only materialize inside the OmniSciDB SQL Engine. Thus,
+The set of types below are only materialize inside the HeavyDB SQL Engine. Thus,
 one cannot create and use them inside the REPL, for instance.
 
 
 .. autosummary::
     :toctree: generated/
 
-    rbc.omnisci_backend.Array
+    rbc.heavyai.Array

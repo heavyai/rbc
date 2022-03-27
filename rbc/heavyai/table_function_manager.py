@@ -1,4 +1,4 @@
-__all__ = ['OmnisciTableFunctionManagerType']
+__all__ = ['HeavyDBTableFunctionManagerType']
 
 
 from numba.core import extending, types
@@ -10,7 +10,7 @@ from rbc.typesystem import Type
 from llvmlite import ir
 
 
-class OmnisciTableFunctionManagerType(Type):
+class HeavyDBTableFunctionManagerType(Type):
     """TableFunctionManager<> is a typesystem custom type that
     represents a class type with the following public interface:
 
@@ -25,21 +25,21 @@ class OmnisciTableFunctionManagerType(Type):
     @property
     def __typesystem_type__(self):
         ptr_t = Type.fromstring("int8 ptr")
-        return Type(ptr_t).params(NumbaPointerType=OmnisciTableFunctionManagerNumbaType).pointer()
+        return Type(ptr_t).params(NumbaPointerType=HeavyDBTableFunctionManagerNumbaType).pointer()
 
 
-class OmnisciTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerType):
+class HeavyDBTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerType):
     pass
 
 
-error_msg = 'TableFunctionManager is only available in OmniSciDB 5.9 or newer (got %s)'
+error_msg = 'TableFunctionManager is only available in HeavyDB 5.9 or newer (got %s)'
 i8p = ir.IntType(8).as_pointer()
 i32 = ir.IntType(32)
 i64 = ir.IntType(64)
 
 
 @extending.intrinsic
-def omnisci_udtfmanager_error_message_(typingctx, mgr, msg):
+def heavydb_udtfmanager_error_message_(typingctx, mgr, msg):
     sig = types.int32(mgr, msg)
 
     target_info = TargetInfo()
@@ -71,15 +71,15 @@ def omnisci_udtfmanager_error_message_(typingctx, mgr, msg):
     return sig, codegen
 
 
-@extending.overload_method(OmnisciTableFunctionManagerNumbaType, 'error_message')
-def omnisci_udtfmanager_error_message(mgr, msg):
+@extending.overload_method(HeavyDBTableFunctionManagerNumbaType, 'error_message')
+def heavydb_udtfmanager_error_message(mgr, msg):
     def impl(mgr, msg):
-        return omnisci_udtfmanager_error_message_(mgr, msg)
+        return heavydb_udtfmanager_error_message_(mgr, msg)
     return impl
 
 
 @extending.intrinsic
-def omnisci_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
+def heavydb_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
     sig = types.void(mgr, num_rows)
 
     target_info = TargetInfo()
@@ -100,8 +100,8 @@ def omnisci_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
     return sig, codegen
 
 
-@extending.overload_method(OmnisciTableFunctionManagerNumbaType, 'set_output_row_size')
-def omnisci_udtfmanager_set_output_row_size(mgr, num_rows):
+@extending.overload_method(HeavyDBTableFunctionManagerNumbaType, 'set_output_row_size')
+def heavydb_udtfmanager_set_output_row_size(mgr, num_rows):
     def impl(mgr, num_rows):
-        return omnisci_udtfmanager_set_output_row_size_(mgr, num_rows)
+        return heavydb_udtfmanager_set_output_row_size_(mgr, num_rows)
     return impl

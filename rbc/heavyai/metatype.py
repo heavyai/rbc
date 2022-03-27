@@ -1,10 +1,10 @@
 """Implements type meta
 """
 
-__all__ = ['OmnisciMetaType']
+__all__ = ['HeavyDBMetaType']
 
 
-class OmnisciMetaType(type):
+class HeavyDBMetaType(type):
 
     class_names = set()
 

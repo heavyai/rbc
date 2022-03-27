@@ -14,10 +14,7 @@ from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip, UNSPECIFIED
 from .targetinfo import TargetInfo
-# XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
-# we support Arrays even without omnisci, so it must be renamed and moved
-# somewhere elsef
-from .heavyai import OmnisciCompilerPipeline
+from .heavyai import HeavyDBCompilerPipeline
 
 
 def isfunctionlike(obj):
@@ -359,7 +356,7 @@ class Caller:
                     llvm_module, succesful_fids = irtools.compile_to_LLVM(
                         [(self.func, signatures_map)],
                         target_info,
-                        pipeline_class=OmnisciCompilerPipeline,
+                        pipeline_class=HeavyDBCompilerPipeline,
                         debug=self.remotejit.debug)
                     lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
@@ -817,7 +814,7 @@ class RemoteJIT:
             llvm_module, succesful_fids = irtools.compile_to_LLVM(
                 [(func, {0: ftype})],
                 target_info,
-                pipeline_class=OmnisciCompilerPipeline,
+                pipeline_class=HeavyDBCompilerPipeline,
                 debug=self.debug)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])

@@ -1,12 +1,12 @@
-"""Implement Omnisci Array type support
+"""Implement HeavyDB Array type support
 """
 
-__all__ = ['ArrayPointer', 'Array', 'OmnisciArrayType']
+__all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType']
 
 from rbc import typesystem, errors
 from .buffer import (BufferPointer, Buffer,
-                     OmnisciBufferType,
-                     omnisci_buffer_constructor)
+                     HeavyDBBufferType,
+                     heavydb_buffer_constructor)
 from numba.core import extending, types
 from typing import Union, TypeVar
 
@@ -14,10 +14,10 @@ from typing import Union, TypeVar
 T = TypeVar('T')
 
 
-class OmnisciArrayType(OmnisciBufferType):
-    """Omnisci Array type for RBC typesystem.
+class HeavyDBArrayType(HeavyDBBufferType):
+    """HeavyDB Array type for RBC typesystem.
 
-    :code:`Omnisci Array<T>` is defined as follows (using C++ syntax)::
+    :code:`HeavyDB Array<T>` is defined as follows (using C++ syntax)::
 
       template<typename T>
       struct Array {
@@ -54,9 +54,9 @@ class Array(Buffer):
     .. code-block:: python
 
         from numba import types
-        from rbc.omnisci_backend import Array
+        from rbc.heavydb import Array
 
-        @omnisci('int64[](int64)')
+        @heavydb('int64[](int64)')
         def my_arange(size):
             arr = Array(size, types.int64)
             for i in range(size):
@@ -134,12 +134,12 @@ class Array(Buffer):
 
 @extending.lower_builtin(Array, types.Integer, types.StringLiteral)
 @extending.lower_builtin(Array, types.Integer, types.NumberClass)
-def omnisci_array_constructor(context, builder, sig, args):
-    return omnisci_buffer_constructor(context, builder, sig, args)
+def heavydb_array_constructor(context, builder, sig, args):
+    return heavydb_buffer_constructor(context, builder, sig, args)
 
 
 @extending.type_callable(Array)
-def type_omnisci_array(context):
+def type_heavydb_array(context):
     def typer(size, dtype):
         if isinstance(dtype, types.StringLiteral):
             element_type = typesystem.Type.fromstring(dtype.literal_value)
@@ -147,5 +147,5 @@ def type_omnisci_array(context):
             element_type = typesystem.Type.fromobject(dtype)
         else:
             raise errors.NumbaNotImplementedError(repr(dtype))
-        return OmnisciArrayType((element_type,)).tonumba()
+        return HeavyDBArrayType((element_type,)).tonumba()
     return typer

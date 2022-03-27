@@ -105,7 +105,7 @@ def _array_api_triu(x, k=0):
 
 
 @expose.implements('full')
-def _omnisci_np_full(shape, fill_value, dtype=None):
+def _impl__full(shape, fill_value, dtype=None):
     """
     Return a new array of given shape and type, filled with fill_value.
     """
@@ -119,7 +119,7 @@ def _omnisci_np_full(shape, fill_value, dtype=None):
 
 
 @expose.implements('full_like')
-def _omnisci_np_full_like(a, fill_value, dtype=None):
+def _impl_full_like(a, fill_value, dtype=None):
     """
     Return a full array with the same shape and type as a given array.
     """
@@ -138,7 +138,7 @@ def _omnisci_np_full_like(a, fill_value, dtype=None):
 
 
 @expose.implements('empty_like')
-def _omnisci_np_empty_like(a, dtype=None):
+def _impl_empty_like(a, dtype=None):
     """
     Return a new array with the same shape and type as a given array.
     """
@@ -154,7 +154,7 @@ def _omnisci_np_empty_like(a, dtype=None):
 
 
 @expose.implements('empty')
-def _omnisci_np_empty(shape, dtype=None):
+def _impl_empty(shape, dtype=None):
     """
     Return a new array of given shape and type, without initializing entries.
     """
@@ -172,7 +172,7 @@ def _omnisci_np_empty(shape, dtype=None):
 
 
 @expose.implements('zeros')
-def _omnisci_np_zeros(shape, dtype=None):
+def _impl_zeros(shape, dtype=None):
     """
     Return a new array of given shape and type, filled with zeros.
     """
@@ -186,7 +186,7 @@ def _omnisci_np_zeros(shape, dtype=None):
 
 
 @expose.implements('zeros_like')
-def _omnisci_np_zeros_like(a, dtype=None):
+def _impl_zeros_like(a, dtype=None):
     """
     Return an array of zeros with the same shape and type as a given array.
     """
@@ -204,7 +204,7 @@ def _omnisci_np_zeros_like(a, dtype=None):
 
 
 @expose.implements('ones')
-def _omnisci_np_ones(shape, dtype=None):
+def _impl_ones(shape, dtype=None):
     """
     Return a new array of given shape and type, filled with ones.
     """
@@ -218,7 +218,7 @@ def _omnisci_np_ones(shape, dtype=None):
 
 
 @expose.implements('ones_like')
-def _omnisci_np_ones_like(a, dtype=None):
+def _impl_ones_like(a, dtype=None):
     """
     Return an array of ones with the same shape and type as a given array.
     """
@@ -236,7 +236,7 @@ def _omnisci_np_ones_like(a, dtype=None):
 
 
 @extending.overload_method(ArrayPointer, 'fill')
-def _omnisci_array_fill(x, v):
+def _impl_array_fill(x, v):
     """
     Fill the array with a scalar value.
     """
@@ -248,7 +248,7 @@ def _omnisci_array_fill(x, v):
 
 
 @expose.implements('cumsum', api=API.NUMPY_API)
-def _omnisci_np_cumsum(a):
+def _impl_cumsum(a):
     """
     Return the cumulative sum of the elements along a given axis.
     """

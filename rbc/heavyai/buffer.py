@@ -1,6 +1,6 @@
-"""Implement Buffer type as a base class to Omnisci Array and Column types.
+"""Implement Buffer type as a base class to HeavyDB Array and Column types.
 
-Omnisci Buffer represents the following structure:
+HeavyDB Buffer represents the following structure:
 
   template<typename T>
   struct Buffer {
@@ -19,12 +19,12 @@ This module implements the support for the following Python operators:
   __setitem__
 
 to provide a minimal functionality for accessing and manipulating the
-Omnisci buffer objects from UDF/UDTFs.
+HeavyDB buffer objects from UDF/UDTFs.
 """
 
 
 import operator
-from .metatype import OmnisciMetaType
+from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
 from rbc import typesystem, irutils
@@ -39,8 +39,8 @@ fp32 = ir.FloatType()
 fp64 = ir.DoubleType()
 
 
-class OmnisciBufferType(typesystem.Type):
-    """Typesystem type class for Omnisci buffer structures.
+class HeavyDBBufferType(typesystem.Type):
+    """Typesystem type class for HeavyDB buffer structures.
     """
     # When True, buffer type arguments are passed by value to
     # functions [not recommended].
@@ -83,7 +83,7 @@ class OmnisciBufferType(typesystem.Type):
 
 
 class BufferType(types.Type):
-    """Numba type class for Omnisci buffer structures.
+    """Numba type class for HeavyDB buffer structures.
     """
 
     @property
@@ -95,7 +95,7 @@ class BufferType(types.Type):
 
 
 class BufferPointer(types.IterableType):
-    """Numba type class for pointers to Omnisci buffer structures.
+    """Numba type class for pointers to HeavyDB buffer structures.
 
     We are not deriving from CPointer because BufferPointer getitem is
     used to access the data stored in Buffer ptr member.
@@ -134,18 +134,18 @@ class BufferPointerIteratorModel(datamodel.StructModel):
         super(BufferPointerIteratorModel, self).__init__(dmm, fe_type, members)
 
 
-class BufferMeta(OmnisciMetaType):
+class BufferMeta(HeavyDBMetaType):
     pass
 
 
 class Buffer(object, metaclass=BufferMeta):
-    """Represents Omnisci Buffer that can be constructed within UDF/UDTFs.
+    """Represents HeavyDB Buffer that can be constructed within UDF/UDTFs.
     """
 
 
 @datamodel.register_default(BufferPointer)
 class BufferPointerModel(datamodel.models.PointerModel):
-    """Base class for Omnisci buffer pointer models.
+    """Base class for HeavyDB buffer pointer models.
 
     Subclasses should register the model for the corresponding
     BufferPointer subclass, for instance::
@@ -156,14 +156,14 @@ class BufferPointerModel(datamodel.models.PointerModel):
     """
 
 
-def omnisci_buffer_constructor(context, builder, sig, args):
+def heavydb_buffer_constructor(context, builder, sig, args):
     """
 
     Usage:
 
-      extending.lower_builtin(MyBuffer, numba.types.Integer, ...)(omnisci_buffer_constructor)
+      extending.lower_builtin(MyBuffer, numba.types.Integer, ...)(heavydb_buffer_constructor)
 
-    will enable creating MyBuffer instance from a Omnisci UDF/UDTF definition:
+    will enable creating MyBuffer instance from a HeavyDB UDF/UDTF definition:
 
       b = MyBuffer(<size>, ...)
 
@@ -201,7 +201,7 @@ def omnisci_buffer_constructor(context, builder, sig, args):
 
 
 @extending.intrinsic
-def omnisci_buffer_ptr_get_ptr_(typingctx, data):
+def heavydb_buffer_ptr_get_ptr_(typingctx, data):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
     sig = ptrtype(data)
@@ -217,7 +217,7 @@ def omnisci_buffer_ptr_get_ptr_(typingctx, data):
 
 
 @extending.intrinsic
-def omnisci_buffer_get_ptr_(typingctx, data):
+def heavydb_buffer_get_ptr_(typingctx, data):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
     sig = ptrtype(data)
@@ -232,7 +232,7 @@ def omnisci_buffer_get_ptr_(typingctx, data):
 
 
 @extending.intrinsic
-def omnisci_buffer_ptr_item_get_ptr_(typingctx, data, index):
+def heavydb_buffer_ptr_item_get_ptr_(typingctx, data, index):
     eltype = data.eltype
     ptrtype = types.CPointer(eltype)
     sig = ptrtype(data, index)
@@ -248,26 +248,26 @@ def omnisci_buffer_ptr_item_get_ptr_(typingctx, data, index):
 
 
 @extending.overload_method(BufferPointer, 'ptr')
-def omnisci_buffer_get_ptr(x, index=None):
+def heavydb_buffer_get_ptr(x, index=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(index):
             def impl(x, index=None):
-                return omnisci_buffer_ptr_get_ptr_(x)
+                return heavydb_buffer_ptr_get_ptr_(x)
         else:
             def impl(x, index=None):
-                return omnisci_buffer_ptr_item_get_ptr_(x, index)
+                return heavydb_buffer_ptr_item_get_ptr_(x, index)
         return impl
     if isinstance(x, BufferType):
         if cgutils.is_nonelike(index):
             def impl(x, index=None):
-                return omnisci_buffer_get_ptr_(x)
+                return heavydb_buffer_get_ptr_(x)
         else:
-            raise NotImplementedError(f'omnisci_buffer_item_get_ptr_({x}, {index})')
+            raise NotImplementedError(f'heavydb_buffer_item_get_ptr_({x}, {index})')
         return impl
 
 
 @extending.intrinsic
-def omnisci_buffer_ptr_len_(typingctx, data):
+def heavydb_buffer_ptr_len_(typingctx, data):
     sig = types.int64(data)
 
     def codegen(context, builder, signature, args):
@@ -281,7 +281,7 @@ def omnisci_buffer_ptr_len_(typingctx, data):
 
 
 @extending.intrinsic
-def omnisci_buffer_len_(typingctx, data):
+def heavydb_buffer_len_(typingctx, data):
     sig = types.int64(data)
 
     def codegen(context, builder, signature, args):
@@ -292,15 +292,15 @@ def omnisci_buffer_len_(typingctx, data):
 
 
 @extending.overload(len)
-def omnisci_buffer_len(x):
+def heavydb_buffer_len(x):
     if isinstance(x, BufferPointer):
-        return lambda x: omnisci_buffer_ptr_len_(x)
+        return lambda x: heavydb_buffer_ptr_len_(x)
     if isinstance(x, BufferType):
-        return lambda x: omnisci_buffer_len_(x)
+        return lambda x: heavydb_buffer_len_(x)
 
 
 @extending.intrinsic
-def omnisci_buffer_ptr_getitem_(typingctx, data, index):
+def heavydb_buffer_ptr_getitem_(typingctx, data, index):
     sig = data.eltype(data, index)
 
     def codegen(context, builder, signature, args):
@@ -316,7 +316,7 @@ def omnisci_buffer_ptr_getitem_(typingctx, data, index):
 
 
 @extending.intrinsic
-def omnisci_buffer_getitem_(typingctx, data, index):
+def heavydb_buffer_getitem_(typingctx, data, index):
     eltype = data.eltype
     sig = eltype(data, index)
 
@@ -330,11 +330,11 @@ def omnisci_buffer_getitem_(typingctx, data, index):
 
 
 @extending.overload(operator.getitem)
-def omnisci_buffer_getitem(x, i):
+def heavydb_buffer_getitem(x, i):
     if isinstance(x, BufferPointer):
-        return lambda x, i: omnisci_buffer_ptr_getitem_(x, i)
+        return lambda x, i: heavydb_buffer_ptr_getitem_(x, i)
     if isinstance(x, BufferType):
-        return lambda x, i: omnisci_buffer_getitem_(x, i)
+        return lambda x, i: heavydb_buffer_getitem_(x, i)
 
 
 # [rbc issue-197] Numba promotes operations like
@@ -364,7 +364,7 @@ def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
 
 
 @extending.intrinsic
-def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
+def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
     eltype = data.eltype
@@ -386,7 +386,7 @@ def omnisci_buffer_ptr_setitem_(typingctx, data, index, value):
 
 
 @extending.intrinsic
-def omnisci_buffer_setitem_(typingctx, data, index, value):
+def heavydb_buffer_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
     eltype = data.members[0].dtype
@@ -403,15 +403,15 @@ def omnisci_buffer_setitem_(typingctx, data, index, value):
 
 
 @extending.overload(operator.setitem)
-def omnisci_buffer_setitem(a, i, v):
+def heavydb_buffer_setitem(a, i, v):
     if isinstance(a, BufferPointer):
-        return lambda a, i, v: omnisci_buffer_ptr_setitem_(a, i, v)
+        return lambda a, i, v: heavydb_buffer_ptr_setitem_(a, i, v)
     if isinstance(a, BufferType):
-        return lambda a, i, v: omnisci_buffer_setitem_(a, i, v)
+        return lambda a, i, v: heavydb_buffer_setitem_(a, i, v)
 
 
 @extending.intrinsic
-def omnisci_buffer_is_null_(typingctx, data):
+def heavydb_buffer_is_null_(typingctx, data):
     sig = types.int8(data)
 
     def codegen(context, builder, sig, args):
@@ -423,7 +423,7 @@ def omnisci_buffer_is_null_(typingctx, data):
 
 
 @extending.intrinsic
-def omnisci_buffer_set_null_(typingctx, data):
+def heavydb_buffer_set_null_(typingctx, data):
     sig = types.none(data)
 
     def codegen(context, builder, sig, args):
@@ -435,7 +435,7 @@ def omnisci_buffer_set_null_(typingctx, data):
 
 
 @extending.intrinsic
-def omnisci_buffer_idx_is_null_(typingctx, col_var, row_idx):
+def heavydb_buffer_idx_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
     sig = types.boolean(col_var, row_idx)
 
@@ -462,19 +462,19 @@ def omnisci_buffer_idx_is_null_(typingctx, col_var, row_idx):
 # as opposed to "BufferType.is_null" that checks if an index in a
 # column is null
 @extending.overload_method(BufferPointer, 'is_null')
-def omnisci_buffer_is_null(x, row_idx=None):
+def heavydb_buffer_is_null(x, row_idx=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(row_idx):
             def impl(x, row_idx=None):
-                return omnisci_buffer_is_null_(x)
+                return heavydb_buffer_is_null_(x)
         else:
             def impl(x, row_idx=None):
-                return omnisci_buffer_idx_is_null_(x, row_idx)
+                return heavydb_buffer_idx_is_null_(x, row_idx)
         return impl
 
 
 @extending.intrinsic
-def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
+def heavydb_buffer_idx_set_null(typingctx, arr, row_idx):
     T = arr.eltype
     sig = types.none(arr, row_idx)
 
@@ -488,7 +488,7 @@ def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
 
     def codegen(context, builder, signature, args):
         # get the operator.setitem intrinsic
-        fnop = context.typing_context.resolve_value_type(omnisci_buffer_ptr_setitem_)
+        fnop = context.typing_context.resolve_value_type(heavydb_buffer_ptr_setitem_)
         setitem_sig = types.none(arr, row_idx, T)
         # register the intrinsic in the typing ctx
         fnop.get_call_type(context.typing_context, setitem_sig.args, {})
@@ -506,14 +506,14 @@ def omnisci_buffer_idx_set_null(typingctx, arr, row_idx):
 
 
 @extending.overload_method(BufferPointer, 'set_null')
-def omnisci_buffer_set_null(x, row_idx=None):
+def heavydb_buffer_set_null(x, row_idx=None):
     if isinstance(x, BufferPointer):
         if cgutils.is_nonelike(row_idx):
             def impl(x, row_idx=None):
-                return omnisci_buffer_set_null_(x)
+                return heavydb_buffer_set_null_(x)
         else:
             def impl(x, row_idx=None):
-                return omnisci_buffer_idx_set_null(x, row_idx)
+                return heavydb_buffer_idx_set_null(x, row_idx)
             return impl
         return impl
 
@@ -529,7 +529,7 @@ def dtype_eq(a, b):
 
 
 @extending.overload_attribute(BufferPointer, 'dtype')
-def omnisci_buffer_dtype(x):
+def heavydb_buffer_dtype(x):
     if isinstance(x, BufferPointer):
         dtype = x.eltype
 
