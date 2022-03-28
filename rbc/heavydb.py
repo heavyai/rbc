@@ -1131,47 +1131,6 @@ class RemoteHeavyDB(RemoteJIT):
             inputArgTypes, outputArgTypes, sqlArgTypes,
             annotations)
 
-    def _make_udtf_old(self, caller, orig_sig, sig):
-        # old style UDTF for heavydb <= 5.3, to be deprecated
-        if self.version >= (5, 4):
-            v = '.'.join(map(str, self.version))
-            raise RuntimeError(
-                'Old-style UDTFs require '
-                'heavydb 5.3 or older, currently '
-                'connected to ', v)
-        thrift = self.thrift_client.thrift
-
-        sizer = None
-        sizer_index = -1
-        inputArgTypes = []
-        outputArgTypes = []
-        sqlArgTypes = []
-        name = caller.func.__name__
-        for i, a in enumerate(sig[1]):
-            _sizer = a.annotation().get('sizer')
-            if _sizer is not None:
-                # expect no more than one sizer argument
-                assert sizer_index == -1
-                sizer_index = i + 1
-                sizer = _sizer
-            atype = self.type_to_extarg(a)
-            if 'output' in a.annotation():
-                outputArgTypes.append(atype)
-            else:
-                if 'input' in a.annotation():
-                    sqlArgTypes.append(atype)
-                elif 'cursor' in a.annotation():
-                    sqlArgTypes.append(self.type_to_extarg('Cursor'))
-                inputArgTypes.append(atype)
-        if sizer is None:
-            sizer = 'kConstant'
-        sizer_type = (thrift.TOutputBufferSizeType
-                      ._NAMES_TO_VALUES[sizer])
-        return thrift.TUserDefinedTableFunction(
-            name + sig.mangling(),
-            sizer_type, sizer_index,
-            inputArgTypes, outputArgTypes, sqlArgTypes)
-
     def _make_udf(self, caller, orig_sig, sig):
         name = caller.func.__name__
         thrift = self.thrift_client.thrift
@@ -1227,9 +1186,7 @@ class RemoteHeavyDB(RemoteJIT):
                         sig = sig[0](*sig.argument_types, **dict(name=name))
                         function_signatures[name].append(sig)
                         sig_is_udtf = is_udtf(sig)
-                        is_old_udtf = 'table' in sig[0].annotation()
-
-                        if i == 0 and (self.version < (5, 2) or is_old_udtf or
+                        if i == 0 and (self.version < (5, 2) or
                                        (self.version < (5, 5) and sig_is_udtf)):
                             sig.set_mangling('')
                         else:
@@ -1241,9 +1198,6 @@ class RemoteHeavyDB(RemoteJIT):
                         if sig_is_udtf:
                             # new style UDTF, requires heavydb version >= 5.4
                             udtfs_map[fid] = self._make_udtf(caller, orig_sig, sig)
-                        elif is_old_udtf:
-                            # old style UDTF for heavydb <= 5.3, to be deprecated
-                            udtfs_map[fid] = self._make_udtf_old(caller, orig_sig, sig)
                         else:
                             udfs_map[fid] = self._make_udf(caller, orig_sig, sig)
                         signatures[fid] = sig
