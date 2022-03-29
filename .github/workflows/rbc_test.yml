@@ -173,13 +173,13 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         env:
-          heavydb_VERSION: ${{ matrix.heavydb-version }}
+          HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
         run: |
           mkdir data
           mamba run -n heavydb-env omnisci_initdb data -f
           mamba run -n heavydb-env omnisci_server --version
           RUN_FLAGS="--enable-runtime-udf --enable-table-functions"
-          if [[ ${heavydb_VERSION} == "5.10" ]]; then
+          if [[ ${HEAVYDB_VERSION} == "5.10" ]]; then
             RUN_FLAGS="${RUN_FLAGS} --enable-dev-table-functions"
           fi
           echo ${RUN_FLAGS}
