@@ -1,10 +1,11 @@
 import pytest
+import importlib
 
 
 classes = [
     'Array',
     'ArrayPointer',
-    'Bytes',
+    'TextEncodingNone',
     'Column',
 ]
 
@@ -12,6 +13,6 @@ classes = [
 @pytest.mark.parametrize('cls', classes)
 def test_heavydb_imports(cls):
     try:
-        exec(f'from rbc.heavydb import {cls}')
+        importlib.import_module('rbc.heavydb', cls)
     except ImportError:
         pytest.fail(f'Could not import "rbc.heavydb.{cls}')

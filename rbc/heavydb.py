@@ -13,7 +13,7 @@ from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
 from .thrift import Client as ThriftClient
 from . import heavydb_backend
-from .heavydb_backend import Array, ArrayPointer, Bytes, Column  # noqa: F401
+from .heavydb_backend import Array, ArrayPointer, TextEncodingNone, Column  # noqa: F401
 from .heavydb_backend import (
     HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
@@ -390,7 +390,6 @@ class RemoteHeavyDB(RemoteJIT):
     typesystem_aliases = dict(
         bool='bool8',
         Array='HeavyDBArrayType',
-        Bytes='HeavyDBBytesType<char8>',
         Cursor='HeavyDBCursorType',
         Column='HeavyDBColumnType',
         OutputColumn='HeavyDBOutputColumnType',
