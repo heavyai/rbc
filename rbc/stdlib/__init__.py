@@ -1,7 +1,7 @@
 import functools
 from enum import Enum
 from numba.core import extending
-from rbc.heavyai import Array, ArrayPointer
+from rbc.heavydb import Array, ArrayPointer
 from rbc import typesystem, errors
 
 

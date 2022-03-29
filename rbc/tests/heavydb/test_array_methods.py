@@ -1,7 +1,8 @@
 import pytest
 import numpy as np
 from rbc.tests import heavydb_fixture
-from rbc.heavyai import Array
+from rbc.heavydb import Array
+from rbc.stdlib import array_api  # noqa: F401
 
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')

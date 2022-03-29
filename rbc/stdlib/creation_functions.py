@@ -5,7 +5,7 @@ https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 """
 
 from rbc import typesystem, errors
-from rbc.heavyai.array import Array, ArrayPointer
+from rbc.heavydb import Array, ArrayPointer
 from rbc.stdlib import Expose, API
 from numba.core import extending, types
 from numba import TypingError

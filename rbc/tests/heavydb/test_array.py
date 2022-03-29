@@ -1,7 +1,10 @@
 import os
 from collections import defaultdict
 
-from rbc.heavyai import Array
+import numpy as np
+
+from rbc.heavydb import Array
+from rbc.externals.stdio import printf
 from rbc.errors import HeavyDBServerError
 from rbc.stdlib import array_api
 from numba import types as nb_types
@@ -278,8 +281,6 @@ def test_array_setitem(heavydb):
 def test_array_constructor_noreturn(heavydb):
     heavydb.reset()
 
-    from rbc.heavyai import Array
-
     @heavydb('float64(int32)')
     def array_noreturn(size):
         a = Array(size, nb_types.float64)
@@ -300,9 +301,6 @@ def test_array_constructor_noreturn(heavydb):
 
 def test_array_constructor_return(heavydb):
     heavydb.reset()
-
-    from rbc.heavyai import Array
-    from rbc.externals.stdio import printf
 
     @heavydb('float64[](int32)')
     def array_return(size):
@@ -330,8 +328,6 @@ def test_array_constructor_return(heavydb):
 def test_array_constructor_len(heavydb):
     heavydb.reset()
 
-    from rbc.heavyai import Array
-
     @heavydb('int64(int32)')
     def array_len(size):
         a = Array(size, nb_types.float64)
@@ -345,9 +341,6 @@ def test_array_constructor_len(heavydb):
 
 def test_array_constructor_getitem(heavydb):
     heavydb.reset()
-
-    from rbc.heavyai import Array
-    import numpy as np
 
     @heavydb('double(int32, int32)')
     def array_ptr(size, pos):
@@ -364,8 +357,6 @@ def test_array_constructor_getitem(heavydb):
 
 def test_array_constructor_is_null(heavydb):
     heavydb.reset()
-
-    from rbc.heavyai import Array
 
     @heavydb('int8(int64)')
     def array_is_null(size):

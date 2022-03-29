@@ -12,8 +12,9 @@ from collections import defaultdict, namedtuple
 from .remotejit import RemoteJIT, RemoteCallCapsule
 from .thrift.utils import resolve_includes
 from .thrift import Client as ThriftClient
-from . import heavyai
-from .heavyai import (
+from . import heavydb_backend
+from .heavydb_backend import Array, ArrayPointer, TextEncodingNone, Column  # noqa: F401
+from .heavydb_backend import (
     HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
@@ -389,7 +390,6 @@ class RemoteHeavyDB(RemoteJIT):
     typesystem_aliases = dict(
         bool='bool8',
         Array='HeavyDBArrayType',
-        Bytes='HeavyDBBytesType<char8>',
         Cursor='HeavyDBCursorType',
         Column='HeavyDBColumnType',
         OutputColumn='HeavyDBOutputColumnType',
@@ -1255,15 +1255,15 @@ class RemoteHeavyDB(RemoteJIT):
 
     def preprocess_callable(self, func):
         func = super().preprocess_callable(func)
-        if 'heavyai' not in func.__code__.co_names:
+        if 'heavydb' not in func.__code__.co_names:
             for symbol in BufferMeta.class_names:
                 if symbol in func.__code__.co_names and symbol not in func.__globals__:
                     warnings.warn(
                         f'{func.__name__} uses {symbol} that may be undefined.'
                         f' Inserting {symbol} to global namespace.'
-                        f' Use `from rbc.heavyai import {symbol}`'
+                        f' Use `from rbc.heavydb import {symbol}`'
                         ' to remove this warning.')
-                    func.__globals__[symbol] = heavyai.__dict__.get(symbol)
+                    func.__globals__[symbol] = heavydb_backend.__dict__.get(symbol)
         return func
 
     _compiler = None

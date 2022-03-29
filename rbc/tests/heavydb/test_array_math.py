@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import rbc.heavyai as omni  # noqa: F401
+import rbc.heavydb_backend as omni  # noqa: F401
 from rbc.stdlib import array_api
 
 
