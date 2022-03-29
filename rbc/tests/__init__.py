@@ -33,7 +33,7 @@ def sql_execute(query):
 
 
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
-                    suffices=['', '10', 'null', 'array', 'arraynull'],
+                    suffices=['', '10', 'null', 'array', 'arraynull', 'text'],
                     load_columnar=True, load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
@@ -66,6 +66,10 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}arraynull' - contains arrays f8, f4, i8, i4, i2,
                                        i1, b with row size 5, contains null
                                        values.
+
+    f'{heavydb.table_name}text' - contains text t4, t2, t1, s, n
+                                  where 't' prefix is for text encoding dict
+                                  and 'n' is for text encoding none.
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
@@ -172,26 +176,43 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
                 'BOOLEAN']
     arrsqltypes = [t + '[]' for t in sqltypes]
-    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
+    # todo: TIMESTAMP, TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
     colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+    textsqltypes = ['TEXT ENCODING DICT(32)', 'TEXT ENCODING DICT(16)',
+                    'TEXT ENCODING DICT(8)', 'TEXT[] ENCODING DICT(32)',
+                    'TEXT ENCODING NONE', 'TEXT ENCODING NONE']
+    textcolnames = ['t4', 't2', 't1', 's', 'n', 'n2']
     table_defn = ',\n'.join('%s %s' % (n, t)
                             for t, n in zip(sqltypes, colnames))
     arrtable_defn = ',\n'.join('%s %s' % (n, t)
                                for t, n in zip(arrsqltypes, colnames))
+    texttable_defn = ',\n'.join('%s %s' % (n, t)
+                                for t, n in zip(textsqltypes, textcolnames))
 
     for suffix in suffices:
         m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
         if 'array' in suffix:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({arrtable_defn});')
+            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({arrtable_defn})')
+        if 'text' in suffix:
+            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({texttable_defn})')
         else:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({table_defn});')
+            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({table_defn})')
 
     if load_columnar:
         # fast method using load_table_columnar thrift endpoint, use for large tables
-        def row_value(row, col, colname, null=False, arr=False):
+        def row_value(row, col, colname, null=False, arr=False, text=False):
+            if text:
+                if colname in ['t4', 't2']:
+                    return ['foofoo', 'bar', 'fun', 'bar', 'foo'][row]
+                if colname in ['t1', 'n']:
+                    return ['fun', 'bar', 'foo', 'barr', 'foooo'][row]
+                elif colname == 's':
+                    return [['foo', 'bar'], ['fun', 'bar'], ['foo']][row % 3]
+                elif colname == 'n2':
+                    return ['1', '12', '123', '1234', '12345'][row]
             if arr:
                 if null and (0 == (row + col) % 2):
                     return None
@@ -205,15 +226,23 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
 
         for suffix in suffices:
             columns = defaultdict(list)
-            for j, n in enumerate(colnames):
-                for i in range(10 if '10' in suffix else 5):
-                    v = row_value(i, j, n, null=('null' in suffix), arr=('array' in suffix))
-                    columns[n].append(v)
+            if 'text' in suffix:
+                for j, n in enumerate(textcolnames):
+                    for i in range(5):
+                        v = row_value(i, j, n, text=True)
+                        columns[n].append(v)
+            else:
+                for j, n in enumerate(colnames):
+                    for i in range(10 if '10' in suffix else 5):
+                        v = row_value(i, j, n, null=('null' in suffix), arr=('array' in suffix))
+                        columns[n].append(v)
             m.load_table_columnar(f'{table_name}{suffix}', **columns)
 
     else:
         # slow method using SQL query statements
-        def row_value(row, col, colname, null=False, arr=False):
+        def row_value(row, col, colname, null=False, arr=False, text=False):
+            if text:
+                raise ValueError('use heavydb_fixture(..., load_table_columnar=True)')
             if arr:
                 if null and (0 == (row + col) % 2):
                     return 'NULL'

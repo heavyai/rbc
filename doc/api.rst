@@ -60,7 +60,7 @@ Externals
 
 
 HeavyDB Backend
-=================
+===============
 
 The table below contains the data structures available for the HeavyDB backend.
 It should be noticed that the following types are not regular Python types but
@@ -74,3 +74,5 @@ one cannot create and use them inside the REPL, for instance.
     :toctree: generated/
 
     rbc.heavyai.Array
+    rbc.heavyai.TextEncodingDict
+    rbc.heavyai.TextEncodingNone

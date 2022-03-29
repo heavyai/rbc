@@ -774,9 +774,9 @@ def test_format_type(heavydb):
     assert test('Column<int32> z') == 'Column<int32> z'
     assert test('Column<int32> | name=z') == 'Column<int32> z'
     assert test('Column<int32> x | name=z') == 'Column<int32> x | name=z'
-    assert test('Column<Bytes>') == 'Column<Bytes>'
+    assert test('Column<TextEncodingNone>') == 'Column<TextEncodingNone>'
     assert test('Column<Array<int32>>') == 'Column<Array<int32>>'
-    assert test('Column<Array<Bytes>>') == 'Column<Array<Bytes>>'
+    assert test('Column<Array<TextEncodingNone>>') == 'Column<Array<TextEncodingNone>>'
 
     assert test('OutputColumn<int32>') == 'OutputColumn<int32>'
     assert test('ColumnList<int32>') == 'ColumnList<int32>'
@@ -796,18 +796,18 @@ def test_format_type(heavydb):
     assert test('UDTF(Cursor<int32, float64>)') == 'UDTF(Cursor<Column<int32>, Column<float64>>)'
     assert test('UDTF(Cursor<int32 x>)') == 'UDTF(Cursor<Column<int32> x>)'
     assert test('UDTF(Cursor<int32 | name=x>)') == 'UDTF(Cursor<Column<int32> x>)'
-    assert test('UDTF(Cursor<Bytes x>)') == 'UDTF(Cursor<Column<Bytes> x>)'
+    assert test('UDTF(Cursor<TextEncodingNone x>)') == 'UDTF(Cursor<Column<TextEncodingNone> x>)'
 
     assert test('int32(int32)') == '(int32) -> int32'
     assert test('int32(int32 x)') == '(int32 x) -> int32'
     assert test('int32(Array<int32>)') == '(Array<int32>) -> int32'
     assert test('int32(int32[])') == '(Array<int32>) -> int32'
     assert test('int32(Array<int32> x)') == '(Array<int32> x) -> int32'
-    assert test('int32(Bytes)') == '(Bytes) -> int32'
-    assert test('int32(Bytes x)') == '(Bytes x) -> int32'
+    assert test('int32(TextEncodingNone)') == '(TextEncodingNone) -> int32'
+    assert test('int32(TextEncodingNone x)') == '(TextEncodingNone x) -> int32'
     assert test('int32(TextEncodingDict)') == '(TextEncodingDict) -> int32'
     assert test('int32(TextEncodingDict x)') == '(TextEncodingDict x) -> int32'
-    assert test('int32(Array<Bytes> x)') == '(Array<Bytes> x) -> int32'
+    assert test('int32(Array<TextEncodingNone> x)') == '(Array<TextEncodingNone> x) -> int32'
 
     def test2(s):
         return test(s, caller=True)
@@ -822,8 +822,8 @@ def test_format_type(heavydb):
     assert test2('UDTF(Constant, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert test2('UDTF(PreFlight, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert test2('UDTF(TableFunctionManager, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
-    assert (test2('UDTF(RowMultiplier, OutputColumn<Array<Bytes>>)')
-            == '(RowMultiplier) -> (Column<Array<Bytes>>)')
+    assert (test2('UDTF(RowMultiplier, OutputColumn<Array<TextEncodingNone>>)')
+            == '(RowMultiplier) -> (Column<Array<TextEncodingNone>>)')
 
     assert test2('UDTF(Cursor<int32>)') == '(Cursor<Column<int32>>) -> void'
     assert test2('UDTF(Cursor<int32 x>)') == '(Cursor<Column<int32> x>) -> void'

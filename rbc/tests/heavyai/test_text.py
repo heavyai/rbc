@@ -1,5 +1,5 @@
-import os
-from collections import defaultdict
+from rbc.tests import heavydb_fixture
+from rbc.heavyai import TextEncodingNone
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
@@ -9,49 +9,15 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    # TODO: use heavydb_fixture from rbc/tests/__init__.py
-    config = rbc_heavydb.get_client_config(debug=not True)
-    m = rbc_heavydb.RemoteHeavyDB(**config)
-    table_name = os.path.splitext(os.path.basename(__file__))[0]
-
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-
-    sqltypes = ['TEXT ENCODING DICT', 'TEXT ENCODING DICT(16)', 'TEXT ENCODING DICT(8)',
-                'TEXT[] ENCODING DICT(32)', 'TEXT ENCODING NONE', 'TEXT ENCODING NONE', 'INT[]']
-    colnames = ['t4', 't2', 't1', 's', 'n', 'n2', 'i4']
-    table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
-    m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});')
-
-    data = defaultdict(list)
-    for i in range(5):
-        for j, n in enumerate(colnames):
-            # todo: to check is_null, use empty string
-            if n in ['t4', 't2']:
-                data[n].append(['foofoo', 'bar', 'fun', 'bar', 'foo'][i])
-            if n in ['t1', 'n']:
-                data[n].append(['fun', 'bar', 'foo', 'barr', 'foooo'][i])
-            elif n == 's':
-                data[n].append([['foo', 'bar'], ['fun', 'bar'], ['foo']][i % 3])
-            elif n == 'n2':
-                data[n].append(['1', '12', '123', '1234', '12345'][i])
-            elif n == 'i4':
-                data[n].append(list(range(i+1)))
-
-    m.load_table_columnar(table_name, **data)
-    m.table_name = table_name
-    yield m
-    try:
-        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    except Exception as msg:
-        print('%s in deardown' % (type(msg)))
+    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True):
+        yield o
 
 
 def test_table_data(heavydb):
     heavydb.reset()
 
     descr, result = heavydb.sql_execute(
-        f'select t4, t2, t1, s, n from {heavydb.table_name}')
+        f'select t4, t2, t1, s, n from {heavydb.table_name}text')
     result = list(result)
 
     assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun'),
@@ -61,15 +27,15 @@ def test_table_data(heavydb):
                       ('foo', 'foo', 'foooo', ['fun', 'bar'], 'foooo')]
 
 
-def test_bytes_len(heavydb):
+def test_TextEncodingNone_len(heavydb):
     heavydb.reset()
 
-    @heavydb('int32(Bytes, Bytes)')
+    @heavydb('int32(TextEncodingNone, TextEncodingNone)')
     def mystrlen(s, s2):
         return len(s) * 100 + len(s2)
 
-    sql_query_expected = f"select length(n) * 100 + length(n2) from {heavydb.table_name}"
-    sql_query = f"select mystrlen(n, n2) from {heavydb.table_name}"
+    sql_query_expected = f"select length(n) * 100 + length(n2) from {heavydb.table_name}text"
+    sql_query = f"select mystrlen(n, n2) from {heavydb.table_name}text"
 
     descr, result_expected = heavydb.sql_execute(sql_query_expected)
     result_expected = list(result_expected)
@@ -79,33 +45,31 @@ def test_bytes_len(heavydb):
     assert result == result_expected
 
 
-def test_bytes_ord(heavydb):
+def test_TextEncodingNone_ord(heavydb):
     heavydb.reset()
 
-    @heavydb('int64(Bytes, int32)', devices=['gpu', 'cpu'])
+    @heavydb('int64(TextEncodingNone, int32)', devices=['gpu', 'cpu'])
     def myord(s, i):
         return s[i] if i < len(s) else 0
 
-    sql_query_data = f"select n from {heavydb.table_name}"
+    sql_query_data = f"select n from {heavydb.table_name}text"
     descr, data = heavydb.sql_execute(sql_query_data)
     data = list(data)
 
     for i in range(5):
         result_expected = [(ord(d[0][i]) if i < len(d[0]) else 0, ) for d in data]
-        sql_query = f"select myord(n, {i}) from {heavydb.table_name}"
+        sql_query = f"select myord(n, {i}) from {heavydb.table_name}text"
         descr, result = heavydb.sql_execute(sql_query)
         result = list(result)
         assert result == result_expected
 
 
-def test_bytes_return(heavydb):
+def test_TextEncodingNone_return(heavydb):
     heavydb.reset()
 
-    from rbc.heavyai import Bytes
-
-    @heavydb('Bytes(int32, int32)')
+    @heavydb('TextEncodingNone(int32, int32)')
     def make_abc(first, n):
-        r = Bytes(n)
+        r = TextEncodingNone(n)
         for i in range(n):
             r[i] = first + i
         return r
@@ -117,14 +81,12 @@ def test_bytes_return(heavydb):
     assert result == [('abcdefghij', )]
 
 
-def test_bytes_upper(heavydb):
+def test_TextEncodingNone_upper(heavydb):
     heavydb.reset()
 
-    from rbc.heavyai import Bytes
-
-    @heavydb('Bytes(Bytes)')
+    @heavydb('TextEncodingNone(TextEncodingNone)')
     def myupper(s):
-        r = Bytes(len(s))
+        r = TextEncodingNone(len(s))
         for i in range(len(s)):
             c = s[i]
             if c >= 97 and c <= 122:
@@ -132,9 +94,61 @@ def test_bytes_upper(heavydb):
             r[i] = c
         return r
 
-    sql_query = f"select n, myupper(n) from {heavydb.table_name}"
+    sql_query = f"select n, myupper(n) from {heavydb.table_name}text"
     descr, result = heavydb.sql_execute(sql_query)
     result = list(result)
 
     for n, u in result:
         assert n.upper() == u
+
+
+def test_TextEncodingNone_str_constructor(heavydb):
+    heavydb.reset()
+
+    @heavydb('TextEncodingNone(int32)')
+    def constructor(_):
+        return TextEncodingNone('hello world')
+
+    assert constructor(3).execute() == 'hello world'
+
+
+def test_TextEncodingNone_eq(heavydb):
+    heavydb.require_version((5, 8), 'Requires heavydb 5.8 or newer')
+
+    heavydb.reset()
+
+    @heavydb('int32(TextEncodingNone, TextEncodingNone)')
+    def eq1(a, b):
+        return a == b
+
+    @heavydb('int32(TextEncodingNone)')
+    def eq2(a):
+        return a == 'world'
+
+    assert eq1('hello', 'hello').execute() == 1
+    assert eq1('c', 'c').execute() == 1
+    assert eq1('hello', 'h').execute() == 0
+    assert eq1('hello', 'hello2').execute() == 0
+
+    assert eq2('world').execute() == 1
+
+
+def test_TextEncodingNone_ne(heavydb):
+    heavydb.require_version((5, 8), 'Requires heavydb 5.8 or newer')
+
+    heavydb.reset()
+
+    @heavydb('int32(TextEncodingNone, TextEncodingNone)')
+    def ne1(a, b):
+        return a != b
+
+    @heavydb('int32(TextEncodingNone)')
+    def ne2(a):
+        return a != 'world'
+
+    assert ne1('hello', 'hello').execute() == 0
+    assert ne1('c', 'c').execute() == 0
+    assert ne1('hello', 'h').execute() == 1
+    assert ne1('hello', 'hello2').execute() == 1
+
+    assert ne2('world').execute() == 0
