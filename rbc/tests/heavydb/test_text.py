@@ -1,5 +1,5 @@
 from rbc.tests import heavydb_fixture
-from rbc.heavyai import TextEncodingNone
+from rbc.heavydb import TextEncodingNone
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')

@@ -14,7 +14,6 @@ from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
 from .utils import get_local_ip, UNSPECIFIED
 from .targetinfo import TargetInfo
-from .heavyai import HeavyDBCompilerPipeline
 
 
 def isfunctionlike(obj):
@@ -342,6 +341,9 @@ class Caller:
     def describe(self):
         """Return LLVM IRs of all target devices.
         """
+        # To-Do: Move the pipeline to outside heavydb_backend
+        from rbc.heavydb_backend.pipeline import HeavyDBCompilerPipeline
+
         lst = ['']
         fid = 0
         for device, target_info in self.remotejit.targets.items():
@@ -808,6 +810,9 @@ class RemoteJIT:
         Return the corresponding LLVM IR module instance which may be
         useful for debugging.
         """
+        # To-Do: Move the pipeline to outside heavydb_backend
+        from rbc.heavydb_backend import HeavyDBCompilerPipeline
+
         if self.debug:
             print(f'remote_compile({func}, {ftype})')
         with target_info:

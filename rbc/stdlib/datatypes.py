@@ -19,10 +19,10 @@ __all__ = [
     'float64'
 ]
 
-# NOTE: currently the code lives in rbc.heavyai, but eventually we
-# should move it here and leave rbc.heavyai.Array only for backwards
+# NOTE: currently the code lives in rbc.heavydb, but eventually we
+# should move it here and leave rbc.heavydb.Array only for backwards
 # compatibility
-from rbc.heavyai import Array
+from rbc.heavydb import Array
 
 # array API data types
 from numba.types import (

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from rbc.externals.heavydb import set_output_row_size
-from rbc.heavyai import TextEncodingNone
+from rbc.heavydb import TextEncodingNone
 from rbc.tests import heavydb_fixture, assert_equal
 
 

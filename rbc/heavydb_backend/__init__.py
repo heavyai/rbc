@@ -12,7 +12,4 @@ from . import mathimpl as math  # noqa: F401
 from . import npyimpl as np  # noqa: F401
 from . import python_operators as operators  # noqa: F401
 
-# initialize the array api
-from rbc.stdlib import array_api  # noqa: F401
-
 __all__ = [s for s in dir() if not s.startswith('_')]

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from rbc.heavyai import Array
+from rbc.heavydb import Array
 from rbc.tests import heavydb_fixture
 from numba import types as nb_types
 import operator
