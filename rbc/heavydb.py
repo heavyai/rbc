@@ -414,15 +414,18 @@ class RemoteHeavyDB(RemoteJIT):
                  password='HyperInteractive',
                  host='localhost',
                  port=6274,
-                 dbname='heavyai',
+                 dbname=None,  # defaults to 'heavyai'
                  **options):
         self.user = user
         self.password = password
 
         # To-Do: Remove this once we stop supporting HeavyDB 5.9
-        _version = get_heavydb_version()
-        if _version and _version < (6, 0, 0) and dbname == 'heavyai':
-            dbname = 'omnisci'
+        if dbname is None:
+            _version = get_heavydb_version()
+            if _version and _version < (6, 0, 0):
+                dbname = 'omnisci'
+            else:
+                dbname = 'heavyai'
         self.dbname = dbname
 
         thrift_filename = os.path.join(os.path.dirname(__file__),
