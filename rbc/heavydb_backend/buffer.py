@@ -27,7 +27,7 @@ import operator
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
-from rbc import typesystem, irutils
+from rbc import typesystem, irutils, errors
 from rbc.targetinfo import TargetInfo
 from numba.core import datamodel, cgutils, extending, types, imputils
 
@@ -343,26 +343,58 @@ def heavydb_buffer_getitem(x, i):
 
 # [rbc issue-197] Numba promotes operations like
 # int32(a) + int32(b) to int64
-def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
-    # buf[pos] = val
+def truncate_cast_or_extend(builder, value, typ, signed):
 
-    if isinstance(nb_value, types.Integer):  # Integer
-        if eltype.bitwidth < nb_value.bitwidth:
-            return builder.trunc(value, buf_typ)  # truncate
-        elif eltype.bitwidth > nb_value.bitwidth:
-            is_signed = nb_value.signed
-            return builder.sext(value, buf_typ) if is_signed else \
-                builder.zext(value, buf_typ)  # extend
-    elif isinstance(nb_value, types.Float):  # Floating-point
-        if eltype.bitwidth < nb_value.bitwidth:
-            return builder.fptrunc(value, buf_typ)  # truncate
-        elif eltype.bitwidth > nb_value.bitwidth:
-            return builder.fpext(value, buf_typ)  # extend
-    elif isinstance(nb_value, types.Boolean):
-        if buf_typ.width < value.type.width:
-            return builder.trunc(value, buf_typ)
-        elif buf_typ.width > value.type.width:
-            return builder.zext(value, buf_typ)
+    def _cast(builder, value, typ, signed):
+        fn = {
+            # unsigned int := float
+            (ir.IntType, ir.FloatType, False): builder.uitofp,
+            (ir.IntType, ir.DoubleType, False): builder.uitofp,
+            # signed int := float
+            (ir.IntType, ir.FloatType, True): builder.sitofp,
+            (ir.IntType, ir.DoubleType, True): builder.sitofp,
+
+            # float := unsigned int
+            (ir.FloatType, ir.IntType, False): builder.fptoui,
+            (ir.DoubleType, ir.IntType, False): builder.fptoui,
+            # float := signed int
+            (ir.FloatType, ir.IntType, True): builder.fptosi,
+            (ir.DoubleType, ir.IntType, True): builder.fptosi,
+        }[(value.type.__class__, typ.__class__, signed)]
+        return fn(value, typ)
+
+    def _truncate(builder, value, typ, signed):
+        if isinstance(typ, ir.IntType):
+            fn = builder.trunc
+        else:
+            fn = builder.fptrunc
+        return fn(value, typ)
+
+    def _extend(builder, value, typ, signed):
+        if isinstance(typ, ir.IntType):
+            fn = builder.sext if signed else builder.zext
+        else:
+            fn = builder.fpext
+        return fn(value, typ)
+
+    if not isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
+        raise errors.NumbaTypeError('Can only truncate, cast or extend int, float or double')
+
+    if value.type.__class__ != typ.__class__ and \
+       ir.IntType in (value.type.__class__, typ.__class__):
+        value = _cast(builder, value, typ, signed)
+
+    if isinstance(value.type, ir.IntType):
+        if value.type.width < typ.width:
+            return _extend(builder, value, typ, signed)
+        elif value.type.width > typ.width:
+            return _truncate(builder, value, typ, signed)
+    elif isinstance(value.type, ir.FloatType):
+        if isinstance(typ, ir.DoubleType):
+            return _extend(builder, value, typ, signed)
+    elif isinstance(value.type, ir.DoubleType):
+        if isinstance(typ, ir.FloatType):
+            return _truncate(builder, value, typ, signed)
 
     return value
 
@@ -370,9 +402,7 @@ def truncate_or_extend(builder, nb_value, eltype, value, buf_typ):
 @extending.intrinsic
 def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
-
-    eltype = data.eltype
-    nb_value = value
+    signed = value.signed if isinstance(value, types.Integer) else True
 
     def codegen(context, builder, signature, args):
         zero = int32_t(0)
@@ -383,7 +413,7 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
         ptr = builder.load(rawptr)
 
         buf = builder.load(builder.gep(ptr, [zero, zero]))
-        value = truncate_or_extend(builder, nb_value, eltype, value, buf.type.pointee)
+        value = truncate_cast_or_extend(builder, value, buf.type.pointee, signed)
         builder.store(value, builder.gep(buf, [index]))
 
     return sig, codegen
@@ -392,14 +422,12 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
 @extending.intrinsic
 def heavydb_buffer_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
-
-    eltype = data.members[0].dtype
-    nb_value = value
+    signed = value.signed if isinstance(value, types.Integer) else True
 
     def codegen(context, builder, signature, args):
         data, index, value = args
         ptr = irutils.get_member_value(builder, data, 0)
-        value = truncate_or_extend(builder, nb_value, eltype, value, ptr.type.pointee)
+        value = truncate_cast_or_extend(builder, value, ptr.type.pointee, signed)
 
         builder.store(value, builder.gep(ptr, [index]))
 
