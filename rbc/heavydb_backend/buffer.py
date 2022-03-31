@@ -372,7 +372,7 @@ def truncate_cast_or_extend(builder, value, typ, signed):
 
     def _extend(builder, value, typ, signed):
         if isinstance(typ, ir.IntType):
-            fn = builder.sext if signed else builder.zext
+            fn = builder.zext if signed else builder.sext
         else:
             fn = builder.fpext
         return fn(value, typ)
