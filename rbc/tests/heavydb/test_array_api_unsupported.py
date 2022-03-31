@@ -37,7 +37,6 @@ unsupported_functions = [
 
 # ensure unimplemented functions raise a meaninful exception
 @pytest.mark.parametrize('func_name', unsupported_functions)
-@pytest.mark.skip()
 def test_unimplemented(heavydb, func_name):
 
     func = getattr(array_api, func_name)
