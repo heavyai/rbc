@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import rbc.heavydb_backend as omni  # noqa: F401
 from rbc.stdlib import array_api
 
 
@@ -129,7 +128,7 @@ def test_heavydb_array_binary_math(heavydb, method, signature, columns):
 
     row_a, row_b, out = list(result)[0]
     expected = getattr(np, method)(row_a, row_b)
-    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
+    assert np.isclose(expected, out, equal_nan=True).all(), 'heavy_' + method  # noqa: E501
 
 
 binary_fn_scalar_input = [
@@ -194,7 +193,7 @@ def test_heavydb_array_binary_math_scalar(heavydb, method, signature, args):
 
     row, out = list(result)[0]
     expected = getattr(np, method)(row, num(scalar))
-    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
+    assert np.isclose(expected, out, equal_nan=True).all(), 'heavy_' + method  # noqa: E501
 
 
 unary_fns = [
@@ -276,7 +275,7 @@ def test_heavydb_array_unary_math_fns(heavydb, method, signature, column):
         row = np.array(row) != 0
 
     expected = getattr(np, method)(row)
-    assert np.isclose(expected, out, equal_nan=True).all(), 'omni_' + method  # noqa: E501
+    assert np.isclose(expected, out, equal_nan=True).all(), 'heavy_' + method  # noqa: E501
 
 
 def test_heaviside(heavydb):
