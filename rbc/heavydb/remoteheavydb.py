@@ -26,7 +26,7 @@ from rbc import ctools, typesystem
 
 
 __all__ = ['RemoteHeavyDB', 'RemoteCallCapsule', 'is_available', 'type_to_type_name',
-           'get_client_config']
+           'get_client_config', 'global_heavydb_singleton']
 
 
 def get_literal_return(func, verbose=False):
