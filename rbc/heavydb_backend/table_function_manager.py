@@ -4,7 +4,7 @@ __all__ = ['HeavyDBTableFunctionManagerType']
 from numba.core import extending, types
 from numba.core.cgutils import make_bytearray, global_constant
 from rbc import structure_type, irutils
-from rbc.errors import UnsupportedError
+from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
 from llvmlite import ir
@@ -47,7 +47,7 @@ def heavydb_udtfmanager_error_message_(typingctx, mgr, msg):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     if not isinstance(msg, types.StringLiteral):
-        raise TypeError(f"expected StringLiteral but got {type(msg).__name__}")
+        raise RequireLiteralValue(f"expected StringLiteral but got {type(msg).__name__}")
 
     def codegen(context, builder, signature, args):
         mgr_ptr = args[0]

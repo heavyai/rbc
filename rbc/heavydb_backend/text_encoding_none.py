@@ -136,7 +136,7 @@ def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
 def type_heavydb_text_encoding_none(context):
     def typer(arg):
         if isinstance(arg, types.UnicodeType):
-            raise RequireLiteralValue()
+            raise RequireLiteralValue('Requires StringLiteral')
         if isinstance(arg, (types.Integer, types.StringLiteral)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
