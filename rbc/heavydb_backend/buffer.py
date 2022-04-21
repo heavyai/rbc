@@ -360,7 +360,7 @@ def truncate_cast_or_extend(builder, value, typ, signed):
             # float := signed int
             (ir.FloatType, ir.IntType, True): builder.fptosi,
             (ir.DoubleType, ir.IntType, True): builder.fptosi,
-        }[(value.type.__class__, typ.__class__, signed)]
+        }[(type(value.type), type(typ), signed)]
         return fn(value, typ)
 
     def _truncate(builder, value, typ, signed):
