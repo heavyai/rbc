@@ -168,6 +168,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
 
     config = rbc_heavydb.get_client_config(debug=debug)
     m = rbc_heavydb.RemoteHeavyDB(**config)
+    m.require_version = require_version
 
     if not load_test_data:
         yield m
@@ -277,7 +278,6 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                 m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
 
     m.table_name = table_name
-    m.require_version = require_version
     yield m
     for suffix in suffices:
         m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')

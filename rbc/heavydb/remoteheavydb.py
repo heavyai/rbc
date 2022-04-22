@@ -345,11 +345,11 @@ def get_heavydb_version(host='localhost', port=6274, _cache={}):
     if (host, port) in _cache:
         return _cache[host, port]
     thrift_content = '''
-exception TMapDException {
+exception TDBException {
   1: string error_msg
 }
 service Heavy {
-  string get_version() throws (1: TMapDException e)
+  string get_version() throws (1: TDBException e)
 }
 '''
     client = ThriftClient(
@@ -504,6 +504,24 @@ class RemoteHeavyDB(RemoteJIT):
             self._thrift_client = self.client
         return self._thrift_client
 
+    def get_table_function_names(self, *, runtime_only=False):
+        if runtime_only:
+            return self.thrift_call('get_runtime_table_function_names', self.session_id)
+        else:
+            return self.thrift_call('get_table_function_names', self.session_id)
+
+    def get_table_function_details(self, *args):
+        endpoint = 'get_table_function_details'
+        return self.thrift_call(endpoint, self.session_id, list(args))
+
+    def get_udf_names(self, *, runtime_only=False):
+        endpoint = 'get_runtime_udf_names' if runtime_only else 'get_udf_names'
+        return self.thrift_call(endpoint, self.session_id)
+
+    def get_udf_details(self, *args):
+        endpoint = 'get_udf_details'
+        return self.thrift_call(endpoint, self.session_id, list(args))
+
     def thrift_call(self, name, *args, **kwargs):
         client = kwargs.get('client')
         if client is None:
@@ -539,7 +557,7 @@ class RemoteHeavyDB(RemoteJIT):
             print(msg)
         try:
             return client(Heavy={name: args})['Heavy'][name]
-        except client.thrift.TMapDException as msg:
+        except client.thrift.TDBException as msg:
             m = re.match(r'.*CalciteContextException.*('
                          r'No match found for function signature.*'
                          r'|Cannot apply.*)',
