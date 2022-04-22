@@ -9,11 +9,8 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    name: Build wheels
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -23,16 +20,12 @@ jobs:
         with:
           python-version: 3.9
 
-      # https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
-      - name: Install buildwheels
-        uses: pypa/cibuildwheel@v2.3.1
-        env:  # minimum version is cpython 3.7
-          CIBW_BUILD: "cp37-*64 cp38-*64 cp39-* cp310-*"
-          CIBW_VERBOSITY: 3
+      - name: Build wheel
+        run: python setup.py bdist_wheel --universal
 
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          path: dist/*.whl
 
   build_sdist:
     name: Build source distribution
