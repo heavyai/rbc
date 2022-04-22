@@ -4,7 +4,7 @@ from rbc.tests import heavydb_fixture
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(6, 0), load_test_data=False):
+    for o in heavydb_fixture(globals(), minimal_version=(6, 1), load_test_data=False):
         yield o
 
 
@@ -57,18 +57,15 @@ def test_get_invalid_udtf_details(heavydb):
 
 
 def test_get_udfs_registered(heavydb):
-    heavydb.require_version((6, 1))
     assert len(heavydb.get_udf_names()) > 0
 
 
 def test_get_runtime_udfs_empty(heavydb):
-    heavydb.require_version((6, 1))
     heavydb.reset()
     assert len(heavydb.get_udf_names(runtime_only=True)) == 0
 
 
 def test_get_udf_details(heavydb):
-    heavydb.require_version((6, 1))
     heavydb.reset()
 
     @heavydb('int32(int32)')
@@ -81,7 +78,6 @@ def test_get_udf_details(heavydb):
 
 
 def get_invalid_udf_details(heavydb):
-    heavydb.require_version((6, 1))
     heavydb.reset()
 
     assert len(heavydb.get_udf_details('invalid_udf_12345')) == 0
