@@ -102,7 +102,6 @@ jobs:
         python-version: ['3.9', '3.8', '3.7']
         numba-version: ['0.55', '0.54']
         heavydb-version: ['6.0', '5.10', '5.9']
-        server-name: ['heavydb', 'omniscidb', 'omniscidb']
         heavydb-from: [conda]
         include:
           - os: ubuntu-latest
@@ -111,14 +110,12 @@ jobs:
             heavydb-version: dev
             docker-image: heavyai/core-os-cpu-dev:latest
             heavydb-from: docker
-            server-name: heavydb
           - os: ubuntu-latest
             python-version: '3.9'
             numba-version: '0.54'
             heavydb-version: dev
             docker-image: heavyai/core-os-cpu-dev:latest
             heavydb-from: docker
-            server-name: heavydb
 
     needs: lint
 
@@ -147,7 +144,11 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          mamba create -n heavydb-env ${{ matrix.server-name }}=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+            mamba create -n heavydb-env heavydb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          else
+            mamba create -n heavydb-env omniscidb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          fi
 
       - name: Build heavydb docker image and run it [docker]
         shell: bash -l {0}
@@ -171,10 +172,15 @@ jobs:
       - name: Start heavydb [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
-        env:
-          HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
         run: |
-          if [[ ${{ matrix.server-name }} == "omniscidb" ]]; then
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+            mkdir storage
+            mamba run -n heavydb-env initheavy storage -f
+            mamba run -n heavydb-env heavydb --version
+            RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions"
+            echo ${RUN_FLAGS}
+            mamba run -n heavydb-env heavydb $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
+          else
             mkdir data
             mamba run -n heavydb-env omnisci_initdb data -f
             mamba run -n heavydb-env omnisci_server --version
@@ -183,13 +189,6 @@ jobs:
               RUN_FLAGS="${RUN_FLAGS} --enable-dev-table-functions"
             fi
             mamba run -n heavydb-env omnisci_server $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
-          else
-            mkdir storage
-            mamba run -n heavydb-env initheavy storage -f
-            mamba run -n heavydb-env heavydb --version
-            RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions"
-            echo ${RUN_FLAGS}
-            mamba run -n heavydb-env heavydb $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
           fi
           sleep 10
           cat heavydb.pid
@@ -246,14 +245,14 @@ jobs:
         shell: bash -l {0}
         if: failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.server-name }} == "omniscidb" ]]; then
-            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.INFO
-            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.WARNING
-            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
-          else
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
             mamba run -n heavydb-env cat storage/mapd_log/heavydb.INFO
             mamba run -n heavydb-env cat storage/mapd_log/heavydb.WARNING
             mamba run -n heavydb-env cat storage/mapd_log/heavydb.ERROR
+          else
+            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.INFO
+            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.WARNING
+            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
           fi
 
       - name: Show Heavydb docker logs on failure [docker]
