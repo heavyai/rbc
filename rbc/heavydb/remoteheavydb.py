@@ -483,8 +483,8 @@ class RemoteHeavyDB(RemoteJIT):
         if self._version is None:
             version = self.thrift_call('get_version')
             self._version = parse_version(version)
-            if self._version[:2] < (5, 6):
-                msg = (f'HeavyDB server v.{version} is too old (expected v.5.6 or newer) '
+            if self._version[:2] < (5, 8):
+                msg = (f'HeavyDB server v.{version} is too old (expected v.5.8 or newer) '
                        'and some features might not be available.')
                 warnings.warn(msg, PendingDeprecationWarning)
         return self._version
