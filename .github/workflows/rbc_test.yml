@@ -305,14 +305,14 @@ jobs:
         - name: Install additional packages
           shell: bash -l {0}
           run: |
-            mamba install -c conda-forge heavydb nbval ibis-omniscidb matplotlib pandas ibis-framework
+            mamba install -c conda-forge omniscidb nbval ibis-omniscidb matplotlib pandas ibis-framework
 
         - name: Start heavydb server
           shell: bash -l {0}
           run: |
-            mkdir storage && initheavy storage -f
-            heavydb --version
-            heavydb --enable-runtime-udfs --enable-table-functions 2>&1 > heavydb-output.txt &
+            mkdir data && omnisci_init data -f
+            omnisci_server --version
+            omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > heavydb-output.txt &
             sleep 10
 
         - name: conda config
@@ -329,5 +329,5 @@ jobs:
           run: |
             pip install -e .
             pytest -v -rs --nbval notebooks/ -x
-            pkill -f heavydb
+            pkill -f omnisci_server
             cat heavydb-output.txt
