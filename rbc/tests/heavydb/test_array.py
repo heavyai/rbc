@@ -510,6 +510,6 @@ def test_literal_cast(heavydb):
             return True
         return False
 
-    _, result = heavydb.sql_execute(f'select test(i4) from {heavydb.table_name}')
+    _, result = heavydb.sql_execute(f'select literal_cast(i4) from {heavydb.table_name}')
     result = list(result)
     assert result == [(1,), (1,), (1,), (1,), (1,)]
