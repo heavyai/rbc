@@ -6,25 +6,27 @@ import inspect
 import os
 import re
 import warnings
+import pathlib
 import configparser
 import numpy
 from collections import defaultdict, namedtuple
-from .remotejit import RemoteJIT, RemoteCallCapsule
-from .thrift.utils import resolve_includes
-from .thrift import Client as ThriftClient
-from . import heavydb_backend
-from .heavydb_backend import Array, ArrayPointer, TextEncodingNone, Column  # noqa: F401
-from .heavydb_backend import (
+from rbc.remotejit import RemoteJIT, RemoteCallCapsule
+from rbc.thrift.utils import resolve_includes
+from rbc.thrift import Client as ThriftClient
+from . import (
     HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType)
-from .targetinfo import TargetInfo
-from .irtools import compile_to_LLVM
-from .errors import ForbiddenNameError, HeavyDBServerError
-from .utils import parse_version, version_date
-from . import ctools
-from . import typesystem
+from rbc.targetinfo import TargetInfo
+from rbc.irtools import compile_to_LLVM
+from rbc.errors import ForbiddenNameError, HeavyDBServerError
+from rbc.utils import parse_version, version_date
+from rbc import ctools, typesystem
+
+
+__all__ = ['RemoteHeavyDB', 'RemoteOmnisci', 'RemoteCallCapsule', 'is_available',
+           'type_to_type_name', 'get_client_config', 'global_heavydb_singleton']
 
 
 def get_literal_return(func, verbose=False):
@@ -428,8 +430,8 @@ class RemoteHeavyDB(RemoteJIT):
                 dbname = 'heavyai'
         self.dbname = dbname
 
-        thrift_filename = os.path.join(os.path.dirname(__file__),
-                                       'omnisci.thrift')
+        thrift_filename = pathlib.Path(
+            os.path.dirname(__file__)).parent.joinpath('omnisci.thrift')
         content = resolve_includes(
             open(thrift_filename).read(),
             [os.path.dirname(thrift_filename)])
@@ -1265,8 +1267,9 @@ class RemoteHeavyDB(RemoteJIT):
                         f'{func.__name__} uses {symbol} that may be undefined.'
                         f' Inserting {symbol} to global namespace.'
                         f' Use `from rbc.heavydb import {symbol}`'
-                        ' to remove this warning.')
-                    func.__globals__[symbol] = heavydb_backend.__dict__.get(symbol)
+                        ' to remove this warning.', SyntaxWarning)
+                    from rbc import heavydb
+                    func.__globals__[symbol] = heavydb.__dict__.get(symbol)
         return func
 
     _compiler = None

@@ -342,7 +342,7 @@ class Caller:
         """Return LLVM IRs of all target devices.
         """
         # To-Do: Move the pipeline to outside heavydb_backend
-        from rbc.heavydb_backend.pipeline import HeavyDBCompilerPipeline
+        from rbc.heavydb.pipeline import HeavyDBCompilerPipeline
 
         lst = ['']
         fid = 0
@@ -811,7 +811,7 @@ class RemoteJIT:
         useful for debugging.
         """
         # To-Do: Move the pipeline to outside heavydb_backend
-        from rbc.heavydb_backend import HeavyDBCompilerPipeline
+        from rbc.heavydb import HeavyDBCompilerPipeline
 
         if self.debug:
             print(f'remote_compile({func}, {ftype})')
