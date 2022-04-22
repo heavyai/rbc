@@ -1752,13 +1752,15 @@ boolean8 = Boolean8('boolean8')
 
 @lower_cast(Boolean1, nb.types.Boolean)
 @lower_cast(Boolean8, nb.types.Boolean)
-def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
+def booleanN_to_boolean(context, builder, fromty, toty, val):
     return builder.icmp_signed('!=', val, val.type(0))
 
 
+@lower_cast(nb.types.BooleanLiteral, Boolean1)
+@lower_cast(nb.types.BooleanLiteral, Boolean8)
 @lower_cast(nb.types.Boolean, Boolean1)
 @lower_cast(nb.types.Boolean, Boolean8)
-def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
+def boolean_to_booleanN(context, builder, fromty, toty, val):
     llty = context.get_value_type(toty)
     return builder.zext(val, llty)
 

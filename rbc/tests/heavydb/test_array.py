@@ -500,3 +500,16 @@ def test_array_enumerate(heavydb):
     _, result = heavydb.sql_execute(f'select i4, array_enumerate(i4) from {table}')
     for arr, s in result:
         assert sum(arr) == s
+
+
+def test_literal_cast(heavydb):
+
+    @heavydb('bool(int32[])')
+    def literal_cast(arr):
+        if len(arr) > 2:
+            return True
+        return False
+
+    _, result = heavydb.sql_execute(f'select test(i4) from {heavydb.table_name}')
+    result = list(result)
+    assert result == [(1,), (1,), (1,), (1,), (1,)]
