@@ -152,3 +152,21 @@ def test_TextEncodingNone_ne(heavydb):
     assert ne1('hello', 'hello2').execute() == 1
 
     assert ne2('world').execute() == 0
+
+
+def test_if_else_assignment(heavydb):
+    # fix for issue #487
+
+    @heavydb("TextEncodingNone(double)")
+    def classify_slope(slope):
+        if slope <= 5:
+            res = TextEncodingNone("low")
+        elif 5 < slope < 15:
+            res = TextEncodingNone("med")
+        else:
+            res = TextEncodingNone("high")
+        return res
+
+    assert classify_slope(2.4).execute() == "low"
+    assert classify_slope(5.4).execute() == "med"
+    assert classify_slope(15.4).execute() == "high"
