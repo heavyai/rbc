@@ -230,7 +230,7 @@ class LLVMIntrinsics(Library):
     objc.retainAutoreleasedReturnValue objc.retainBlock
     objc.storeStrong objc.storeWeak preserve.array.access.index
     preserve.union.access.index preserve.struct.access.index
-    masked.store.* '''.strip().split())
+    masked.store.* memset'''.strip().split())
 
 
 class NVVMIntrinsics(Library):
