@@ -9,7 +9,8 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True):
+    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True,
+                             minimal_version=(5, 8)):
         yield o
 
 
