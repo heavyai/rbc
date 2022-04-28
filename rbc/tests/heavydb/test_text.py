@@ -9,8 +9,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True,
-                             minimal_version=(5, 8)):
+    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True):
         yield o
 
 
@@ -156,6 +155,8 @@ def test_TextEncodingNone_ne(heavydb):
 
 
 def test_if_else_assignment(heavydb):
+    heavydb.require_version((5, 8), 'Requires heavydb 5.8 or newer')
+
     # fix for issue #487
 
     @heavydb("TextEncodingNone(double)")
