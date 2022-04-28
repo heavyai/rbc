@@ -21,7 +21,7 @@ from . import (
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
 from rbc.errors import ForbiddenNameError, HeavyDBServerError
-from rbc.utils import parse_version, version_date
+from rbc.utils import parse_version
 from rbc import ctools, typesystem
 
 
