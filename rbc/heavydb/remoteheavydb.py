@@ -227,7 +227,7 @@ def get_client_config(**config):
     if 'dbname' not in config:
         version = get_heavydb_version(host=config['host'], port=config['port'])
         if version is not None and version[:2] >= (6, 0):
-            config['dbname'] = 'omnisci'
+            config['dbname'] = 'heavyai'
         else:
             config['dbname'] = 'omnisci'
 
