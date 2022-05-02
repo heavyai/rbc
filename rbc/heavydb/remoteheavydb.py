@@ -229,7 +229,8 @@ def get_client_config(**config):
         if version is not None and version[:2] >= (6, 0):
             config['dbname'] = 'heavyai'
         else:
-            config['dbname'] = 'omnisci'
+            config['dbname'] = 'heavyai'
+            # config['dbname'] = 'omnisci'
 
     return config
 
