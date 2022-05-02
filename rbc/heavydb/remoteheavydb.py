@@ -21,7 +21,7 @@ from . import (
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
 from rbc.errors import ForbiddenNameError, HeavyDBServerError
-from rbc.utils import parse_version, version_date
+from rbc.utils import parse_version
 from rbc import ctools, typesystem
 
 
@@ -227,11 +227,7 @@ def get_client_config(**config):
     if 'dbname' not in config:
         version = get_heavydb_version(host=config['host'], port=config['port'])
         if version is not None and version[:2] >= (6, 0):
-            if version[:3] == (6, 0, 0) and version_date(version) < 20220301:
-                # TODO: remove this if-block when heavydb 6.0 is released.
-                config['dbname'] = 'omnisci'
-            else:
-                config['dbname'] = 'heavyai'
+            config['dbname'] = 'omnisci'
         else:
             config['dbname'] = 'omnisci'
 
