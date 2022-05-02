@@ -1217,6 +1217,9 @@ class RemoteHeavyDB(RemoteJIT):
                     user_defined_llvm_ir=self.user_defined_llvm_ir.get(device),
                     debug=self.debug)
 
+                if self.debug:
+                    print(llvm_module)
+
                 assert llvm_module.triple == target_info.triple
                 assert llvm_module.data_layout == target_info.datalayout
                 for f in llvm_module.functions:

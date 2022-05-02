@@ -111,6 +111,29 @@ def heavydb_text_encoding_none_constructor(context, builder, sig, args):
     return heavydb_buffer_constructor(context, builder, sig, args)
 
 
+def get_copy_bytes_fn(module, arr, src_data, sz):
+
+    fn_name = 'copy_bytes_fn'
+    try:
+        return module.get_global(fn_name)
+    except KeyError:
+        pass
+
+    # create function and prevent llvm from optimizing it
+    fnty = ir.FunctionType(ir.VoidType(), [arr.type, src_data.type, sz.type])
+    func = ir.Function(module, fnty, fn_name)
+    func.attributes.add('noinline')
+
+    block = func.append_basic_block(name="entry")
+    builder = ir.IRBuilder(block)
+    sizeof_char = TargetInfo().sizeof('char')
+    dest_data = builder.extract_value(builder.load(func.args[0]), [0])
+    cgutils.raw_memcpy(builder, dest_data, func.args[1], func.args[2], sizeof_char)
+    builder.ret_void()
+
+    return func
+
+
 @extending.lower_builtin(TextEncodingNone, types.StringLiteral)
 def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
     int64_t = ir.IntType(64)
@@ -121,14 +144,17 @@ def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
 
     # arr = {ptr, size, is_null}*
     arr = heavydb_buffer_constructor(context, builder, sig.return_type(types.int64), [sz])
-    ptr = builder.extract_value(builder.load(arr), [0])
 
     msg_bytes = literal_value.encode('utf-8')
-    msg_const = cgutils.make_bytearray(msg_bytes)
-    msg_global_var = cgutils.global_constant(builder.module, f"Text({literal_value})", msg_const)
-    msg_ptr = builder.bitcast(msg_global_var, int8_t_ptr)
-    sizeof_char = TargetInfo().sizeof('char')
-    cgutils.raw_memcpy(builder, ptr, msg_ptr, sz, sizeof_char)
+    msg_const = cgutils.make_bytearray(msg_bytes + b'\0')
+    try:
+        msg_global_var = builder.module.get_global(literal_value)
+    except KeyError:
+        msg_global_var = cgutils.global_constant(builder.module, literal_value, msg_const)
+    src_data = builder.bitcast(msg_global_var, int8_t_ptr)
+
+    fn = get_copy_bytes_fn(builder.module, arr, src_data, sz)
+    builder.call(fn, [arr, src_data, sz])
     return arr
 
 
