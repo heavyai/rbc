@@ -282,8 +282,23 @@ class TargetInfo(object):
         if bits is not None:
             return bits
         # expand this dict as needed
-        return dict(x86_64=64, nvptx64=64,
-                    x86=32, nvptx=32, arm64=64)[self.arch]
+        bits = dict(
+            x86_64=64, nvptx64=64, arm64=64, aarch64=64,
+            x86=32, nvptx=32,
+        ).get(self.arch)
+        if bits is None:
+            if '64' in self.arch:
+                warnings.warn(
+                    f"Unknown {self.arch} architecture: inferring 64bits."
+                    "Please report this warning."
+                )
+                bits = 64
+            else:
+                raise SystemError(
+                    f"Unknown {self.arch} architecture."
+                    "Please report this error."
+                )
+        return bits
 
     @property
     def datalayout(self):
