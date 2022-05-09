@@ -289,7 +289,7 @@ class TargetInfo(object):
         if bits is None:
             if '64' in self.arch:
                 warnings.warn(
-                    f"Unknown {self.arch} architecture: inferring 64bits."
+                    f"Unknown {self.arch} architecture: inferring 64 bits."
                     "Please report this warning."
                 )
                 bits = 64
