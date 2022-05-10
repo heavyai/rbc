@@ -28,9 +28,9 @@ git clone git@github.com:xnd-project/rbc-feedstock.git
 cd rbc-feedstock
 git remote add upstream git@github.com:conda-forge/rbc-feedstock.git
 git remote add xnd-project git@github.com:xnd-project/rbc-feedstock.git
-git checkout master
+git checkout main
 git fetch upstream
-git reset --hard upstream/master
+git reset --hard upstream/main
 git push -f -u xnd-project
 
 git branch release-${TAG_STR}

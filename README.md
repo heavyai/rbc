@@ -112,5 +112,5 @@ q = con.sql('select i, incr(i) from mytable').execute()
 
 ### More examples and usage cases
 
-See [notebooks](https://github.com/xnd-project/rbc/tree/master/notebooks).
+See [notebooks](https://github.com/xnd-project/rbc/tree/main/notebooks).
 
