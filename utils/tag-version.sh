@@ -7,12 +7,12 @@ fi
 TAG=$1
 TAG_STR="v${TAG}"
 
-# checkout to master
-echo "Checking out master"
-git checkout master
+# checkout to main
+echo "Checking out main"
+git checkout main
 
 if [[ $? -ne 0 ]]; then
-	echo "`git checkout master` failed"
+	echo "`git checkout main` failed"
 	exit 1
 fi
 

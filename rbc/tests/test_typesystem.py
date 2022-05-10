@@ -274,7 +274,7 @@ def test_normalize(target_info):
         assert tostr('size_t') == 'uint64'
         assert tostr('c_size_t') == 'uint64'
         assert tostr('std::size_t') == 'uint64'
-        assert tostr('long double') == 'float128'
+        assert tostr('long double') in ['float64', 'float128']
         assert tostr('byte') == 'int8'
         assert tostr('unsigned byte') == 'uint8'
         assert tostr('signed char') == 'int8'
