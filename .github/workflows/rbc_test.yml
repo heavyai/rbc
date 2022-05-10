@@ -289,7 +289,7 @@ jobs:
         - name: Install additional packages
           shell: bash -l {0}
           run: |
-            mamba install -c conda-forge omniscidb nbval ibis-omniscidb matplotlib pandas ibis-framework
+            mamba install -c conda-forge omniscidb nbval ibis-heavyai matplotlib pandas
 
         - name: Start heavydb server
           shell: bash -l {0}
