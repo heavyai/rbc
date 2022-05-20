@@ -520,18 +520,18 @@ class RemoteHeavyDB(RemoteJIT):
         endpoint = 'get_table_function_details'
         return self.thrift_call(endpoint, self.session_id, list(args))
 
-    def get_udf_names(self, *, runtime_only=False):
+    def get_function_names(self, *, runtime_only=False):
         """Return a list of user defined function names registered on the server.
         If `runtime_only=True`, then, only runtime UDF names are returned.
         """
-        endpoint = 'get_runtime_udf_names' if runtime_only else 'get_udf_names'
+        endpoint = 'get_runtime_function_names' if runtime_only else 'get_function_names'
         return self.thrift_call(endpoint, self.session_id)
 
-    def get_udf_details(self, *args):
+    def get_function_details(self, *args):
         """Given a list of user defined function names, return a
         TUserDefinedFunction for each UDF name
         """
-        endpoint = 'get_udf_details'
+        endpoint = 'get_function_details'
         return self.thrift_call(endpoint, self.session_id, list(args))
 
     def thrift_call(self, name, *args, **kwargs):

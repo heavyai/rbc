@@ -57,12 +57,12 @@ def test_get_invalid_udtf_details(heavydb):
 
 
 def test_get_udfs_registered(heavydb):
-    assert len(heavydb.get_udf_names()) > 0
+    assert len(heavydb.get_function_names()) > 0
 
 
 def test_get_runtime_udfs_empty(heavydb):
     heavydb.reset()
-    assert len(heavydb.get_udf_names(runtime_only=True)) == 0
+    assert len(heavydb.get_function_names(runtime_only=True)) == 0
 
 
 def test_get_udf_details(heavydb):
@@ -74,10 +74,10 @@ def test_get_udf_details(heavydb):
 
     heavydb.register()
 
-    assert len(heavydb.get_udf_details('incr')) == 1
+    assert len(heavydb.get_function_details('incr')) == 1
 
 
 def get_invalid_udf_details(heavydb):
     heavydb.reset()
 
-    assert len(heavydb.get_udf_details('invalid_udf_12345')) == 0
+    assert len(heavydb.get_function_details('invalid_udf_12345')) == 0
