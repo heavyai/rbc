@@ -101,21 +101,21 @@ jobs:
         os: [ubuntu-latest]
         python-version: ['3.9', '3.8', '3.7']
         numba-version: ['0.55', '0.54']
-        heavydb-version: ['5.10', '5.9', '5.8', '5.7']
+        heavydb-version: ['6.0', '5.10', '5.9']
         heavydb-from: [conda]
-        include:
-          - os: ubuntu-latest
-            python-version: '3.10'
-            numba-version: '0.55'
-            heavydb-version: dev
-            docker-image: omnisci/core-os-cpu-dev:latest
-            heavydb-from: docker
-          - os: ubuntu-latest
-            python-version: '3.9'
-            numba-version: '0.54'
-            heavydb-version: dev
-            docker-image: omnisci/core-os-cpu-dev:latest
-            heavydb-from: docker
+        # include:
+        #   - os: ubuntu-latest
+        #     python-version: '3.10'
+        #     numba-version: '0.55'
+        #     heavydb-version: dev
+        #     docker-image: heavyai/core-os-cpu-dev:latest
+        #     heavydb-from: docker
+        #   - os: ubuntu-latest
+        #     python-version: '3.9'
+        #     numba-version: '0.54'
+        #     heavydb-version: dev
+        #     docker-image: heavyai/core-os-cpu-dev:latest
+        #     heavydb-from: docker
 
     needs: lint
 
@@ -144,7 +144,11 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          mamba create -n heavydb-env omniscidb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+            mamba create -n heavydb-env heavydb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          else
+            mamba create -n heavydb-env omniscidb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          fi
 
       - name: Build heavydb docker image and run it [docker]
         shell: bash -l {0}
@@ -168,18 +172,24 @@ jobs:
       - name: Start heavydb [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
-        env:
-          HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
         run: |
-          mkdir data
-          mamba run -n heavydb-env omnisci_initdb data -f
-          mamba run -n heavydb-env omnisci_server --version
-          RUN_FLAGS="--enable-runtime-udf --enable-table-functions"
-          if [[ ${HEAVYDB_VERSION} == "5.10" ]]; then
-            RUN_FLAGS="${RUN_FLAGS} --enable-dev-table-functions"
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+            mkdir storage
+            mamba run -n heavydb-env initheavy storage -f
+            mamba run -n heavydb-env heavydb --version
+            RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions --enable-udf-registration-for-all-users"
+            echo ${RUN_FLAGS}
+            mamba run -n heavydb-env heavydb $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
+          else
+            mkdir data
+            mamba run -n heavydb-env omnisci_initdb data -f
+            mamba run -n heavydb-env omnisci_server --version
+            RUN_FLAGS="--enable-runtime-udf --enable-table-functions"
+            if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
+              RUN_FLAGS="${RUN_FLAGS} --enable-dev-table-functions"
+            fi
+            mamba run -n heavydb-env omnisci_server $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
           fi
-          echo ${RUN_FLAGS}
-          mamba run -n heavydb-env omnisci_server $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
           sleep 10
           cat heavydb.pid
 
@@ -235,9 +245,15 @@ jobs:
         shell: bash -l {0}
         if: failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          mamba run -n heavydb-env cat data/mapd_log/omnisci_server.INFO
-          mamba run -n heavydb-env cat data/mapd_log/omnisci_server.WARNING
-          mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+            mamba run -n heavydb-env cat storage/mapd_log/heavydb.INFO
+            mamba run -n heavydb-env cat storage/mapd_log/heavydb.WARNING
+            mamba run -n heavydb-env cat storage/mapd_log/heavydb.ERROR
+          else
+            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.INFO
+            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.WARNING
+            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
+          fi
 
       - name: Show Heavydb docker logs on failure [docker]
         shell: bash -l {0}

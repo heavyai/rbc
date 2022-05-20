@@ -229,6 +229,8 @@ def test_text_encoding_column_list2(heavydb, size):
 @pytest.mark.parametrize("num_cols", (1, 2, 3, 4))
 def test_text_encoding_column_list3(heavydb, size, num_cols):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
+    if heavydb.version >= (6, 0):
+        pytest.skip("test_text_encoding_column_list3 crashes heavydb server")
 
     fn = "test_copy_column_list3"
     table = f"{heavydb.base_name}_{size}"

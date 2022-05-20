@@ -348,7 +348,7 @@ def get_heavydb_version(host='localhost', port=6274, _cache={}):
 exception TMapDException {
   1: string error_msg
 }
-service Omnisci {
+service Heavy {
   string get_version() throws (1: TMapDException e)
 }
 '''
@@ -359,7 +359,7 @@ service Omnisci {
         thrift_content=thrift_content,
         socket_timeout=60000)
     try:
-        version = client(Omnisci=dict(get_version=()))['Omnisci']['get_version']
+        version = client(Heavy=dict(get_version=()))['Heavy']['get_version']
     except Exception as msg:
         print(f'failed to get heavydb version[host={host}, port={port}]: {msg}')
         version = None
@@ -483,8 +483,8 @@ class RemoteHeavyDB(RemoteJIT):
         if self._version is None:
             version = self.thrift_call('get_version')
             self._version = parse_version(version)
-            if self._version[:2] < (5, 6):
-                msg = (f'HeavyDB server v.{version} is too old (expected v.5.6 or newer) '
+            if self._version[:2] < (5, 8):
+                msg = (f'HeavyDB server v.{version} is too old (expected v.5.8 or newer) '
                        'and some features might not be available.')
                 warnings.warn(msg, PendingDeprecationWarning)
         return self._version
@@ -538,7 +538,7 @@ class RemoteHeavyDB(RemoteJIT):
                 msg = msg[:180] + '...' + msg[-15:]
             print(msg)
         try:
-            return client(Omnisci={name: args})['Omnisci'][name]
+            return client(Heavy={name: args})['Heavy'][name]
         except client.thrift.TMapDException as msg:
             m = re.match(r'.*CalciteContextException.*('
                          r'No match found for function signature.*'
