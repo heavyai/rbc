@@ -250,7 +250,7 @@ def test_table_function_error(heavydb):
     """)
     assert list(result) == [(0.0,), (0.5,), (1.0,), (1.5,), (2.0,)]
 
-    with pytest.raises(heavydb.thrift_client.thrift.TMapDException) as exc:
+    with pytest.raises(HeavyDBServerError) as exc:
         heavydb.sql_execute(f"""
             select *
             from table(
