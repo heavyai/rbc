@@ -1,5 +1,5 @@
 import pytest
-from rbc.errors import NumbaTypeError
+from rbc.errors import NumbaTypeError, HeavyDBServerError
 from rbc.tests import heavydb_fixture, sql_execute
 from rbc.externals.heavydb import table_function_error
 import numpy as np
@@ -145,7 +145,7 @@ def test_table_function_manager(heavydb):
             out[i] = col[i]
         return size
 
-    with pytest.raises(heavydb.thrift_client.thrift.TMapDException) as exc:
+    with pytest.raises(HeavyDBServerError) as exc:
         heavydb.sql_execute(
             f'select out0 from table(my_manager_error('
             f'cursor(select f8 from {heavydb.table_name})));')
@@ -250,7 +250,7 @@ def test_table_function_error(heavydb):
     """)
     assert list(result) == [(0.0,), (0.5,), (1.0,), (1.5,), (2.0,)]
 
-    with pytest.raises(heavydb.thrift_client.thrift.TMapDException) as exc:
+    with pytest.raises(HeavyDBServerError) as exc:
         heavydb.sql_execute(f"""
             select *
             from table(
