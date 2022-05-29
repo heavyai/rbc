@@ -569,7 +569,9 @@ class RemoteHeavyDB(RemoteJIT):
                 msg = (f"{msg.error_msg} Please use server options --enable-runtime-udf"
                        " and/or --enable-table-functions")
                 raise HeavyDBServerError(msg)
-
+            m = re.match(r'Error executing table function', msg.error_msg)
+            if m:
+                raise HeavyDBServerError(msg.error_msg)
             # TODO: catch more known server failures here.
             raise
 
@@ -859,13 +861,6 @@ class RemoteHeavyDB(RemoteJIT):
             'Array<int64_t>': typemap['TExtArgumentType']['ArrayInt64'],
             'Array<float>': typemap['TExtArgumentType']['ArrayFloat'],
             'Array<double>': typemap['TExtArgumentType']['ArrayDouble'],
-            'Column<bool>': typemap['TExtArgumentType'].get('ColumnBool'),
-            'Column<int8_t>': typemap['TExtArgumentType'].get('ColumnInt8'),
-            'Column<int16_t>': typemap['TExtArgumentType'].get('ColumnInt16'),
-            'Column<int32_t>': typemap['TExtArgumentType'].get('ColumnInt32'),
-            'Column<int64_t>': typemap['TExtArgumentType'].get('ColumnInt64'),
-            'Column<float>': typemap['TExtArgumentType'].get('ColumnFloat'),
-            'Column<double>': typemap['TExtArgumentType'].get('ColumnDouble'),
             'Column<TextEncodingDict>': typemap['TExtArgumentType'].get(
                 'ColumnTextEncodingDict'),
             'Cursor': typemap['TExtArgumentType']['Cursor'],
@@ -877,13 +872,6 @@ class RemoteHeavyDB(RemoteJIT):
                 'GeoMultiPolygon'),
             'TextEncodingNone': typemap['TExtArgumentType'].get('TextEncodingNone'),
             'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
-            'ColumnList<bool>': typemap['TExtArgumentType'].get('ColumnListBool'),
-            'ColumnList<int8_t>': typemap['TExtArgumentType'].get('ColumnListInt8'),
-            'ColumnList<int16_t>': typemap['TExtArgumentType'].get('ColumnListInt16'),
-            'ColumnList<int32_t>': typemap['TExtArgumentType'].get('ColumnListInt32'),
-            'ColumnList<int64_t>': typemap['TExtArgumentType'].get('ColumnListInt64'),
-            'ColumnList<float>': typemap['TExtArgumentType'].get('ColumnListFloat'),
-            'ColumnList<double>': typemap['TExtArgumentType'].get('ColumnListDouble'),
             'ColumnList<TextEncodingDict>': typemap['TExtArgumentType'].get(
                 'ColumnListTextEncodingDict'),
             'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
@@ -895,6 +883,22 @@ class RemoteHeavyDB(RemoteJIT):
                 'TExtArgumentType']['ArrayInt8']
 
         ext_arguments_map['bool8'] = ext_arguments_map['bool']
+
+        for T, Tname in [
+                ('bool', 'Bool'),
+                ('int8_t', 'Int8'),
+                ('int16_t', 'Int16'),
+                ('int32_t', 'Int32'),
+                ('int64_t', 'Int64'),
+                ('float', 'Float'),
+                ('double', 'Double')]:
+            ext_arguments_map[f'Column<{T}>'] = typemap['TExtArgumentType'].get(f'Column{Tname}')
+            ext_arguments_map[f'ColumnList<{T}>'] = typemap['TExtArgumentType'].get(
+                f'ColumnList{Tname}')
+            ext_arguments_map[f'ColumnArray<{T}>'] = typemap['TExtArgumentType'].get(
+                f'ColumnArray{Tname}')
+            ext_arguments_map[f'ColumnListArray<{T}>'] = typemap['TExtArgumentType'].get(
+                f'ColumnListArray{Tname}')
 
         for ptr_type, T in [
                 ('bool', 'bool'),
@@ -936,6 +940,9 @@ class RemoteHeavyDB(RemoteJIT):
             s = t.tostring(use_annotation=False, use_name=False)
             extarg = self._get_ext_arguments_map().get(s)
             if extarg is None:
+                if s in self._get_ext_arguments_map():
+                    raise ValueError(f'cannot convert {t}(={s}) to ExtArgumentType:'
+                                     ' bug in _get_ext_arguments_map?')
                 raise ValueError(f'cannot convert {t}(={s}) to ExtArgumentType')
             return extarg
         elif isinstance(t, str):
@@ -971,7 +978,8 @@ class RemoteHeavyDB(RemoteJIT):
                     messages.append(f'thrift type map: add new type {typ}')
                 elif member not in typemap[typ]:
                     messages.append(
-                        f'thrift type map: add new member {typ}.{member}')
+                        f'thrift type map: add new member {typ}.{member}'
+                        ' to rbc/extension_functions.thrift')
                 elif ivalue != typemap[typ][member]:
                     messages.append(
                         f'thrift type map: update {typ}.{member}'
