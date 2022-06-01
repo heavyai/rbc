@@ -508,17 +508,16 @@ class RemoteHeavyDB(RemoteJIT):
         """Return a list of table function names registered on the server.
         If `runtime_only` is True, then, only runtime UDTF names are returned
         """
-        if runtime_only:
-            return self.thrift_call('get_runtime_table_function_names', self.session_id)
-        else:
-            return self.thrift_call('get_table_function_names', self.session_id)
+        endpoint = ('get_runtime_table_function_names' if runtime_only else
+                    'get_table_function_names')
+        return self.thrift_call(endpoint, self.session_id)
 
-    def table_function_details(self, *args):
+    def table_function_details(self, *names):
         """Given a list of table function names, returns a
         TUserDefinedTableFunction for each UDTF name
         """
         endpoint = 'get_table_function_details'
-        return self.thrift_call(endpoint, self.session_id, list(args))
+        return self.thrift_call(endpoint, self.session_id, list(names))
 
     def function_names(self, *, runtime_only=False):
         """Return a list of user defined function names registered on the server.

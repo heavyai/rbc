@@ -39,6 +39,7 @@ def test_get_udtf_details(heavydb):
 
     heavydb.register()
     details = heavydb.table_function_details('my_udtf')
+    assert len(details) == 1
 
     @heavydb('int32(Column<int>, ConstantParameter, OutputColumn<int>)')
     def another_udtf(x, m, y):
