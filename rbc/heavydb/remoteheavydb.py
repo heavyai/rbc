@@ -17,7 +17,9 @@ from . import (
     HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
-    BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType)
+    BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
+    HeavyDBTimestampType
+)
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
 from rbc.errors import ForbiddenNameError, HeavyDBServerError
@@ -404,6 +406,7 @@ class RemoteHeavyDB(RemoteJIT):
         TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
         TableFunctionManager='HeavyDBTableFunctionManagerType<>',
+        Timestamp='HeavyDBTimestampType',
         UDTF='int32|kind=UDTF'
     )
 
@@ -936,7 +939,7 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('HeavyDBTextEncodingDictType<>', 'TextEncodingDict'),
-                ('TimeStamp', 'TimeStamp'),
+                ('Timestamp', 'Timestamp'),
         ]:
             ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
@@ -1414,6 +1417,9 @@ class RemoteHeavyDB(RemoteJIT):
             use_typename = True
         elif isinstance(typ, HeavyDBTableFunctionManagerType):
             typ = typ.copy().params(typename='TableFunctionManager')
+            use_typename = True
+        elif isinstance(typ, HeavyDBTimestampType):
+            typ = typ.copy().params(typename='Timestamp')
             use_typename = True
         elif is_sizer(typ):
             sizer = get_sizer_enum(typ)
