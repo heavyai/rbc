@@ -839,8 +839,6 @@ def test_column_dtype(heavydb):
                 y[i] = 3.0
             elif x.dtype == types.float64:
                 y[i] = 4.0
-            else:
-                y[i] = 'hello world'  # this ought be removed by DCE
         return sz
 
     inpts = (

@@ -73,6 +73,7 @@ one cannot create and use them inside the REPL, for instance.
 .. autosummary::
     :toctree: generated/
 
-    rbc.heavyai.Array
-    rbc.heavyai.TextEncodingDict
-    rbc.heavyai.TextEncodingNone
+    rbc.heavydb.Array
+    rbc.heavydb.TextEncodingDict
+    rbc.heavydb.TextEncodingNone
+    rbc.heavydb.Timestamp

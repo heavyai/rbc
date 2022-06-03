@@ -9,6 +9,7 @@ import warnings
 import pathlib
 import configparser
 import numpy
+import textwrap
 from collections import defaultdict, namedtuple
 from rbc.remotejit import RemoteJIT, RemoteCallCapsule
 from rbc.thrift.utils import resolve_includes
@@ -68,16 +69,16 @@ def get_literal_return(func, verbose=False):
             raise NotImplementedError(
                 f'literal value from binary op `{node.op}`')
         raise NotImplementedError(f'literal value from `{node}`')
-    source = ''
-    intent = None
-    for line in inspect.getsourcelines(func)[0]:
-        if line.lstrip().startswith('@'):
-            continue
-        if intent is None:
-            intent = len(line) - len(line.lstrip())
-        source += line[intent:]
 
-    tree = ast.parse(source)
+    source = ''
+    valid = False
+    for line in inspect.getsourcelines(func)[0]:
+        if 'def ' in line:
+            valid = True
+        if valid:
+            source += line
+
+    tree = ast.parse(textwrap.dedent(source))
     last_node = tree.body[0].body[-1]
     if isinstance(last_node, ast.Return):
         try:
@@ -1044,6 +1045,8 @@ class RemoteHeavyDB(RemoteJIT):
                     null_value = numpy.dtype(f'uint{bitwidth}').type(int(value)).view(
                         'int8' if dtype == 'boolean8' else dtype)
                     null_values_astype[tname] = null_value
+        null_values_astype['Timestamp'] = null_values_astype['int64']
+        null_values_asint['Timestamp'] = null_values_asint['int64']
         self._null_values = null_values_astype
 
         targets = {}

@@ -54,6 +54,12 @@ class HeavyDB(Library):
     allocate_varlen_buffer set_output_row_size
     TableFunctionManager_error_message TableFunctionManager_set_output_row_size
     table_function_error
+    extract_epoch extract_dateepoch extract_quarterday extract_hour
+    extract_minute extract_second extract_millisecond extract_nanosecond
+    extract_dow extract_isodow extract_day extract_week_monday extract_week_sunday
+    extract_week_saturday extract_day_of_year extract_month extract_quarter
+    extract_year extract_microsecond
+    datetrunc_year datetrunc_month datetrunc_day datetrunc_hour datetrunc_minute
     '''.strip().split())
 
 

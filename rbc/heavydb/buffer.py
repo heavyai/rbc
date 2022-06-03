@@ -413,7 +413,8 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
         ptr = builder.load(rawptr)
 
         buf = builder.load(builder.gep(ptr, [zero, zero]))
-        value = truncate_cast_or_extend(builder, value, buf.type.pointee, signed)
+        if isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
+            value = truncate_cast_or_extend(builder, value, buf.type.pointee, signed)
         builder.store(value, builder.gep(buf, [index]))
 
     return sig, codegen
@@ -427,7 +428,8 @@ def heavydb_buffer_setitem_(typingctx, data, index, value):
     def codegen(context, builder, signature, args):
         data, index, value = args
         ptr = irutils.get_member_value(builder, data, 0)
-        value = truncate_cast_or_extend(builder, value, ptr.type.pointee, signed)
+        if isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
+            value = truncate_cast_or_extend(builder, value, ptr.type.pointee, signed)
 
         builder.store(value, builder.gep(ptr, [index]))
 
@@ -481,6 +483,12 @@ def heavydb_buffer_idx_is_null_(typingctx, col_var, row_idx):
         ptr, index = args
         data = builder.extract_value(builder.load(ptr), [0])
         res = builder.load(builder.gep(data, [index]))
+
+        # importing it here in case in the future someone tries to import
+        # buffer on timestamp.py
+        from .timestamp import TimestampNumbaType
+        if isinstance(signature.args[0].eltype, TimestampNumbaType):
+            res = builder.extract_value(res, 0)
 
         if isinstance(T, types.Float):
             res = builder.bitcast(res, nv.type)
