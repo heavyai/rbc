@@ -1418,9 +1418,6 @@ class RemoteHeavyDB(RemoteJIT):
         elif isinstance(typ, HeavyDBTableFunctionManagerType):
             typ = typ.copy().params(typename='TableFunctionManager')
             use_typename = True
-        elif isinstance(typ, HeavyDBTimestampType):
-            typ = typ.copy().params(typename='Timestamp')
-            use_typename = True
         elif is_sizer(typ):
             sizer = get_sizer_enum(typ)
             for shortname, fullname in output_buffer_sizer_map.items():
