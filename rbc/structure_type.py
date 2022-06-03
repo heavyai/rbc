@@ -23,7 +23,10 @@ class StructureTypeAttributeTemplate(typing.templates.AttributeTemplate):
 
     def generic_resolve(self, typ, attr):
         model = datamodel.default_manager.lookup(typ)
-        return model.get_member_fe_type(attr)
+        try:
+            return model.get_member_fe_type(attr)
+        except KeyError:
+            pass
 
 
 class StructurePointerTypeAttributeTemplate(typing.templates.AttributeTemplate):
