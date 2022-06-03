@@ -18,7 +18,6 @@ from . import (
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
-    HeavyDBTimestampType
 )
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
