@@ -179,7 +179,7 @@ jobs:
             mamba run -n heavydb-env heavydb --version
             RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions --enable-udf-registration-for-all-users"
             echo ${RUN_FLAGS}
-            mamba run -n heavydb-env heavydb $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
+            mamba run -n heavydb-env heavydb $RUN_FLAGS &> heavydb-output.txt &
           else
             mkdir data
             mamba run -n heavydb-env omnisci_initdb data -f
@@ -188,10 +188,9 @@ jobs:
             if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
               RUN_FLAGS="${RUN_FLAGS} --enable-dev-table-functions"
             fi
-            mamba run -n heavydb-env omnisci_server $RUN_FLAGS \> heavydb-output.txt 2\>\&1 \& echo \$! \> heavydb.pid
+            mamba run -n heavydb-env omnisci_server $RUN_FLAGS &> heavydb-output.txt &
           fi
           sleep 10
-          cat heavydb.pid
 
       - name: Create rbc test environment v${{ matrix.python-version }}
         shell: bash -l {0}
@@ -264,9 +263,14 @@ jobs:
 
       - name: Stop Heavydb server [conda]
         shell: bash -l {0}
+        continue-on-error: true
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          test -f heavydb.pid && kill -INT `cat heavydb.pid`
+          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+            mamba run -n heavydb-env killall heavydb
+          else
+            mamba run -n heavydb-env killall omnisci_server
+          fi
           sleep 5
 
       - name: Show Heavydb server output [conda]
