@@ -1,9 +1,7 @@
-'''HeavyDB Timestamp type that corresponds to HeavyDB type TEXT ENCODED DICT.
-'''
+"""HeavyDB Timestamp type that corresponds to HeavyDB type timestamp."""
 from rbc import typesystem
 from rbc.heavydb import HeavyDBMetaType
 from numba.core import extending, types, cgutils
-from llvmlite import ir
 
 __all__ = ['HeavyDBTimestampType', 'Timestamp']
 
