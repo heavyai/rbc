@@ -1,9 +1,15 @@
+from packaging.version import Version
+
 from rbc.tests import heavydb_fixture
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+
+
+if Version(available_version[:2]) < Version("6"):
+    pytest.skip(f"Requires HeavyDB >= 6, got {available_version}")
 
 
 @pytest.fixture(scope='module')
