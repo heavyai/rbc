@@ -15,6 +15,7 @@ dependencies:
   - numba>=0.52
   - llvmlite
   - pytest
+  - packaging
   - tblib
   - thriftpy2
   - netifaces
