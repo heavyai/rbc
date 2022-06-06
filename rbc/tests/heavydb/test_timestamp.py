@@ -8,7 +8,7 @@ available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
-if Version(available_version[:2]) < Version("6"):
+if Version('.'.join(map(str, available_version[:2]))) < Version("6"):
     pytest.skip(f"Requires HeavyDB >= 6, got {available_version}")
 
 
