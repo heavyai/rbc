@@ -33,7 +33,7 @@ def test_timestamp(heavydb):
     def timestamp_extract(x, y):
         set_output_row_size(len(x))
         for i in range(len(x)):
-            y[i] = x[i]
+            y[i] = x[i].time
         return len(x)
 
     heavydb.register()
@@ -41,4 +41,4 @@ def test_timestamp(heavydb):
     table = 'time_test'
     query = f'select * from table(timestamp_extract(cursor(select t1 from {table})));'
     _, result = heavydb.sql_execute(query)
-    assert list(result) == [1, 1654268400000]
+    assert list(result) == [(1,), (1654268400000000000,)]

@@ -32,6 +32,9 @@ class HeavyDBTimestampType(typesystem.Type):
         return 'Timestamp'
 
 
+extending.make_attribute_wrapper(TimestampNumbaType, 'time', 'time')
+
+
 @extending.type_callable(Timestamp)
 def type_heavydb_timestamp(context):
     def typer(arg):
