@@ -220,7 +220,7 @@ class Client(object):
                         print(msg)
                         raise
                     if exc is not None:
-                        raise exc  # RAISING SERVER EXCEPTION
+                        raise exc[1]  # SERVER EXCEPTION
                     r = self._result_from_thrift(
                         getattr(service, query_name + '_result'), r)
                     results[service_name][query_name] = r
