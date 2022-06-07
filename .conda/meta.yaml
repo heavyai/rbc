@@ -1,17 +1,17 @@
 package:
   name: rbc
-  version: 0.1.0.dev2
+  version: 0.7.3
 
 source:
   git_url: https://github.com/xnd-project/rbc.git
-  git_rev: v0.1.0.dev2
+  git_rev: v0.7.3
   #git_url: ../
 
 test:
   requires:
     - pytest
   commands:
-    - pytest -sv -r s --pyargs rbc
+    - pytest -sv -r s -k "not test_python_version" --pyargs rbc
   imports:
     - rbc
     - rbc.thrift
@@ -21,22 +21,18 @@ requirements:
     - python
     - setuptools
   host:
+    - cffi
     - python
-    - pytest-runner
-    - pytest
+    - setuptools
+    - pip
+  run:
+    - cffi
+    - python
     - thriftpy2
     - tblib
     - llvmlite >=0.29
-    - numba
+    - numba >=0.52
     - netifaces
-  run:
-    - python
-    - thriftpy2
-    - tblib
-    - llvmlite
-    - numba
-    - netifaces
-    - clang
 
 about:
   home: https://github.com/xnd-project/rbc
