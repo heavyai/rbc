@@ -35,13 +35,11 @@ def setup_package():
         # enviroment should provide the correct requirements - using
         # PyPI is unreliable, see below.
         install_requires = []
-        setup_requires = []
         tests_require = []
     else:
         # Get requirements via PyPI. Use at your own risk as more than
         # once the numba and llvmlite have not matched.
         install_requires = open('requirements.txt', 'r').read().splitlines()
-        setup_requires = ['pytest-runner']
         tests_require = ['pytest']
 
     metadata = dict(
@@ -70,7 +68,6 @@ def setup_package():
         packages=find_packages(),
         package_data={'': ['*.thrift']},
         install_requires=install_requires,
-        setup_requires=setup_requires,
         tests_require=tests_require,
     )
 

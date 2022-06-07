@@ -1,10 +1,10 @@
 package:
   name: rbc
-  version: 0.7.3
+  version: 0.8.0
 
 source:
   git_url: https://github.com/xnd-project/rbc.git
-  git_rev: v0.7.3
+  git_rev: v0.8.0
   #git_url: ../
 
 test:
@@ -17,9 +17,6 @@ test:
     - rbc.thrift
 
 requirements:
-  build:
-    - python
-    - setuptools
   host:
     - cffi
     - python

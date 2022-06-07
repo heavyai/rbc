@@ -18,5 +18,3 @@ dependencies:
   - tblib
   - thriftpy2
   - netifaces
-  - clang
-  - clangxx
