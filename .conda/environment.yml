@@ -20,5 +20,4 @@ dependencies:
   - netifaces
   - clang=10
   - clangxx=10
-  - six
   # - cudatoolkit-dev   # disable temporary
