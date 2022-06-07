@@ -13,11 +13,10 @@ dependencies:
   - python>=3.7
   - setuptools
   - numba>=0.52
-  - llvmlite
+  - llvmlite>=0.29
   - pytest
   - tblib
   - thriftpy2
   - netifaces
-  - clang=10
-  - clangxx=10
-  # - cudatoolkit-dev   # disable temporary
+  - clang
+  - clangxx
