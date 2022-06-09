@@ -67,7 +67,7 @@ jobs:
       - name: Create rbc test environment v${{ matrix.python-version }}
         shell: bash -l {0}
         run: |
-          cat .conda/environment.yml > rbc_test.yaml
+          cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
@@ -150,19 +150,6 @@ jobs:
             mamba create -n heavydb-env omniscidb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
           fi
 
-      - name: Build heavydb docker image and run it [docker]
-        shell: bash -l {0}
-        env:
-          HEAVYDB_DOCKER_IMAGE: ${{ matrix.docker-image }}
-        if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker'
-        run: |
-          # force docker-compose installation
-          mamba create -n docker docker-compose -c conda-forge
-          # run docker services
-          mamba run -n docker docker-compose build
-          mamba run -n docker docker-compose up -d
-          sleep 20
-
       - name: heavydb-env conda list [conda]
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
@@ -195,7 +182,7 @@ jobs:
       - name: Create rbc test environment v${{ matrix.python-version }}
         shell: bash -l {0}
         run: |
-          cat .conda/environment.yml > rbc_test.yaml
+          cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
@@ -214,19 +201,6 @@ jobs:
         shell: bash -l {0}
         run: |
           mamba run -n rbc python setup.py develop
-
-      - name: Run rbc tests [docker]
-        shell: bash -l {0}
-        if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker'
-        env:
-          HEAVYDB_DEV_LABEL: ${{ 'docker-dev' }}
-          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
-          EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
-          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
-          RBC_TESTS_FULL: TRUE
-        run: |
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k heavydb
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k "not heavydb"
 
       - name: Run rbc tests
         shell: bash -l {0}
@@ -254,13 +228,6 @@ jobs:
             mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
           fi
 
-      - name: Show Heavydb docker logs on failure [docker]
-        shell: bash -l {0}
-        if: failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker'
-        run: |
-          mamba run -n docker docker-compose top  # to check if server is still alive
-          mamba run -n docker docker-compose exec -T ls
-
       - name: Stop Heavydb server [conda]
         shell: bash -l {0}
         continue-on-error: true
@@ -279,14 +246,6 @@ jobs:
         run: |
           cat heavydb-output.txt
 
-      - name: Show Heavydb docker logs on failure [docker]
-        shell: bash -l {0}
-        timeout-minutes: 2
-        if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker' }}
-        run: |
-          mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> heavydb-docker.log
-          cat heavydb-docker.log
-
   eval-notebooks:
       runs-on: ubuntu-latest
       needs: lint
@@ -304,7 +263,7 @@ jobs:
             python-version: 3.8
             mamba-version: "*"
             channels: conda-forge
-            environment-file: .conda/environment.yml
+            environment-file: environment.yml
 
         - name: Install additional packages
           shell: bash -l {0}

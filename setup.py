@@ -40,7 +40,7 @@ def setup_package():
         # Get requirements via PyPI. Use at your own risk as more than
         # once the numba and llvmlite have not matched.
         install_requires = open('requirements.txt', 'r').read().splitlines()
-        tests_require = ['pytest']
+        tests_require = ['pytest', 'clang==11.1']
 
     metadata = dict(
         name='rbc-project',

@@ -1,7 +1,8 @@
-numba>=0.52
-llvmlite>=0.29
+numba>=0.54
+llvmlite
 tblib
 thriftpy2
 netifaces
+clang==11.1
 sphinx_autodoc_typehints
 pydata-sphinx-theme>=0.8.0

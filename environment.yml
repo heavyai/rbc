@@ -1,6 +1,6 @@
 #
 # Usage:
-#   conda env create --file=.conda/environment.yml -n rbc-dev
+#   conda env create --file=.conda/environment.yml -n rbc
 #   python setup.py develop
 #   pytest -sv .
 
@@ -14,6 +14,7 @@ dependencies:
   - setuptools
   - numba>=0.52
   - llvmlite>=0.29
+  - clang==11.1
   - pytest
   - tblib
   - thriftpy2
