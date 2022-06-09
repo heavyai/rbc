@@ -86,7 +86,6 @@ html_theme = 'pydata_sphinx_theme'
 html_logo = "images/xndlogo.png"
 
 html_theme_options = {
-    "logo_link": "index",
     "github_url": "https://github.com/xnd-project/rbc",
     "use_edit_page_button": True,
 }
