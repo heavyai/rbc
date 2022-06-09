@@ -4,3 +4,4 @@ tblib
 thriftpy2
 six
 netifaces
+packaging
