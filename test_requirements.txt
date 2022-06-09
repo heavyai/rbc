@@ -4,6 +4,5 @@ tblib
 thriftpy2
 netifaces
 clang==11.1.0
-clangxx==11.1.0
 sphinx_autodoc_typehints
 pydata-sphinx-theme>=0.9.0
