@@ -1,15 +1,12 @@
-from packaging.version import Version, InvalidVersion
-
 from rbc.tests import heavydb_fixture
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
-available_version, reason = rbc_heavydb.is_available()
-pytestmark = pytest.mark.skipif(not available_version, reason=reason)
+
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True, minimal_version=(6, 0)):
+    for o in heavydb_fixture(globals(), minimal_version=(6, 0)):
         yield o
 
 
