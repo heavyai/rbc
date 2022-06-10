@@ -15,6 +15,10 @@ class HeavyDBTextEncodingDictType(typesystem.Type):
     def __typesystem_type__(self):
         return typesystem.Type('int32')
 
+    def tostring(self, use_typename=False, use_annotation=True, use_name=True,
+                 use_annotation_name=False, _skip_annotation=False):
+        return 'TextEncodingDict'
+
 
 class TextEncodingDict(object, metaclass=HeavyDBMetaType):
     """

@@ -9,13 +9,16 @@ __all__ = ['OutputColumn', 'Column', 'HeavyDBOutputColumnType', 'HeavyDBColumnTy
 
 from llvmlite import ir
 from rbc import typesystem, irutils
-from .buffer import Buffer, HeavyDBBufferType, BufferType
+from rbc.errors import NumbaTypeError
+from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
 from rbc.targetinfo import TargetInfo
-from numba.core import extending, types
+from numba.core import extending, cgutils
+from numba.core import types as nb_types
 from typing import Union
 
 
+int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 
 
@@ -30,6 +33,12 @@ class HeavyDBColumnType(HeavyDBBufferType):
     def match(self, other):
         if type(self) is type(other):
             return self[0] == other[0]
+
+    @property
+    def buffer_extra_members(self):
+        if self.element_type.tostring() == 'TextEncodingDict':
+            return ('i8* string_dict_proxy_',)
+        return ()
 
 
 class HeavyDBOutputColumnType(HeavyDBColumnType):
@@ -94,7 +103,7 @@ def heavydb_column_set_null_(typingctx, col_var, row_idx):
     #                    ^                          ^
     #                 fp value                  serialized
     T = col_var.eltype
-    sig = types.void(col_var, row_idx)
+    sig = nb_types.void(col_var, row_idx)
 
     target_info = TargetInfo()
     null_value = target_info.null_values[str(T)]
@@ -105,7 +114,7 @@ def heavydb_column_set_null_(typingctx, col_var, row_idx):
 
         ty = ptr.type.pointee
         nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
-        if isinstance(T, types.Float):
+        if isinstance(T, nb_types.Float):
             nv = builder.bitcast(nv, ty)
         builder.store(nv, builder.gep(ptr, [index]))
 
@@ -122,7 +131,7 @@ def heavydb_column_set_null(col_var, index):
 @extending.intrinsic
 def heavydb_column_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
-    sig = types.boolean(col_var, row_idx)
+    sig = nb_types.boolean(col_var, row_idx)
 
     target_info = TargetInfo()
     null_value = target_info.null_values[str(T)]
@@ -133,10 +142,55 @@ def heavydb_column_is_null_(typingctx, col_var, row_idx):
         ptr = irutils.get_member_value(builder, data, 0)
         res = builder.load(builder.gep(ptr, [index]))
 
-        if isinstance(T, types.Float):
+        if isinstance(T, nb_types.Float):
             res = builder.bitcast(res, nv.type)
 
         return builder.icmp_signed('==', res, nv)
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def heavydb_column_getString_(typingctx, col_var, row_idx):
+    # should this return a text encoding none? or even a string?
+    sig = nb_types.voidptr(col_var, row_idx)
+
+    def codegen(context, builder, signature, args):
+        [col, row_idx] = args
+        idx = builder.trunc(row_idx, int32_t)
+        proxy = builder.extract_value(builder.load(col), 2)
+        i8p = int8_t.as_pointer()
+        fnty = ir.FunctionType(i8p, [i8p, int32_t])
+        fn = cgutils.get_or_insert_function(builder.module, fnty,
+                                            "StringDictionaryProxy_getString")
+        ret = builder.call(fn, [proxy, idx])
+        return ret
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def heavydb_column_getStringId_(typingctx, col_var, str_arg):
+    sig = nb_types.int32(col_var, str_arg)
+
+    from .text_encoding_none import TextEncodingNonePointer
+
+    def codegen(context, builder, signature, args):
+        [col, arg] = args
+        if isinstance(str_arg, nb_types.UnicodeType):
+            unicode = cgutils.create_struct_proxy(signature.args[1])(context, builder, value=arg)
+            c_str = unicode.data
+        elif isinstance(str_arg, TextEncodingNonePointer):
+            c_str = builder.extract_value(builder.load(arg), 0)
+        else:
+            raise NumbaTypeError(f'Cannot handle string argument type {str_arg}')
+        proxy = builder.extract_value(builder.load(col), 2)
+        i8p = int8_t.as_pointer()
+        fnty = ir.FunctionType(int32_t, [i8p, i8p])
+        fn = cgutils.get_or_insert_function(builder.module, fnty,
+                                            "StringDictionaryProxy_getStringId")
+        ret = builder.call(fn, [proxy, c_str])
+        return ret
 
     return sig, codegen
 
@@ -145,6 +199,20 @@ def heavydb_column_is_null_(typingctx, col_var, row_idx):
 def heavydb_column_is_null(col_var, row_idx):
     def impl(col_var, row_idx):
         return heavydb_column_is_null_(col_var, row_idx)
+    return impl
+
+
+@extending.overload_method(BufferPointer, 'getString')
+def heavydb_column_getString(col_var, row_idx):
+    def impl(col_var, row_idx):
+        return heavydb_column_getString_(col_var, row_idx)
+    return impl
+
+
+@extending.overload_method(BufferPointer, 'getStringId')
+def heavydb_column_getStringId(col_var, str):
+    def impl(col_var, str):
+        return heavydb_column_getStringId_(col_var, str)
     return impl
 
 

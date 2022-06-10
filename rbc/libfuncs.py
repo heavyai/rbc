@@ -60,6 +60,7 @@ class HeavyDB(Library):
     extract_week_saturday extract_day_of_year extract_month extract_quarter
     extract_year extract_microsecond
     datetrunc_year datetrunc_month datetrunc_day datetrunc_hour datetrunc_minute
+    StringDictionaryProxy_getString StringDictionaryProxy_getStringId
     '''.strip().split())
 
 

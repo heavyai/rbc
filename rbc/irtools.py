@@ -9,7 +9,6 @@ from llvmlite import ir
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .errors import UnsupportedError
-from .utils import get_version
 from . import libfuncs
 from rbc.externals import stdio
 from numba.core import codegen, cpu, compiler_lock, \
@@ -278,14 +277,10 @@ def compile_instance(func, sig,
     succesful.
     """
     flags = compiler.Flags()
-    if get_version('numba') >= (0, 54):
-        flags.no_compile = True
-        flags.no_cpython_wrapper = True
-        flags.no_cfunc_wrapper = True
-    else:
-        flags.set('no_compile')
-        flags.set('no_cpython_wrapper')
-        flags.set('no_cfunc_wrapper')
+    flags.no_compile = True
+    flags.no_cpython_wrapper = True
+    flags.no_cfunc_wrapper = True
+    flags.nrt = True
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(

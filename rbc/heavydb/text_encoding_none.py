@@ -16,6 +16,10 @@ from llvmlite import ir
 from typing import Union
 
 
+class TextEncodingNonePointer(BufferPointer):
+    pass
+
+
 class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
     """HeavyDB TextEncodingNone type for RBC typesystem.
     """
@@ -40,10 +44,6 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
             return 1
         if other.is_string:
             return 2
-
-
-class TextEncodingNonePointer(BufferPointer):
-    pass
 
 
 class TextEncodingNone(Buffer):

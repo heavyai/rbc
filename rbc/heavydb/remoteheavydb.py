@@ -935,7 +935,6 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
-                ('HeavyDBTextEncodingDictType<>', 'TextEncodingDict'),
                 ('Timestamp', 'Timestamp'),
         ]:
             ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \

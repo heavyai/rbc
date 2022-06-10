@@ -67,6 +67,27 @@ def define(heavydb):
             y[j] = col[j]
         return m * sz
 
+    if heavydb.version[:2] >= (6, 2):
+        @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, TextEncodingNone, OutputColumn<int32_t>)',  # noqa: E501
+                 devices=['cpu'])
+        def test_getstringid_from_arg(x, m, text, y):
+            y[0] = x.getStringId(text)
+            return 1
+
+        @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<int32_t>)',
+                 devices=['cpu'], T=['TextEncodingDict'])
+        def test_getstringid_from_unicode(x, m, y):
+            text = "foo"  # this creates a unicode string
+            y[0] = x.getStringId(text)
+            return 1
+
+        # from rbc.heavydb import TextEncodingNone
+        # @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, OutputColumn<TextEncodingNone>)')  # noqa: E501
+        # def test_getstring(x, m, y):
+        #     for i in range(len(x)):
+        #         y[i] = TextEncodingNone(x[i].getString(i))
+        #     return len(x)
+
 
 @pytest.fixture(scope="function")
 def create_columns(heavydb):
@@ -357,3 +378,40 @@ def test_ct_binding_dict_encoded45(heavydb, size, fn_suffix):
         assert list(sum(result, ())) == out5
     else:
         assert list(result) == list(zip(out4, out5))
+
+
+@pytest.mark.parametrize('text', ['foo', 'bar', 'invalid1234'])
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getStringId(heavydb, col, text):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    fn = 'test_getstringid_from_arg'
+    table = f"{heavydb.base_name}text"
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col} from {table}),"
+             f"1,"
+             f"'{text}'));")
+
+    _, result = heavydb.sql_execute(query)
+    [result] = result
+    if text in ['foo', 'bar']:
+        assert result[0] > 0
+    else:
+        assert result[0] < 0
+
+
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getStringId_unicode(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    fn = 'test_getstringid_from_unicode'
+    table = f"{heavydb.base_name}text"
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col} from {table}),"
+             f"1));")
+
+    _, result = heavydb.sql_execute(query)
+    [result] = result
+    assert result[0] > 0
