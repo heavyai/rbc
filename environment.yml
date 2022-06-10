@@ -12,8 +12,8 @@ channels:
 dependencies:
   - python>=3.7
   - setuptools
-  - numba>=0.52
-  - llvmlite>=0.29
+  - numba>=0.54
+  - llvmlite
   - clang==11.1
   - pytest
   - tblib
