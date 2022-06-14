@@ -10,7 +10,9 @@ __all__ = ['OutputColumn', 'Column', 'HeavyDBOutputColumnType', 'HeavyDBColumnTy
 from llvmlite import ir
 from rbc import typesystem, irutils
 from rbc.errors import NumbaTypeError
-from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
+from .buffer import (Buffer, HeavyDBBufferType,
+                     BufferType, BufferPointer,
+                     heavydb_buffer_constructor)
 from .column_list import HeavyDBColumnListType
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, cgutils
@@ -151,35 +153,65 @@ def heavydb_column_is_null_(typingctx, col_var, row_idx):
 
 
 @extending.intrinsic
-def heavydb_column_getString_(typingctx, col_var, row_idx):
-    # should this return a text encoding none? or even a string?
-    sig = nb_types.voidptr(col_var, row_idx)
-
-    def codegen(context, builder, signature, args):
-        [col, row_idx] = args
-        idx = builder.trunc(row_idx, int32_t)
-        proxy = builder.extract_value(builder.load(col), 2)
+def heavydb_column_getString_(typingctx, col_var, string_id):
+    def getBytes(builder, proxy, string_id):
+        # bytes
         i8p = int8_t.as_pointer()
         fnty = ir.FunctionType(i8p, [i8p, int32_t])
-        fn = cgutils.get_or_insert_function(builder.module, fnty,
-                                            "StringDictionaryProxy_getString")
-        ret = builder.call(fn, [proxy, idx])
-        return ret
+        getStringBytes = cgutils.get_or_insert_function(builder.module, fnty,
+                                                        "StringDictionaryProxy_getStringBytes")
+        return builder.call(getStringBytes, [proxy, string_id])
 
+    def getBytesLength(context, builder, proxy, string_id):
+        # length
+        i8p = int8_t.as_pointer()
+        size_t = context.get_value_type(typesystem.Type('size_t')._normalize().tonumba())
+        fnty = ir.FunctionType(size_t, [i8p, int32_t])
+        getStringLength = cgutils.get_or_insert_function(builder.module, fnty,
+                                                         "StringDictionaryProxy_getStringLength")
+        return builder.call(getStringLength, [proxy, string_id])
+
+    def free(builder, ptr):
+        i8p = int8_t.as_pointer()
+        void = ir.VoidType()
+        fnty = ir.FunctionType(void, [i8p])
+        fn = cgutils.get_or_insert_function(builder.module, fnty, "free")
+        builder.call(fn, [ptr])
+
+    def codegen(context, builder, signature, args):
+        [col, string_id] = args
+        string_id = builder.trunc(string_id, int32_t)
+        proxy = builder.extract_value(builder.load(col), 2)
+
+        ptr = getBytes(builder, proxy, string_id)
+        sz = getBytesLength(context, builder, proxy, string_id)
+
+        text = heavydb_buffer_constructor(context, builder, signature, [sz])
+        cgutils.memcpy(builder, text.ptr, ptr, builder.add(sz, sz.type(1)))
+        free(builder, ptr)
+        text.sz = sz
+        return text._getpointer()
+
+    # importing it here to avoid circular import issue
+    from .text_encoding_none import HeavyDBTextEncodingNoneType
+    ret = HeavyDBTextEncodingNoneType().tonumba()
+    sig = ret(col_var, string_id)
     return sig, codegen
 
 
 @extending.intrinsic
 def heavydb_column_getStringId_(typingctx, col_var, str_arg):
-    sig = nb_types.int32(col_var, str_arg)
-
+    # import here to avoid circular import issue
     from .text_encoding_none import TextEncodingNonePointer
+
+    sig = nb_types.int32(col_var, str_arg)
 
     def codegen(context, builder, signature, args):
         [col, arg] = args
         if isinstance(str_arg, nb_types.UnicodeType):
-            unicode = cgutils.create_struct_proxy(signature.args[1])(context, builder, value=arg)
-            c_str = unicode.data
+            uni_str_ctor = cgutils.create_struct_proxy(nb_types.unicode_type)
+            uni_str = uni_str_ctor(context, builder, value=arg)
+            c_str = uni_str.data
         elif isinstance(str_arg, TextEncodingNonePointer):
             c_str = builder.extract_value(builder.load(arg), 0)
         else:

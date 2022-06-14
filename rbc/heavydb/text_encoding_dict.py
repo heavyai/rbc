@@ -17,7 +17,9 @@ class HeavyDBTextEncodingDictType(typesystem.Type):
 
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
                  use_annotation_name=False, _skip_annotation=False):
-        return 'TextEncodingDict'
+        self._params['typename'] = 'TextEncodingDict'
+        return super().tostring(True, use_annotation, use_name,
+                                use_annotation_name, _skip_annotation)
 
 
 class TextEncodingDict(object, metaclass=HeavyDBMetaType):

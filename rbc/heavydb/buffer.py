@@ -201,7 +201,7 @@ def heavydb_buffer_constructor(context, builder, sig, args):
             with orelse:
                 is_null = context.get_value_type(null_type)(0)
         fa.is_null = is_null      # int8_t
-    return fa._getpointer()
+    return fa
 
 
 @extending.intrinsic

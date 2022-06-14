@@ -1,5 +1,7 @@
 import os
 os.environ["NUMBA_CAPTURED_ERRORS"] = "new_style"
+os.environ["NUMBA_LOOP_VECTORIZE"] = "0"
+os.environ["NUMBA_SLP_VECTORIZE"] = "0"
 
 # Expose a temporary prototype. It will be replaced by proper
 # implementation soon.

@@ -132,7 +132,7 @@ class Array(Buffer):
 @extending.lower_builtin(Array, nb_types.Integer, nb_types.StringLiteral)
 @extending.lower_builtin(Array, nb_types.Integer, nb_types.NumberClass)
 def heavydb_array_constructor(context, builder, sig, args):
-    return heavydb_buffer_constructor(context, builder, sig, args)
+    return heavydb_buffer_constructor(context, builder, sig, args)._getpointer()
 
 
 @extending.type_callable(Array)

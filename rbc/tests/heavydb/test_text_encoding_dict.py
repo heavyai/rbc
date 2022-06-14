@@ -81,12 +81,11 @@ def define(heavydb):
             y[0] = x.getStringId(text)
             return 1
 
-        # from rbc.heavydb import TextEncodingNone
-        # @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, OutputColumn<TextEncodingNone>)')  # noqa: E501
-        # def test_getstring(x, m, y):
-        #     for i in range(len(x)):
-        #         y[i] = TextEncodingNone(x[i].getString(i))
-        #     return len(x)
+        @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>)')  # noqa: E501
+        def test_getstring(x, unique, y):
+            for i in range(unique):
+                y[i] = len(x.getString(i))
+            return unique
 
 
 @pytest.fixture(scope="function")
@@ -415,3 +414,21 @@ def test_getStringId_unicode(heavydb, col):
     _, result = heavydb.sql_execute(query)
     [result] = result
     assert result[0] > 0
+
+
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getString_fx(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    table = f"{heavydb.base_name}text"
+    _, unique = heavydb.sql_execute(f'select count(distinct {col}) from {table}')
+    unique = list(unique)[0][0]
+
+    fn = 'test_getstring'
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col} from {table}),"
+             f"{unique}));")
+
+    _, result = heavydb.sql_execute(query)
+    assert all([x[0] > 0 for x in result])

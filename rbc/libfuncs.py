@@ -60,7 +60,8 @@ class HeavyDB(Library):
     extract_week_saturday extract_day_of_year extract_month extract_quarter
     extract_year extract_microsecond
     datetrunc_year datetrunc_month datetrunc_day datetrunc_hour datetrunc_minute
-    StringDictionaryProxy_getString StringDictionaryProxy_getStringId
+    StringDictionaryProxy_getStringBytes StringDictionaryProxy_getStringLength
+    StringDictionaryProxy_getStringId
     '''.strip().split())
 
 
@@ -72,7 +73,8 @@ class Stdlib(Library):
     _function_names = list(''' atof atoi atol atoll strtod strtof strtol strtold strtoll strtoul
     strtoull rand srand calloc free malloc realloc abort atexit
     at_quick_exit exit getenv quick_exit system bsearch qsort abs div
-    labs ldiv llabs lldiv mblen mbtowc wctomb mbstowcs wcstombs '''.strip().split())
+    labs ldiv llabs lldiv mblen mbtowc wctomb mbstowcs wcstombs
+    free'''.strip().split())
 
 
 class Stdio(Library):
