@@ -16,6 +16,7 @@ dependencies:
   - llvmlite
   - clang==11.1
   - pytest
+  - packaging
   - tblib
   - thriftpy2
   - netifaces

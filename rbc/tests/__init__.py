@@ -7,6 +7,8 @@ import warnings
 import numpy
 from collections import defaultdict
 
+from packaging.version import Version
+
 
 def assert_equal(actual, desired):
     """Test equality of actual and desired.
@@ -117,13 +119,17 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
         if not available_version:
             pytest.skip(reason)
         # Requires update when heavydb-internal bumps up version number:
-        current_development_version = (6, 2, 0)
-        if available_version[:3] > current_development_version:
-            warnings.warn(f'{available_version}) is newer than development version'
+        current_development_version = Version("6.2.0")
+
+        curr_version = Version('.'.join(map(str, available_version[:2])))
+
+        if curr_version > current_development_version:
+            warnings.warn(f'{curr_version}) is newer than development version'
                           f' ({current_development_version}), please update the latter!')
 
         assert isinstance(version, tuple)
-        if version > available_version[:3]:
+        version = Version('.'.join(map(str, version)))
+        if version > curr_version:
             _reason = f'test requires version {version} or newer, got {available_version}'
             if message is not None:
                 _reason += f': {message}'
@@ -146,12 +152,12 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                               ' Tests with development labels will not be run.')
             if env_label != label:
                 _reason = (f'test requires version {version} with label {label},'
-                           f' got {available_version} with label {env_label}')
+                           f' got {curr_version} with label {env_label}')
                 if message is not None:
                     _reason += f': {message}'
                 pytest.skip(_reason)
 
-            if version < available_version[:3]:
+            if version < curr_version:
                 # in the case the branch given in the label was never
                 # merged, consider removing the corresponding test
                 warnings.warn(f'detected test requiring {version} with out-of-date label {label}.'
