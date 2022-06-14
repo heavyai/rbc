@@ -1,6 +1,6 @@
 #
 # Usage:
-#   conda env create --file=.conda/environment.yml -n rbc-dev
+#   conda env create --file=.conda/environment.yml -n rbc
 #   python setup.py develop
 #   pytest -sv .
 
@@ -12,14 +12,11 @@ channels:
 dependencies:
   - python>=3.7
   - setuptools
-  - numba>=0.52
+  - numba>=0.54
   - llvmlite
+  - clang==11.1
   - pytest
   - packaging
   - tblib
   - thriftpy2
   - netifaces
-  - clang=10
-  - clangxx=10
-  - six
-  # - cudatoolkit-dev   # disable temporary
