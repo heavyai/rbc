@@ -25,7 +25,7 @@ class RBCDocumenter(FunctionDocumenter):
                     more_content: Optional[List[str]],
                     no_docstring: bool = False
                     ) -> None:
-        super().add_content(more_content, no_docstring)
+        super().add_content(more_content)
 
 
 def setup(app):

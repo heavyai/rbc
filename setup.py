@@ -42,7 +42,7 @@ def setup_package():
         # once the numba and llvmlite have not matched.
         install_requires = open('requirements.txt', 'r').read().splitlines()
         setup_requires = ['pytest-runner']
-        tests_require = ['pytest']
+        tests_require = ['pytest', 'packaging']
 
     metadata = dict(
         name='rbc-project',
