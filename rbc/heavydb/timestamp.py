@@ -26,6 +26,14 @@ kMonsPerYear = 12
 
 
 class Timestamp(object, metaclass=HeavyDBMetaType):
+    pass
+
+
+class TimestampNumbaType(nb_types.Type):
+    pass
+
+
+class Timestamp(object, metaclass=HeavyDBMetaType):
     '''HeavyDB Timestamp type that corresponds to HeavyDB type TIMESTAMP.
 
     .. code-block:: c
@@ -265,6 +273,7 @@ class HeavyDBTimestampType(typesystem.Type):
 
     def tonumba(self, bool_is_int8=None):
         return TimestampNumbaType()
+
 
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
                  use_annotation_name=False, _skip_annotation=False):

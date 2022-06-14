@@ -6,12 +6,11 @@ from rbc.heavydb import Timestamp
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
-pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True,
+    for o in heavydb_fixture(globals(), debug=False, load_columnar=True,
                              suffices=['timestamp'], minimal_version=(6, 0)):
         define(o)
         yield o

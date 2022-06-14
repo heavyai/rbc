@@ -67,7 +67,7 @@ jobs:
       - name: Create rbc test environment v${{ matrix.python-version }}
         shell: bash -l {0}
         run: |
-          cat .conda/environment.yml > rbc_test.yaml
+          cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
@@ -195,7 +195,7 @@ jobs:
       - name: Create rbc test environment v${{ matrix.python-version }}
         shell: bash -l {0}
         run: |
-          cat .conda/environment.yml > rbc_test.yaml
+          cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
@@ -304,7 +304,7 @@ jobs:
             python-version: 3.8
             mamba-version: "*"
             channels: conda-forge
-            environment-file: .conda/environment.yml
+            environment-file: environment.yml
 
         - name: Install additional packages
           shell: bash -l {0}
