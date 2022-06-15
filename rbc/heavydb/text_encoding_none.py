@@ -1,4 +1,4 @@
-'''HeavyDB TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
+'''RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
 '''
 
 __all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'HeavyDBTextEncodingNoneType']
@@ -46,7 +46,7 @@ class TextEncodingNonePointer(BufferPointer):
 
 
 class TextEncodingNone(Buffer):
-    '''HeavyDB TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
+    '''RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
     HeavyDB TextEncodingNone represents the following structure:
     .. code-block:: c
         struct TextEncodingNone {

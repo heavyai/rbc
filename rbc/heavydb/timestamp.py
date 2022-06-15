@@ -1,4 +1,4 @@
-"""HeavyDB Timestamp type that corresponds to HeavyDB type timestamp."""
+"""RBC Timestamp type that corresponds to HeavyDB type timestamp."""
 import operator
 import numpy as np
 from rbc import typesystem
@@ -26,7 +26,7 @@ kMonsPerYear = 12
 
 
 class Timestamp(metaclass=HeavyDBMetaType):
-    '''HeavyDB Timestamp type that corresponds to HeavyDB type TIMESTAMP.
+    '''RBC Timestamp type that corresponds to HeavyDB type TIMESTAMP.
 
     .. code-block:: c
         struct Timestamp {
