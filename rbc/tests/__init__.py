@@ -1,11 +1,12 @@
 __all__ = ['heavydb_fixture', 'sql_execute']
 
 
+from abc import abstractclassmethod, abstractproperty
+import numpy as np
 import os
 import pytest
 import warnings
 import numpy
-from collections import defaultdict
 
 from packaging.version import Version
 
@@ -34,8 +35,193 @@ def sql_execute(query):
     return heavydb.sql_execute(query)
 
 
+class _TestTable:
+
+    @abstractclassmethod
+    def suffix(cls):
+        pass
+
+    @abstractproperty
+    def sqltypes(self):
+        pass
+
+    @property
+    def colnames(self):
+        return self.values.keys()
+
+    @abstractproperty
+    def values(self):
+        pass
+
+    @property
+    def table_defn(self):
+        return ',\n'.join(f'{n} {t}' for n, t in zip(self.colnames, self.sqltypes))
+
+
+class _DefaultTestTable(_TestTable):
+
+    @classmethod
+    def suffix(cls):
+        return ''
+
+    @property
+    def sqltypes(self):
+        return ('FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
+                'BOOLEAN')
+
+    @property
+    def values(self):
+        return {
+            'f4': [0, 1, 2, 3, 4],
+            'f8': [0, 1, 2, 3, 4],
+            'i1': [0, 1, 2, 3, 4],
+            'i2': [0, 1, 2, 3, 4],
+            'i4': [0, 1, 2, 3, 4],
+            'i8': [0, 1, 2, 3, 4],
+            'b': [True, False, True, False, True],
+        }
+
+
+class _10TestTable(_DefaultTestTable):
+
+    @classmethod
+    def suffix(cls):
+        return '10'
+
+    @property
+    def values(self):
+        return {
+            'f4': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'f8': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'i1': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'i2': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'i4': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'i8': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            'b': [True, False, True, False, True, False, True, False, True, False],
+        }
+
+
+class _nullTestTable(_DefaultTestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "null"
+
+    @property
+    def values(self):
+        return {
+            'f4': [None, 1, 2, None, 4],
+            'f8': [0, 1, None, 3, 4],
+            'i1': [0, None, 2, 3, None],
+            'i2': [None, 1, 2, None, 4],
+            'i4': [0, 1, None, 3, 4],
+            'i8': [0, None, 2, 3, None],
+            'b': [None, False, True, None, True],
+        }
+
+
+class _arrayTestTable(_DefaultTestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "array"
+
+    @property
+    def sqltypes(self):
+        return ('FLOAT[]', 'DOUBLE[]', 'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
+                'BOOLEAN[]')
+
+    @property
+    def values(self):
+        return {
+            'f4': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
+            'f8': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
+            'i1': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
+            'i2': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
+            'i4': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
+            'i8': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
+            'b': [[], [False], [True, False], [False, True, False], [True, False, True, False]],
+        }
+
+
+class _arraynullTestTable(_arrayTestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "arraynull"
+
+    @property
+    def values(self):
+        return {
+            'f4': [None, [1], None, [None, 4, 5], None],
+            'f8': [[], None, [None, 3], None, [4, None, 6, 7]],
+            'i1': [None, [None], None, [3, None, 5], None],
+            'i2': [[], None, [2, None], None, [4, 5, None, 7]],
+            'i4': [None, [1], None, [3, 4, None], None],
+            'i8': [[], None, [2, 3], None, [None, 5, 6, None]],
+            'b': [None, [False], None, [None, True, False], None],
+        }
+
+
+class _TimestampTestTable(_TestTable):
+
+    @classmethod
+    def suffix(cls):
+        return 'timestamp'
+
+    @property
+    def sqltypes(self):
+        return ('TIMESTAMP(9)', 'TIMESTAMP(9)', 'TIMESTAMP(9)', 'BIGINT', 'TIMESTAMP(6)')
+
+    @property
+    def values(self):
+        return {
+            "t9": [np.datetime64("1971-01-01 01:01:01.001001001").astype('long'),
+                   np.datetime64("1972-02-02 02:02:02.002002002").astype('long'),
+                   np.datetime64("1973-03-03 03:03:03.003003003").astype('long')],
+            "t9_2": [np.datetime64("2021-01-01 01:01:01.001001001").astype('long'),
+                     np.datetime64("2022-02-02 02:02:02.002002002").astype('long'),
+                     np.datetime64("2023-03-03 03:03:03.003003003").astype('long')],
+            "t9_null": [np.datetime64("1972-02-02 02:02:02.002002002").astype('long'),
+                        np.datetime64('NaT').astype('long'),
+                        np.datetime64("2037-02-02 02:02:02.002002002").astype('long')],
+            "i8_2": [1609462861001001001, 1643767322002002002, 1677812583003003003],
+            't6': [np.datetime64("1971-01-01 01:01:01.001001").astype('long'),
+                   np.datetime64("1972-02-02 02:02:02.002002").astype('long'),
+                   np.datetime64("1973-03-03 03:03:03.003003").astype('long')]
+        }
+
+
+class _TextTestTable(_TestTable):
+
+    @classmethod
+    def suffix(cls):
+        return 'text'
+
+    @property
+    def sqltypes(self):
+        return ('TEXT ENCODING DICT(32)', 'TEXT ENCODING DICT(16)',
+                'TEXT ENCODING DICT(8)', 'TEXT[] ENCODING DICT(32)',
+                'TEXT ENCODING NONE', 'TEXT ENCODING NONE')
+
+    @property
+    def colnames(self):
+        return ('t4', 't2', 't1', 's', 'n', 'n2')
+
+    @property
+    def values(self):
+        return {
+            't4': ['foofoo', 'bar', 'fun', 'bar', 'foo'],
+            't2': ['foofoo', 'bar', 'fun', 'bar', 'foo'],
+            't1': ['fun', 'bar', 'foo', 'barr', 'foooo'],
+            's': [['foo', 'bar'], ['fun', 'bar'], ['foo'], ['foo', 'bar'], ['fun', 'bar']],
+            'n': ['fun', 'bar', 'foo', 'barr', 'foooo'],
+            'n2': ['1', '12', '123', '1234', '12345'],
+        }
+
+
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
-                    suffices=['', '10', 'null', 'array', 'arraynull', 'text'],
+                    suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'],
                     load_columnar=True, load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
@@ -72,6 +258,9 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}text' - contains text t4, t2, t1, s, n
                                   where 't' prefix is for text encoding dict
                                   and 'n' is for text encoding none.
+
+    f'{heavydb.table_name}timestamp' - contains timestamp t9, t6
+                                  where 't' prefix is for timestamp.
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
@@ -180,108 +369,18 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
         yield m
         return
 
-    sqltypes = ['FLOAT', 'DOUBLE', 'TINYINT', 'SMALLINT', 'INT', 'BIGINT',
-                'BOOLEAN']
-    arrsqltypes = [t + '[]' for t in sqltypes]
-    # todo: TIMESTAMP, TIME,
+    # todo: TIME,
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-    textsqltypes = ['TEXT ENCODING DICT(32)', 'TEXT ENCODING DICT(16)',
-                    'TEXT ENCODING DICT(8)', 'TEXT[] ENCODING DICT(32)',
-                    'TEXT ENCODING NONE', 'TEXT ENCODING NONE']
-    textcolnames = ['t4', 't2', 't1', 's', 'n', 'n2']
-    table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
-    arrtable_defn = ',\n'.join('%s %s' % (n, t)
-                               for t, n in zip(arrsqltypes, colnames))
-    texttable_defn = ',\n'.join('%s %s' % (n, t)
-                                for t, n in zip(textsqltypes, textcolnames))
-
-    for suffix in suffices:
-        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
-        if 'array' in suffix:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({arrtable_defn})')
-        if 'text' in suffix:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({texttable_defn})')
-        else:
-            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({table_defn})')
-
-    if load_columnar:
-        # fast method using load_table_columnar thrift endpoint, use for large tables
-        def row_value(row, col, colname, null=False, arr=False, text=False):
-            if text:
-                if colname in ['t4', 't2']:
-                    return ['foofoo', 'bar', 'fun', 'bar', 'foo'][row]
-                if colname in ['t1', 'n']:
-                    return ['fun', 'bar', 'foo', 'barr', 'foooo'][row]
-                elif colname == 's':
-                    return [['foo', 'bar'], ['fun', 'bar'], ['foo']][row % 3]
-                elif colname == 'n2':
-                    return ['1', '12', '123', '1234', '12345'][row]
-            if arr:
-                if null and (0 == (row + col) % 2):
-                    return None
-                a = [row_value(row + i, col, colname, null=null, arr=False) for i in range(row)]
-                return a
-            if null and (0 == (row + col) % 3):
-                return None
-            if colname == 'b':
-                return row % 2 == 0
-            return row
-
-        for suffix in suffices:
-            columns = defaultdict(list)
-            if 'text' in suffix:
-                for j, n in enumerate(textcolnames):
-                    for i in range(5):
-                        v = row_value(i, j, n, text=True)
-                        columns[n].append(v)
-            else:
-                for j, n in enumerate(colnames):
-                    for i in range(10 if '10' in suffix else 5):
-                        v = row_value(i, j, n, null=('null' in suffix), arr=('array' in suffix))
-                        columns[n].append(v)
-            m.load_table_columnar(f'{table_name}{suffix}', **columns)
-
-    else:
-        # slow method using SQL query statements
-        def row_value(row, col, colname, null=False, arr=False, text=False):
-            if text:
-                raise ValueError('use heavydb_fixture(..., load_table_columnar=True)')
-            if arr:
-                if null and (0 == (row + col) % 2):
-                    return 'NULL'
-                a = [row_value(row + i, col, colname, null=null, arr=False) for i in range(row)]
-                return '{' + ', '.join(map(str, a)) + '}'
-            if null and (0 == (row + col) % 3):
-                return 'NULL'
-            if colname == 'b':
-                return ("'true'" if row % 2 == 0 else "'false'")
-            return row
-
-        for i in range(10):
-            if i < 5:
-                for suffix in suffices:
-                    if suffix == '':
-                        table_row = ', '.join(str(row_value(i, j, n))
-                                              for j, n in enumerate(colnames))
-                    elif suffix == 'null':
-                        table_row = ', '.join(str(row_value(i, j, n, null=True))
-                                              for j, n in enumerate(colnames))
-                    elif suffix == 'array':
-                        table_row = ', '.join(str(row_value(i, j, n, arr=True))
-                                              for j, n in enumerate(colnames))
-                    elif suffix == 'arraynull':
-                        table_row = ', '.join(str(row_value(i, j, n, null=True, arr=True))
-                                              for j, n in enumerate(colnames))
-                    else:
-                        continue
-                    m.sql_execute(f'INSERT INTO {table_name}{suffix} VALUES ({table_row})')
-            if i < 10 and '10' in suffices:
-                table_row = ', '.join(str(row_value(i, j, n)) for j, n in enumerate(colnames))
-                m.sql_execute(f'INSERT INTO {table_name}10 VALUES ({table_row})')
+    for cls in (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
+                _arraynullTestTable, _TextTestTable, _TimestampTestTable):
+        suffix = cls.suffix()
+        if suffix in suffices:
+            obj = cls()
+            m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
+            m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({obj.table_defn})')
+            m.load_table_columnar(f'{table_name}{suffix}', **obj.values)
 
     m.table_name = table_name
     yield m

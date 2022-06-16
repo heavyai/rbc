@@ -1,4 +1,4 @@
-'''HeavyDB TextEncodingDict type that corresponds to HeavyDB type TEXT ENCODED DICT.
+'''RBC TextEncodingDict type that corresponds to HeavyDB type TEXT ENCODED DICT.
 '''
 
 __all__ = ['HeavyDBTextEncodingDictType', 'TextEncodingDict']
@@ -17,7 +17,7 @@ class HeavyDBTextEncodingDictType(typesystem.Type):
 
 
 class TextEncodingDict(object, metaclass=HeavyDBMetaType):
-    '''HeavyDB TextEncodingDict type that corresponds to HeavyDB type TEXT ENCODED DICT.
+    '''RBC TextEncodingDict type that corresponds to HeavyDB type TEXT ENCODED DICT.
     HeavyDB TextEncodingDict behaves like an int32_t.
     '''
     pass

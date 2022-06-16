@@ -76,3 +76,4 @@ one cannot create and use them inside the REPL, for instance.
     rbc.heavydb.Array
     rbc.heavydb.TextEncodingDict
     rbc.heavydb.TextEncodingNone
+    rbc.heavydb.Timestamp
