@@ -17,7 +17,16 @@ class HeavyDBTextEncodingDictType(typesystem.Type):
 
 
 class TextEncodingDict(object, metaclass=HeavyDBMetaType):
-    '''RBC TextEncodingDict type that corresponds to HeavyDB type TEXT ENCODED DICT.
+    """
+    RBC ``TextEncodingDict`` type that corresponds to HeavyDB type TEXT ENCODED DICT.
+
+
     HeavyDB TextEncodingDict behaves like an int32_t.
-    '''
+
+    .. code-block:: c
+
+        {
+            int32_t value;
+        }
+    """
     pass
