@@ -5,6 +5,12 @@ __all__ = ['HeavyDBTextEncodingDictType', 'TextEncodingDict']
 
 from .metatype import HeavyDBMetaType
 from rbc import typesystem
+from numba import types as nb_types
+
+
+class TextEncodingDictNumbaType(nb_types.Type):
+    def __init__(self):
+        super().__init__(name='TextEncodingDictNumbaType')
 
 
 class HeavyDBTextEncodingDictType(typesystem.Type):

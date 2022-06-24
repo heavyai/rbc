@@ -87,6 +87,17 @@ def define(heavydb):
                 y[i] = len(x.getString(i))
             return unique
 
+        @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>)')  # noqa: E501
+        def test_getstring_lst(lst, unique, m, y):
+            for i in range(lst.nrows):
+                y[i] = 0
+
+            for i in range(lst.ncols):
+                col = lst[i]
+                for j in range(unique):
+                    y[j] += len(col.getString(j))
+            return unique
+
 
 @pytest.fixture(scope="function")
 def create_columns(heavydb):
@@ -417,7 +428,7 @@ def test_getStringId_unicode(heavydb, col):
 
 
 @pytest.mark.parametrize('col', ['t1', 't2', 't4'])
-def test_getString_fx(heavydb, col):
+def test_getString(heavydb, col):
     if heavydb.version[:2] < (6, 2):
         pytest.skip('Requires HeavyDB main branch')
 
@@ -432,3 +443,25 @@ def test_getString_fx(heavydb, col):
 
     _, result = heavydb.sql_execute(query)
     assert all([x[0] > 0 for x in result])
+
+
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getString_lst(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    table = f"{heavydb.base_name}text"
+    _, unique = heavydb.sql_execute(f'select count(distinct {col}) from {table}')
+    unique = list(unique)[0][0]
+
+    fn = 'test_getstring_lst'
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col}, {col}, {col} from {table}),"
+             f"{unique}, 1));")
+
+    _, result = heavydb.sql_execute(query)
+
+    if col == 't1':
+        assert list(result) == [(9,), (9,), (9,), (12,), (15,)]
+    else:
+        assert list(result) == [(18,), (9,), (9,), (9,)]

@@ -180,8 +180,10 @@ def heavydb_column_getString_(typingctx, col_var, string_id):
 
     def codegen(context, builder, signature, args):
         [col, string_id] = args
+        if col.type.is_pointer:
+            col = builder.load(col)
         string_id = builder.trunc(string_id, int32_t)
-        proxy = builder.extract_value(builder.load(col), 2)
+        proxy = builder.extract_value(col, 2)
 
         ptr = getBytes(builder, proxy, string_id)
         sz = getBytesLength(context, builder, proxy, string_id)
@@ -208,6 +210,9 @@ def heavydb_column_getStringId_(typingctx, col_var, str_arg):
 
     def codegen(context, builder, signature, args):
         [col, arg] = args
+        if col.type.is_pointer:
+            col = builder.load(col)
+
         if isinstance(str_arg, nb_types.UnicodeType):
             uni_str_ctor = cgutils.create_struct_proxy(nb_types.unicode_type)
             uni_str = uni_str_ctor(context, builder, value=arg)
@@ -216,7 +221,7 @@ def heavydb_column_getStringId_(typingctx, col_var, str_arg):
             c_str = builder.extract_value(builder.load(arg), 0)
         else:
             raise NumbaTypeError(f'Cannot handle string argument type {str_arg}')
-        proxy = builder.extract_value(builder.load(col), 2)
+        proxy = builder.extract_value(col, 2)
         i8p = int8_t.as_pointer()
         fnty = ir.FunctionType(int32_t, [i8p, i8p])
         fn = cgutils.get_or_insert_function(builder.module, fnty,
@@ -235,6 +240,13 @@ def heavydb_column_is_null(col_var, row_idx):
 
 
 @extending.overload_method(BufferPointer, 'getString')
+def heavydb_column_ptr_getString(col_var, row_idx):
+    def impl(col_var, row_idx):
+        return heavydb_column_getString_(col_var, row_idx)
+    return impl
+
+
+@extending.overload_method(BufferType, 'getString')
 def heavydb_column_getString(col_var, row_idx):
     def impl(col_var, row_idx):
         return heavydb_column_getString_(col_var, row_idx)
@@ -242,6 +254,13 @@ def heavydb_column_getString(col_var, row_idx):
 
 
 @extending.overload_method(BufferPointer, 'getStringId')
+def heavydb_column_ptr_getStringId(col_var, str):
+    def impl(col_var, str):
+        return heavydb_column_getStringId_(col_var, str)
+    return impl
+
+
+@extending.overload_method(BufferType, 'getStringId')
 def heavydb_column_getStringId(col_var, str):
     def impl(col_var, str):
         return heavydb_column_getStringId_(col_var, str)
