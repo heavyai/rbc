@@ -171,13 +171,6 @@ def heavydb_column_getString_(typingctx, col_var, string_id):
                                                          "StringDictionaryProxy_getStringLength")
         return builder.call(getStringLength, [proxy, string_id])
 
-    def free(builder, ptr):
-        i8p = int8_t.as_pointer()
-        void = ir.VoidType()
-        fnty = ir.FunctionType(void, [i8p])
-        fn = cgutils.get_or_insert_function(builder.module, fnty, "free")
-        builder.call(fn, [ptr])
-
     def codegen(context, builder, signature, args):
         [col, string_id] = args
         if col.type.is_pointer:
@@ -188,10 +181,12 @@ def heavydb_column_getString_(typingctx, col_var, string_id):
         ptr = getBytes(builder, proxy, string_id)
         sz = getBytesLength(context, builder, proxy, string_id)
 
-        text = heavydb_buffer_constructor(context, builder, signature, [sz])
-        cgutils.memcpy(builder, text.ptr, ptr, builder.add(sz, sz.type(1)))
-        free(builder, ptr)
+        text = heavydb_buffer_constructor(context, builder, signature,
+                                          [builder.add(sz, sz.type(1))])
+        cgutils.memcpy(builder, text.ptr, ptr, sz)
+        builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [sz]))
         text.sz = sz
+        cgutils.printf(builder, "%s - %d\n", text.ptr, text.sz)
         return text._getpointer()
 
     # importing it here to avoid circular import issue
