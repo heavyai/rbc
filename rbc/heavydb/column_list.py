@@ -34,7 +34,9 @@ def heavydb_columnlist_getitem(typingctx, lst, idx):
     from .column import HeavyDBColumnType
 
     members = lst.dtype.members
+    is_text_encoding_dict = False
     if len(members) == 4:
+        is_text_encoding_dict = True
         T = Type.fromstring('TextEncodingDict')
     else:
         T = Type.fromnumba(lst.dtype.members[0].dtype.dtype)
@@ -52,7 +54,8 @@ def heavydb_columnlist_getitem(typingctx, lst, idx):
 
         col.ptr = builder.load(builder.gep(collist.ptrs, [idx]))
         col.sz = collist.size
-        col.string_dict_proxy_ = builder.load(builder.gep(collist.string_dict_proxy_, [idx]))
+        if is_text_encoding_dict:
+            col.string_dict_proxy_ = builder.load(builder.gep(collist.string_dict_proxy_, [idx]))
         return col._getvalue()
 
     return sig, codegen
