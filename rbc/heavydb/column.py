@@ -186,7 +186,6 @@ def heavydb_column_getString_(typingctx, col_var, string_id):
         cgutils.memcpy(builder, text.ptr, ptr, sz)
         builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [sz]))
         text.sz = sz
-        cgutils.printf(builder, "%s - %d\n", text.ptr, text.sz)
         return text._getpointer()
 
     # importing it here to avoid circular import issue
