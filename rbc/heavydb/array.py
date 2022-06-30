@@ -7,11 +7,9 @@ from rbc import typesystem, errors
 from .buffer import (BufferPointer, Buffer,
                      HeavyDBBufferType,
                      heavydb_buffer_constructor)
-from numba.core import extending, types
-from typing import Union, TypeVar
-
-
-T = TypeVar('T')
+from numba.core import extending
+from numba import types as nb_types
+from typing import Union
 
 
 class HeavyDBArrayType(HeavyDBBufferType):
@@ -58,13 +56,13 @@ class Array(Buffer):
 
         @heavydb('int64[](int64)')
         def my_arange(size):
-            arr = Array(size, types.int64)
+            arr = Array(size, nb_types.int64)
             for i in range(size):
                 a[i] = i
             return a
     """
 
-    def __init__(self, size: int, dtype: Union[str, types.Type]) -> None:
+    def __init__(self, size: int, dtype: Union[str, nb_types.Type]) -> None:
         pass
 
     def is_null(self) -> bool:
@@ -98,8 +96,6 @@ class Array(Buffer):
     @property
     def ndim(self):
         """
-        ❌ Not implemented
-
         Number of array dimensions (axes).
         """
         pass
@@ -116,8 +112,6 @@ class Array(Buffer):
     @property
     def size(self):
         """
-        ❌ Not implemented
-
         Number of elements in an array.
         """
         pass
@@ -132,8 +126,8 @@ class Array(Buffer):
         pass
 
 
-@extending.lower_builtin(Array, types.Integer, types.StringLiteral)
-@extending.lower_builtin(Array, types.Integer, types.NumberClass)
+@extending.lower_builtin(Array, nb_types.Integer, nb_types.StringLiteral)
+@extending.lower_builtin(Array, nb_types.Integer, nb_types.NumberClass)
 def heavydb_array_constructor(context, builder, sig, args):
     return heavydb_buffer_constructor(context, builder, sig, args)
 
@@ -141,11 +135,25 @@ def heavydb_array_constructor(context, builder, sig, args):
 @extending.type_callable(Array)
 def type_heavydb_array(context):
     def typer(size, dtype):
-        if isinstance(dtype, types.StringLiteral):
+        if isinstance(dtype, nb_types.StringLiteral):
             element_type = typesystem.Type.fromstring(dtype.literal_value)
-        elif isinstance(dtype, types.NumberClass):
+        elif isinstance(dtype, nb_types.NumberClass):
             element_type = typesystem.Type.fromobject(dtype)
         else:
             raise errors.NumbaNotImplementedError(repr(dtype))
         return HeavyDBArrayType((element_type,)).tonumba()
     return typer
+
+
+@extending.overload_attribute(ArrayPointer, 'ndim')
+def get_ndim(arr):
+    def impl(arr):
+        return 1
+    return impl
+
+
+@extending.overload_attribute(ArrayPointer, 'size')
+def get_size(arr):
+    def impl(arr):
+        return len(arr)
+    return impl

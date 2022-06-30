@@ -513,3 +513,23 @@ def test_literal_cast(heavydb):
     _, result = heavydb.sql_execute(f'select literal_cast(i4) from {heavydb.table_name}')
     result = list(result)
     assert result == [(1,), (1,), (1,), (1,), (1,)]
+
+
+def test_array_size(heavydb):
+
+    @heavydb('int64(float32[])')
+    def get_size(arr):
+        return arr.size
+
+    _, result = heavydb.sql_execute(f'select get_size(f4) from {heavydb.table_name} limit 1;')
+    assert list(result) == [(6,)]
+
+
+def test_array_ndim(heavydb):
+
+    @heavydb('int64(float32[])')
+    def get_ndim(arr):
+        return arr.ndim
+
+    _, result = heavydb.sql_execute(f'select get_ndim(f4) from {heavydb.table_name} limit 1;')
+    assert list(result) == [(1,)]
