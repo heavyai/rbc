@@ -27,7 +27,7 @@ import operator
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
-from rbc import typesystem, irutils, errors
+from rbc import typesystem, errors
 from rbc.targetinfo import TargetInfo
 from numba.core import datamodel, cgutils, extending, types, imputils
 
@@ -186,7 +186,7 @@ def heavydb_buffer_constructor(context, builder, sig, args):
     alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
 
     alloc_fn_name = 'allocate_varlen_buffer'
-    alloc_fn = irutils.get_or_insert_function(builder.module, alloc_fnty, alloc_fn_name)
+    alloc_fn = cgutils.get_or_insert_function(builder.module, alloc_fnty, alloc_fn_name)
     ptr8 = builder.call(alloc_fn, [element_count, element_size])
     ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
 
@@ -290,7 +290,7 @@ def heavydb_buffer_len_(typingctx, data):
 
     def codegen(context, builder, signature, args):
         data, = args
-        return irutils.get_member_value(builder, data, 1)
+        return builder.extract_value(data, [1])
 
     return sig, codegen
 
@@ -326,7 +326,7 @@ def heavydb_buffer_getitem_(typingctx, data, index):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        ptr = irutils.get_member_value(builder, data, 0)
+        ptr = builder.extract_value(data, [0])
         res = builder.load(builder.gep(ptr, [index]))
 
         return res
@@ -427,7 +427,7 @@ def heavydb_buffer_setitem_(typingctx, data, index, value):
 
     def codegen(context, builder, signature, args):
         data, index, value = args
-        ptr = irutils.get_member_value(builder, data, 0)
+        ptr = builder.extract_value(data, [0])
         if isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
             value = truncate_cast_or_extend(builder, value, ptr.type.pointee, signed)
 

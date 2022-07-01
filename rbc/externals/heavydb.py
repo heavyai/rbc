@@ -1,11 +1,9 @@
 """External functions defined by the HeavyDB server
 """
 
-from rbc import irutils
 from rbc.errors import UnsupportedError, NumbaTypeError
 from rbc.targetinfo import TargetInfo
-from numba.core import extending, types as nb_types
-from numba.core.cgutils import make_bytearray, global_constant
+from numba.core import extending, cgutils, types as nb_types
 from llvmlite import ir
 
 
@@ -28,7 +26,7 @@ def set_output_row_size(typingctx, set_output_row_size):
             raise UnsupportedError(msg)
 
         fnty = ir.FunctionType(ir.VoidType(), [ir.IntType(64)])
-        fn = irutils.get_or_insert_function(builder.module, fnty, name="set_output_row_size")
+        fn = cgutils.get_or_insert_function(builder.module, fnty, name="set_output_row_size")
         assert fn.is_declaration
         builder.call(fn, args)  # don't return anything
 
@@ -48,14 +46,14 @@ def table_function_error(typingctx, message):
     def codegen(context, builder, sig, args):
         int8ptr = ir.PointerType(ir.IntType(8))
         fntype = ir.FunctionType(ir.IntType(32), [int8ptr])
-        fn = irutils.get_or_insert_function(builder.module, fntype,
+        fn = cgutils.get_or_insert_function(builder.module, fntype,
                                             name="table_function_error")
         assert fn.is_declaration
         #
         msg_bytes = message.literal_value.encode('utf-8')
-        msg_const = make_bytearray(msg_bytes + b'\0')
-        msg_global_var = global_constant(builder.module, "table_function_error_message",
-                                         msg_const)
+        msg_const = cgutils.make_bytearray(msg_bytes + b'\0')
+        msg_global_var = cgutils.global_constant(builder.module, "table_function_error_message",
+                                                 msg_const)
         msg_ptr = builder.bitcast(msg_global_var, int8ptr)
         return builder.call(fn, [msg_ptr])
 

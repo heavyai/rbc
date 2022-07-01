@@ -8,7 +8,7 @@ __all__ = ['OutputColumn', 'Column', 'HeavyDBOutputColumnType', 'HeavyDBColumnTy
            'HeavyDBCursorType']
 
 from llvmlite import ir
-from rbc import typesystem, irutils
+from rbc import typesystem
 from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
 from rbc.targetinfo import TargetInfo
@@ -110,7 +110,7 @@ def heavydb_column_set_null_(typingctx, col_var, row_idx):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        ptr = irutils.get_member_value(builder, data, 0)
+        ptr = builder.extract_value(data, [0])
 
         ty = ptr.type.pointee
         nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
@@ -139,7 +139,7 @@ def heavydb_column_is_null_(typingctx, col_var, row_idx):
 
     def codegen(context, builder, signature, args):
         data, index = args
-        ptr = irutils.get_member_value(builder, data, 0)
+        ptr = builder.extract_value(data, [0])
         res = builder.load(builder.gep(ptr, [index]))
 
         if isinstance(T, nb_types.Float):

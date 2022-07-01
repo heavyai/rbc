@@ -1,9 +1,9 @@
 __all__ = ['HeavyDBTableFunctionManagerType']
 
 
-from numba.core import extending, types
+from numba.core import extending, types, cgutils
 from numba.core.cgutils import make_bytearray, global_constant
-from rbc import structure_type, irutils
+from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
@@ -63,7 +63,7 @@ def heavydb_udtfmanager_error_message_(typingctx, mgr, msg):
         msg_ptr = builder.bitcast(msg_global_var, i8p)
 
         fnty = ir.FunctionType(i32, [i8p, i8p])
-        fn = irutils.get_or_insert_function(
+        fn = cgutils.get_or_insert_function(
             builder.module, fnty, "TableFunctionManager_error_message")
 
         return builder.call(fn, [mgr_i8ptr, msg_ptr])
@@ -92,7 +92,7 @@ def heavydb_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
         mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
 
         fnty = ir.FunctionType(ir.VoidType(), [i8p, i64])
-        fn = irutils.get_or_insert_function(
+        fn = cgutils.get_or_insert_function(
             builder.module, fnty, "TableFunctionManager_set_output_row_size")
 
         builder.call(fn, [mgr_i8ptr, num_rows_arg])

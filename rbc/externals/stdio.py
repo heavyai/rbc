@@ -1,7 +1,6 @@
 """https://en.cppreference.com/w/c/io
 """
 
-from rbc import irutils
 from llvmlite import ir
 from rbc.targetinfo import TargetInfo
 from numba.core import cgutils, extending
@@ -14,7 +13,7 @@ int32_t = ir.IntType(32)
 def _cg_fflush(builder):
     int8_t = ir.IntType(8)
     fflush_fnty = ir.FunctionType(int32_t, [int8_t.as_pointer()])
-    fflush_fn = irutils.get_or_insert_function(builder.module, fflush_fnty, name="fflush")
+    fflush_fn = cgutils.get_or_insert_function(builder.module, fflush_fnty, name="fflush")
 
     builder.call(fflush_fn, [int8_t.as_pointer()(None)])
 

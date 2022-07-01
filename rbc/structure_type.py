@@ -2,7 +2,6 @@
 __all__ = ['StructureNumbaType', 'StructureNumbaPointerType', 'make_numba_struct']
 
 import operator
-from rbc.irutils import get_member_value
 from llvmlite import ir
 from numba.core import datamodel, extending, types, imputils, typing, cgutils, typeconv
 
@@ -133,7 +132,7 @@ def make_numba_struct(name, members, origin=None, _cache={}):
 def StructureNumbaType_getattr_impl(context, builder, sig, struct, attr):
     model = datamodel.default_manager.lookup(sig)
     index = model.get_field_position(attr)
-    return get_member_value(builder, struct, index)
+    return builder.extract_value(struct, [index])
 
 
 @lowering_registry.lower_setattr_generic(StructureNumbaType)
