@@ -190,6 +190,17 @@ def ol_attr_ptr_(typingctx, text):
 
 
 @extending.intrinsic
+def ol_attr_sz_(typingctx, text):
+    sig = nb_types.int64(text)
+
+    def codegen(context, builder, sig, args):
+        [data] = args
+        return builder.extract_value(builder.load(data), 1)
+
+    return sig, codegen
+
+
+@extending.intrinsic
 def ol_attr_is_null_(typingctx, text):
     sig = nb_types.int8(text)
 
@@ -210,7 +221,7 @@ def ol_attr_ptr(text):
 @extending.overload_attribute(TextEncodingNonePointer, 'sz')
 def ol_attr_sz(text):
     def impl(text):
-        return len(text)
+        return ol_attr_sz_(text)
     return impl
 
 

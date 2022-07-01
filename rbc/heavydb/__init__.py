@@ -6,6 +6,7 @@ from .pipeline import *  # noqa: F401, F403
 from .column_list import *  # noqa: F401, F403
 from .table_function_manager import *  # noqa: F401, F403
 from .text_encoding_dict import *  # noqa: F401, F403
+from .string_dict_proxy import *  # noqa: F401, F403
 from .text_encoding_none import *  # noqa: F401, F403
 from .timestamp import *  # noqa: F401, F403
 from .remoteheavydb import *  # noqa: F401, F403

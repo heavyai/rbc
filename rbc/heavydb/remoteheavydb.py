@@ -1126,6 +1126,9 @@ class RemoteHeavyDB(RemoteJIT):
                 consumed_index += 1
                 continue
 
+            if annot.get('input_id') and annot.get('input_id') == 'args<>':
+                annot['input_id'] = 'args<-1>'
+
             annotations.append(annot)
 
             if isinstance(a, HeavyDBCursorType):

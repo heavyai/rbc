@@ -71,20 +71,28 @@ def define(heavydb):
         @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, TextEncodingNone, OutputColumn<int32_t>)',  # noqa: E501
                  devices=['cpu'])
         def test_getstringid_from_arg(x, m, text, y):
-            y[0] = x.getStringId(text)
+            y[0] = x.string_dict_proxy.getStringId(text)
             return 1
+
+        @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)',  # noqa: E501
+                 devices=['cpu'])
+        def test_empty_input_id(mgr, out):
+            mgr.set_output_row_size(2)
+            out[0] = out.string_dict_proxy.getStringId("onedal")
+            out[1] = out.string_dict_proxy.getStringId("mlpack")
+            return len(out)
 
         @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<int32_t>)',
                  devices=['cpu'], T=['TextEncodingDict'])
         def test_getstringid_from_unicode(x, m, y):
             text = "foo"  # this creates a unicode string
-            y[0] = x.getStringId(text)
+            y[0] = x.string_dict_proxy.getStringId(text)
             return 1
 
         @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>)')  # noqa: E501
         def test_getstring(x, unique, y):
             for i in range(unique):
-                y[i] = len(x.getString(i))
+                y[i] = len(x.string_dict_proxy.getString(i))
             return unique
 
         @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>)')  # noqa: E501
@@ -95,7 +103,7 @@ def define(heavydb):
             for i in range(lst.ncols):
                 col = lst[i]
                 for j in range(unique):
-                    y[j] += len(col.getString(j))
+                    y[j] += len(col.string_dict_proxy.getString(j))
             return unique
 
 
@@ -425,6 +433,21 @@ def test_getStringId_unicode(heavydb, col):
     _, result = heavydb.sql_execute(query)
     [result] = result
     assert result[0] > 0
+
+
+def test_empty_input_id(heavydb):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    fn = 'test_empty_input_id'
+    query = (f"SELECT * FROM table({fn}());")
+
+    _, result = heavydb.sql_execute(query)
+    result = list(result)
+
+    assert len(result) == 2
+    assert ('onedal',) in result
+    assert ('mlpack',) in result
 
 
 @pytest.mark.parametrize('col', ['t1', 't2', 't4'])
