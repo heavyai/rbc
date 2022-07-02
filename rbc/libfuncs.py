@@ -73,8 +73,7 @@ class Stdlib(Library):
     _function_names = list(''' atof atoi atol atoll strtod strtof strtol strtold strtoll strtoul
     strtoull rand srand calloc free malloc realloc abort atexit
     at_quick_exit exit getenv quick_exit system bsearch qsort abs div
-    labs ldiv llabs lldiv mblen mbtowc wctomb mbstowcs wcstombs
-    free'''.strip().split())
+    labs ldiv llabs lldiv mblen mbtowc wctomb mbstowcs wcstombs '''.strip().split())
 
 
 class Stdio(Library):
