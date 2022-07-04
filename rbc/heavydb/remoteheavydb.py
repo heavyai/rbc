@@ -1380,6 +1380,14 @@ class RemoteHeavyDB(RemoteJIT):
             if 'name' not in atype.annotation() and atype.name is not None:
                 atype.annotation(name=atype.name)
                 atype._params.pop('name')
+
+            # generate fields
+            if isinstance(atype, HeavyDBCursorType):
+                fields = []
+                for i, col in enumerate(atype[0]):
+                    annot = col.annotation()
+                    fields.append(annot.get('name', f'field{i}'))
+                atype.annotation(fields=str(fields))
         return ftype
 
     def format_type(self, typ: typesystem.Type):
