@@ -31,8 +31,6 @@ class HeavyDBColumnListType(Type):
 
 @extending.intrinsic
 def heavydb_columnlist_getitem(typingctx, lst, idx):
-    from .column import HeavyDBColumnType
-
     members = lst.dtype.members
     is_text_encoding_dict = False
     if len(members) == 4:
@@ -41,7 +39,7 @@ def heavydb_columnlist_getitem(typingctx, lst, idx):
     else:
         T = Type.fromnumba(lst.dtype.members[0].dtype.dtype)
 
-    ret = HeavyDBColumnType((T,)).tonumba().dtype
+    ret = Type.fromstring(f'Column<{T}>').tonumba().dtype
     sig = ret(lst, idx)
 
     def codegen(context, builder, signature, args):
