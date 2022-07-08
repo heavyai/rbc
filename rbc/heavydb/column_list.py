@@ -5,6 +5,7 @@ from numba.core import extending, cgutils
 from rbc.heavydb.buffer import Buffer
 from rbc.typesystem import Type
 from rbc import structure_type
+from rbc.targetinfo import TargetInfo
 
 
 class HeavyDBColumnListType(Type):
@@ -15,7 +16,8 @@ class HeavyDBColumnListType(Type):
 
     @property
     def buffer_extra_members(self):
-        if self.element_type.tostring() == 'TextEncodingDict':
+        heavydb_version = TargetInfo().software[1][:3]
+        if heavydb_version >= (6, 2) and self.element_type.tostring() == 'TextEncodingDict':
             return ('i8** string_dict_proxy_',)
         return ()
 

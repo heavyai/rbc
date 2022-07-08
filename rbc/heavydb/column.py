@@ -35,7 +35,8 @@ class HeavyDBColumnType(HeavyDBBufferType):
 
     @property
     def buffer_extra_members(self):
-        if self.element_type.tostring() == 'TextEncodingDict':
+        heavydb_version = TargetInfo().software[1][:3]
+        if heavydb_version >= (6, 2) and self.element_type.tostring() == 'TextEncodingDict':
             return ('i8* string_dict_proxy_',)
         return ()
 
