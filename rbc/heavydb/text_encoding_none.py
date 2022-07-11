@@ -1,5 +1,6 @@
-'''RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
-'''
+"""
+RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
+"""
 
 __all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'HeavyDBTextEncodingNoneType']
 
@@ -46,15 +47,20 @@ class TextEncodingNonePointer(BufferPointer):
 
 
 class TextEncodingNone(Buffer):
-    '''RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
+    """
+    RBC ``TextEncodingNone`` type that corresponds to HeavyDB type TEXT ENCODED NONE.
     HeavyDB TextEncodingNone represents the following structure:
+
     .. code-block:: c
+
         struct TextEncodingNone {
             char* ptr;
             size_t sz;  // when non-negative, TextEncodingNone has fixed width.
             int8_t is_null;
         }
+
     .. code-block:: python
+
         from rbc.heavydb import TextEncodingNone
         @heavydb('TextEncodingNone(int32, int32)')
         def make_abc(first, n):
@@ -62,12 +68,15 @@ class TextEncodingNone(Buffer):
             for i in range(n):
                 r[i] = first + i
             return r
+
     .. code-block:: python
+
         from rbc.heavydb import TextEncodingNone
         @heavydb('TextEncodingNone()')
         def make_text():
             return TextEncodingNone('some text here')
-    '''
+
+    """
 
     def __init__(self, size: Union[int, str]):
         pass

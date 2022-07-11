@@ -74,6 +74,8 @@ one cannot create and use them inside the REPL, for instance.
     :toctree: generated/
 
     rbc.heavydb.Array
+    rbc.heavydb.Column
+    rbc.heavydb.ColumnList
     rbc.heavydb.TextEncodingDict
     rbc.heavydb.TextEncodingNone
     rbc.heavydb.Timestamp

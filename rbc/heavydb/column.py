@@ -13,6 +13,7 @@ from .buffer import Buffer, HeavyDBBufferType, BufferType
 from .column_list import HeavyDBColumnListType
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, types
+from typing import Union
 
 
 int32_t = ir.IntType(32)
@@ -40,7 +41,44 @@ class HeavyDBOutputColumnType(HeavyDBColumnType):
 
 
 class Column(Buffer):
-    pass
+    """
+    RBC ``Column<T>`` type that corresponds to HeavyDB COLUMN
+
+    In HeavyDB, a Column of type ``T`` is represented as follows:
+
+    .. code-block:: c
+
+        {
+            T* ptr;
+            int64_t sz;
+            void* string_dict_proxy;  // available only if T == TextEncodingDict
+        }
+
+    """
+    def dtype(self):
+        """
+        Data type of the array elements.
+        """
+
+    def getStringId(self, s: Union[str, 'TextEncodingNone']) -> int:  # noqa: F821
+        """
+        Return the string ID for the given string ``s``.
+
+        .. note::
+            Only available on ``CPU`` and ``Column<TextEncodingDict>``
+        """
+
+    def getString(self, id: int) -> int:
+        """
+        Return the string for the given ``id``.
+
+        .. note::
+            Only available on ``CPU`` and ``Column<TextEncodingDict>``
+        """
+
+    def __len__(self) -> int:
+        """
+        """
 
 
 class OutputColumn(Column):

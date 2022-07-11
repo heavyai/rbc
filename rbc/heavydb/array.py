@@ -34,7 +34,10 @@ ArrayPointer = BufferPointer
 
 class Array(Buffer):
     """
-    In HeavyDB, an Array of type `T` is represented as follows:
+    RBC ``Array<T>`` type that corresponds to HeavyDB ARRAY
+
+
+    In HeavyDB, an Array of type ``T`` is represented as follows:
 
     .. code-block:: C
 

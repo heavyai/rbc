@@ -26,21 +26,26 @@ kMonsPerYear = 12
 
 
 class Timestamp(metaclass=HeavyDBMetaType):
-    '''RBC Timestamp type that corresponds to HeavyDB type TIMESTAMP.
+    """
+    RBC ``Timestamp`` type that corresponds to HeavyDB type TIMESTAMP.
 
     .. code-block:: c
+
         struct Timestamp {
             int64_t time;
         };
 
     .. code-block:: python
+
         from rbc.heavydb import Timestamp
         @heavydb('int32_t(Column<Timestamp>, RowMultiplier, Column<int64_t>')
         def get_years(column_times, m, column_hours):
             for i in range(len(column_times)):
                 column_hours[i] = column_times[i].getHours()
             return len(column_times)
-    '''
+
+    All comparison (dunder methods) are implemented for this class.
+    """
 
     def __init__(self, time: Union[int, 'nb_types.LiteralString']) -> 'Timestamp':
         pass
