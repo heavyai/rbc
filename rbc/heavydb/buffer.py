@@ -125,6 +125,9 @@ class BufferPointer(types.IterableType):
     def iterator_type(self):
         return BufferIteratorType(self)
 
+    def copy(self, context, builder, val, retptr):
+        raise NotImplementedError
+
 
 class BufferIteratorType(types.SimpleIteratorType):
 
@@ -164,6 +167,17 @@ class BufferPointerModel(datamodel.models.PointerModel):
     """
 
 
+def memalloc(context, builder, ptr_type, element_count, element_size):
+    alloc_fn_name = 'allocate_varlen_buffer'
+    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
+    alloc_fn = cgutils.get_or_insert_function(builder.module,
+                                              alloc_fnty,
+                                              alloc_fn_name)
+    ptr8 = builder.call(alloc_fn, [element_count, element_size])
+    ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
+    return ptr
+
+
 def heavydb_buffer_constructor(context, builder, sig, args):
     """
 
@@ -187,12 +201,7 @@ def heavydb_buffer_constructor(context, builder, sig, args):
     element_count = builder.zext(args[0], int64_t)
     element_size = int64_t(ptr_type.dtype.bitwidth // 8)
 
-    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
-
-    alloc_fn_name = 'allocate_varlen_buffer'
-    alloc_fn = cgutils.get_or_insert_function(builder.module, alloc_fnty, alloc_fn_name)
-    ptr8 = builder.call(alloc_fn, [element_count, element_size])
-    ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
+    ptr = memalloc(context, builder, ptr_type, element_count, element_size)
 
     fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
     fa.ptr = ptr                  # T*

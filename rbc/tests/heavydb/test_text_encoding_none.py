@@ -1,3 +1,4 @@
+import numpy as np
 from rbc.tests import heavydb_fixture
 from rbc.heavydb import TextEncodingNone
 import pytest
@@ -172,3 +173,15 @@ def test_if_else_assignment(heavydb):
     assert classify_slope(2.4).execute() == "low"
     assert classify_slope(5.4).execute() == "med"
     assert classify_slope(15.4).execute() == "high"
+
+
+def test_return_text(heavydb):
+    @heavydb("TextEncodingNone(TextEncodingNone)", devices=['cpu'])
+    def fn(t):
+        return t
+
+    col = 'n'
+    table = heavydb.table_name + 'text'
+    _, result = heavydb.sql_execute(f"select {col}, fn({col}) from {table};")
+    result = list(zip(*result))
+    np.testing.assert_equal(*result)

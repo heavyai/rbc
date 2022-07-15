@@ -9,16 +9,17 @@ from rbc import typesystem
 from rbc.targetinfo import TargetInfo
 from rbc.errors import RequireLiteralValue
 from .buffer import (
-    BufferPointer, Buffer, HeavyDBBufferType,
+    Buffer, HeavyDBBufferType,
     heavydb_buffer_constructor)
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
+from .array import ArrayPointer
 from llvmlite import ir
 from typing import Union
 
 
-class TextEncodingNonePointer(BufferPointer):
-    pass
+int32_t = ir.IntType(32)
+int64_t = ir.IntType(64)
 
 
 class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
@@ -45,6 +46,24 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
             return 1
         if other.is_string:
             return 2
+
+
+class TextEncodingNonePointer(ArrayPointer):
+    def copy(self, context, builder, val, retptr):
+        from .buffer import memalloc
+        ptr_type = self.dtype.members[0]
+        element_size = int64_t(ptr_type.dtype.bitwidth // 8)
+
+        src = builder.extract_value(builder.load(val), 0)
+        element_count = builder.extract_value(builder.load(val), 1)
+        is_null = builder.extract_value(builder.load(val), 2)
+
+        zero, one, two = int32_t(0), int32_t(1), int32_t(2)
+        ptr = memalloc(context, builder, ptr_type, element_count, element_size)
+        cgutils.raw_memcpy(builder, ptr, src, element_count, element_size)
+        builder.store(ptr, builder.gep(retptr, [zero, zero]))
+        builder.store(element_count, builder.gep(retptr, [zero, one]))
+        builder.store(is_null, builder.gep(retptr, [zero, two]))
 
 
 class TextEncodingNone(Buffer):

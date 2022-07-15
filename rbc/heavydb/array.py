@@ -7,9 +7,14 @@ from rbc import typesystem, errors
 from .buffer import (BufferPointer, Buffer,
                      HeavyDBBufferType,
                      heavydb_buffer_constructor)
-from numba.core import extending
+from numba.core import extending, cgutils
 from numba import types as nb_types
 from typing import Union
+from llvmlite import ir
+
+
+int32_t = ir.IntType(32)
+int64_t = ir.IntType(64)
 
 
 class HeavyDBArrayType(HeavyDBBufferType):
@@ -24,12 +29,39 @@ class HeavyDBArrayType(HeavyDBBufferType):
         bool is_null;
       }
     """
+
+    @property
+    def numba_pointer_type(self):
+        return ArrayPointer
+
     @property
     def buffer_extra_members(self):
         return ('bool is_null',)
 
 
-ArrayPointer = BufferPointer
+class ArrayPointer(BufferPointer):
+    def copy(self, context, builder, val, retptr):
+        from .buffer import memalloc
+        ptr_type = self.dtype.members[0]
+        element_size = int64_t(ptr_type.dtype.bitwidth // 8)
+
+        src = builder.extract_value(builder.load(val), 0)
+        element_count = builder.extract_value(builder.load(val), 1)
+        is_null = builder.extract_value(builder.load(val), 2)
+
+        zero, one, two = int32_t(0), int32_t(1), int32_t(2)
+        with builder.if_else(cgutils.is_true(builder, is_null)) as (then, otherwise):
+            with then:
+                nullptr = cgutils.get_null_value(src.type)
+                builder.store(nullptr, builder.gep(retptr, [zero, zero]))
+            with otherwise:
+                # we can't just copy the pointer here because return buffers need
+                # to have their own memory, as input buffers are freed upon returning
+                ptr = memalloc(context, builder, ptr_type, element_count, element_size)
+                cgutils.raw_memcpy(builder, ptr, src, element_count, element_size)
+                builder.store(ptr, builder.gep(retptr, [zero, zero]))
+        builder.store(element_count, builder.gep(retptr, [zero, one]))
+        builder.store(is_null, builder.gep(retptr, [zero, two]))
 
 
 class Array(Buffer):
