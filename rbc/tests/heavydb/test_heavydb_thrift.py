@@ -33,7 +33,7 @@ def test_get_runtime_udtfs_non_empty(heavydb):
 def test_get_udtf_details(heavydb):
     heavydb.unregister()
 
-    @heavydb('int32(Column<int>, OutputColumn<int>)')
+    @heavydb('int32(Column<int>, OutputColumn<int>)', devices=['cpu'])
     def my_udtf(x, y):
         return 0
 
@@ -41,7 +41,7 @@ def test_get_udtf_details(heavydb):
     details = heavydb.table_function_details('my_udtf')
     assert len(details) == 1
 
-    @heavydb('int32(Column<int>, ConstantParameter, OutputColumn<int>)')
+    @heavydb('int32(Column<int>, ConstantParameter, OutputColumn<int>)', devices=['cpu'])
     def another_udtf(x, m, y):
         return 0
 
@@ -69,7 +69,7 @@ def test_get_runtime_udfs_empty(heavydb):
 def test_get_udf_details(heavydb):
     heavydb.reset()
 
-    @heavydb('int32(int32)')
+    @heavydb('int32(int32)', devices=['cpu'])
     def incr(a):
         return a + 1
 
