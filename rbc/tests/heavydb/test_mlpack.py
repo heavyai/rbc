@@ -7,26 +7,25 @@ from rbc.errors import HeavyDBServerError
 @pytest.fixture(scope='module')
 def heavydb():
 
-    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
+    for o in heavydb_fixture(globals(), minimal_version=(6, 1)):
         yield o
 
 
 @pytest.mark.parametrize("func", ['dbscan', 'kmeans'])
 def test_mlpack(heavydb, func):
     heavydb.require_version(
-        (5, 6),
+        (6, 1),
         'Requires heavydb-internal PR 5430 and heavydb built with -DENABLE_MLPACK')
 
-    extra_args = dict(dbscan='cast(1 as float), 1',
-                      kmeans='1')[func]
+    extra_args = dict(dbscan='cast(1 as float), 1, \'mlpack\'',
+                      kmeans='1, 1, \'default\', \'mlpack\'')[func]
     query = (f'select * from table({func}(cursor(select cast(rowid as int), f8, f8, f8 '
-             f'from {heavydb.table_name}), {extra_args}, 1))')
+             f'from {heavydb.table_name}), {extra_args}))')
 
     try:
         _, result = heavydb.sql_execute(query)
     except HeavyDBServerError as msg:
-        m = re.match(fr'.*Undefined function call {func!r}',
-                     msg.args[0])
+        m = re.match(r'.*Cannot find (mlpack|DEFAULT) ML library to support', msg.args[0])
         if m is not None:
             pytest.skip(f'test requires heavydb server with MLPACK support: {msg}')
         raise

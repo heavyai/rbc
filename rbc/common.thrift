@@ -26,7 +26,8 @@ enum TDatumType {
   MULTIPOLYGON,
   TINYINT,
   GEOMETRY,
-  GEOGRAPHY
+  GEOGRAPHY,
+  MULTILINESTRING
 }
 
 enum TEncodingType {
@@ -38,6 +39,8 @@ enum TEncodingType {
   SPARSE,
   GEOINT,
   DATE_IN_DAYS
+  ARRAY,
+  ARRAY_DICT
 }
 
 struct TTypeInfo {
