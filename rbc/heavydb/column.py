@@ -9,13 +9,15 @@ __all__ = ['OutputColumn', 'Column', 'HeavyDBOutputColumnType', 'HeavyDBColumnTy
 
 from llvmlite import ir
 from rbc import typesystem, irutils
-from .buffer import Buffer, HeavyDBBufferType, BufferType
+from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
 from rbc.targetinfo import TargetInfo
-from numba.core import extending, types
+from numba.core import extending, cgutils
+from numba.core import types as nb_types
 from typing import Union
 
 
+int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
 
 
@@ -30,6 +32,13 @@ class HeavyDBColumnType(HeavyDBBufferType):
     def match(self, other):
         if type(self) is type(other):
             return self[0] == other[0]
+
+    @property
+    def buffer_extra_members(self):
+        heavydb_version = TargetInfo().software[1][:3]
+        if heavydb_version >= (6, 2) and self.element_type.tostring() == 'TextEncodingDict':
+            return ('i8* string_dict_proxy_',)
+        return ()
 
 
 class HeavyDBOutputColumnType(HeavyDBColumnType):
@@ -94,7 +103,7 @@ def heavydb_column_set_null_(typingctx, col_var, row_idx):
     #                    ^                          ^
     #                 fp value                  serialized
     T = col_var.eltype
-    sig = types.void(col_var, row_idx)
+    sig = nb_types.void(col_var, row_idx)
 
     target_info = TargetInfo()
     null_value = target_info.null_values[str(T)]
@@ -105,7 +114,7 @@ def heavydb_column_set_null_(typingctx, col_var, row_idx):
 
         ty = ptr.type.pointee
         nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
-        if isinstance(T, types.Float):
+        if isinstance(T, nb_types.Float):
             nv = builder.bitcast(nv, ty)
         builder.store(nv, builder.gep(ptr, [index]))
 
@@ -122,7 +131,7 @@ def heavydb_column_set_null(col_var, index):
 @extending.intrinsic
 def heavydb_column_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
-    sig = types.boolean(col_var, row_idx)
+    sig = nb_types.boolean(col_var, row_idx)
 
     target_info = TargetInfo()
     null_value = target_info.null_values[str(T)]
@@ -133,7 +142,7 @@ def heavydb_column_is_null_(typingctx, col_var, row_idx):
         ptr = irutils.get_member_value(builder, data, 0)
         res = builder.load(builder.gep(ptr, [index]))
 
-        if isinstance(T, types.Float):
+        if isinstance(T, nb_types.Float):
             res = builder.bitcast(res, nv.type)
 
         return builder.icmp_signed('==', res, nv)
@@ -145,6 +154,32 @@ def heavydb_column_is_null_(typingctx, col_var, row_idx):
 def heavydb_column_is_null(col_var, row_idx):
     def impl(col_var, row_idx):
         return heavydb_column_is_null_(col_var, row_idx)
+    return impl
+
+
+@extending.intrinsic
+def get_dict_proxy(typingctx, col_var):
+    from .string_dict_proxy import StringDictionaryProxyNumbaType
+    sig = StringDictionaryProxyNumbaType()(col_var)
+
+    def codegen(context, builder, sig, args):
+        [col] = args
+        if col.type.is_pointer:
+            col = builder.load(col)
+        ptr = builder.extract_value(col, [2])
+        proxy_ctor = cgutils.create_struct_proxy(sig.return_type)
+        proxy = proxy_ctor(context, builder)
+        proxy.ptr = ptr
+        return proxy._getvalue()
+
+    return sig, codegen
+
+
+@extending.overload_attribute(BufferType, "string_dict_proxy")
+@extending.overload_attribute(BufferPointer, "string_dict_proxy")
+def heavydb_column_string_dict_proxy(col_var):
+    def impl(col_var):
+        return get_dict_proxy(col_var)
     return impl
 
 

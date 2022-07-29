@@ -1,22 +1,64 @@
 __all__ = ['HeavyDBColumnListType', 'ColumnList']
 
 
-from numba.core import extending
+from numba.core import extending, cgutils
 from rbc.heavydb.buffer import Buffer
 from rbc.typesystem import Type
 from rbc import structure_type
+from rbc.targetinfo import TargetInfo
 
 
 class HeavyDBColumnListType(Type):
 
     @property
+    def element_type(self):
+        return self[0][0]
+
+    @property
+    def buffer_extra_members(self):
+        heavydb_version = TargetInfo().software[1][:3]
+        if heavydb_version >= (6, 2) and self.element_type.tostring() == 'TextEncodingDict':
+            return ('i8** string_dict_proxy_',)
+        return ()
+
+    @property
     def __typesystem_type__(self):
-        element_type = self[0][0]
-        ptrs_t = element_type.pointer().pointer().params(name='ptrs')
+        ptrs_t = self.element_type.pointer().pointer().params(name='ptrs')
         length_t = Type.fromstring('int64 length')
         size_t = Type.fromstring('int64 size')
-        return Type(ptrs_t, length_t, size_t).params(
+        extra_members = tuple(map(Type.fromobject, self.buffer_extra_members))
+        return Type(ptrs_t, length_t, size_t, *extra_members).params(
             NumbaPointerType=HeavyDBColumnListNumbaType).pointer()
+
+
+@extending.intrinsic
+def heavydb_columnlist_getitem(typingctx, lst, idx):
+    members = lst.dtype.members
+    is_text_encoding_dict = False
+    if len(members) == 4:
+        is_text_encoding_dict = True
+        T = Type.fromstring('TextEncodingDict')
+    else:
+        T = Type.fromnumba(lst.dtype.members[0].dtype.dtype)
+
+    ret = Type.fromstring(f'Column<{T}>').tonumba().dtype
+    sig = ret(lst, idx)
+
+    def codegen(context, builder, signature, args):
+        [lst, idx] = args
+        collist_ctor = cgutils.create_struct_proxy(signature.args[0].dtype)
+        collist = collist_ctor(context, builder, value=builder.load(lst))
+
+        col_ctor = cgutils.create_struct_proxy(signature.return_type)
+        col = col_ctor(context, builder)
+
+        col.ptr = builder.load(builder.gep(collist.ptrs, [idx]))
+        col.sz = collist.size
+        if is_text_encoding_dict:
+            col.string_dict_proxy_ = builder.load(builder.gep(collist.string_dict_proxy_, [idx]))
+        return col._getvalue()
+
+    return sig, codegen
 
 
 class ColumnList(Buffer):
@@ -51,7 +93,7 @@ class ColumnList(Buffer):
 class HeavyDBColumnListNumbaType(structure_type.StructureNumbaPointerType):
     def get_getitem_impl(self):
         def impl(x, i):
-            return x.ptrs[i]
+            return heavydb_columnlist_getitem(x, i)
         return impl
 
 

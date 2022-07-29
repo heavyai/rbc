@@ -11,9 +11,14 @@ from rbc.errors import RequireLiteralValue
 from .buffer import (
     BufferPointer, Buffer, HeavyDBBufferType,
     heavydb_buffer_constructor)
-from numba.core import types, extending, cgutils
+from numba.core import extending, cgutils
+from numba.core import types as nb_types
 from llvmlite import ir
 from typing import Union
+
+
+class TextEncodingNonePointer(BufferPointer):
+    pass
 
 
 class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
@@ -40,10 +45,6 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
             return 1
         if other.is_string:
             return 2
-
-
-class TextEncodingNonePointer(BufferPointer):
-    pass
 
 
 class TextEncodingNone(Buffer):
@@ -94,7 +95,7 @@ def text_encoding_none_eq(a, b):
                     return False
             return True
         return impl
-    elif isinstance(a, TextEncodingNonePointer) and isinstance(b, types.StringLiteral):
+    elif isinstance(a, TextEncodingNonePointer) and isinstance(b, nb_types.StringLiteral):
         lv = b.literal_value
         sz = len(lv)
 
@@ -109,15 +110,15 @@ def text_encoding_none_eq(a, b):
 @extending.overload(operator.ne)
 def text_encoding_none_ne(a, b):
     if isinstance(a, TextEncodingNonePointer):
-        if isinstance(b, (TextEncodingNonePointer, types.StringLiteral)):
+        if isinstance(b, (TextEncodingNonePointer, nb_types.StringLiteral)):
             def impl(a, b):
                 return not(a == b)
             return impl
 
 
-@extending.lower_builtin(TextEncodingNone, types.Integer)
+@extending.lower_builtin(TextEncodingNone, nb_types.Integer)
 def heavydb_text_encoding_none_constructor(context, builder, sig, args):
-    return heavydb_buffer_constructor(context, builder, sig, args)
+    return heavydb_buffer_constructor(context, builder, sig, args)._getpointer()
 
 
 def get_copy_bytes_fn(module, arr, src_data, sz):
@@ -143,7 +144,7 @@ def get_copy_bytes_fn(module, arr, src_data, sz):
     return func
 
 
-@extending.lower_builtin(TextEncodingNone, types.StringLiteral)
+@extending.lower_builtin(TextEncodingNone, nb_types.StringLiteral)
 def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
     int64_t = ir.IntType(64)
     int8_t_ptr = ir.IntType(8).as_pointer()
@@ -152,7 +153,7 @@ def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
     sz = int64_t(len(literal_value))
 
     # arr = {ptr, size, is_null}*
-    arr = heavydb_buffer_constructor(context, builder, sig.return_type(types.int64), [sz])
+    arr = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64), [sz])._getpointer()  # noqa: E501
 
     msg_bytes = literal_value.encode('utf-8')
     msg_const = cgutils.make_bytearray(msg_bytes + b'\0')
@@ -170,8 +171,62 @@ def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
     def typer(arg):
-        if isinstance(arg, types.UnicodeType):
+        if isinstance(arg, nb_types.UnicodeType):
             raise RequireLiteralValue('Requires StringLiteral')
-        if isinstance(arg, (types.Integer, types.StringLiteral)):
+        if isinstance(arg, (nb_types.Integer, nb_types.StringLiteral)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
+
+
+@extending.intrinsic
+def ol_attr_ptr_(typingctx, text):
+    sig = nb_types.voidptr(text)
+
+    def codegen(context, builder, sig, args):
+        [data] = args
+        return builder.extract_value(builder.load(data), 0)
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def ol_attr_sz_(typingctx, text):
+    sig = nb_types.int64(text)
+
+    def codegen(context, builder, sig, args):
+        [data] = args
+        return builder.extract_value(builder.load(data), 1)
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def ol_attr_is_null_(typingctx, text):
+    sig = nb_types.int8(text)
+
+    def codegen(context, builder, sig, args):
+        [data] = args
+        return builder.extract_value(builder.load(data), 2)
+
+    return sig, codegen
+
+
+@extending.overload_attribute(TextEncodingNonePointer, 'ptr')
+def ol_attr_ptr(text):
+    def impl(text):
+        return ol_attr_ptr_(text)
+    return impl
+
+
+@extending.overload_attribute(TextEncodingNonePointer, 'sz')
+def ol_attr_sz(text):
+    def impl(text):
+        return ol_attr_sz_(text)
+    return impl
+
+
+@extending.overload_attribute(TextEncodingNonePointer, 'is_null')
+def ol_attr_is_null(text):
+    def impl(text):
+        return ol_attr_is_null_(text)
+    return impl

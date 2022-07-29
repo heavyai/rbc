@@ -935,7 +935,6 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
-                ('HeavyDBTextEncodingDictType<>', 'TextEncodingDict'),
                 ('Timestamp', 'Timestamp'),
         ]:
             ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
@@ -1386,6 +1385,12 @@ class RemoteHeavyDB(RemoteJIT):
                     annot = col.annotation()
                     fields.append(annot.get('name', f'field{i}'))
                 atype.annotation(fields=str(fields))
+
+            # replace args<> by args<-1>
+            annot = atype.annotation()
+            if annot.get('input_id') and annot.get('input_id') == 'args<>':
+                annot['input_id'] = 'args<-1>'
+
         return ftype
 
     def format_type(self, typ: typesystem.Type):

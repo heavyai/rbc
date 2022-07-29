@@ -22,25 +22,25 @@ def define(heavydb):
              ' RowMultiplier, OutputColumn<T>)',
              T=scalar_types, devices=['cpu'])
     def columns_sum1(rowid, lst, m, out):
-        for i in range(lst.size):
+        for i in range(lst.nrows):
             out[i] *= 0
-            for j in range(lst.length):
+            for j in range(lst.ncols):
                 out[i] += lst.ptrs[j][i]
-        return lst.size
+        return lst.nrows
 
     @heavydb('int32 columns_sum2(Cursor<Column<int64>, ColumnList<T>>,'
              ' RowMultiplier, OutputColumn<T>)',
              T=scalar_types, devices=['cpu'])
     def columns_sum2(rowid, lst, m, out):
-        for j in range(lst.length):
+        for j in range(lst.ncols):
             col = lst[j]  # equivalent to lst.ptrs[j]
             if j == 0:
-                for i in range(lst.size):
+                for i in range(lst.nrows):
                     out[i] = col[i]
             else:
-                for i in range(lst.size):
+                for i in range(lst.nrows):
                     out[i] += col[i]
-        return lst.size
+        return lst.nrows
 
     @heavydb('int32 columns_sum3(Cursor<Column<int64>, ColumnList<T>>,'
              ' RowMultiplier, OutputColumn<T>)',

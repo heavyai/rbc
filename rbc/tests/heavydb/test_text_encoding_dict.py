@@ -67,6 +67,45 @@ def define(heavydb):
             y[j] = col[j]
         return m * sz
 
+    if heavydb.version[:2] >= (6, 2):
+        @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, TextEncodingNone, OutputColumn<int32_t>)',  # noqa: E501
+                 devices=['cpu'])
+        def test_getstringid_from_arg(x, m, text, y):
+            y[0] = x.string_dict_proxy.getStringId(text)
+            return 1
+
+        @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)',  # noqa: E501
+                 devices=['cpu'])
+        def test_empty_input_id(mgr, out):
+            mgr.set_output_row_size(2)
+            out[0] = out.string_dict_proxy.getStringId("onedal")
+            out[1] = out.string_dict_proxy.getStringId("mlpack")
+            return len(out)
+
+        @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<int32_t>)',
+                 devices=['cpu'], T=['TextEncodingDict'])
+        def test_getstringid_from_unicode(x, m, y):
+            text = "foo"  # this creates a unicode string
+            y[0] = x.string_dict_proxy.getStringId(text)
+            return 1
+
+        @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>)')  # noqa: E501
+        def test_getstring(x, unique, y):
+            for i in range(unique):
+                y[i] = len(x.string_dict_proxy.getString(i))
+            return unique
+
+        @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>)')  # noqa: E501
+        def test_getstring_lst(lst, unique, m, y):
+            for i in range(lst.nrows):
+                y[i] = 0
+
+            for i in range(lst.ncols):
+                col = lst[i]
+                for j in range(unique):
+                    y[j] += len(col.string_dict_proxy.getString(j))
+            return unique
+
 
 @pytest.fixture(scope="function")
 def create_columns(heavydb):
@@ -357,3 +396,95 @@ def test_ct_binding_dict_encoded45(heavydb, size, fn_suffix):
         assert list(sum(result, ())) == out5
     else:
         assert list(result) == list(zip(out4, out5))
+
+
+@pytest.mark.parametrize('text', ['foo', 'bar', 'invalid1234'])
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getStringId(heavydb, col, text):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    fn = 'test_getstringid_from_arg'
+    table = f"{heavydb.base_name}text"
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col} from {table}),"
+             f"1,"
+             f"'{text}'));")
+
+    _, result = heavydb.sql_execute(query)
+    [result] = result
+    if text in ['foo', 'bar']:
+        assert result[0] > 0
+    else:
+        assert result[0] < 0
+
+
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getStringId_unicode(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    fn = 'test_getstringid_from_unicode'
+    table = f"{heavydb.base_name}text"
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col} from {table}),"
+             f"1));")
+
+    _, result = heavydb.sql_execute(query)
+    [result] = result
+    assert result[0] > 0
+
+
+def test_empty_input_id(heavydb):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    fn = 'test_empty_input_id'
+    query = (f"SELECT * FROM table({fn}());")
+
+    _, result = heavydb.sql_execute(query)
+    result = list(result)
+
+    assert len(result) == 2
+    assert ('onedal',) in result
+    assert ('mlpack',) in result
+
+
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getString(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    table = f"{heavydb.base_name}text"
+    _, unique = heavydb.sql_execute(f'select count(distinct {col}) from {table}')
+    unique = list(unique)[0][0]
+
+    fn = 'test_getstring'
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col} from {table}),"
+             f"{unique}));")
+
+    _, result = heavydb.sql_execute(query)
+    assert all([x[0] > 0 for x in result])
+
+
+@pytest.mark.parametrize('col', ['t1', 't2', 't4'])
+def test_getString_lst(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    table = f"{heavydb.base_name}text"
+    _, unique = heavydb.sql_execute(f'select count(distinct {col}) from {table}')
+    unique = list(unique)[0][0]
+
+    fn = 'test_getstring_lst'
+    query = (f"SELECT * FROM table({fn}("
+             f"cursor(select {col}, {col}, {col} from {table}),"
+             f"{unique}, 1));")
+
+    _, result = heavydb.sql_execute(query)
+
+    if col == 't1':
+        assert list(result) == [(9,), (9,), (9,), (12,), (15,)]
+    else:
+        assert list(result) == [(18,), (9,), (9,), (9,)]
