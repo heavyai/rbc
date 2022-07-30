@@ -71,3 +71,23 @@ def test_columns_sum(heavydb, T, variant):
     actual = list(zip(*result))[0]
 
     assert expected == actual
+
+
+def test_columnlist_enumerate(heavydb):
+
+    @heavydb('int32(Cursor<ColumnList<T>>, RowMultiplier, OutputColumn<T>)',
+             T=['int32'], devices=['cpu'])
+    def columnlist_enumerate(lst, m, out):
+        for i in range(lst.nrows):
+            out[i] = 0
+
+        for _, col in enumerate(lst):
+            for i, e in enumerate(col):
+                out[i] += e
+        return lst.nrows
+
+    heavydb.register()
+    query = (f'select * from table(columnlist_enumerate(cursor('
+             f'select i4, i4, i4 from {heavydb.table_name}), 1))')
+    _, result = heavydb.sql_execute(query)
+    assert list(result) == [(0,), (3,), (6,), (9,), (12,)]

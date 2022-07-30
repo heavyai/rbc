@@ -86,7 +86,7 @@ class HeavyDBBufferType(typesystem.Type):
         return self.numba_pointer_type(numba_type)
 
 
-class BufferType(types.Type):
+class BufferType(types.IterableType):
     """Numba type class for HeavyDB buffer structures.
     """
 
@@ -96,6 +96,10 @@ class BufferType(types.Type):
         Return buffer element dtype.
         """
         return self.members[0].dtype
+
+    @property
+    def iterator_type(self):
+        return BufferIteratorType(self)
 
 
 class BufferPointer(types.IterableType):
@@ -119,10 +123,10 @@ class BufferPointer(types.IterableType):
 
     @property
     def iterator_type(self):
-        return BufferPointerIteratorType(self)
+        return BufferIteratorType(self)
 
 
-class BufferPointerIteratorType(types.SimpleIteratorType):
+class BufferIteratorType(types.SimpleIteratorType):
 
     def __init__(self, buffer_type):
         name = f"iter_buffer({buffer_type})"
@@ -130,7 +134,7 @@ class BufferPointerIteratorType(types.SimpleIteratorType):
         super().__init__(name, self.buffer_type.eltype)
 
 
-@datamodel.register_default(BufferPointerIteratorType)
+@datamodel.register_default(BufferIteratorType)
 class BufferPointerIteratorModel(datamodel.StructModel):
     def __init__(self, dmm, fe_type):
         members = [('index', types.EphemeralPointer(types.uintp)),
@@ -578,7 +582,7 @@ def heavydb_buffer_dtype(x):
         return impl
 
 
-@extending.lower_builtin('iternext', BufferPointerIteratorType)
+@extending.lower_builtin('iternext', BufferIteratorType)
 @imputils.iternext_impl(imputils.RefType.UNTRACKED)
 def iternext_BufferPointer(context, builder, sig, args, result):
     [iterbufty] = sig.args
@@ -589,11 +593,13 @@ def iternext_BufferPointer(context, builder, sig, args, result):
     buf = iterval.buffer
     idx = builder.load(iterval.index)
 
-    len_fn = context.typing_context.resolve_value_type(len)
-    len_sig = types.intp(sig.args[0].buffer_type)
-    # if the intrinsic was not called before, one need to "register" it first
-    len_fn.get_call_type(context.typing_context, len_sig.args, {})
-    count = context.get_function(len_fn, len_sig)(builder, [buf])
+    if buf.type.is_pointer:
+        col = context.make_helper(builder, iterbufty.buffer_type.dtype,
+                                  value=builder.load(buf))
+    else:
+        col = context.make_helper(builder, iterbufty.buffer_type,
+                                  value=buf)
+    count = col.sz
 
     is_valid = builder.icmp_signed('<', idx, count)
     result.set_valid(is_valid)
@@ -601,7 +607,6 @@ def iternext_BufferPointer(context, builder, sig, args, result):
     with builder.if_then(is_valid):
         getitem_fn = context.typing_context.resolve_value_type(operator.getitem)
         getitem_sig = iterbufty.buffer_type.eltype(iterbufty.buffer_type, types.intp)
-        # same here, "register" the intrinsic before calling it
         getitem_fn.get_call_type(context.typing_context, getitem_sig.args, {})
         getitem_out = context.get_function(getitem_fn, getitem_sig)(builder, [buf, idx])
         result.yield_(getitem_out)
@@ -609,6 +614,7 @@ def iternext_BufferPointer(context, builder, sig, args, result):
         builder.store(nidx, iterval.index)
 
 
+@extending.lower_builtin('getiter', BufferType)
 @extending.lower_builtin('getiter', BufferPointer)
 def getiter_buffer_pointer(context, builder, sig, args):
     [buffer] = args
