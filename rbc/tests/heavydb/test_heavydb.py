@@ -359,7 +359,7 @@ def test_casting(heavydb):
     The following table defines the behavior of applying these UDFs to
     values with different types:
 
-    OmnisciDB version 5.9+
+    HeavyDB version 5.9+
     ----------------------
              | Functions applied to <itype value>
     itype    | i8   | i16  | i32  | i64  | f32  | f64  |
@@ -371,7 +371,7 @@ def test_casting(heavydb):
     float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
 
-    OmnisciDB version 5.8
+    HeavyDB version 5.8
     ----------------------
              | Functions applied to <itype value>
     itype    | i8   | i16  | i32  | i64  | f32  | f64  |
@@ -383,7 +383,7 @@ def test_casting(heavydb):
     float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
 
-    OmnisciDB version 5.7 and older
+    HeavyDB version 5.7 and older
     -------------------------------
              | Functions applied to <itype value>
     itype    | i8   | i16  | i32  | i64  | f32  | f64  |
@@ -838,7 +838,7 @@ def test_reconnect(heavydb):
 
 
 def test_non_admin_user(heavydb):
-    heavydb.require_version((5, 9), 'Requires omniscidb 5.9 or newer')
+    heavydb.require_version((5, 9), 'Requires HeavyDB 5.9 or newer')
 
     user = 'rbc_test_non_admin_user'
     password = 'Xy2kq_3lM'

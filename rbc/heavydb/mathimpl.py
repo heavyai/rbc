@@ -1,9 +1,17 @@
 import math
-from rbc.externals import gen_codegen, dispatch_codegen
-from numba.core.typing.templates import infer_global
-from numba.core.imputils import lower_builtin
-from numba.core.typing.templates import ConcreteTemplate, signature
+from rbc.externals import gen_codegen
+from numba.core.typing.templates import ConcreteTemplate, signature, Registry
 from numba.types import float32, float64, int32, int64, uint64, intp
+from numba.core.intrinsics import INTR_TO_CMATH
+from .heavydb_compiler import heavydb_cpu_registry, heavydb_gpu_registry
+
+
+lower_cpu = heavydb_cpu_registry.lower
+lower_gpu = heavydb_gpu_registry.lower
+
+
+registry = Registry()
+infer_global = registry.register_global
 
 
 # Adding missing cases in Numba
@@ -75,22 +83,31 @@ unarys += [("trunc", "truncf", math.trunc)]
 binarys = []
 binarys += [("copysign", "copysignf", math.copysign)]
 binarys += [("atan2", "atan2f", math.atan2)]
-binarys += [("pow", "powf", math.pow)]
 binarys += [("fmod", "fmodf", math.fmod)]
 binarys += [("hypot", "hypotf", math.hypot)]
 binarys += [("remainder", "remainderf", math.remainder)]
 
 
 def impl_unary(fname, key, typ):
-    cpu = gen_codegen(fname)
+    if fname in INTR_TO_CMATH.values():
+        # use llvm intrinsics when possible
+        cpu = gen_codegen(f'llvm.{fname}')
+    else:
+        cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower_builtin(key, typ)(dispatch_codegen(cpu, gpu))
+    lower_cpu(key, typ)(cpu)
+    lower_gpu(key, typ)(gpu)
 
 
 def impl_binary(fname, key, typ):
-    cpu = gen_codegen(fname)
+    if fname in INTR_TO_CMATH.values():
+        # use llvm intrinsics when possible
+        cpu = gen_codegen(f'llvm.{fname}')
+    else:
+        cpu = gen_codegen(fname)
     gpu = gen_codegen(f"__nv_{fname}")
-    lower_builtin(key, typ, typ)(dispatch_codegen(cpu, gpu))
+    lower_cpu(key, typ, typ)(cpu)
+    lower_gpu(key, typ, typ)(gpu)
 
 
 for fname64, fname32, key in unarys:
@@ -105,17 +122,42 @@ for fname64, fname32, key in binarys:
 
 # manual mapping
 def impl_ldexp():
+    # cpu
     ldexp_cpu = gen_codegen('ldexp')
-    ldexp_gpu = gen_codegen('__nv_ldexp')
-
     ldexpf_cpu = gen_codegen('ldexpf')
-    ldexpf_gpu = gen_codegen('__nv_ldexpf')
+    lower_cpu(math.ldexp, float64, int32)(ldexp_cpu)
+    lower_cpu(math.ldexp, float32, int32)(ldexpf_cpu)
 
-    lower_builtin(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
-    lower_builtin(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
+    # gpu
+    ldexp_gpu = gen_codegen('__nv_ldexp')
+    ldexpf_gpu = gen_codegen('__nv_ldexpf')
+    lower_gpu(math.ldexp, float64, int32)(ldexp_gpu)
+    lower_gpu(math.ldexp, float32, int32)(ldexpf_gpu)
+
+
+def impl_pow():
+    # cpu
+    pow_cpu = gen_codegen('pow')
+    powf_cpu = gen_codegen('powf')
+    lower_cpu(math.pow, float64, float64)(pow_cpu)
+    lower_cpu(math.pow, float32, float32)(powf_cpu)
+    lower_cpu(math.pow, float64, int32)(pow_cpu)
+    lower_cpu(math.pow, float32, int32)(powf_cpu)
+
+    # gpu
+    pow_gpu = gen_codegen('__nv_pow')
+    powf_gpu = gen_codegen('__nv_powf')
+    powi_gpu = gen_codegen('__nv_powi')
+    powif_gpu = gen_codegen('__nv_powif')
+    lower_gpu(math.pow, float64, float64)(pow_gpu)
+    lower_gpu(math.pow, float32, float32)(powf_gpu)
+    lower_gpu(math.pow, float64, int32)(powi_gpu)
+    lower_gpu(math.pow, float32, int32)(powif_gpu)
 
 
 impl_ldexp()
+impl_pow()
+
 
 # CPU only:
 # math.gcd

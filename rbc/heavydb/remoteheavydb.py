@@ -261,7 +261,7 @@ def is_sizer(t):
 
 
 def get_sizer_enum(t):
-    """Return sizer enum value as defined by the omniscidb server.
+    """Return sizer enum value as defined by the HeavyDB server.
     """
     sizer = t.annotation()['sizer']
     sizer = output_buffer_sizer_map.get(sizer or None, sizer)
@@ -1530,5 +1530,5 @@ class RemoteHeavyDB(RemoteJIT):
 
 
 class RemoteOmnisci(RemoteHeavyDB):
-    """Omnisci - the previous brand of HeavyAI
+    """HeavyDB - the previous brand of HeavyAI
     """
