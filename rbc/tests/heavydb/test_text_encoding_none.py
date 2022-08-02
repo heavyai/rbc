@@ -1,4 +1,3 @@
-import numpy as np
 from rbc.tests import heavydb_fixture
 from rbc.heavydb import TextEncodingNone
 import pytest
@@ -180,8 +179,8 @@ def test_return_text(heavydb):
     def fn(t):
         return t
 
-    col = 'n'
     table = heavydb.table_name + 'text'
-    _, result = heavydb.sql_execute(f"select {col}, fn({col}) from {table};")
+    _, result = heavydb.sql_execute(f"select n, fn(n) from {table};")
     result = list(zip(*result))
-    np.testing.assert_equal(*result)
+    expected, got = zip(*result)
+    assert expected == got

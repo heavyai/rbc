@@ -40,7 +40,7 @@ class HeavyDBArrayType(HeavyDBBufferType):
 
 
 class ArrayPointer(BufferPointer):
-    def copy(self, context, builder, val, retptr):
+    def deepcopy(self, context, builder, val, retptr):
         from .buffer import memalloc
         ptr_type = self.dtype.members[0]
         element_size = int64_t(ptr_type.dtype.bitwidth // 8)

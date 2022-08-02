@@ -49,7 +49,7 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
 
 
 class TextEncodingNonePointer(ArrayPointer):
-    def copy(self, context, builder, val, retptr):
+    def deepcopy(self, context, builder, val, retptr):
         from .buffer import memalloc
         ptr_type = self.dtype.members[0]
         element_size = int64_t(ptr_type.dtype.bitwidth // 8)
@@ -76,8 +76,8 @@ class TextEncodingNone(Buffer):
 
         struct TextEncodingNone {
             char* ptr;
-            size_t sz;  // when non-negative, TextEncodingNone has fixed width.
-            int8_t is_null;
+            size_t size;
+            int8_t padding;
         }
 
     .. code-block:: python

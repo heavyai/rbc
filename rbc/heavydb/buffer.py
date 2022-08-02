@@ -125,7 +125,7 @@ class BufferPointer(types.IterableType):
     def iterator_type(self):
         return BufferIteratorType(self)
 
-    def copy(self, context, builder, val, retptr):
+    def deepcopy(self, context, builder, val, retptr):
         raise NotImplementedError
 
 
