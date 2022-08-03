@@ -132,7 +132,7 @@ def text_encoding_none_ne(a, b):
     if isinstance(a, TextEncodingNonePointer):
         if isinstance(b, (TextEncodingNonePointer, nb_types.StringLiteral)):
             def impl(a, b):
-                return not(a == b)
+                return not (a == b)
             return impl
 
 
