@@ -182,5 +182,5 @@ def test_return_text(heavydb):
     table = heavydb.table_name + 'text'
     _, result = heavydb.sql_execute(f"select n, fn(n) from {table};")
     result = list(zip(*result))
-    expected, got = zip(*result)
+    expected, got = result
     assert expected == got

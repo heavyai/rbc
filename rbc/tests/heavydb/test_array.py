@@ -544,5 +544,5 @@ def test_return_array(heavydb):
     heavydb.register()
     _, result = heavydb.sql_execute(f'select i8, fn(i8) from {heavydb.table_name};')
     result = list(zip(*result))
-    expected, got = zip(*result)
+    expected, got = result
     assert expected == got
