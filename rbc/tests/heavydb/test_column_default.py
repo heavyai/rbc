@@ -66,7 +66,6 @@ typs = (
 
 @pytest.mark.parametrize("suffix,kind,expected", typs)
 def test_default_sizer(heavydb, suffix, kind, expected):
-    heavydb.skip_on_docker()
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5403")
 
     codes = {

@@ -50,7 +50,6 @@ def create_columns(heavydb):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (32,))
 def test_template_text(heavydb, size):
-    heavydb.skip_on_docker()
 
     if heavydb.has_cuda:
         heavydb.require_version(
@@ -75,7 +74,6 @@ def test_template_text(heavydb, size):
 
 @pytest.mark.parametrize("col", ("i4", "f4"))
 def test_template_number(heavydb, col):
-    heavydb.skip_on_docker()
 
     if heavydb.has_cuda:
         heavydb.require_version(
@@ -93,7 +91,6 @@ def test_template_number(heavydb, col):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("out", (3,))
 def test_template_columnlist_text(heavydb, size, out):
-    heavydb.skip_on_docker()
 
     fn = "ct_binding_columnlist"
     table = f"{heavydb.base_name}_{size}"
@@ -106,7 +103,6 @@ def test_template_columnlist_text(heavydb, size, out):
 
 @pytest.mark.parametrize("col,out", zip(("i4", "f4", "i2"), (1, 2, 4)))
 def test_template_columnlist_number(heavydb, col, out):
-    heavydb.skip_on_docker()
 
     fn = "ct_binding_columnlist"
     table = heavydb.table_name
@@ -118,7 +114,6 @@ def test_template_columnlist_number(heavydb, col, out):
 
 @pytest.mark.parametrize("col,out", zip(("i4", "f4"), (10, 20)))
 def test_template_column_number(heavydb, col, out):
-    heavydb.skip_on_docker()
     heavydb.require_version((5, 8), "Requires heavydb-internal PR #5770")
 
     fn = "ct_binding_column"

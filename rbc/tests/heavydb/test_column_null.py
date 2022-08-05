@@ -66,7 +66,6 @@ def test_null_value(heavydb, col):
 
 
 def test_row_adder(heavydb):
-    heavydb.skip_on_docker()
     descr, expected = heavydb.sql_execute(
         f'select f8, f8 + f8 from {heavydb.table_name}null')
     data, expected = zip(*list(expected))

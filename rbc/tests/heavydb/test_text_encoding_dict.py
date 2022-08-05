@@ -331,7 +331,6 @@ def test_text_encoding_order_by(heavydb, size):
 @pytest.mark.usefixtures("create_columns")
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_ct_binding_dict_encoded1(heavydb, size):
-    heavydb.skip_on_docker()
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
     fn = 'ct_binding_dict_encoded1'
@@ -355,7 +354,6 @@ def test_ct_binding_dict_encoded1(heavydb, size):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("fn_suffix", ("2", "3",))
 def test_ct_binding_dict_encoded23(heavydb, size, fn_suffix):
-    heavydb.skip_on_docker()
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = f"ct_binding_dict_encoded{fn_suffix}"
@@ -379,7 +377,6 @@ def test_ct_binding_dict_encoded23(heavydb, size, fn_suffix):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 @pytest.mark.parametrize("fn_suffix", ("4", "5", "6"))
 def test_ct_binding_dict_encoded45(heavydb, size, fn_suffix):
-    heavydb.skip_on_docker()
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
 
     fn = f"ct_binding_dict_encoded{fn_suffix}"

@@ -56,8 +56,6 @@ def test_column_alloc(heavydb, T):
 
 @pytest.mark.parametrize("fn", ('column_list_row_sum', 'columnlist_set_output_row_size'))
 def test_columnlist_alloc(heavydb, fn):
-    if fn == "column_list_row_sum":
-        heavydb.skip_on_docker()
 
     query = (f'select * from table({fn}(cursor('
              f'select i4, i4+1, i4+2 from {heavydb.table_name})));')

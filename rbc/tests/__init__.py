@@ -265,13 +265,6 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
 
-    def skip_on_docker():
-        curr_version = Version('.'.join(map(str, available_version[:2])))
-        ci = os.environ.get('CI')
-        source = os.environ.get('HEAVYDB_SOURCE')
-        if ci and source == 'docker' and curr_version >= Version("6.1"):
-            pytest.skip('HeavyDB docker is not built with -DENABLE_SYSTEM_TFS')
-
     def require_version(version, message=None, label=None):
         """Execute pytest.skip(...) if version is older than available_version.
 
@@ -367,7 +360,6 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     config = rbc_heavydb.get_client_config(debug=debug)
     m = rbc_heavydb.RemoteHeavyDB(**config)
     m.require_version = require_version
-    m.skip_on_docker = skip_on_docker
 
     if not load_test_data:
         yield m

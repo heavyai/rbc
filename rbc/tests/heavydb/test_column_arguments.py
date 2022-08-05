@@ -116,7 +116,6 @@ def test_copy(heavydb, use_default, inputs):
 
 @pytest.mark.parametrize('kind', ['1', '11', '111', '211', '221', '212', '13', '32', '34', '242'])
 def test_ct_binding_constant_sizer(heavydb, kind):
-    heavydb.skip_on_docker()
     heavydb.require_version((5, 7), 'Requires heavydb-internal PR 5274')
     colnames = ', '.join({'1': 'i4', '2': 'i8', '3': 'i4, i4, i4',
                           '4': 'i8, i8, i8'}[n] for n in kind)
@@ -134,7 +133,6 @@ def test_ct_binding_constant_sizer(heavydb, kind):
                                   '2129', '139', '329', '349', '2429',
                                   '91', '196', '396', '369', '169'])
 def test_ct_binding_row_multiplier(heavydb, use_default, kind):
-    heavydb.skip_on_docker()
     if use_default:
         heavydb.require_version((5, 7), 'Requires heavydb-internal PR 5403')
 
