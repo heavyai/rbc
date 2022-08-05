@@ -98,11 +98,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.10', '3.9', '3.8']
-        numba-version: ['0.56', '0.55']
-        heavydb-version: ['6.1', '6.0', '5.10']
-        heavydb-from: [conda]
+        # os: [ubuntu-latest]
+        # python-version: ['3.10', '3.9', '3.8']
+        # numba-version: ['0.56', '0.55']
+        # heavydb-version: ['6.1', '6.0', '5.10']
+        # heavydb-from: [conda]
         include:
           - os: ubuntu-latest
             python-version: '3.10'
