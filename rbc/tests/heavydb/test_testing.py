@@ -3,7 +3,7 @@ from rbc.tests import heavydb_fixture
 
 
 @pytest.mark.parametrize('suffix', ['', '10', 'null', 'array', 'arraynull'])
-def test_table_load(mth, suffix):
+def test_table_load(suffix):
 
     count = 0
     for heavydb in heavydb_fixture(globals()):
