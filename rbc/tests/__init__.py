@@ -267,11 +267,10 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
 
     def skip_on_docker():
         curr_version = Version('.'.join(map(str, available_version[:2])))
-        print(os.environ.get('CI'))
-        print(os.environ.get('HEAVYDB_SOURCE'))
-        print(curr_version)
-        if os.environ.get('CI') and os.environ.get('HEAVYDB_SOURCE') == 'docker' and \
-                curr_version >= (6, 1):
+        ci = os.environ.get('CI')
+        source = os.environ.get('HEAVYDB_SOURCE')
+        print(ci, (source == 'docker'), (curr_version >= (6, 1)))
+        if ci and source == 'docker' and curr_version >= (6, 1):
             pytest.skip('HeavyDB docker is not built with -DENABLE_SYSTEM_TFS')
 
     def require_version(version, message=None, label=None):
