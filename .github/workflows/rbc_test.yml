@@ -228,6 +228,7 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker'
         env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
           HEAVYDB_DEV_LABEL: ${{ 'docker-dev' }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
@@ -241,6 +242,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker' ) }}
         env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
