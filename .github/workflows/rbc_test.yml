@@ -101,21 +101,21 @@ jobs:
         os: [ubuntu-latest]
         python-version: ['3.10', '3.9', '3.8']
         numba-version: ['0.56', '0.55']
-        heavydb-version: ['6.0', '5.10', '5.9']
+        heavydb-version: ['6.1', '6.0', '5.10']
         heavydb-from: [conda]
-        # include:
-        #   - os: ubuntu-latest
-        #     python-version: '3.10'
-        #     numba-version: '0.55'
-        #     heavydb-version: dev
-        #     docker-image: heavyai/core-os-cpu-dev:latest
-        #     heavydb-from: docker
-        #   - os: ubuntu-latest
-        #     python-version: '3.9'
-        #     numba-version: '0.54'
-        #     heavydb-version: dev
-        #     docker-image: heavyai/core-os-cpu-dev:latest
-        #     heavydb-from: docker
+        include:
+          - os: ubuntu-latest
+            python-version: '3.10'
+            numba-version: '0.56'
+            heavydb-version: dev
+            docker-image: heavyai/core-os-cpu-dev:latest
+            heavydb-from: docker
+          - os: ubuntu-latest
+            python-version: '3.10'
+            numba-version: '0.55'
+            heavydb-version: dev
+            docker-image: heavyai/core-os-cpu-dev:latest
+            heavydb-from: docker
 
     needs: lint
 
@@ -198,7 +198,7 @@ jobs:
           cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
-          mamba env create  --file=rbc_test.yaml -n rbc
+          mamba env create --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
         shell: bash -l {0}
