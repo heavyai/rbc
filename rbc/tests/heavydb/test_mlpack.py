@@ -26,7 +26,11 @@ def test_mlpack(heavydb, func):
         _, result = heavydb.sql_execute(query)
     except HeavyDBServerError as msg:
         m = re.match(r'.*Cannot find (mlpack|DEFAULT) ML library to support', msg.args[0])
-        if m is not None:
+        if m:
+            pytest.skip(f'test requires heavydb server with MLPACK support: {msg}')
+        # heavydb from conda-forge is built without MLPACK
+        m = re.match(r".*Undefined function call 'dbscan' in SQL statement.*", msg.args[0])
+        if m:
             pytest.skip(f'test requires heavydb server with MLPACK support: {msg}')
         raise
 
