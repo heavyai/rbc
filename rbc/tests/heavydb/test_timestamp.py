@@ -10,7 +10,7 @@ available_version, reason = rbc_heavydb.is_available()
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=False, load_columnar=True,
+    for o in heavydb_fixture(globals(), debug=False,
                              suffices=['timestamp'], minimal_version=(6, 0)):
         define(o)
         yield o
