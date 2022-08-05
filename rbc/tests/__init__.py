@@ -222,7 +222,7 @@ class _TextTestTable(_TestTable):
 
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                     suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'],
-                    load_columnar=True, load_test_data=True, debug=False):
+                    load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
     .. code-block:: python
@@ -264,6 +264,12 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
+
+    def skip_on_docker():
+        curr_version = Version('.'.join(map(str, available_version[:2])))
+        if os.environ.get('CI') and os.environ.get('HEAVYDB_DOCKER_IMAGE') and \
+                curr_version >= (6, 1):
+            pytest.skip('HeavyDB docker is not built with -DENABLE_SYSTEM_TFS')
 
     def require_version(version, message=None, label=None):
         """Execute pytest.skip(...) if version is older than available_version.
@@ -352,10 +358,6 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                 warnings.warn(f'detected test requiring {version} with out-of-date label {label}.'
                               ' Please reset test label to None.')
 
-    # Throw an error on Travis CI if the server is not available
-    if "TRAVIS" in os.environ and not available_version:
-        pytest.exit(msg=reason, returncode=1)
-
     require_version(minimal_version)
 
     filename = caller_globals['__file__']
@@ -364,6 +366,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     config = rbc_heavydb.get_client_config(debug=debug)
     m = rbc_heavydb.RemoteHeavyDB(**config)
     m.require_version = require_version
+    m.skip_on_docker = skip_on_docker
 
     if not load_test_data:
         yield m
