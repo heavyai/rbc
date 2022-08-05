@@ -323,7 +323,7 @@ jobs:
         - name: Start heavydb server
           shell: bash -l {0}
           run: |
-            mkdir data && omnisci_initdb data -f
+            mkdir storage && initheavy storage -f
             heavydb --version
             heavydb --enable-dev-table-functions --enable-udf-registration-for-all-users --enable-runtime-udf --enable-table-functions 2>&1 > heavydb-output.txt &
             sleep 10
