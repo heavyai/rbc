@@ -338,5 +338,5 @@ jobs:
           shell: bash -l {0}
           run: |
             pytest -v -rs --nbval notebooks/ -x
-            pkill -f omnisci_server
+            pkill -f heavydb
             cat heavydb-output.txt
