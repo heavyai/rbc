@@ -92,6 +92,7 @@ jobs:
           mamba run -n rbc pytest -sv -r A rbc/ -x
 
   heavydb:
+    if: ${{ false }}  # disable for now
     name: Heavydb ${{ matrix.heavydb-version }} - ${{ matrix.os }} - Numba v${{matrix.numba-version}} - Python v${{ matrix.python-version }} [${{ matrix.heavydb-from }}]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
@@ -315,7 +316,7 @@ jobs:
           run: |
             mkdir storage && initheavy storage -f
             heavydb --version
-            heavydb --enable-dev-table-functions --enable-udf-registration-for-all-users --enable-runtime-udf --enable-table-functions 2>&1 > heavydb-output.txt &
+            heavydb --enable-dev-table-functions --enable-udf-registration-for-all-users --enable-runtime-udfs --enable-table-functions 2>&1 > heavydb-output.txt &
             sleep 10
 
         - name: conda config
