@@ -101,18 +101,18 @@ jobs:
         os: [ubuntu-latest]
         python-version: ['3.10', '3.9', '3.8']
         numba-version: ['0.56', '0.55']
-        heavydb-version: ['6.0', '5.10', '5.9']
+        heavydb-version: ['6.1', '6.0', '5.10']
         heavydb-from: [conda]
         # include:
         #   - os: ubuntu-latest
         #     python-version: '3.10'
-        #     numba-version: '0.55'
+        #     numba-version: '0.56'
         #     heavydb-version: dev
         #     docker-image: heavyai/core-os-cpu-dev:latest
         #     heavydb-from: docker
         #   - os: ubuntu-latest
-        #     python-version: '3.9'
-        #     numba-version: '0.54'
+        #     python-version: '3.10'
+        #     numba-version: '0.55'
         #     heavydb-version: dev
         #     docker-image: heavyai/core-os-cpu-dev:latest
         #     heavydb-from: docker
@@ -144,10 +144,10 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
-            mamba create -n heavydb-env heavydb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
-          else
+          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
             mamba create -n heavydb-env omniscidb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
+          else
+            mamba create -n heavydb-env heavydb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
           fi
 
       - name: Build heavydb docker image and run it [docker]
@@ -173,22 +173,19 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
+          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
+            mkdir data
+            mamba run -n heavydb-env omnisci_initdb data -f
+            mamba run -n heavydb-env omnisci_server --version
+            RUN_FLAGS="--enable-runtime-udf --enable-table-functions --enable-dev-table-functions"
+            mamba run -n heavydb-env omnisci_server $RUN_FLAGS &> heavydb-output.txt &
+          else
             mkdir storage
             mamba run -n heavydb-env initheavy storage -f
             mamba run -n heavydb-env heavydb --version
             RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions --enable-udf-registration-for-all-users"
             echo ${RUN_FLAGS}
             mamba run -n heavydb-env heavydb $RUN_FLAGS &> heavydb-output.txt &
-          else
-            mkdir data
-            mamba run -n heavydb-env omnisci_initdb data -f
-            mamba run -n heavydb-env omnisci_server --version
-            RUN_FLAGS="--enable-runtime-udf --enable-table-functions"
-            if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
-              RUN_FLAGS="${RUN_FLAGS} --enable-dev-table-functions"
-            fi
-            mamba run -n heavydb-env omnisci_server $RUN_FLAGS &> heavydb-output.txt &
           fi
           sleep 10
 
@@ -198,7 +195,7 @@ jobs:
           cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
-          mamba env create  --file=rbc_test.yaml -n rbc
+          mamba env create --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
         shell: bash -l {0}
@@ -219,6 +216,7 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker'
         env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
           HEAVYDB_DEV_LABEL: ${{ 'docker-dev' }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
@@ -232,6 +230,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker' ) }}
         env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
           EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
@@ -244,14 +243,14 @@ jobs:
         shell: bash -l {0}
         if: failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
-            mamba run -n heavydb-env cat storage/mapd_log/heavydb.INFO
-            mamba run -n heavydb-env cat storage/mapd_log/heavydb.WARNING
-            mamba run -n heavydb-env cat storage/mapd_log/heavydb.ERROR
-          else
+          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
             mamba run -n heavydb-env cat data/mapd_log/omnisci_server.INFO
             mamba run -n heavydb-env cat data/mapd_log/omnisci_server.WARNING
             mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
+          else
+            mamba run -n heavydb-env cat storage/mapd_log/heavydb.INFO
+            mamba run -n heavydb-env cat storage/mapd_log/heavydb.WARNING
+            mamba run -n heavydb-env cat storage/mapd_log/heavydb.ERROR
           fi
 
       - name: Show Heavydb docker logs on failure [docker]
@@ -266,10 +265,10 @@ jobs:
         continue-on-error: true
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "6.0" ]]; then
-            mamba run -n heavydb-env killall heavydb
-          else
+          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
             mamba run -n heavydb-env killall omnisci_server
+          else
+            mamba run -n heavydb-env killall heavydb
           fi
           sleep 5
 
@@ -309,14 +308,14 @@ jobs:
         - name: Install additional packages
           shell: bash -l {0}
           run: |
-            mamba install -c conda-forge omniscidb nbval ibis-heavyai matplotlib pandas
+            mamba install -c conda-forge heavydb nbval ibis-heavyai matplotlib pandas
 
         - name: Start heavydb server
           shell: bash -l {0}
           run: |
-            mkdir data && omnisci_initdb data -f
-            omnisci_server --version
-            omnisci_server --enable-runtime-udf --enable-table-functions 2>&1 > heavydb-output.txt &
+            mkdir storage && initheavy storage -f
+            heavydb --version
+            heavydb --enable-dev-table-functions --enable-udf-registration-for-all-users --enable-runtime-udfs --enable-table-functions 2>&1 > heavydb-output.txt &
             sleep 10
 
         - name: conda config
@@ -328,10 +327,15 @@ jobs:
           run: |
             conda list
 
+        - name: Install RBC
+          shell: bash -l {0}
+          continue-on-error: true
+          run: |
+            pip install -e .
+
         - name: Execute pytest
           shell: bash -l {0}
           run: |
-            pip install -e .
             pytest -v -rs --nbval notebooks/ -x
-            pkill -f omnisci_server
+            pkill -f heavydb
             cat heavydb-output.txt

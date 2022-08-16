@@ -2,17 +2,14 @@ import pytest
 from rbc.tests import heavydb_fixture
 
 
-@pytest.mark.parametrize('mth', ['columnar', 'query'])
 @pytest.mark.parametrize('suffix', ['', '10', 'null', 'array', 'arraynull'])
-def test_table_load(mth, suffix):
-
-    load_columnar = mth == 'columnar'
+def test_table_load(suffix):
 
     count = 0
-    for heavydb in heavydb_fixture(globals(), load_columnar=load_columnar):
+    for heavydb in heavydb_fixture(globals()):
         heavydb.require_version((5, 7, 0),
                                 'Requires heavydb-internal PR 5465 [rbc PR 330]')
-        if load_columnar and suffix == 'arraynull':
+        if suffix == 'arraynull':
             heavydb.require_version((5, 7, 0),
                                     'Requires heavydb-internal PR 5492 [rbc issue 245]')
         count += 1

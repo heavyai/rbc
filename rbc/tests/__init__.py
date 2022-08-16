@@ -222,7 +222,7 @@ class _TextTestTable(_TestTable):
 
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                     suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'],
-                    load_columnar=True, load_test_data=True, debug=False):
+                    load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
     .. code-block:: python
@@ -351,10 +351,6 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
                 # merged, consider removing the corresponding test
                 warnings.warn(f'detected test requiring {version} with out-of-date label {label}.'
                               ' Please reset test label to None.')
-
-    # Throw an error on Travis CI if the server is not available
-    if "TRAVIS" in os.environ and not available_version:
-        pytest.exit(msg=reason, returncode=1)
 
     require_version(minimal_version)
 

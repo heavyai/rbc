@@ -4,7 +4,7 @@ from rbc.tests import heavydb_fixture
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=not True, load_columnar=True, load_test_data=False):
+    for o in heavydb_fixture(globals(), debug=not True, load_test_data=False):
         yield o
 
 
