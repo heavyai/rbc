@@ -351,19 +351,25 @@ class TargetInfo(object):
     def has_numba(self):
         """Check if target supports numba symbols
         """
-        return self.info.get('has_numba', False)
+        return bool(int(self.info.get('has_numba', False)))
 
     @property
     def has_numpy(self):
         """Check if target supports numpy symbols
         """
-        return self.info.get('has_numpy', False)
+        return bool(int(self.info.get('has_numpy', False)))
+
+    @property
+    def has_libdevice(self):
+        """Check if target has libdevice (CUDA math library) available
+        """
+        return bool(int(self.info.get('has_libdevice', False)))
 
     @property
     def has_cpython(self):
         """Check if target supports Python C/API symbols
         """
-        return self.info.get('has_cpython', False)
+        return bool(int(self.info.get('has_cpython', False)))
 
     @property
     def llvm_version(self):
