@@ -19,6 +19,7 @@ from . import (
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
+    HeavyDBRowFunctionManagerType,
 )
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
@@ -406,6 +407,7 @@ class RemoteHeavyDB(RemoteJIT):
         TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
         TableFunctionManager='HeavyDBTableFunctionManagerType<>',
+        RowFunctionManager='HeavyDBRowFunctionManagerType<>',
         Timestamp='HeavyDBTimestampType',
         UDTF='int32|kind=UDTF'
     )
@@ -1181,10 +1183,20 @@ class RemoteHeavyDB(RemoteJIT):
         name = caller.func.__name__
         thrift = self.thrift_client.thrift
         rtype = self.type_to_extarg(sig[0])
-        atypes = self.type_to_extarg(sig[1])
+        uses_manager = False
+        atypes = []
+        for i, a in enumerate(sig[1]):
+            if isinstance(a, HeavyDBRowFunctionManagerType):
+                err_msg = 'RowFunctionManager ought to be the first argument'
+                if i != 0:
+                    raise TypeError(err_msg)
+                uses_manager = True
+                continue
+            else:
+                atypes.append(self.type_to_extarg(a))
         return thrift.TUserDefinedFunction(
             name + sig.mangling(),
-            atypes, rtype)
+            atypes, rtype, uses_manager)
 
     def register(self):
         """Register caller cache to the server."""

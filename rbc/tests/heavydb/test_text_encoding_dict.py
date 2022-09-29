@@ -7,7 +7,7 @@ from rbc.tests import heavydb_fixture
 @pytest.fixture(scope="module")
 def heavydb():
 
-    for o in heavydb_fixture(globals(), minimal_version=(5, 7)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 7), suffices=['text']):
         define(o)
         o.base_name = os.path.splitext(os.path.basename(__file__))[0]
         yield o
@@ -488,3 +488,24 @@ def test_getString_lst(heavydb, col):
         assert list(result) == [(9,), (9,), (9,), (12,), (15,)]
     else:
         assert list(result) == [(18,), (9,), (9,), (9,)]
+
+
+@pytest.mark.parametrize('col', ['t1'])
+def test_udf_copy_dict_encoded_string(heavydb, col):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB main branch')
+
+    table = f"{heavydb.base_name}text"
+
+    @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+    def fn_copy(mgr, t):
+        dict_id = mgr.getDictId('fn_copy', 0)
+        str = mgr.getString(dict_id, t)
+        return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_ID, str)
+
+    heavydb.register()
+
+    query = f"SELECT fn_copy({col}) from {table}"
+    _, result = heavydb.sql_execute(query)
+
+    assert list(result) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
