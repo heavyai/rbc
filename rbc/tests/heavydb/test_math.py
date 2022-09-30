@@ -217,7 +217,6 @@ numpy_functions = [
     ('subtract', 'double(double, double)', np.subtract),
     ('multiply', 'double(double, double)', np.multiply),
     ('divide', 'double(double, double)', np.divide),
-    ('true_divide', 'double(double, double)', np.true_divide),
     ('floor_divide', 'double(double, double)', np.floor_divide),
     ('power', 'double(double, double)', np.power),
     ('float_power', 'double(double, double)', np.float_power),
