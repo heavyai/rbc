@@ -96,7 +96,7 @@ def _impl_ufunc_logaddexp2(x1, x2):
     pass
 
 
-@binary_expose.implements(np.true_divide, ufunc_name='true_divide', api=API.NUMPY_API)
+@binary_expose.implements(np.true_divide, ufunc_name="true_divide", api=API.NUMPY_API)
 def _impl_ufunc_true_divide(x1, x2):
     pass
 

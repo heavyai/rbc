@@ -308,7 +308,7 @@ jobs:
         - name: Install additional packages
           shell: bash -l {0}
           run: |
-            mamba install -c conda-forge heavydb nbval ibis-heavyai matplotlib pandas
+            mamba install -c conda-forge heavydb nbval ibis-heavyai matplotlib pandas ibis-framework==3.0.2
 
         - name: Start heavydb server
           shell: bash -l {0}
