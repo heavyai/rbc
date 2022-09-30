@@ -1,8 +1,9 @@
 __all__ = ['HeavyDBRowFunctionManagerType']
 
 
-from numba.core import extending, types, cgutils
+from numba.core import extending, cgutils
 from numba.core.cgutils import make_bytearray, global_constant
+from numba.core import types as nb_types
 from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
@@ -20,7 +21,7 @@ class HeavyDBRowFunctionManagerType(Type):
 
     @property
     def __typesystem_type__(self):
-        ptr_t = Type.fromstring("int8 ptr")
+        ptr_t = Type.fromstring("int8 pointer")
         return Type(ptr_t).params(NumbaPointerType=HeavyDBRowFunctionManagerNumbaType).pointer()
 
 
@@ -36,13 +37,13 @@ i64 = ir.IntType(64)
 
 @extending.intrinsic
 def heavydb_udf_manager_get_dict_id_(typingctx, mgr, func_name, arg_idx):
-    sig = types.int32(mgr, func_name, arg_idx)
+    sig = nb_types.int32(mgr, func_name, arg_idx)
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    if not isinstance(func_name, types.StringLiteral):
+    if not isinstance(func_name, nb_types.StringLiteral):
         raise RequireLiteralValue(f"expected StringLiteral but got {type(func_name).__name__}")
 
     def codegen(context, builder, signature, args):

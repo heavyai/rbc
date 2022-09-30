@@ -7,7 +7,7 @@ from rbc.tests import heavydb_fixture
 @pytest.fixture(scope="module")
 def heavydb():
 
-    for o in heavydb_fixture(globals(), minimal_version=(5, 7), suffices=['text']):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 7), suffices=['', 'text']):
         define(o)
         o.base_name = os.path.splitext(os.path.basename(__file__))[0]
         yield o
@@ -106,8 +106,14 @@ def define(heavydb):
                     y[j] += len(col.string_dict_proxy.getString(j))
             return unique
 
+        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        def fn_copy(mgr, t):
+            dict_id = mgr.getDictId('fn_copy', 0)
+            str = mgr.getString(dict_id, t)
+            return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_ID, str)
 
-@pytest.fixture(scope="function")
+
+@pytest.fixture(scope="module")
 def create_columns(heavydb):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
@@ -496,16 +502,18 @@ def test_udf_copy_dict_encoded_string(heavydb, col):
         pytest.skip('Requires HeavyDB main branch')
 
     table = f"{heavydb.base_name}text"
-
-    @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
-    def fn_copy(mgr, t):
-        dict_id = mgr.getDictId('fn_copy', 0)
-        str = mgr.getString(dict_id, t)
-        return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_ID, str)
-
-    heavydb.register()
-
     query = f"SELECT fn_copy({col}) from {table}"
     _, result = heavydb.sql_execute(query)
 
     assert list(result) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
+
+
+def test_row_function_manager(heavydb):
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB main branch')
+
+    @heavydb('int32(int32, RowFunctionManager)')
+    def invalid_fn(a, mgr):
+        return a
+
+    heavydb.register()

@@ -406,8 +406,8 @@ class RemoteHeavyDB(RemoteJIT):
         ColumnList='HeavyDBColumnListType',
         TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
-        TableFunctionManager='HeavyDBTableFunctionManagerType<>',
-        RowFunctionManager='HeavyDBRowFunctionManagerType<>',
+        TableFunctionManager='HeavyDBTableFunctionManagerType',
+        RowFunctionManager='HeavyDBRowFunctionManagerType',
         Timestamp='HeavyDBTimestampType',
         UDTF='int32|kind=UDTF'
     )
@@ -1450,6 +1450,9 @@ class RemoteHeavyDB(RemoteJIT):
             use_typename = True
         elif isinstance(typ, HeavyDBTableFunctionManagerType):
             typ = typ.copy().params(typename='TableFunctionManager')
+            use_typename = True
+        elif isinstance(typ, HeavyDBRowFunctionManagerType):
+            typ = typ.copy().params(typename='RowFunctionManager')
             use_typename = True
         elif is_sizer(typ):
             sizer = get_sizer_enum(typ)
