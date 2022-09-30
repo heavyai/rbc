@@ -1,7 +1,7 @@
 """
 Array API specification for element-wise functions.
 
-https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html.
+https://data-apis.org/array- api/latest/API_specification/elementwise_functions.html.
 """
 
 from rbc.stdlib import Expose, BinaryUfuncExpose, UnaryUfuncExpose, API, determine_input_type
@@ -13,7 +13,7 @@ from numba.core import types
 
 __all__ = [
     'add', 'subtract', 'multiply', 'divide', 'logaddexp', 'logaddexp2',
-    'floor_divide', 'pow', 'remainder', 'mod',
+    'true_divide', 'floor_divide', 'pow', 'remainder', 'mod',
     'fmod', 'gcd', 'lcm', 'bitwise_and', 'bitwise_or', 'bitwise_xor',
     'bitwise_not', 'atan2', 'hypot',
     'greater', 'greater_equal', 'less', 'less_equal', 'not_equal',
@@ -93,6 +93,11 @@ def _impl_ufunc_copysign(x1, x2):
 
 @binary_expose.implements(np.logaddexp2, api=API.NUMPY_API)
 def _impl_ufunc_logaddexp2(x1, x2):
+    pass
+
+
+@binary_expose.implements(np.true_divide, api=API.NUMPY_API)
+def _impl_ufunc_true_divide(x1, x2):
     pass
 
 
