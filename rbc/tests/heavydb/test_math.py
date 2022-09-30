@@ -119,7 +119,6 @@ math_functions = [
 devices = ('cpu', 'gpu')
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=["math." + item[0] for item in math_functions])
@@ -316,7 +315,6 @@ if np is not None:
                 print(f'TODO: ADD {n} TEST TO {__file__}')
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
                          ids=["np." + item[0] for item in numpy_functions])
