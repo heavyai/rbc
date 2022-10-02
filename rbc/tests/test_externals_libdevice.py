@@ -64,7 +64,6 @@ cols_dict = {
 }
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "fname,retty,argtys,has_ptr_arg", funcs, ids=[item[0] for item in funcs]
 )

@@ -227,7 +227,7 @@ class TargetInfo(object):
         supported_keys = ('name', 'triple', 'datalayout', 'features', 'bits',
                           'compute_capability', 'count', 'threads', 'cores',
                           'has_cpython', 'has_numba', 'driver', 'software',
-                          'llvm_version', 'null_values')
+                          'llvm_version', 'null_values', 'has_libdevice')
         if prop not in supported_keys:
             print(f'rbc.{type(self).__name__}:'
                   f' unsupported property {prop}={value}.')
