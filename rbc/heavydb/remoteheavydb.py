@@ -1068,7 +1068,6 @@ class RemoteHeavyDB(RemoteJIT):
                 target_info.add_library('stdlib')
                 target_info.add_library('heavydb')
             elif target_info.is_gpu:
-                print(f'{target_info.has_libdevice=}')
                 if self.version < (6, 2):
                     # BC note: older heavydb versions do not define
                     # has_libdevice and assume that libdevice exists
