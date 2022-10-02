@@ -451,6 +451,7 @@ class RemoteHeavyDB(RemoteJIT):
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
         self.has_cuda = None
+        self.has_cuda_libdevice = None
         self._null_values = dict()
 
         # An user-defined device-LLVM IR mapping.
@@ -1066,8 +1067,15 @@ class RemoteHeavyDB(RemoteJIT):
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('heavydb')
-            elif target_info.is_gpu and self.version >= (5, 5):
-                target_info.add_library('libdevice')
+            elif target_info.is_gpu:
+                if self.version < (6, 2):
+                    # BC note: older heavydb versions do not define
+                    # has_libdevice and assume that libdevice exists
+                    self.has_cuda_libdevice = True
+                else:
+                    self.has_cuda_libdevice = target_info.has_libdevice
+                if self.has_cuda_libdevice:
+                    target_info.add_library('libdevice')
 
             version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
             target_info.set('software', f'HeavyDB {version_str}')

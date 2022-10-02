@@ -21,6 +21,8 @@ def heavydb():
     for o in heavydb_fixture(globals()):
         if not o.has_cuda:
             pytest.skip("cuda is not enabled")
+        if not o.has_cuda_libdevice:
+            pytest.skip('Test requires CUDA-enabled heavydb server with libdevice')
         define(o)
         yield o
 
