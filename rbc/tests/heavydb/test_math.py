@@ -197,7 +197,7 @@ def test_math_function(heavydb, device, nb_version, fn_name, signature):
         if np.isnan(expected):
             assert np.isnan(result)
         else:
-            assert(np.isclose(expected, result))
+            assert np.isclose(expected, result)
 
 
 numpy_functions = [
@@ -385,4 +385,4 @@ def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func
         if np.isnan(expected):
             assert np.isnan(result), fn_name
         else:
-            assert(np.isclose(expected, result)), fn_name
+            assert np.isclose(expected, result), fn_name

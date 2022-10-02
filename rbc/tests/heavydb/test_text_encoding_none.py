@@ -172,3 +172,15 @@ def test_if_else_assignment(heavydb):
     assert classify_slope(2.4).execute() == "low"
     assert classify_slope(5.4).execute() == "med"
     assert classify_slope(15.4).execute() == "high"
+
+
+def test_return_text(heavydb):
+    @heavydb("TextEncodingNone(TextEncodingNone)", devices=['cpu'])
+    def fn(t):
+        return t
+
+    table = heavydb.table_name + 'text'
+    _, result = heavydb.sql_execute(f"select n, fn(n) from {table};")
+    result = list(zip(*result))
+    expected, got = result
+    assert expected == got
