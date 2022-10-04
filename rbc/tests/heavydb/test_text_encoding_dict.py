@@ -408,7 +408,7 @@ def test_ct_binding_dict_encoded45(heavydb, size, fn_suffix):
 @pytest.mark.parametrize('col', ['t1', 't2', 't4'])
 def test_getStringId(heavydb, col, text):
     if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB main branch')
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     fn = 'test_getstringid_from_arg'
     table = f"{heavydb.base_name}text"
@@ -428,7 +428,7 @@ def test_getStringId(heavydb, col, text):
 @pytest.mark.parametrize('col', ['t1', 't2', 't4'])
 def test_getStringId_unicode(heavydb, col):
     if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB main branch')
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     fn = 'test_getstringid_from_unicode'
     table = f"{heavydb.base_name}text"
@@ -443,7 +443,7 @@ def test_getStringId_unicode(heavydb, col):
 
 def test_empty_input_id(heavydb):
     if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB main branch')
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     fn = 'test_empty_input_id'
     query = (f"SELECT * FROM table({fn}());")
@@ -459,7 +459,7 @@ def test_empty_input_id(heavydb):
 @pytest.mark.parametrize('col', ['t1', 't2', 't4'])
 def test_getString(heavydb, col):
     if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB main branch')
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     table = f"{heavydb.base_name}text"
     _, unique = heavydb.sql_execute(f'select count(distinct {col}) from {table}')
@@ -477,7 +477,7 @@ def test_getString(heavydb, col):
 @pytest.mark.parametrize('col', ['t1', 't2', 't4'])
 def test_getString_lst(heavydb, col):
     if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB main branch')
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     table = f"{heavydb.base_name}text"
     _, unique = heavydb.sql_execute(f'select count(distinct {col}) from {table}')
@@ -499,7 +499,7 @@ def test_getString_lst(heavydb, col):
 @pytest.mark.parametrize('col', ['t1'])
 def test_udf_copy_dict_encoded_string(heavydb, col):
     if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB main branch')
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     table = f"{heavydb.base_name}text"
     query = f"SELECT fn_copy({col}) from {table}"
@@ -509,11 +509,13 @@ def test_udf_copy_dict_encoded_string(heavydb, col):
 
 
 def test_row_function_manager(heavydb):
-    if heavydb.version[:2] < (6, 3):
-        pytest.skip('Requires HeavyDB main branch')
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     @heavydb('int32(int32, RowFunctionManager)')
     def invalid_fn(a, mgr):
         return a
 
-    heavydb.register()
+    with pytest.raises(TypeError) as exc:
+        heavydb.register()
+    assert str(exc.value) == 'RowFunctionManager ought to be the first argument'
