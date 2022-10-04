@@ -21,8 +21,8 @@ class HeavyDBRowFunctionManagerType(Type):
 
     @property
     def __typesystem_type__(self):
-        t = Type('int8').params(NumbaPointerType=HeavyDBRowFunctionManagerNumbaType)
-        return t.pointer()
+        ptr_t = Type.fromstring("int8 pointer")
+        return Type(ptr_t).params(NumbaPointerType=HeavyDBRowFunctionManagerNumbaType).pointer()
 
 
 class HeavyDBRowFunctionManagerNumbaType(structure_type.StructureNumbaPointerType):
