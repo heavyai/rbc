@@ -1,6 +1,7 @@
 import pytest
-import numpy as np
+from rbc.tests import heavydb_fixture
 
+import numpy as np
 from rbc.stdlib import array_api
 from rbc.typesystem import Type
 from rbc.heavydb import type_to_type_name
@@ -14,48 +15,8 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    # TODO: use heavydb_fixture from rbc/tests/__init__.py
-    config = rbc_heavydb.get_client_config(debug=not True)
-    m = rbc_heavydb.RemoteHeavyDB(**config)
-    table_name = 'rbc_test_heavydb_array'
-
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    sqltypes = ['FLOAT[]', 'DOUBLE[]',
-                'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
-                'BOOLEAN[]']
-    # todo: TEXT ENCODING DICT, TEXT ENCODING NONE, TIMESTAMP, TIME,
-    # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
-    # MULTIPOLYGON, See
-    # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
-    colnames = ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
-    table_defn = ',\n'.join('%s %s' % (n, t)
-                            for t, n in zip(sqltypes, colnames))
-    m.sql_execute(
-        'CREATE TABLE IF NOT EXISTS {table_name} ({table_defn});'
-        .format(**locals()))
-
-    def row_value(row, col, colname):
-        if colname == 'b':
-            return 'ARRAY[%s]' % (', '.join(
-                ("'true'" if i % 2 == 0 else "'false'")
-                for i in range(-3, 3)))
-        if colname.startswith('f'):
-            return 'ARRAY[%s]' % (', '.join(
-                str(row * 10 + i + 0.5) for i in range(-3, 3)))
-        return 'ARRAY[%s]' % (', '.join(
-            str(row * 10 + i) for i in range(-3, 3)))
-
-    rows = 5
-    for i in range(rows):
-        table_row = ', '.join(str(row_value(i, j, n))
-                              for j, n in enumerate(colnames))
-        m.sql_execute(f'INSERT INTO {table_name} VALUES ({table_row})')
-    m.table_name = table_name
-    yield m
-    try:
-        m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-    except Exception as msg:
-        print('%s in deardown' % (type(msg)))
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6), suffices=['array']):
+        yield o
 
 
 def np_ones(sz):
