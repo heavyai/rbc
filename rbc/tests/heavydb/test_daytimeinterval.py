@@ -9,7 +9,7 @@ available_version, reason = rbc_heavydb.is_available()
 @pytest.fixture(scope="module")
 def heavydb():
     for o in heavydb_fixture(
-        globals(), debug=False, load_test_data=False, minimal_version=(6, 0)
+        globals(), debug=False, load_test_data=False, minimal_version=(6, 2)
     ):
         define(o)
         yield o
@@ -132,6 +132,9 @@ inputs = [
 @pytest.mark.parametrize("start, stop, step, order", inputs)
 def test_generate_time_series(heavydb, start, stop, step, order):
 
+    if heavydb.version[:2] >= (6, 2):
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
+
     RBC_FUNC = "rbc_generate_series"
     HEAVYDB_FUNC = "generate_series"
 
@@ -177,6 +180,9 @@ invalid_inputs = [
 
 @pytest.mark.parametrize("start, stop, step, error_msg", invalid_inputs)
 def test_generate_series_invalid_inputs(heavydb, start, stop, step, error_msg):
+
+    if heavydb.version[:2] >= (6, 2):
+        pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     query = (
         "SELECT generate_series FROM TABLE(rbc_generate_series("
