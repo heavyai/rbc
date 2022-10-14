@@ -3,6 +3,7 @@ import numpy as np
 from rbc.heavydb import Array
 from rbc.tests import heavydb_fixture
 from numba import types as nb_types
+from rbc.stdlib import array_api  # noqa: F401
 import operator
 
 
@@ -13,7 +14,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), load_test_data=False):
         define(o)
         yield o
 

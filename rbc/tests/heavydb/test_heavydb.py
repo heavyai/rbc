@@ -9,9 +9,6 @@ from rbc.typesystem import Type
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
-# Throw an error on Travis CI if the server is not available
-if "TRAVIS" in os.environ and not available_version:
-    pytest.exit(msg=reason, returncode=1)
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -67,7 +64,7 @@ def nb_version():
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), suffices=['']):
         yield o
 
 

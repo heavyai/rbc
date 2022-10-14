@@ -5,7 +5,7 @@ from rbc.tests import heavydb_fixture
 
 @pytest.fixture(scope="module")
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(5, 7)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 7), suffices=['']):
         o.base_name = os.path.splitext(os.path.basename(__file__))[0]
         yield o
 
