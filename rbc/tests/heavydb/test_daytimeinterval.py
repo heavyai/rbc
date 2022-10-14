@@ -1,5 +1,6 @@
 import pytest
 from rbc.tests import heavydb_fixture
+from rbc.errors import HeavyDBServerError
 
 rbc_heavydb = pytest.importorskip("rbc.heavydb")
 available_version, reason = rbc_heavydb.is_available()
@@ -154,3 +155,36 @@ def test_generate_time_series(heavydb, start, stop, step, order):
         _, rbc_result = heavydb.sql_execute(non_named_arg_query.format(RBC_FUNC))
         _, heavy_result = heavydb.sql_execute(non_named_arg_query.format(HEAVYDB_FUNC))
         assert list(rbc_result) == list(heavy_result)
+
+
+invalid_inputs = [
+    (
+        # Step of 0 days is not permitted
+        "TIMESTAMP(9) '1970-01-01 00:00:00.000000010'",
+        "TIMESTAMP(9) '1970-01-01 00:00:00.000000020'",
+        "INTERVAL '0' day",
+        "Timestamp division by zero",
+    ),
+    (
+        # Step of 0 months is not permitted
+        "TIMESTAMP(9) '1970-01-01 00:00:00.000000010'",
+        "TIMESTAMP(9) '1970-01-01 00:00:00.000000020'",
+        "INTERVAL '0' month",
+        "Timestamp division by zero",
+    ),
+]
+
+
+@pytest.mark.parametrize("start, stop, step, error_msg", invalid_inputs)
+def test_generate_series_invalid_inputs(heavydb, start, stop, step, error_msg):
+
+    query = (
+        "SELECT generate_series FROM TABLE(rbc_generate_series("
+        f"{start},"
+        f"{stop},"
+        f"{step}));"
+    )
+    with pytest.raises(HeavyDBServerError) as exc:
+        _, result = heavydb.sql_execute(query)
+
+    assert exc.match(error_msg)
