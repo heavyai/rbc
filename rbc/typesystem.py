@@ -727,9 +727,12 @@ class Type(tuple, metaclass=MetaType):
         return tuple.__str__(self)
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, self.__class__):
-            return super().__eq__(other)
-        return False
+        if not isinstance(other, self.__class__):
+            return False
+        return super().__eq__(other)
+
+    def __hash__(self) -> int:
+        return super().__hash__()
 
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
                  use_annotation_name=False, _skip_annotation=False):

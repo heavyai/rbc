@@ -278,17 +278,12 @@ class Signature:
                     assert isinstance(csig, Type), (sig, csig, type(csig))
                     csig = self.remotejit.normalize_function_type(csig)
                     signature.add(csig)
-                    # print()
-                    # print('csig')
-                    # print(str(csig))
             else:
                 sig = self.remotejit.normalize_function_type(sig)
                 signature.add(sig)
         if fsig is not None and fsig.is_complete:
             fsig = self.remotejit.normalize_function_type(fsig)
             signature.add(fsig)
-        # print('signature')
-        # print(signature)
         return signature
 
 
