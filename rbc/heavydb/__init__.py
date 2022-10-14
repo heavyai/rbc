@@ -9,6 +9,8 @@ from .text_encoding_dict import *  # noqa: F401, F403
 from .string_dict_proxy import *  # noqa: F401, F403
 from .text_encoding_none import *  # noqa: F401, F403
 from .timestamp import *  # noqa: F401, F403
+from .day_time_interval import *  # noqa: F401, F403
+from .year_month_time_interval import *  # noqa: F401, F403
 from .remoteheavydb import *  # noqa: F401, F403
 
 from . import mathimpl as math  # noqa: F401

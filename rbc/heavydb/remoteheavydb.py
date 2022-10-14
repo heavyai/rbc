@@ -407,6 +407,8 @@ class RemoteHeavyDB(RemoteJIT):
         TextEncodingDict='HeavyDBTextEncodingDictType',
         TableFunctionManager='HeavyDBTableFunctionManagerType<>',
         Timestamp='HeavyDBTimestampType',
+        DayTimeInterval='HeavyDBDayTimeIntervalType',
+        YearMonthTimeInterval='HeavyDBYearMonthTimeIntervalType',
         UDTF='int32|kind=UDTF'
     )
 
@@ -898,6 +900,8 @@ class RemoteHeavyDB(RemoteJIT):
             'TextEncodingNone': typemap['TExtArgumentType'].get('TextEncodingNone'),
             'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
             'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
+            'DayTimeInterval': typemap['TExtArgumentType'].get('DayTimeInterval'),
+            'YearMonthTimeInterval': typemap['TExtArgumentType'].get('YearMonthTimeInterval'),
         }
 
         if self.version[:2] < (5, 4):
