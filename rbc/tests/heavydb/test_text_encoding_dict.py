@@ -108,9 +108,10 @@ def define(heavydb):
 
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
         def fn_copy(mgr, t):
+            db_id = mgr.getDictDbId('fn_copy', 0)
             dict_id = mgr.getDictId('fn_copy', 0)
-            str = mgr.getString(dict_id, t)
-            return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_ID, str)
+            str = mgr.getString(db_id, dict_id, t)
+            return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_DB_ID, mgr.TRANSIENT_DICT_ID, str)
 
 
 @pytest.fixture(scope="module")

@@ -63,6 +63,7 @@ class HeavyDB(Library):
     StringDictionaryProxy_getStringBytes StringDictionaryProxy_getStringLength
     StringDictionaryProxy_getStringId
     RowFunctionManager_getStringDictionaryProxy RowFunctionManager_getDictId
+    RowFunctionManager_getDictDbId
     '''.strip().split())
 
 

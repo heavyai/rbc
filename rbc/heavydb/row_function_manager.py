@@ -35,10 +35,12 @@ i32 = ir.IntType(32)
 i64 = ir.IntType(64)
 
 
-@extending.intrinsic
-def heavydb_udf_manager_get_dict_id_(typingctx, mgr, func_name, arg_idx):
-    sig = nb_types.int32(mgr, func_name, arg_idx)
+__DB_ID = 0x0f
+__DICT_ID = 0x0e
 
+
+@extending.intrinsic
+def heavydb_udf_manager_get_dict_id_(typingctx, mgr, kind, func_name, arg_idx):
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
@@ -46,8 +48,15 @@ def heavydb_udf_manager_get_dict_id_(typingctx, mgr, func_name, arg_idx):
     if not isinstance(func_name, nb_types.StringLiteral):
         raise RequireLiteralValue(f"expected StringLiteral but got {type(func_name).__name__}")
 
+    if not isinstance(kind, nb_types.IntegerLiteral):
+        raise RequireLiteralValue(f"expected IntegerLiteral but got {kind}")
+
+    sig = nb_types.int32(mgr, kind, func_name, arg_idx)
+
+    suffix = 'getDictDbId' if kind.literal_value == __DB_ID else 'getDictId'
+
     def codegen(context, builder, signature, args):
-        mgr_ptr, _, idx = args
+        mgr_ptr, _, _, idx = args
 
         mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
 
@@ -61,7 +70,7 @@ def heavydb_udf_manager_get_dict_id_(typingctx, mgr, func_name, arg_idx):
 
         fnty = ir.FunctionType(i32, [i8p, i8p, i64])
         fn = cgutils.get_or_insert_function(
-            builder.module, fnty, "RowFunctionManager_getDictId")
+            builder.module, fnty, f"RowFunctionManager_{suffix}")
 
         return builder.call(fn, [mgr_i8ptr, msg_ptr, idx])
 
@@ -69,24 +78,25 @@ def heavydb_udf_manager_get_dict_id_(typingctx, mgr, func_name, arg_idx):
 
 
 @extending.intrinsic
-def heavydb_udf_manager_get_string_dict_proxy_(typingctx, mgr, dict_id):
+def heavydb_udf_manager_get_string_dict_proxy_(typingctx, mgr, db_id, dict_id):
     from .string_dict_proxy import StringDictionaryProxyNumbaType
     dict_proxy = StringDictionaryProxyNumbaType()
-    sig = dict_proxy(mgr, dict_id)
+    sig = dict_proxy(mgr, db_id, dict_id)
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     def codegen(context, builder, signature, args):
-        mgr_ptr, dict_id = args
+        mgr_ptr, db_id, dict_id = args
 
         mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
-        fnty = ir.FunctionType(i8p, [i8p, i32])
+        fnty = ir.FunctionType(i8p, [i8p, i32, i32])
         fn = cgutils.get_or_insert_function(
             builder.module, fnty, "RowFunctionManager_getStringDictionaryProxy")
         dict_id = builder.trunc(dict_id, i32)
-        proxy_ptr = builder.call(fn, [mgr_i8ptr, dict_id])
+        db_id = builder.trunc(db_id, i32)
+        proxy_ptr = builder.call(fn, [mgr_i8ptr, db_id, dict_id])
         proxy_ctor = cgutils.create_struct_proxy(sig.return_type)
         proxy = proxy_ctor(context, builder)
         proxy.ptr = proxy_ptr
@@ -98,33 +108,41 @@ def heavydb_udf_manager_get_string_dict_proxy_(typingctx, mgr, dict_id):
 @extending.overload_method(HeavyDBRowFunctionManagerNumbaType, 'getDictId')
 def heavydb_udf_manager_get_dict_id(mgr, func_name, arg_idx):
     def impl(mgr, func_name, arg_idx):
-        return heavydb_udf_manager_get_dict_id_(mgr, func_name, arg_idx)
+        return heavydb_udf_manager_get_dict_id_(mgr, __DICT_ID, func_name, arg_idx)
+    return impl
+
+
+@extending.overload_method(HeavyDBRowFunctionManagerNumbaType, 'getDictDbId')
+def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
+    def impl(mgr, func_name, arg_idx):
+        return heavydb_udf_manager_get_dict_id_(mgr, __DB_ID, func_name, arg_idx)
     return impl
 
 
 @extending.overload_method(HeavyDBRowFunctionManagerNumbaType, 'getStringDictionaryProxy')
-def heavydb_udf_manager_get_string_dict_proxy(mgr, dict_id):
-    def impl(mgr, dict_id):
-        return heavydb_udf_manager_get_string_dict_proxy_(mgr, dict_id)
+def heavydb_udf_manager_get_string_dict_proxy(mgr, db_id, dict_id):
+    def impl(mgr, db_id, dict_id):
+        return heavydb_udf_manager_get_string_dict_proxy_(mgr, db_id, dict_id)
     return impl
 
 
 @extending.overload_method(HeavyDBRowFunctionManagerNumbaType, 'getOrAddTransient')
-def heavydb_udf_manager_get_or_add_transient(mgr, dict_id, str_arg):
-    def impl(mgr, dict_id, str_arg):
-        proxy = mgr.getStringDictionaryProxy(dict_id)
+def heavydb_udf_manager_get_or_add_transient(mgr, db_id, dict_id, str_arg):
+    def impl(mgr, db_id, dict_id, str_arg):
+        proxy = mgr.getStringDictionaryProxy(db_id, dict_id)
         return proxy.getOrAddTransient(str_arg)
     return impl
 
 
 @extending.overload_method(HeavyDBRowFunctionManagerNumbaType, 'getString')
-def heavydb_udf_manager_get_string(mgr, dict_id, string_id):
-    def impl(mgr, dict_id, string_id):
-        proxy = mgr.getStringDictionaryProxy(dict_id)
+def heavydb_udf_manager_get_string(mgr, db_id, dict_id, string_id):
+    def impl(mgr, db_id, dict_id, string_id):
+        proxy = mgr.getStringDictionaryProxy(db_id, dict_id)
         return proxy.getString(string_id)
     return impl
 
 
+@extending.overload_attribute(HeavyDBRowFunctionManagerNumbaType, 'TRANSIENT_DICT_DB_ID')
 @extending.overload_attribute(HeavyDBRowFunctionManagerNumbaType, 'TRANSIENT_DICT_ID')
 def heavydb_udf_manager_transient_dict_id(mgr):
     def impl(mgr):
