@@ -477,10 +477,19 @@ def get_null_value(buffer):
     target_info = TargetInfo()
     null_value = target_info.null_values[f'{T}']
 
+    # null_values are stored as uin64 values but when assigning to
+    # i.e. Column<double>, they null value need to be bitcasted to
+    # double.
+    toty = T.key
+    conv_table = {
+        'Timestamp': 'int64'
+    }
+    toty = conv_table.get(toty, toty)
+
     # The server sends numbers as unsigned values rather than signed ones.
     # Thus, 129 should be read as -127 (overflow). See rbc issue #254
     bitwidth = T.bitwidth
-    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(toty)
     return null_value
 
 
