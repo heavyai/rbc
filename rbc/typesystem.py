@@ -1728,9 +1728,10 @@ class Boolean1Model(datamodel.models.BooleanModel):
         return self._bit_type
 
 
-class Boolean8(nb.types.Boolean):
+class Boolean8(nb.types.Integer):
 
-    bitwidth = 8
+    def __init__(self, name, bitwidth=None, signed=None):
+        super().__init__(name, bitwidth=8, signed=True)
 
     def can_convert_to(self, typingctx, other):
         return isinstance(other, nb.types.Boolean)

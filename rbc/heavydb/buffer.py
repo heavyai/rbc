@@ -482,7 +482,9 @@ def get_null_value(buffer):
     # double.
     toty = T.key
     conv_table = {
-        'Timestamp': 'int64'
+        'Timestamp': 'int64',
+        'boolean8': 'int8',
+        'boolean1': 'int8',
     }
     toty = conv_table.get(toty, toty)
 
