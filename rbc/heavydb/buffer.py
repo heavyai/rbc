@@ -27,7 +27,7 @@ import operator
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
-from rbc import typesystem, errors
+from rbc import typesystem
 from rbc.targetinfo import TargetInfo
 from numba.core import datamodel, cgutils, extending, types, imputils
 
