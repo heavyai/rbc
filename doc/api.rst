@@ -73,9 +73,9 @@ one cannot create and use them inside the REPL, for instance.
 .. autosummary::
     :toctree: generated/
 
-    rbc.heavydb.Array
-    rbc.heavydb.Column
-    rbc.heavydb.ColumnList
-    rbc.heavydb.TextEncodingDict
-    rbc.heavydb.TextEncodingNone
-    rbc.heavydb.Timestamp
+    heavydb.Array
+    heavydb.Column
+    heavydb.ColumnList
+    heavydb.TextEncodingDict
+    heavydb.TextEncodingNone
+    heavydb.Timestamp

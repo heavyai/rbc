@@ -52,25 +52,25 @@ class Timestamp(metaclass=HeavyDBMetaType):
 
     def truncateToMicroseconds(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to microseconds
+        Return a new ``Timestamp`` with ``time`` truncated to microseconds
         """
         pass
 
     def truncateToMilliseconds(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to milliseconds
+        Return a new ``Timestamp`` with ``time`` truncated to milliseconds
         """
         pass
 
     def truncateToSeconds(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to seconds
+        Return a new ``Timestamp`` with ``time`` truncated to seconds
         """
         pass
 
     def truncateToMinutes(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to minutes
+        Return a new ``Timestamp`` with ``time`` truncated to minutes
 
         .. note::
             Only available on ``CPU``
@@ -79,7 +79,7 @@ class Timestamp(metaclass=HeavyDBMetaType):
 
     def truncateToHours(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to hours
+        Return a new ``Timestamp`` with ``time`` truncated to hours
 
         .. note::
             Only available on ``CPU``
@@ -88,7 +88,7 @@ class Timestamp(metaclass=HeavyDBMetaType):
 
     def truncateToDay(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to day
+        Return a new ``Timestamp`` with ``time`` truncated to day
 
         .. note::
             Only available on ``CPU``
@@ -97,7 +97,7 @@ class Timestamp(metaclass=HeavyDBMetaType):
 
     def truncateToMonth(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to month
+        Return a new ``Timestamp`` with ``time`` truncated to month
 
         .. note::
             Only available on ``CPU``
@@ -106,7 +106,7 @@ class Timestamp(metaclass=HeavyDBMetaType):
 
     def truncateToYear(self) -> 'Timestamp':
         """
-        Return a new  ``Timestamp`` with ``time`` truncated to year
+        Return a new ``Timestamp`` with ``time`` truncated to year
 
         .. note::
             Only available on ``CPU``
