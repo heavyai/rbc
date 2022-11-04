@@ -49,6 +49,10 @@ class HeavyDBBufferType(typesystem.Type):
         return False
 
     @property
+    def numba_type(self):
+        return BufferType
+
+    @property
     def numba_pointer_type(self):
         return BufferPointer
 
@@ -78,7 +82,7 @@ class HeavyDBBufferType(typesystem.Type):
             size_t,
             *extra_members
         )
-        buffer_type._params['NumbaType'] = BufferType
+        buffer_type._params['NumbaType'] = self.numba_type
         buffer_type._params['NumbaPointerType'] = self.numba_pointer_type
         numba_type = buffer_type.tonumba(bool_is_int8=True)
         if self.pass_by_value:
@@ -431,16 +435,16 @@ def heavydb_buffer_idx_is_null_(typingctx, col_var, row_idx):
     T = col_var.eltype
     sig = types.boolean(col_var, row_idx)
 
-    target_info = TargetInfo()
-    null_value = target_info.null_values[str(T)]
-    # The server sends numbers as unsigned values rather than signed ones.
-    # Thus, 129 should be read as -127 (overflow). See rbc issue #254
-    nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
-
     def codegen(context, builder, signature, args):
         ptr, index = args
         data = builder.extract_value(builder.load(ptr), [0])
         res = builder.load(builder.gep(data, [index]))
+
+        target_info = TargetInfo()
+        null_value = target_info.null_values[str(T)]
+        # The server sends numbers as unsigned values rather than signed ones.
+        # Thus, 129 should be read as -127 (overflow). See rbc issue #254
+        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
 
         # importing it here in case in the future someone tries to import
         # buffer on timestamp.py
@@ -453,7 +457,19 @@ def heavydb_buffer_idx_is_null_(typingctx, col_var, row_idx):
 
         return builder.icmp_signed('==', res, nv)
 
-    return sig, codegen
+    def codegen_column_array(context, builder, sig, args):
+        ptr, index = args
+        i8p = int8_t.as_pointer()
+        fnty = ir.FunctionType(int8_t, [i8p, int64_t])
+        isNull = cgutils.get_or_insert_function(builder.module, fnty,
+                                                "ColumnArray_isNull")
+        flatbuffer = builder.extract_value(builder.load(ptr), [0])
+        return builder.call(isNull, [flatbuffer, index])
+
+    if isinstance(T, BufferPointer):
+        return sig, codegen_column_array
+    else:
+        return sig, codegen
 
 
 # "BufferPointer.is_null" checks if a given array or column is null

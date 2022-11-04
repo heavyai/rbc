@@ -24,6 +24,15 @@ int32_t = ir.IntType(32)
 class HeavyDBColumnType(HeavyDBBufferType):
     """Heavydb Column type for RBC typesystem.
     """
+
+    def postprocess_type(self):
+        # importing here to avoid circular import issue
+        from .array import HeavyDBArrayType
+        if isinstance(self[0][0], HeavyDBArrayType):
+            from .column_array import HeavyDBColumnArrayType
+            return self.copy(cls=HeavyDBColumnArrayType)
+        return self
+
     @property
     def pass_by_value(self):
         heavydb_version = TargetInfo().software[1][:3]

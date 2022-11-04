@@ -954,6 +954,7 @@ class RemoteHeavyDB(RemoteJIT):
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('Timestamp', 'Timestamp'),
         ]:
+            # Column<T>
             ext_arguments_map['HeavyDBColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
@@ -961,12 +962,20 @@ class RemoteHeavyDB(RemoteJIT):
             if T == 'Timestamp':
                 # timestamp is only defined for Columns
                 continue
+
+            # Array<T>
             ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Array<%s>' % T)
+            # ColumnList<T>
             ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
+            # Column<Array<T>>
+            ext_arguments_map[f'HeavyDBColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
+                = ext_arguments_map.get(f'ColumnArray<{T}>')
+            ext_arguments_map[f'HeavyDBOutputColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
+                = ext_arguments_map.get(f'ColumnArray<{T}>')
 
         ext_arguments_map['HeavyDBTextEncodingNoneType<char8>'] = \
             ext_arguments_map.get('TextEncodingNone')

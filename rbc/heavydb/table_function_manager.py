@@ -100,8 +100,41 @@ def heavydb_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
     return sig, codegen
 
 
+@extending.intrinsic
+def mgr_set_output_array_(typingctx, mgr, col_idx, value):
+    sig = types.void(mgr, col_idx, value)
+
+    target_info = TargetInfo()
+    # XXX: Check is heavydb 6.1 has this function
+    if target_info.software[1][:3] < (6, 1, 0):
+        raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
+
+    def codegen(context, builder, sig, args):
+        mgr_ptr, col_idx, value = args
+
+        mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
+
+        fnty = ir.FunctionType(ir.VoidType(), [i8p, i64, i64])
+        fn_name = "TableFunctionManager_set_output_array_values_total_number"
+        module = builder.module
+        fn = cgutils.get_or_insert_function(module, fnty, fn_name)
+
+        builder.call(fn, [mgr_i8ptr, col_idx, value])
+
+    return sig, codegen
+
+
 @extending.overload_method(HeavyDBTableFunctionManagerNumbaType, 'set_output_row_size')
 def heavydb_udtfmanager_set_output_row_size(mgr, num_rows):
     def impl(mgr, num_rows):
         return heavydb_udtfmanager_set_output_row_size_(mgr, num_rows)
+    return impl
+
+
+set_output_array = 'set_output_array_values_total_number'
+
+@extending.overload_method(HeavyDBTableFunctionManagerNumbaType, set_output_array)
+def mgr_set_output_array(mgr, col_idx, value):
+    def impl(mgr, col_idx, value):
+        return mgr_set_output_array_(mgr, col_idx, value)
     return impl
