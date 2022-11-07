@@ -27,7 +27,7 @@ import operator
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
-from rbc import typesystem, errors
+from rbc import typesystem
 from rbc.targetinfo import TargetInfo
 from numba.core import datamodel, cgutils, extending, types, imputils
 
@@ -354,70 +354,11 @@ def heavydb_buffer_getitem(x, i):
         return lambda x, i: heavydb_buffer_getitem_(x, i)
 
 
-# [rbc issue-197] Numba promotes operations like
-# int32(a) + int32(b) to int64
-def truncate_cast_or_extend(builder, value, typ, signed):
-
-    def _cast(builder, value, typ, signed):
-        fn = {
-            # unsigned int := float
-            (ir.IntType, ir.FloatType, False): builder.uitofp,
-            (ir.IntType, ir.DoubleType, False): builder.uitofp,
-            # signed int := float
-            (ir.IntType, ir.FloatType, True): builder.sitofp,
-            (ir.IntType, ir.DoubleType, True): builder.sitofp,
-
-            # float := unsigned int
-            (ir.FloatType, ir.IntType, False): builder.fptoui,
-            (ir.DoubleType, ir.IntType, False): builder.fptoui,
-            # float := signed int
-            (ir.FloatType, ir.IntType, True): builder.fptosi,
-            (ir.DoubleType, ir.IntType, True): builder.fptosi,
-        }[(type(value.type), type(typ), signed)]
-        return fn(value, typ)
-
-    def _truncate(builder, value, typ, signed):
-        if isinstance(typ, ir.IntType):
-            fn = builder.trunc
-        else:
-            fn = builder.fptrunc
-        return fn(value, typ)
-
-    def _extend(builder, value, typ, signed):
-        if isinstance(typ, ir.IntType):
-            fn = builder.zext if signed else builder.sext
-        else:
-            fn = builder.fpext
-        return fn(value, typ)
-
-    if not isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
-        raise errors.NumbaTypeError('Can only truncate, cast or extend int, float or double')
-
-    if value.type.__class__ != typ.__class__ and \
-       ir.IntType in (value.type.__class__, typ.__class__):
-        value = _cast(builder, value, typ, signed)
-
-    if isinstance(value.type, ir.IntType):
-        if value.type.width < typ.width:
-            return _extend(builder, value, typ, signed)
-        elif value.type.width > typ.width:
-            return _truncate(builder, value, typ, signed)
-    elif isinstance(value.type, ir.FloatType):
-        if isinstance(typ, ir.DoubleType):
-            return _extend(builder, value, typ, signed)
-    elif isinstance(value.type, ir.DoubleType):
-        if isinstance(typ, ir.FloatType):
-            return _truncate(builder, value, typ, signed)
-
-    return value
-
-
 @extending.intrinsic
 def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
-    signed = value.signed if isinstance(value, types.Integer) else True
 
-    def codegen(context, builder, signature, args):
+    def codegen(context, builder, sig, args):
         zero = int32_t(0)
 
         data, index, value = args
@@ -426,8 +367,11 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
         ptr = builder.load(rawptr)
 
         buf = builder.load(builder.gep(ptr, [zero, zero]))
-        if isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
-            value = truncate_cast_or_extend(builder, value, buf.type.pointee, signed)
+        # [rbc issue-197] Numba promotes operations like
+        # int32(a) + int32(b) to int64
+        fromty = sig.args[2]
+        toty = sig.args[0].eltype
+        value = context.cast(builder, value, fromty, toty)
         builder.store(value, builder.gep(buf, [index]))
 
     return sig, codegen
@@ -436,13 +380,14 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
 @extending.intrinsic
 def heavydb_buffer_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
-    signed = value.signed if isinstance(value, types.Integer) else True
 
-    def codegen(context, builder, signature, args):
+    def codegen(context, builder, sig, args):
         data, index, value = args
         ptr = builder.extract_value(data, [0])
-        if isinstance(value.type, (ir.IntType, ir.FloatType, ir.DoubleType)):
-            value = truncate_cast_or_extend(builder, value, ptr.type.pointee, signed)
+
+        fromty = sig.args[2]
+        toty = sig.args[0].eltype
+        value = context.cast(builder, value, fromty, toty)
 
         builder.store(value, builder.gep(ptr, [index]))
 
@@ -526,36 +471,28 @@ def heavydb_buffer_is_null(x, row_idx=None):
         return impl
 
 
-@extending.intrinsic
-def heavydb_buffer_idx_set_null(typingctx, arr, row_idx):
-    T = arr.eltype
-    sig = types.none(arr, row_idx)
+def get_null_value(buffer):
+    T = buffer.eltype
 
     target_info = TargetInfo()
     null_value = target_info.null_values[f'{T}']
 
+    # null_values are stored as uin64 values but when assigning to
+    # i.e. Column<double>, they null value need to be bitcasted to
+    # double.
+    toty = T.key
+    conv_table = {
+        'Timestamp': 'int64',
+        'boolean8': 'int8',
+        'boolean1': 'int8',
+    }
+    toty = conv_table.get(toty, toty)
+
     # The server sends numbers as unsigned values rather than signed ones.
     # Thus, 129 should be read as -127 (overflow). See rbc issue #254
     bitwidth = T.bitwidth
-    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(f'int{bitwidth}')
-
-    def codegen(context, builder, signature, args):
-        # get the operator.setitem intrinsic
-        fnop = context.typing_context.resolve_value_type(heavydb_buffer_ptr_setitem_)
-        setitem_sig = types.none(arr, row_idx, T)
-        # register the intrinsic in the typing ctx
-        fnop.get_call_type(context.typing_context, setitem_sig.args, {})
-        intrinsic = context.get_function(fnop, setitem_sig)
-
-        data, index = args
-        # data = {T*, i64, i8}*
-        ty = data.type.pointee.elements[0].pointee
-        nv = ir.Constant(ir.IntType(T.bitwidth), null_value)
-        if isinstance(T, types.Float):
-            nv = builder.bitcast(nv, ty)
-        intrinsic(builder, (data, index, nv,))
-
-    return sig, codegen
+    null_value = np.dtype(f'uint{bitwidth}').type(null_value).view(toty)
+    return null_value
 
 
 @extending.overload_method(BufferPointer, 'set_null')
@@ -565,8 +502,10 @@ def heavydb_buffer_set_null(x, row_idx=None):
             def impl(x, row_idx=None):
                 return heavydb_buffer_set_null_(x)
         else:
+            null_value = get_null_value(x)
+
             def impl(x, row_idx=None):
-                return heavydb_buffer_idx_set_null(x, row_idx)
+                x[row_idx] = null_value
             return impl
         return impl
 
