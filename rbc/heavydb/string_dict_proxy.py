@@ -103,6 +103,7 @@ def proxy_getStringId_(typingctx, proxy_ptr, str_arg):
 
 
 @extending.overload_method(StringDictionaryProxyNumbaType, 'getStringId')
+@extending.overload_method(StringDictionaryProxyNumbaType, 'getOrAddTransient')
 def ov_getStringId(proxy, str_arg):
     def impl(proxy, str_arg):
         return proxy_getStringId_(proxy.ptr, str_arg)

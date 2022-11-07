@@ -810,6 +810,7 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     s = str(a)
                 new_params.append(s)
+            # print(name)
             return (name + '<' + ', '.join(new_params) + '>' + suffix)
         raise NotImplementedError(repr(self))
 

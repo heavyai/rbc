@@ -19,6 +19,7 @@ from . import (
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
+    HeavyDBRowFunctionManagerType,
 )
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
@@ -405,7 +406,8 @@ class RemoteHeavyDB(RemoteJIT):
         ColumnList='HeavyDBColumnListType',
         TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
-        TableFunctionManager='HeavyDBTableFunctionManagerType<>',
+        TableFunctionManager='HeavyDBTableFunctionManagerType',
+        RowFunctionManager='HeavyDBRowFunctionManagerType',
         Timestamp='HeavyDBTimestampType',
         DayTimeInterval='HeavyDBDayTimeIntervalType',
         YearMonthTimeInterval='HeavyDBYearMonthTimeIntervalType',
@@ -1185,10 +1187,23 @@ class RemoteHeavyDB(RemoteJIT):
         name = caller.func.__name__
         thrift = self.thrift_client.thrift
         rtype = self.type_to_extarg(sig[0])
-        atypes = self.type_to_extarg(sig[1])
+        function_annotations = dict()
+        annotations = []
+        atypes = []
+        for i, a in enumerate(sig[1]):
+            if isinstance(a, HeavyDBRowFunctionManagerType):
+                err_msg = 'RowFunctionManager ought to be the first argument'
+                if i != 0:
+                    raise TypeError(err_msg)
+                function_annotations['uses_manager'] = 'True'
+            else:
+                atypes.append(self.type_to_extarg(a))
+                annotations.append({})
+
+        annotations.append(function_annotations)
         return thrift.TUserDefinedFunction(
             name + sig.mangling(),
-            atypes, rtype)
+            atypes, rtype, annotations)
 
     def register(self):
         """Register caller cache to the server."""
@@ -1442,6 +1457,9 @@ class RemoteHeavyDB(RemoteJIT):
             use_typename = True
         elif isinstance(typ, HeavyDBTableFunctionManagerType):
             typ = typ.copy().params(typename='TableFunctionManager')
+            use_typename = True
+        elif isinstance(typ, HeavyDBRowFunctionManagerType):
+            typ = typ.copy().params(typename='RowFunctionManager')
             use_typename = True
         elif is_sizer(typ):
             sizer = get_sizer_enum(typ)
