@@ -6,7 +6,7 @@ from rbc.external import external
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(5, 6), debug=not True):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6), debug=not True, suffices=['']):
         yield o
 
 

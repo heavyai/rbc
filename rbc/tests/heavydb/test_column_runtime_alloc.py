@@ -11,7 +11,7 @@ table_columns_map = dict(int64='i8', int32='i4', int16='i2', int8='i1',
 @pytest.fixture(scope='module')
 def heavydb():
 
-    for o in heavydb_fixture(globals(), minimal_version=(5, 7, 1)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 7, 1), load_test_data=['']):
         define(o)
         yield o
 

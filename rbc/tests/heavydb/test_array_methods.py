@@ -15,7 +15,7 @@ NUMERIC_TYPES = ['int8', 'int16', 'int32', 'int64', 'float32', 'float64']
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), load_test_data=False):
         define(o)
         yield o
 

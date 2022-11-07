@@ -7,7 +7,7 @@ from numba import TypingError
 @pytest.fixture(scope="module")
 def heavydb():
 
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), load_test_data=False):
         yield o
 
 
