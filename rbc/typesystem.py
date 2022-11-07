@@ -732,6 +732,8 @@ class Type(tuple, metaclass=MetaType):
         return super().__eq__(other)
 
     def __hash__(self) -> int:
+        # Explictly add a hash for Type, otherwise code that depends on Type
+        # being hashable fails
         return super().__hash__()
 
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
@@ -810,7 +812,6 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     s = str(a)
                 new_params.append(s)
-            # print(name)
             return (name + '<' + ', '.join(new_params) + '>' + suffix)
         raise NotImplementedError(repr(self))
 
