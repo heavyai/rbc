@@ -62,6 +62,8 @@ class HeavyDB(Library):
     datetrunc_year datetrunc_month datetrunc_day datetrunc_hour datetrunc_minute
     StringDictionaryProxy_getStringBytes StringDictionaryProxy_getStringLength
     StringDictionaryProxy_getStringId
+    RowFunctionManager_getStringDictionaryProxy RowFunctionManager_getDictId
+    RowFunctionManager_getDictDbId
     '''.strip().split())
 
 
