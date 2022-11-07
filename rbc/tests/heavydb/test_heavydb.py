@@ -806,6 +806,8 @@ def test_format_type(heavydb):
     assert test('int32(TextEncodingDict x)') == '(TextEncodingDict x) -> int32'
     assert test('int32(Array<TextEncodingNone> x)') == '(Array<TextEncodingNone> x) -> int32'
 
+    assert test('int32(RowFunctionManager, int32)') == '(RowFunctionManager, int32) -> int32'
+
     def test2(s):
         return test(s, caller=True)
 
