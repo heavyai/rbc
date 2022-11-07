@@ -9,7 +9,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), debug=not True):
+    for o in heavydb_fixture(globals(), suffices=['text']):
         yield o
 
 

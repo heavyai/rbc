@@ -7,7 +7,7 @@ import numpy as np
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), suffices=['']):
         define(o)
         yield o
 

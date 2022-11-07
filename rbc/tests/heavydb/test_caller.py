@@ -7,7 +7,7 @@ from rbc.tests import heavydb_fixture, assert_equal
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(5, 8)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 8), load_test_data=False):
         define(o)
         yield o
 
