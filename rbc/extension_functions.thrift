@@ -75,7 +75,10 @@ enum TExtArgumentType {
   ColumnListArrayTextEncodingNone,
   ArrayTextEncodingDict,
   ColumnArrayTextEncodingDict,
-  ColumnListArrayTextEncodingDict
+  ColumnListArrayTextEncodingDict,
+  GeoMultiPoint,
+  DayTimeInterval,
+  YearMonthTimeInterval,
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required
