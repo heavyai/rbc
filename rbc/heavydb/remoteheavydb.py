@@ -19,6 +19,7 @@ from . import (
     HeavyDBOutputColumnType, HeavyDBColumnType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
+    HeavyDBRowFunctionManagerType,
 )
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
@@ -405,8 +406,11 @@ class RemoteHeavyDB(RemoteJIT):
         ColumnList='HeavyDBColumnListType',
         TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
-        TableFunctionManager='HeavyDBTableFunctionManagerType<>',
+        TableFunctionManager='HeavyDBTableFunctionManagerType',
+        RowFunctionManager='HeavyDBRowFunctionManagerType',
         Timestamp='HeavyDBTimestampType',
+        DayTimeInterval='HeavyDBDayTimeIntervalType',
+        YearMonthTimeInterval='HeavyDBYearMonthTimeIntervalType',
         UDTF='int32|kind=UDTF'
     )
 
@@ -451,6 +455,7 @@ class RemoteHeavyDB(RemoteJIT):
         self.thrift_typemap = defaultdict(dict)
         self._init_thrift_typemap()
         self.has_cuda = None
+        self.has_cuda_libdevice = None
         self._null_values = dict()
 
         # An user-defined device-LLVM IR mapping.
@@ -897,6 +902,8 @@ class RemoteHeavyDB(RemoteJIT):
             'TextEncodingNone': typemap['TExtArgumentType'].get('TextEncodingNone'),
             'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
             'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
+            'DayTimeInterval': typemap['TExtArgumentType'].get('DayTimeInterval'),
+            'YearMonthTimeInterval': typemap['TExtArgumentType'].get('YearMonthTimeInterval'),
         }
 
         if self.version[:2] < (5, 4):
@@ -1066,8 +1073,15 @@ class RemoteHeavyDB(RemoteJIT):
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('heavydb')
-            elif target_info.is_gpu and self.version >= (5, 5):
-                target_info.add_library('libdevice')
+            elif target_info.is_gpu:
+                if self.version < (6, 2):
+                    # BC note: older heavydb versions do not define
+                    # has_libdevice and assume that libdevice exists
+                    self.has_cuda_libdevice = True
+                else:
+                    self.has_cuda_libdevice = target_info.has_libdevice
+                if self.has_cuda_libdevice:
+                    target_info.add_library('libdevice')
 
             version_str = '.'.join(map(str, self.version[:3])) + self.version[3]
             target_info.set('software', f'HeavyDB {version_str}')
@@ -1173,10 +1187,23 @@ class RemoteHeavyDB(RemoteJIT):
         name = caller.func.__name__
         thrift = self.thrift_client.thrift
         rtype = self.type_to_extarg(sig[0])
-        atypes = self.type_to_extarg(sig[1])
+        function_annotations = dict()
+        annotations = []
+        atypes = []
+        for i, a in enumerate(sig[1]):
+            if isinstance(a, HeavyDBRowFunctionManagerType):
+                err_msg = 'RowFunctionManager ought to be the first argument'
+                if i != 0:
+                    raise TypeError(err_msg)
+                function_annotations['uses_manager'] = 'True'
+            else:
+                atypes.append(self.type_to_extarg(a))
+                annotations.append({})
+
+        annotations.append(function_annotations)
         return thrift.TUserDefinedFunction(
             name + sig.mangling(),
-            atypes, rtype)
+            atypes, rtype, annotations)
 
     def register(self):
         """Register caller cache to the server."""
@@ -1430,6 +1457,9 @@ class RemoteHeavyDB(RemoteJIT):
             use_typename = True
         elif isinstance(typ, HeavyDBTableFunctionManagerType):
             typ = typ.copy().params(typename='TableFunctionManager')
+            use_typename = True
+        elif isinstance(typ, HeavyDBRowFunctionManagerType):
+            typ = typ.copy().params(typename='RowFunctionManager')
             use_typename = True
         elif is_sizer(typ):
             sizer = get_sizer_enum(typ)

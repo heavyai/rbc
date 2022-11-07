@@ -119,7 +119,6 @@ math_functions = [
 devices = ('cpu', 'gpu')
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=["math." + item[0] for item in math_functions])
@@ -128,6 +127,9 @@ def test_math_function(heavydb, device, nb_version, fn_name, signature):
 
     if not heavydb.has_cuda and device == 'gpu':
         pytest.skip('test requires CUDA-enabled heavydb server')
+
+    if not heavydb.has_cuda_libdevice and device == 'gpu':
+        pytest.skip('Test requires CUDA-enabled heavydb server with libdevice')
 
     math_func = getattr(math, fn_name, None)
     if math_func is None:
@@ -197,7 +199,7 @@ def test_math_function(heavydb, device, nb_version, fn_name, signature):
         if np.isnan(expected):
             assert np.isnan(result)
         else:
-            assert(np.isclose(expected, result))
+            assert np.isclose(expected, result)
 
 
 numpy_functions = [
@@ -316,7 +318,6 @@ if np is not None:
                 print(f'TODO: ADD {n} TEST TO {__file__}')
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
                          ids=["np." + item[0] for item in numpy_functions])
@@ -325,6 +326,9 @@ def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func
 
     if not heavydb.has_cuda and device == 'gpu':
         pytest.skip('Test requires CUDA-enabled heavydb server')
+
+    if not heavydb.has_cuda_libdevice and device == 'gpu':
+        pytest.skip('Test requires CUDA-enabled heavydb server with libdevice')
 
     if fn_name in ['cbrt', 'float_power']:
         pytest.skip(f'Numba does not support {fn_name}')
@@ -385,4 +389,4 @@ def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func
         if np.isnan(expected):
             assert np.isnan(result), fn_name
         else:
-            assert(np.isclose(expected, result)), fn_name
+            assert np.isclose(expected, result), fn_name

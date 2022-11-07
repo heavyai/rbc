@@ -137,7 +137,10 @@ array_methods = [
     ('zeros_like_dtype', 'double[](int32[])', ('i4',), np.zeros(6, dtype='q')),
     ('zeros_dtype', 'double[](int64)', (5,), np.zeros(5)),
     ('empty', 'int32[](int64)', (5,), np.empty(5, dtype=np.int32)),
+    ('empty_like', 'int8[](int8[])', ('i1',), np.empty(6, dtype='i')),
     ('empty_like', 'int32[](int32[])', ('i4',), np.empty(6, dtype='i')),
+    ('empty_like', 'float[](float[])', ('f4',), np.empty(6, dtype='f')),
+    ('empty_like', 'double[](double[])', ('f8',), np.empty(6, dtype='f')),
     ('empty_dtype', 'double[](int64)', (5,), np.empty(5)),
     ('cumsum', 'double[](int32)', (5,), np.arange(1, 6)),
 ]

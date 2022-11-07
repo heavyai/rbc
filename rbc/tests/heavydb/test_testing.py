@@ -2,7 +2,7 @@ import pytest
 from rbc.tests import heavydb_fixture
 
 
-@pytest.mark.parametrize('suffix', ['', '10', 'null', 'array', 'arraynull'])
+@pytest.mark.parametrize('suffix', ['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'])
 def test_table_load(suffix):
 
     count = 0
@@ -63,5 +63,19 @@ def test_table_load(suffix):
                            None, [None, 1, 0]),
                           (None, [4.0, None, 6.0, 7.0], None, [4, 5, None, 7], None,
                            [None, 5, 6, None], None)]
+    elif suffix == 'text':
+        assert colnames == ['t4', 't2', 't1', 's', 'n', 'n2']
+        assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun', '1'),
+                          ('bar', 'bar', 'bar', ['fun', 'bar'], 'bar', '12'),
+                          ('fun', 'fun', 'foo', ['foo'], 'foo', '123'),
+                          ('bar', 'bar', 'barr', ['foo', 'bar'], 'barr', '1234'),
+                          ('foo', 'foo', 'foooo', ['fun', 'bar'], 'foooo', '12345')]
+    elif suffix == 'timestamp':
+        assert colnames == ['t9', 't9_2', 't9_null', 'i8_2', 't6']
+        assert result == [
+            (31539661001001001, 1609462861001001001, 65844122002002002, 1609462861001001001, 31539661001001),  # noqa: E501
+            (65844122002002002, 1643767322002002002, None, 1643767322002002002, 65844122002002),
+            (99975783003003003, 1677812583003003003, 2117152922002002002, 1677812583003003003, 99975783003003)  # noqa: E501
+        ]
     else:
         raise NotImplementedError(suffix)

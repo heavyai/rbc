@@ -44,6 +44,13 @@ def define(heavydb):
             y[i] = x.is_null(i)
         return len(x)
 
+    @heavydb('int32_t(Column<Timestamp>, RowMultiplier, OutputColumn<Timestamp>)',
+             devices=['cpu', 'gpu'])
+    def timestamp_set_null(x, m, y):
+        for i in range(len(x)):
+            y.set_null(i)
+        return len(x)
+
     @heavydb("int32_t(Column<Timestamp>, TextEncodingNone, OutputColumn<int64_t>)",
              devices=['cpu'])
     def timestamp_get(x, op, y):
@@ -421,3 +428,14 @@ def test_is_null(heavydb, col):
     _, result = heavydb.sql_execute(query)
 
     assert list(result) == [(0,), (1,), (0,)]
+
+
+@pytest.mark.parametrize('col', ['t9'])
+def test_set_null(heavydb, col):
+    table = f"{heavydb.table_name}timestamp"
+
+    query = (f"select * from table(timestamp_set_null("
+             f"cursor(select {col} from {table})))")
+    _, result = heavydb.sql_execute(query)
+
+    assert list(result) == [(None,), (None,), (None,)]

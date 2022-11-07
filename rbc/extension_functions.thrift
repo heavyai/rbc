@@ -75,7 +75,10 @@ enum TExtArgumentType {
   ColumnListArrayTextEncodingNone,
   ArrayTextEncodingDict,
   ColumnArrayTextEncodingDict,
-  ColumnListArrayTextEncodingDict
+  ColumnListArrayTextEncodingDict,
+  GeoMultiPoint,
+  DayTimeInterval,
+  YearMonthTimeInterval,
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required
@@ -91,8 +94,9 @@ enum TOutputBufferSizeType {
 
 struct TUserDefinedFunction {
   1: string name,
-  2: list<TExtArgumentType> argTypes
-  3: TExtArgumentType retType
+  2: list<TExtArgumentType> argTypes,
+  3: TExtArgumentType retType,
+  4: list<map<string, string>> annotations
 }
 
 struct TUserDefinedTableFunction {

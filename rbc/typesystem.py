@@ -726,6 +726,14 @@ class Type(tuple, metaclass=MetaType):
             return self.tostring()
         return tuple.__str__(self)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return super().__eq__(other)
+
+    def __hash__(self) -> int:
+        return super().__hash__()
+
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
                  use_annotation_name=False, _skip_annotation=False):
         """Return string representation of a type.
@@ -802,6 +810,7 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     s = str(a)
                 new_params.append(s)
+            # print(name)
             return (name + '<' + ', '.join(new_params) + '>' + suffix)
         raise NotImplementedError(repr(self))
 
@@ -1728,9 +1737,10 @@ class Boolean1Model(datamodel.models.BooleanModel):
         return self._bit_type
 
 
-class Boolean8(nb.types.Boolean):
+class Boolean8(nb.types.Integer):
 
-    bitwidth = 8
+    def __init__(self, name, bitwidth=None, signed=None):
+        super().__init__(name, bitwidth=8, signed=True)
 
     def can_convert_to(self, typingctx, other):
         return isinstance(other, nb.types.Boolean)

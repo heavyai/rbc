@@ -8,7 +8,7 @@ ARRAY_NOT_NULL = 2
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6), suffices=['arraynull']):
         define(o)
         yield o
 

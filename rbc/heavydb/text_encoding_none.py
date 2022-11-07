@@ -9,16 +9,17 @@ from rbc import typesystem
 from rbc.targetinfo import TargetInfo
 from rbc.errors import RequireLiteralValue
 from .buffer import (
-    BufferPointer, Buffer, HeavyDBBufferType,
+    Buffer, HeavyDBBufferType,
     heavydb_buffer_constructor)
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
+from .array import ArrayPointer
 from llvmlite import ir
 from typing import Union
 
 
-class TextEncodingNonePointer(BufferPointer):
-    pass
+int32_t = ir.IntType(32)
+int64_t = ir.IntType(64)
 
 
 class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
@@ -47,6 +48,25 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
             return 2
 
 
+class TextEncodingNonePointer(ArrayPointer):
+    def deepcopy(self, context, builder, val, retptr):
+        from .buffer import memalloc
+        ptr_type = self.dtype.members[0]
+        element_size = int64_t(ptr_type.dtype.bitwidth // 8)
+
+        struct_load = builder.load(val)
+        src = builder.extract_value(struct_load, 0, name='text_buff_ptr')
+        element_count = builder.extract_value(struct_load, 1, name='text_size')
+        is_null = builder.extract_value(struct_load, 2, name='text_is_null')
+
+        zero, one, two = int32_t(0), int32_t(1), int32_t(2)
+        ptr = memalloc(context, builder, ptr_type, element_count, element_size)
+        cgutils.raw_memcpy(builder, ptr, src, element_count, element_size)
+        builder.store(ptr, builder.gep(retptr, [zero, zero]))
+        builder.store(element_count, builder.gep(retptr, [zero, one]))
+        builder.store(is_null, builder.gep(retptr, [zero, two]))
+
+
 class TextEncodingNone(Buffer):
     """
     RBC ``TextEncodingNone`` type that corresponds to HeavyDB type TEXT ENCODED NONE.
@@ -56,8 +76,8 @@ class TextEncodingNone(Buffer):
 
         struct TextEncodingNone {
             char* ptr;
-            size_t sz;  // when non-negative, TextEncodingNone has fixed width.
-            int8_t is_null;
+            size_t size;
+            int8_t padding;
         }
 
     .. code-block:: python
@@ -112,7 +132,7 @@ def text_encoding_none_ne(a, b):
     if isinstance(a, TextEncodingNonePointer):
         if isinstance(b, (TextEncodingNonePointer, nb_types.StringLiteral)):
             def impl(a, b):
-                return not(a == b)
+                return not (a == b)
             return impl
 
 

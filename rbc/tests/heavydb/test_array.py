@@ -533,3 +533,16 @@ def test_array_ndim(heavydb):
 
     _, result = heavydb.sql_execute(f'select get_ndim(f4) from {heavydb.table_name} limit 1;')
     assert list(result) == [(1,)]
+
+
+def test_return_array(heavydb):
+
+    @heavydb('int64[](int64[])', devices=['cpu'])
+    def fn(a):
+        return a
+
+    heavydb.register()
+    _, result = heavydb.sql_execute(f'select i8, fn(i8) from {heavydb.table_name};')
+    result = list(zip(*result))
+    expected, got = result
+    assert expected == got

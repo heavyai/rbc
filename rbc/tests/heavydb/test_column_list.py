@@ -11,7 +11,7 @@ sql_type_map = dict(int64='BIGINT', int32='INT', int16='SMALLINT', int8='TINYINT
 @pytest.fixture(scope='module')
 def heavydb():
 
-    for o in heavydb_fixture(globals(), minimal_version=(5, 6)):
+    for o in heavydb_fixture(globals(), minimal_version=(5, 6), suffices=['']):
         define(o)
         yield o
 

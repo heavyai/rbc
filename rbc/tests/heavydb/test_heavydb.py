@@ -9,9 +9,6 @@ from rbc.typesystem import Type
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
-# Throw an error on Travis CI if the server is not available
-if "TRAVIS" in os.environ and not available_version:
-    pytest.exit(msg=reason, returncode=1)
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
@@ -67,7 +64,7 @@ def nb_version():
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), suffices=['']):
         yield o
 
 
@@ -808,6 +805,8 @@ def test_format_type(heavydb):
     assert test('int32(TextEncodingDict)') == '(TextEncodingDict) -> int32'
     assert test('int32(TextEncodingDict x)') == '(TextEncodingDict x) -> int32'
     assert test('int32(Array<TextEncodingNone> x)') == '(Array<TextEncodingNone> x) -> int32'
+
+    assert test('int32(RowFunctionManager, int32)') == '(RowFunctionManager, int32) -> int32'
 
     def test2(s):
         return test(s, caller=True)

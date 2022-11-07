@@ -7,7 +7,7 @@ from rbc.errors import HeavyDBServerError
 @pytest.fixture(scope='module')
 def heavydb():
 
-    for o in heavydb_fixture(globals(), minimal_version=(6, 1)):
+    for o in heavydb_fixture(globals(), minimal_version=(6, 1), suffices=['']):
         yield o
 
 

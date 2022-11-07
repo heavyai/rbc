@@ -304,6 +304,13 @@ def heavydb_timestamp_literal_string_ctor(context, builder, sig, args):
     return timestamp._getvalue()
 
 
+@extending.lower_cast(nb_types.Integer, TimestampNumbaType)
+def cast_int_to_timestamp(context, builder, fromty, toty, val):
+    timestamp = cgutils.create_struct_proxy(toty)(context, builder)
+    timestamp.time = val
+    return timestamp._getvalue()
+
+
 @extending.overload_method(TimestampNumbaType, "getYear")
 def heavydb_timestamp_getYear(timestamp):
     target_info = TargetInfo()

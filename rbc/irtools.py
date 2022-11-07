@@ -245,7 +245,8 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                                status.code)
                 stdio._cg_fflush(builder)
             builder.ret_void()
-        builder.store(builder.load(out), wrapfn.args[0])
+        # does a "deepcopy"
+        rtype.deepcopy(context, builder, out, wrapfn.args[0])
         builder.ret_void()
     else:
         wrapty = ir.FunctionType(ll_return_type, ll_argtypes)

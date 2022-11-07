@@ -79,3 +79,5 @@ one cannot create and use them inside the REPL, for instance.
     heavydb.TextEncodingDict
     heavydb.TextEncodingNone
     heavydb.Timestamp
+    heavydb.DayTimeInterval
+    heavydb.YearMonthTimeInterval

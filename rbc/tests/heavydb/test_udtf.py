@@ -7,7 +7,7 @@ import numpy as np
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals()):
+    for o in heavydb_fixture(globals(), suffices=['']):
         define(o)
         yield o
 
@@ -157,7 +157,7 @@ def test_table_function_manager(heavydb):
         f'cursor(select f8 from {heavydb.table_name})));')
 
     expected = [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
-    assert(list(result) == expected)
+    assert list(result) == expected
 
 
 @pytest.mark.parametrize("sleep", ['ct_sleep1', 'ct_sleep2'])
