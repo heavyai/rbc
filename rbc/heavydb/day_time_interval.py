@@ -4,6 +4,7 @@ from rbc import typesystem
 from rbc.heavydb import HeavyDBMetaType
 from rbc.external import external
 from rbc.targetinfo import TargetInfo
+from rbc.errors import UnsupportedError
 from numba.core import extending, cgutils, datamodel
 from numba.core import types as nb_types
 from .timestamp import TimestampNumbaType, Timestamp, kMicroSecsPerSec
@@ -175,6 +176,8 @@ def ol_day_time_interval_operator_add(a, b):
         DateAddHighPrecisionNullable = external(
             "int64 DateAddHighPrecisionNullable(int64, int64, int64, int32, int64)|cpu"
         )
+    else:
+        raise UnsupportedError('DateAddHighPrecisionNullable is not supported on GPU')
 
     if isinstance(a, DayTimeIntervalNumbaType) and isinstance(b, TimestampNumbaType):
 
@@ -198,8 +201,6 @@ def ol_day_time_interval_operator_add(a, b):
 
 @extending.overload_method(DayTimeIntervalNumbaType, "numStepsBetween")
 def ol_day_time_interval_numStepBetween_method(dti, begin, end):
-    # importing here to avoid circular dependency error
-
     if isinstance(begin, TimestampNumbaType) and isinstance(end, TimestampNumbaType):
 
         def impl(dti, begin, end):
