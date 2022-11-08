@@ -182,7 +182,7 @@ invalid_inputs = [
 @pytest.mark.parametrize("start, stop, step, error_msg", invalid_inputs)
 def test_generate_series_invalid_inputs(heavydb, start, stop, step, error_msg):
 
-    if heavydb.version[:2] <= (6, 2):
+    if heavydb.version[:2] < (6, 2):
         pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     query = (
