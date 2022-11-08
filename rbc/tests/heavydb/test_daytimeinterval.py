@@ -133,7 +133,7 @@ inputs = [
 @pytest.mark.parametrize("start, stop, step, order", inputs)
 def test_generate_time_series(heavydb, start, stop, step, order):
 
-    if heavydb.version[:2] <= (6, 2):
+    if heavydb.version[:2] < (6, 2):
         pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     RBC_FUNC = "rbc_generate_series"
