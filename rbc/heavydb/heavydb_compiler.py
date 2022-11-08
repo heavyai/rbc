@@ -1,8 +1,10 @@
+import warnings
+from functools import partial
 from contextlib import contextmanager
 import llvmlite.binding as llvm
 from rbc.targetinfo import TargetInfo
 from numba.np import ufunc_db
-from numba import _dynfunc
+from numba import _dynfunc, njit
 from numba.core import (
     codegen, compiler_lock, typing,
     base, cpu, utils, descriptors,
@@ -12,6 +14,7 @@ from numba.core.target_extension import (
     Generic,
     target_registry,
     dispatcher_registry,
+    jit_registry,
 )
 
 
@@ -27,6 +30,16 @@ class HeavyDB_GPU(Generic):
 
 target_registry['heavydb_cpu'] = HeavyDB_CPU
 target_registry['heavydb_gpu'] = HeavyDB_GPU
+
+
+def custom_jit(*args, target=None, **kwargs):
+    assert 'target' not in kwargs
+    assert '_target' not in kwargs
+    return njit(*args, _target=target, **kwargs)
+
+
+jit_registry[target_registry['heavydb_cpu']] = partial(custom_jit, target='heavydb_cpu')
+jit_registry[target_registry['heavydb_gpu']] = partial(custom_jit, target='heavydb_gpu')
 
 heavydb_cpu_registry = imputils.Registry(name='heavydb_cpu_registry')
 heavydb_gpu_registry = imputils.Registry(name='heavydb_gpu_registry')
@@ -177,16 +190,40 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
 
         # See https://github.com/xnd-project/rbc/issues/45
         remove_features = {
+            (12, 12): [], (11, 11): [], (10, 10): [], (9, 9): [], (8, 8): [],
             (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'tsxldtrk', 'amx-tile', 'amx-bf16',
                       'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
                       'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'cx8', 'enqcmd', 'avx512bf16'],
             (11, 10): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8'],
+            (9, 11): ['sse2', 'cx16', 'sahf', 'tbm', 'avx512ifma', 'sha',
+                      'gfni', 'fma4', 'vpclmulqdq', 'prfchw', 'bmi2', 'cldemote',
+                      'fsgsbase', 'ptwrite', 'xsavec', 'popcnt', 'mpx',
+                      'avx512bitalg', 'movdiri', 'xsaves', 'avx512er',
+                      'avx512vnni', 'avx512vpopcntdq', 'pconfig', 'clwb',
+                      'avx512f', 'clzero', 'pku', 'mmx', 'lwp', 'rdpid', 'xop',
+                      'rdseed', 'waitpkg', 'movdir64b', 'sse4a', 'avx512bw',
+                      'clflushopt', 'xsave', 'avx512vbmi2', '64bit', 'avx512vl',
+                      'invpcid', 'avx512cd', 'avx', 'vaes', 'cx8', 'fma', 'rtm',
+                      'bmi', 'enqcmd', 'rdrnd', 'mwaitx', 'sse4.1', 'sse4.2', 'avx2',
+                      'fxsr', 'wbnoinvd', 'sse', 'lzcnt', 'pclmul', 'prefetchwt1',
+                      'f16c', 'ssse3', 'sgx', 'shstk', 'cmov', 'avx512vbmi',
+                      'avx512bf16', 'movbe', 'xsaveopt', 'avx512dq', 'adx',
+                      'avx512pf', 'sse3'],
             (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
         }.get((server_llvm_version[0], client_llvm_version[0]), [])
-        for f in remove_features:
-            features = features.replace('+' + f, '').replace('-' + f, '')
+        if remove_features is None:
+            warnings.warn(
+                f'{type(self).__name__}._get_host_cpu_features: `remove_features` dictionary'
+                ' requires an update: detected different LLVM versions in server '
+                f'{server_llvm_version} and client {client_llvm_version}.'
+                f' CPU features: {features}.')
+        else:
+            features += ','
+            for f in remove_features:
+                features = features.replace('+' + f + ',', '').replace('-' + f + ',', '')
+            features.rstrip(',')
         return features
 
     def _customize_tm_options(self, options):
@@ -207,15 +244,15 @@ class JITRemoteTypingContext(typing.Context):
     """JITRemote Typing Context
     """
 
-    def load_additional_registries(self):
-        from . import mathimpl
-        self.install_registry(mathimpl.registry)
-        return super().load_additional_registries()
+    # def load_additional_registries(self):
+    #     from . import mathimpl
+    #     self.install_registry(mathimpl.registry)
+    #     return super().load_additional_registries()
 
 
 class JITRemoteTargetContext(base.BaseContext):
     # Whether dynamic globals (CPU runtime addresses) is allowed
-    allow_dynamic_globals = True
+    allow_dynamic_globals = True  # should this be False?
 
     def __init__(self, typing_context, target):
         if target not in ('heavydb_cpu', 'heavydb_gpu'):
@@ -258,11 +295,12 @@ class JITRemoteTargetContext(base.BaseContext):
 
         # uncomment as needed!
         # from numba.core import optional
-        from numba.np import linalg, polynomial, arraymath, arrayobj  # noqa: F401
+        from numba.np import linalg, polynomial
         # from numba.typed import typeddict, dictimpl
         # from numba.typed import typedlist, listobject
         # from numba.experimental import jitclass, function_type
         # from numba.np import npdatetime
+        from numba.np import arraymath, arrayobj  # noqa: F401
 
         # Add target specific implementations
         from numba.np import npyimpl
@@ -273,7 +311,7 @@ class JITRemoteTargetContext(base.BaseContext):
         #     jitclassimpl
         # self.install_registry(cmathimpl.registry)
         # self.install_registry(cffiimpl.registry)
-        self.install_registry(mathimpl.registry)
+        # self.install_registry(mathimpl.registry)
         self.install_registry(npyimpl.registry)
         # self.install_registry(printimpl.registry)
         # self.install_registry(randomimpl.registry)
@@ -334,7 +372,7 @@ class JITRemoteTargetContext(base.BaseContext):
         doc = "compiled wrapper for %r" % (fndesc.qualname,)
         cfunc = _dynfunc.make_function(
             fndesc.lookup_module(),
-            fndesc.qualname.split(".")[-1],
+            fndesc.qualname.rsplit(".", 1)[-1],
             doc,
             fnptr,
             env,

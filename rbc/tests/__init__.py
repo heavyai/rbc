@@ -144,6 +144,30 @@ class _arrayTestTable(_DefaultTestTable):
         }
 
 
+class _mathTestTable(_DefaultTestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "math"
+
+    @property
+    def sqltypes(self):
+        return ('BOOLEAN', 'BOOLEAN', 'DOUBLE', 'DOUBLE', 'DOUBLE', 'INT',
+                'INT')
+
+    @property
+    def values(self):
+        return {
+            'a': [False, False, True, False, False],
+            'b': [False, True, False, True, False],
+            'x': [0.123 + 1/10.0, 0.123 + 2/10.0, 0.123 + 3/10.0, 0.123 + 4/10.0, 0.123 + 5/10.0],
+            'y': [1/6.0, 2/6.0, 3/6.0, 4/6.0, 5/6.0],
+            'z': [2.23, 3.23, 4.23, 5.23, 6.23],
+            'i': [1, 2, 3, 4, 5],
+            'j': [10, 20, 30, 40, 50],
+        }
+
+
 class _arraynullTestTable(_arrayTestTable):
 
     @classmethod
@@ -221,7 +245,7 @@ class _TextTestTable(_TestTable):
 
 
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
-                    suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'],
+                    suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp', 'math'],
                     load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
@@ -254,6 +278,8 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}arraynull' - contains arrays f8, f4, i8, i4, i2,
                                        i1, b with row size 5, contains null
                                        values.
+
+    f'{heavydb.table_name}math' - contains scalar values for math operations,
 
     f'{heavydb.table_name}text' - contains text t4, t2, t1, s, n
                                   where 't' prefix is for text encoding dict
@@ -370,7 +396,8 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     # MULTIPOLYGON, See
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
     for cls in (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
-                _arraynullTestTable, _TextTestTable, _TimestampTestTable):
+                _arraynullTestTable, _TextTestTable, _TimestampTestTable,
+                _mathTestTable):
         suffix = cls.suffix()
         if suffix in suffices:
             obj = cls()

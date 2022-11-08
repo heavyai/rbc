@@ -29,7 +29,8 @@ from llvmlite import ir
 import numpy as np
 from rbc import typesystem
 from rbc.targetinfo import TargetInfo
-from numba.core import datamodel, cgutils, extending, types, imputils
+from rbc.heavydb import extending
+from numba.core import datamodel, cgutils, types, imputils
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)

@@ -1530,5 +1530,5 @@ class RemoteHeavyDB(RemoteJIT):
 
 
 class RemoteOmnisci(RemoteHeavyDB):
-    """HeavyDB - the previous brand of HeavyAI
+    """Omnisci - the previous brand of HeavyAI
     """

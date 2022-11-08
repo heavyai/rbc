@@ -359,7 +359,7 @@ def test_casting(heavydb):
     The following table defines the behavior of applying these UDFs to
     values with different types:
 
-    HeavyDB version 5.9+
+    OmnisciDB version 5.9+
     ----------------------
              | Functions applied to <itype value>
     itype    | i8   | i16  | i32  | i64  | f32  | f64  |
@@ -368,30 +368,6 @@ def test_casting(heavydb):
     smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
     int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
     bigint   | FAIL | FAIL | FAIL | OK   | OK   | OK   |
-    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
-    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
-
-    HeavyDB version 5.8
-    ----------------------
-             | Functions applied to <itype value>
-    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
-    ---------+------+------+------+------+------+------+
-    tinyint  | OK   | OK   | OK   | OK   | OK   | OK   |
-    smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
-    int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
-    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | OK   |
-    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
-    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
-
-    HeavyDB version 5.7 and older
-    -------------------------------
-             | Functions applied to <itype value>
-    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
-    ---------+------+------+------+------+------+------+
-    tinyint  | OK   | OK   | OK   | OK   | FAIL | FAIL |
-    smallint | FAIL | OK   | OK   | OK   | FAIL | FAIL |
-    int      | FAIL | FAIL | OK   | OK   | FAIL | FAIL |
-    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | FAIL |
     float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
 

@@ -829,8 +829,8 @@ def test_issue343(heavydb):
     # to switch the target context from CPU to GPU, so that functions
     # are bind to the correct target. In the case below, math.exp
     # is bind to '@llvm.exp.f64' on CPU and '@__nv_exp' on GPU.
-    if not heavydb.has_cuda:
-        pytest.skip('test requires heavydb build with GPU support')
+    if not (heavydb.has_cuda and heavydb.has_libdevice):
+        pytest.skip('test requires heavydb build with GPU support and libdevice')
 
     @njit
     def bar(x):
@@ -892,3 +892,17 @@ def test_column_enumerate(heavydb):
         f'select rowid, i4 from {heavydb.table_name} order by rowid;')
     for (r,), (_, e) in zip(list(result), list(expected_result)):
         assert r == e
+
+
+def test_foo(heavydb):
+    from rbc.externals.heavydb import set_output_row_size
+
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)')
+    def col_enumerate(x, y):
+        sz = len(x)
+        # set_output_row_size(sz)
+        # for i, e in enumerate(x):
+        #     y[i] = e
+        return sz
+
+    heavydb.register()
