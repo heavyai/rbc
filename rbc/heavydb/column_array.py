@@ -103,6 +103,7 @@ class ColumnArrayPointer(nb_types.Type):
 def heavydb_column_array_getitem_(typingctx, x, i):
     T = x.eltype
     array = typesystem.Type.fromstring(f'Array<{T}>').tonumba().dtype
+    print(T)
     sig = array(x, i)
 
     def codegen(context, builder, sig, args):
