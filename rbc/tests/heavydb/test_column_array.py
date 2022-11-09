@@ -4,14 +4,16 @@ from rbc.tests import heavydb_fixture
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(6, 3), suffices=['array']):
+    for o in heavydb_fixture(globals(), minimal_version=(6, 3),
+                             suffices=['array', 'arraynull', 'text']):
         define(o)
         yield o
 
 
 def define(heavydb):
-
-    @heavydb("int32(TableFunctionManager, Column<Array<T>> inp, OutputColumn<Array<T>> out)", T=['int64'])
+    @heavydb("int32(TableFunctionManager, Column<Array<T>> inp, OutputColumn<Array<T>> out | input_id=args<0>)",  # noqa: E501
+             T=['bool', 'int8', 'int16', 'int32', 'int64', 'float', 'double', 'TextEncodingDict'],
+             devices=['cpu'])
     def test_column_array(mgr, inp, out):
         sz = len(inp)
         output_values_size = 0
@@ -34,9 +36,37 @@ def define(heavydb):
     heavydb.register()
 
 
-@pytest.mark.parametrize("col", ['i8'])
-def test_copy(heavydb, col):
+@pytest.mark.parametrize("suffix", ['array', 'arraynull'])
+@pytest.mark.parametrize("col", ['b', 'i1', 'i2', 'i4', 'i8', 'f4', 'f8'])
+def test_copy(heavydb, suffix, col):
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB 6.3 or newer')
+
     query = (f'select * from table(test_column_array(cursor(select {col} '
-             f'from {heavydb.table_name}array)));')
-    # _, result = heavydb.sql_execute(query)
-    # print(list(result))
+             f'from {heavydb.table_name}{suffix})));')
+    _, result = heavydb.sql_execute(query)
+
+    query = (f'select {col} from {heavydb.table_name}{suffix}')
+    _, expected = heavydb.sql_execute(query)
+
+    result = list(result)
+    expected = list(expected)
+    assert len(result) == len(expected) == 5
+    assert result == expected
+
+
+@pytest.mark.parametrize("col", ['s'])
+def test_copy_text_encoding_dict(heavydb, col):
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB 6.3 or newer')
+
+    query = (f'select * from table(test_column_array(cursor(select {col} '
+             f'from {heavydb.table_name}text)));')
+    _, result = heavydb.sql_execute(query)
+
+    query = (f'select {col} from {heavydb.table_name}text')
+    _, expected = heavydb.sql_execute(query)
+    result = list(result)
+    expected = list(expected)
+    assert len(result) == len(expected) == 5
+    assert result == expected
