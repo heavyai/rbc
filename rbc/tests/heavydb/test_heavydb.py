@@ -823,6 +823,8 @@ def test_format_type(heavydb):
     assert test2('UDTF(Constant, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert test2('UDTF(PreFlight, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert test2('UDTF(TableFunctionManager, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert (test2('UDTF(RowMultiplier, OutputColumn<Array<int32>>)')
+            == '(RowMultiplier) -> (Column<Array<int32>>)')
     assert (test2('UDTF(RowMultiplier, OutputColumn<Array<TextEncodingNone>>)')
             == '(RowMultiplier) -> (Column<Array<TextEncodingNone>>)')
 

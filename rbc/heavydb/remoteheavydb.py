@@ -1402,7 +1402,7 @@ class RemoteHeavyDB(RemoteJIT):
                     atype.annotation(sizer=sizer)
                 elif isinstance(atype, HeavyDBTableFunctionManagerType):
                     continue
-                elif isinstance(atype, HeavyDBOutputColumnType):
+                elif isinstance(atype, (HeavyDBOutputColumnType, HeavyDBOutputColumnArrayType)):
                     rtypes.append(atype.copy(HeavyDBColumnType))
                     continue
                 atypes.append(atype)
