@@ -26,11 +26,12 @@ class HeavyDBColumnType(HeavyDBBufferType):
     """
 
     def postprocess_type(self):
-        # importing here to avoid circular import issue
-        from .array import HeavyDBArrayType
-        if isinstance(self[0][0], HeavyDBArrayType):
+        if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
             from .column_array import HeavyDBColumnArrayType
             return self.copy(cls=HeavyDBColumnArrayType)
+        elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
+            from .column_array import HeavyDBOutputColumnArrayType
+            return self.copy(cls=HeavyDBOutputColumnArrayType)
         return self
 
     @property

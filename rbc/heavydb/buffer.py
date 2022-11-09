@@ -73,6 +73,13 @@ class HeavyDBBufferType(typesystem.Type):
     def buffer_extra_members(self):
         return ()
 
+    @property
+    def custom_params(self):
+        return {
+            'NumbaType': self.numba_type,
+            'NumbaPointerType': self.numba_pointer_type,
+        }
+
     def tonumba(self, bool_is_int8=None):
         ptr_t = typesystem.Type(self.element_type, '*', name='ptr')
         size_t = typesystem.Type.fromstring('size_t sz')
@@ -82,8 +89,7 @@ class HeavyDBBufferType(typesystem.Type):
             size_t,
             *extra_members
         )
-        buffer_type._params['NumbaType'] = self.numba_type
-        buffer_type._params['NumbaPointerType'] = self.numba_pointer_type
+        buffer_type.params(other=None, **self.custom_params)
         numba_type = buffer_type.tonumba(bool_is_int8=True)
         if self.pass_by_value:
             return numba_type

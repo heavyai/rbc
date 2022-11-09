@@ -775,6 +775,8 @@ def test_format_type(heavydb):
     assert test('Column<Array<int32>>') == 'Column<Array<int32>>'
     assert test('Column<Array<TextEncodingNone>>') == 'Column<Array<TextEncodingNone>>'
 
+    assert test('ColumnList<Array<int32>>') == 'ColumnList<Array<int32>>'
+
     assert test('OutputColumn<int32>') == 'OutputColumn<int32>'
     assert test('ColumnList<int32>') == 'ColumnList<int32>'
 

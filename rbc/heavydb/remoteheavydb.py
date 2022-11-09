@@ -17,9 +17,10 @@ from rbc.thrift import Client as ThriftClient
 from . import (
     HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
+    HeavyDBOutputColumnArrayType, HeavyDBColumnArrayType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
-    HeavyDBRowFunctionManagerType,
+    HeavyDBRowFunctionManagerType, HeavyDBColumnListArrayType,
 )
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
@@ -248,7 +249,9 @@ def is_udtf(sig):
         return True
     for a in sig[1]:
         if isinstance(a, (HeavyDBOutputColumnType, HeavyDBColumnType,
-                          HeavyDBColumnListType, HeavyDBTableFunctionManagerType)):
+                          HeavyDBOutputColumnArrayType, HeavyDBColumnArrayType,
+                          HeavyDBColumnListType, HeavyDBColumnListArrayType,
+                          HeavyDBTableFunctionManagerType)):
             return True
     return False
 
@@ -976,6 +979,14 @@ class RemoteHeavyDB(RemoteJIT):
                 = ext_arguments_map.get(f'ColumnArray<{T}>')
             ext_arguments_map[f'HeavyDBOutputColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
                 = ext_arguments_map.get(f'ColumnArray<{T}>')
+            # ColumnList<T>
+            ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            # ColumnList<Array<T>>
+            ext_arguments_map[f'HeavyDBColumnListArrayType<HeavyDBArrayType<{ptr_type}>>'] \
+                = ext_arguments_map.get(f'ColumnListArray<{T}>')
 
         ext_arguments_map['HeavyDBTextEncodingNoneType<char8>'] = \
             ext_arguments_map.get('TextEncodingNone')
@@ -1173,12 +1184,13 @@ class RemoteHeavyDB(RemoteJIT):
                     consumed_index += 1
 
             else:
-                if isinstance(a, HeavyDBOutputColumnType):
+                if isinstance(a, (HeavyDBOutputColumnType, HeavyDBOutputColumnArrayType)):
                     atype = self.type_to_extarg(a)
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
-                    if isinstance(a, (HeavyDBColumnType, HeavyDBColumnListType)):
+                    if isinstance(a, (HeavyDBColumnType, HeavyDBColumnArrayType,
+                                      HeavyDBColumnListType)):
                         sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:

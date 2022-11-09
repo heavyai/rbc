@@ -133,6 +133,7 @@ def heavydb_udtfmanager_set_output_row_size(mgr, num_rows):
 
 set_output_array = 'set_output_array_values_total_number'
 
+
 @extending.overload_method(HeavyDBTableFunctionManagerNumbaType, set_output_array)
 def mgr_set_output_array(mgr, col_idx, value):
     def impl(mgr, col_idx, value):
