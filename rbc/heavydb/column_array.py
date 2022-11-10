@@ -5,13 +5,14 @@ Heavydb Column<Array<T>> type is the type of input/output column arguments in
 UDTFs.
 """
 
-__all__ = ['HeavyDBOutputColumnArrayType', 'HeavyDBColumnArrayType']
+__all__ = ['HeavyDBOutputColumnArrayType', 'HeavyDBColumnArrayType', 'ColumnArray']
 
 import operator
 from typing import TypeVar
 from rbc import typesystem
-from .column import HeavyDBColumnType, Column
-from .array import Array
+from .column import HeavyDBColumnType
+from . import array
+from .metatype import HeavyDBMetaType
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
 from llvmlite import ir
@@ -32,7 +33,7 @@ void = ir.VoidType()
 _COLUMN_PARAM_NAME = 'ColumnArray_inner_type'
 
 
-class ColumnArray(Column):
+class ColumnArray(metaclass=HeavyDBMetaType):
     """
     RBC ``Column<Array<T>>`` type that corresponds to HeavyDB COLUMN<ARRAY<T>>
 
@@ -54,15 +55,15 @@ class ColumnArray(Column):
             Only available on ``CPU``
         """
 
-    def set_item(self, index: int, arr: Array[T]) -> int:
+    def set_item(self, index: int, arr: 'array.Array[T]') -> int:
         """
-        ``self[index] = arr
+        ``self[index] = arr``
 
         .. note::
             Only available on ``CPU``
         """
 
-    def concat_item(self, index: int, arr: Array[T]) -> int:
+    def concat_item(self, index: int, arr: 'array.Array[T]') -> int:
         """
         Concat array ``arr`` at ``index``.
 

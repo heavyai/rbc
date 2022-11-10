@@ -5,11 +5,12 @@ Heavydb Column<Array<T>> type is the type of input/output column arguments in
 UDTFs.
 """
 
-__all__ = ['HeavyDBColumnListArrayType']
+__all__ = ['HeavyDBColumnListArrayType', 'ColumnListArray']
+
 
 import operator
 from rbc import typesystem
-from .column_list import HeavyDBColumnListType
+from .column_list import HeavyDBColumnListType, ColumnList
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
 from llvmlite import ir
@@ -25,6 +26,11 @@ void = ir.VoidType()
 
 
 _COLUMN_PARAM_NAME = 'ColumnListArray_inner_type'
+
+
+class ColumnListArray(ColumnList):
+    """
+    """
 
 
 class HeavyDBColumnListArrayType(HeavyDBColumnListType):

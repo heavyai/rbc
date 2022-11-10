@@ -1,4 +1,4 @@
-__all__ = ['HeavyDBTableFunctionManagerType']
+__all__ = ['HeavyDBTableFunctionManagerType', 'TableFunctionManager']
 
 
 from numba.core import extending, types, cgutils
@@ -7,10 +7,12 @@ from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
+from .abstract_type import HeavyDBAbstractType
+from .metatype import HeavyDBMetaType
 from llvmlite import ir
 
 
-class HeavyDBTableFunctionManagerType(Type):
+class HeavyDBTableFunctionManagerType(HeavyDBAbstractType):
     """TableFunctionManager<> is a typesystem custom type that
     represents a class type with the following public interface:
 
@@ -32,7 +34,7 @@ class HeavyDBTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerT
     pass
 
 
-class TableFunctionManager:
+class TableFunctionManager(metaclass=HeavyDBMetaType):
     """
     TableFunctionManager is available in HeavyDB 5.9 or newer
     """

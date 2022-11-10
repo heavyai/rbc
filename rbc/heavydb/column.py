@@ -11,6 +11,7 @@ from llvmlite import ir
 from rbc import typesystem
 from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
+from . import text_encoding_none
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
@@ -79,7 +80,7 @@ class Column(Buffer):
         Data type of the array elements.
         """
 
-    def getStringId(self, s: Union[str, 'TextEncodingNone']) -> int:  # noqa: F821
+    def getStringId(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: F821
         """
         Return the string ID for the given string ``s``.
 
