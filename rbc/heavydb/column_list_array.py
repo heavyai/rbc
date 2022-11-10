@@ -49,7 +49,8 @@ class HeavyDBColumnListArrayType(HeavyDBColumnListType):
         return {
             'NumbaType': self.numba_type,
             'NumbaPointerType': self.numba_pointer_type,
-            _COLUMN_PARAM_NAME: self[0][0]
+            _COLUMN_PARAM_NAME: self[0][0],
+            'name': f'STRUCT_{self.mangling()}_{self[0][0][0][0].tostring()}'
         }
 
 

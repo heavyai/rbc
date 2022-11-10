@@ -4,14 +4,15 @@ __all__ = ['HeavyDBColumnListType', 'ColumnList']
 import operator
 from numba.core import extending, cgutils, datamodel, imputils
 
-from rbc.heavydb.buffer import Buffer
+from .buffer import Buffer
+from .abstract_type import HeavyDBAbstractType
 from numba.core import types as nb_types
 from rbc.typesystem import Type
 from rbc import structure_type
 from rbc.targetinfo import TargetInfo
 
 
-class HeavyDBColumnListType(Type):
+class HeavyDBColumnListType(HeavyDBAbstractType):
 
     def postprocess_type(self):
         if self.tostring().startswith('HeavyDBColumnListType<HeavyDBArrayType'):
@@ -34,14 +35,9 @@ class HeavyDBColumnListType(Type):
     def numba_pointer_type(self):
         return ColumnListType
 
-    # @property
-    # def numba_type(self):
-    #     return ColumnList
-
     @property
     def custom_params(self):
         return {
-            # 'NumbaType': self.numba_type,
             'NumbaPointerType': self.numba_pointer_type,
         }
 

@@ -30,8 +30,6 @@ def define(heavydb):
                 out.set_item(i, inp[i])
         return sz
 
-    heavydb.register()
-
     @heavydb('int32(TableFunctionManager, ColumnList<Array<T>> lst, OutputColumn<Array<T>> out | input_id=args<0>)',  # noqa: E501
              T=['int64', 'float', 'TextEncodingDict'], devices=['cpu'])
     def rbc_array_concat(mgr, lst, out):

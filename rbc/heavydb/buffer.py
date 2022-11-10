@@ -25,6 +25,7 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 import operator
 from .metatype import HeavyDBMetaType
+from .abstract_type import HeavyDBAbstractType
 from llvmlite import ir
 import numpy as np
 from rbc import typesystem
@@ -39,7 +40,7 @@ fp32 = ir.FloatType()
 fp64 = ir.DoubleType()
 
 
-class HeavyDBBufferType(typesystem.Type):
+class HeavyDBBufferType(HeavyDBAbstractType):
     """Typesystem type class for HeavyDB buffer structures.
     """
     # When True, buffer type arguments are passed by value to
