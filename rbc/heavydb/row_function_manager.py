@@ -8,13 +8,12 @@ from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
-from .abstract_type import HeavyDBAbstractType
 from .metatype import HeavyDBMetaType
 from . import text_encoding_none, string_dict_proxy
 from llvmlite import ir
 
 
-class HeavyDBRowFunctionManagerType(HeavyDBAbstractType):
+class HeavyDBRowFunctionManagerType(Type):
     """RowFunctionManager<> is a typesystem custom type that
     represents a class type with the following public interface:
 
