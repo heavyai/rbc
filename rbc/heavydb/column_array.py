@@ -8,11 +8,16 @@ UDTFs.
 __all__ = ['HeavyDBOutputColumnArrayType', 'HeavyDBColumnArrayType']
 
 import operator
+from typing import TypeVar
 from rbc import typesystem
-from .column import HeavyDBColumnType
+from .column import HeavyDBColumnType, Column
+from .array import Array
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
 from llvmlite import ir
+
+
+T = TypeVar('T')
 
 
 i1 = ir.IntType(1)
@@ -25,6 +30,65 @@ void = ir.VoidType()
 
 
 _COLUMN_PARAM_NAME = 'ColumnArray_inner_type'
+
+
+class ColumnArray(Column):
+    """
+    RBC ``Column<Array<T>>`` type that corresponds to HeavyDB COLUMN<ARRAY<T>>
+
+    In HeavyDB, a Column of type ``Array<T>`` is represented as follows:
+
+    .. code-block:: c
+
+        {
+            int8_t* flatbuffer;
+            int64_t size;
+        }
+
+    """
+    def get_item(self, index: int) -> int:
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def set_item(self, index: int, arr: Array[T]) -> int:
+        """
+        ``self[index] = arr
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def concat_item(self, index: int, arr: Array[T]) -> int:
+        """
+        Concat array ``arr`` at ``index``.
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def is_null(self, index: int) -> int:
+        """
+        Check if the array at ``index`` is null.
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def set_null(self, index: int) -> int:
+        """
+        Set the array at ``index`` to null.
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def __len__(self) -> int:
+        """
+        """
 
 
 class HeavyDBColumnArrayType(HeavyDBColumnType):
@@ -222,6 +286,7 @@ def heavydb_column_array_len_(typingctx, x):
 
 
 @extending.overload(operator.getitem)
+@extending.overload_method(ColumnArrayPointer, 'get_item')
 def heavydb_column_array_getitem(x, i):
     if isinstance(x, ColumnArrayPointer):
         def impl(x, i):
@@ -234,6 +299,7 @@ def heavydb_column_array_getitem(x, i):
 
 
 @extending.overload_method(ColumnArrayPointer, 'is_null')
+@extending.overload_method(ColumnArrayType, 'is_null')
 def heavydb_column_array_ptr_is_null(x, i):
     def impl(x, i):
         return heavydb_column_array_is_null_(deref(x), i)
@@ -241,23 +307,10 @@ def heavydb_column_array_ptr_is_null(x, i):
 
 
 @extending.overload_method(ColumnArrayPointer, 'set_null')
+@extending.overload_method(ColumnArrayType, 'set_null')
 def heavydb_column_array_ptr_set_null(x, i):
     def impl(x, i):
         return heavydb_column_array_set_null_(deref(x), i)
-    return impl
-
-
-@extending.overload_method(ColumnArrayType, 'is_null')
-def heavydb_column_array_is_null(x, i):
-    def impl(x, i):
-        return heavydb_column_array_is_null_(x, i)
-    return impl
-
-
-@extending.overload_method(ColumnArrayType, 'set_null')
-def heavydb_column_array_set_null(x, i):
-    def impl(x, i):
-        return heavydb_column_array_set_null_(x, i)
     return impl
 
 

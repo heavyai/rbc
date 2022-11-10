@@ -32,6 +32,35 @@ class HeavyDBTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerT
     pass
 
 
+class TableFunctionManager:
+    """
+    TableFunctionManager is available in HeavyDB 5.9 or newer
+    """
+
+    def set_output_row_size(self, size: int) -> None:
+        """
+        Set the number of rows in an output column.
+
+        .. note::
+            Must be called before any assignment on output columns.
+        """
+
+    def error_message(self, msg: str) -> None:
+        """
+        .. note::
+            ``msg`` must be known at compile-time.
+        """
+
+    def set_output_array_values_total_number(self, index: int,
+                                             output_array_values_total_number: int) -> None:
+        """
+        Set the total number of array values in a column of arrays.
+
+        .. note::
+            Must be called before making any assignment on output columns.
+        """
+
+
 error_msg = 'TableFunctionManager is only available in HeavyDB 5.9 or newer (got %s)'
 i8p = ir.IntType(8).as_pointer()
 i32 = ir.IntType(32)
