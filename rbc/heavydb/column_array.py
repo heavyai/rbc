@@ -48,7 +48,8 @@ class HeavyDBColumnArrayType(HeavyDBColumnType):
     def custom_params(self):
         return {
             **super().custom_params,
-            _COLUMN_PARAM_NAME: self[0][0]
+            _COLUMN_PARAM_NAME: self[0][0],
+            'name': f'STRUCT_{self.mangling()}_{self[0][0][0][0].tostring()}'
         }
 
 
@@ -72,6 +73,10 @@ class ColumnArrayType(nb_types.Type):
         super().__init__(name)
 
     @property
+    def key(self):
+        return self.dtype
+
+    @property
     def eltype(self):
         """
         Return buffer element dtype.
@@ -91,7 +96,7 @@ class ColumnArrayPointer(nb_types.Type):
     def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
         self.eltype = dtype.eltype  # buffer element dtype
-        name = "%s[%s]*" % (type(self).__name__, dtype)
+        name = f"Column<Array<{self.eltype}>>*"
         super().__init__(name)
 
     @property
@@ -103,7 +108,6 @@ class ColumnArrayPointer(nb_types.Type):
 def heavydb_column_array_getitem_(typingctx, x, i):
     T = x.eltype
     array = typesystem.Type.fromstring(f'Array<{T}>').tonumba().dtype
-    print(T)
     sig = array(x, i)
 
     def codegen(context, builder, sig, args):

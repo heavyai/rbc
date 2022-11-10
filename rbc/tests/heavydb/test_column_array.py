@@ -12,7 +12,7 @@ def heavydb():
 
 def define(heavydb):
     @heavydb("int32(TableFunctionManager, Column<Array<T>> inp, OutputColumn<Array<T>> out | input_id=args<0>)",  # noqa: E501
-             T=['int64', 'float'], devices=['cpu'])
+             T=['float', 'int64', 'TextEncodingDict'], devices=['cpu'])
     def rbc_array_copy(mgr, inp, out):
         sz = len(inp)
         output_values_size = 0
@@ -30,27 +30,10 @@ def define(heavydb):
                 out.set_item(i, inp[i])
         return sz
 
-    @heavydb("int32(TableFunctionManager, Column<Array<T>> inp, OutputColumn<Array<T>> out | input_id=args<0>)",  # noqa: E501
-             T=['TextEncodingDict'], devices=['cpu'])
-    def rbc_array_copy_text(mgr, inp, out):
-        sz = len(inp)
-        output_values_size = 0
-        for i in range(sz):
-            output_values_size += len(inp[i])
-
-        # initialize array buffers
-        mgr.set_output_array_values_total_number(0, output_values_size)
-
-        mgr.set_output_row_size(sz)
-        for i in range(sz):
-            if inp.is_null(i):
-                out.set_null(i)
-            else:
-                out.set_item(i, inp[i])
-        return sz
+    heavydb.register()
 
     @heavydb('int32(TableFunctionManager, ColumnList<Array<T>> lst, OutputColumn<Array<T>> out | input_id=args<0>)',  # noqa: E501
-             T=['int64', 'float'], devices=['cpu'])
+             T=['int64', 'float', 'TextEncodingDict'], devices=['cpu'])
     def rbc_array_concat(mgr, lst, out):
         output_values_size = 0
 
@@ -75,34 +58,8 @@ def define(heavydb):
 
         return size
 
-    @heavydb('int32(TableFunctionManager, ColumnList<Array<T>> lst, OutputColumn<Array<T>> out | input_id=args<0>)',  # noqa: E501
-             T=['TextEncodingDict'], devices=['cpu'])
-    def rbc_array_concat_text(mgr, lst, out):
-        output_values_size = 0
 
-        for j in range(lst.ncols):
-            for i in range(lst.nrows):
-                output_values_size += len(lst[j][i])
-
-        mgr.set_output_array_values_total_number(
-            0,  # output column index
-            output_values_size,  # upper bound to the number of items
-                                 # in all output arrays
-        )
-
-        size = lst.nrows
-        mgr.set_output_row_size(size)
-
-        for i in range(lst.nrows):
-            for j in range(lst.ncols):
-                col = lst[j]
-                arr = col[i]
-                out.concat_item(i, arr)
-
-        return size
-
-
-@pytest.mark.parametrize("suffix", ['array', 'arraynull'])
+@pytest.mark.parametrize("suffix", ['array'])
 @pytest.mark.parametrize("col", ['i8', 'f4'])
 def test_copy(heavydb, suffix, col):
     if heavydb.version[:2] < (6, 3):
@@ -129,7 +86,7 @@ def test_copy_text(heavydb, col):
     if col == 'na':
         pytest.skip('Column<Array<TextEncodingNone>> is not supported yet.')
 
-    query = (f'select * from table(rbc_array_copy_text(cursor(select {col} '
+    query = (f'select * from table(rbc_array_copy(cursor(select {col} '
              f'from {heavydb.table_name}text)));')
     _, result = heavydb.sql_execute(query)
 
@@ -173,7 +130,7 @@ def test_concat_text(heavydb, col):
     if col == 'na':
         pytest.skip('Column<Array<TextEncodingNone>> is not supported yet.')
 
-    query = (f'select * from table(rbc_array_concat_text(cursor(select {col} '
+    query = (f'select * from table(rbc_array_concat(cursor(select {col} '
              f'from {heavydb.table_name}text)));')
     _, result = heavydb.sql_execute(query)
 
