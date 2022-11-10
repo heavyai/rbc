@@ -32,6 +32,7 @@ class StringDictionaryProxy(metaclass=HeavyDBMetaType):
         """
         """
 
+
 class StringDictionaryProxyNumbaType(nb_types.Type):
     def __init__(self):
         super().__init__(name='StringDictionaryProxy')

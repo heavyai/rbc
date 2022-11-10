@@ -80,7 +80,7 @@ class Column(Buffer):
         Data type of the array elements.
         """
 
-    def getStringId(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: F821
+    def getStringId(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: E501
         """
         Return the string ID for the given string ``s``.
 

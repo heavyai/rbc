@@ -40,11 +40,11 @@ class RowFunctionManager(metaclass=HeavyDBMetaType):
     TRANSIENT_DICT_DB_ID = 0
     TRANSIENT_DICT_ID = 0
 
-    def getString(self, db_id: int, dict_id: int, str_arg: int) -> 'text_encoding_none.TextEncodingNone':
+    def getString(self, db_id: int, dict_id: int, str_arg: int) -> 'text_encoding_none.TextEncodingNone':  # noqa: E501
         """
         """
 
-    def getStringDictionaryProxy(self, db_id: int, dict_id: int) -> 'string_dict_proxy.StringDictionaryProxy':
+    def getStringDictionaryProxy(self, db_id: int, dict_id: int) -> 'string_dict_proxy.StringDictionaryProxy':  # noqa: E501
         """
         """
 
