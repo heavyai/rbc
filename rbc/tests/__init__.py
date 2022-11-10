@@ -129,7 +129,7 @@ class _arrayTestTable(_DefaultTestTable):
     @property
     def sqltypes(self):
         return ('FLOAT[]', 'DOUBLE[]', 'TINYINT[]', 'SMALLINT[]', 'INT[]', 'BIGINT[]',
-                'BOOLEAN[]', 'TEXT[] ENCODING DICT')
+                'BOOLEAN[]')
 
     @property
     def values(self):
@@ -141,7 +141,6 @@ class _arrayTestTable(_DefaultTestTable):
             'i4': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
             'i8': [[], [1], [2, 3], [3, 4, 5], [4, 5, 6, 7]],
             'b': [[], [False], [True, False], [False, True, False], [True, False, True, False]],
-            't': [[], ['a'], ['a', 'b'], ['a', 'b', 'c'], ['a', 'b', 'c', 'd']],
         }
 
 
