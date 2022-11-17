@@ -308,7 +308,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
         if not available_version:
             pytest.skip(reason)
         # Requires update when heavydb-internal bumps up version number:
-        current_development_version = Version("6.3.0")
+        current_development_version = Version("6.4.0")
 
         curr_version = Version('.'.join(map(str, available_version[:2])))
 

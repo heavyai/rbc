@@ -899,6 +899,7 @@ class RemoteHeavyDB(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
             'GeoMultiLineString': typemap['TExtArgumentType'].get('GeoMultiLineString'),
+            'GeoMultiPoint': typemap['TExtArgumentType'].get('GeoMultiPoint'),
             'TextEncodingNone': typemap['TExtArgumentType'].get('TextEncodingNone'),
             'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
             'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
@@ -922,8 +923,17 @@ class RemoteHeavyDB(RemoteJIT):
                 ('double', 'Double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('TextEncodingNone', 'TextEncodingNone'),
-                ('Timestamp', 'Timestamp')]:
+                ('Timestamp', 'Timestamp'),
+                ('GeoLineString', 'GeoLineString'),
+                ('GeoPolygon', 'GeoPolygon'),
+                ('GeoMultiPoint', 'GeoMultiPoint'),
+                ('GeoMultiLineString', 'GeoMultiLineString'),
+                ('GeoPoint', 'GeoPoint'),
+                ('GeoMultiPolygon', 'GeoMultiPolygon'),
+                ]:
             ext_arguments_map[f'Column<{T}>'] = typemap['TExtArgumentType'].get(f'Column{Tname}')
+            if T == 'Timestamp':
+                continue
             ext_arguments_map[f'ColumnList<{T}>'] = typemap['TExtArgumentType'].get(
                 f'ColumnList{Tname}')
             ext_arguments_map[f'ColumnArray<{T}>'] = typemap['TExtArgumentType'].get(
@@ -944,12 +954,15 @@ class RemoteHeavyDB(RemoteJIT):
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('Timestamp', 'Timestamp'),
         ]:
-            ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
-                = ext_arguments_map.get('Array<%s>' % T)
             ext_arguments_map['HeavyDBColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
+            if T == 'Timestamp':
+                # timestamp is only defined for Columns
+                continue
+            ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
+                = ext_arguments_map.get('Array<%s>' % T)
             ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
