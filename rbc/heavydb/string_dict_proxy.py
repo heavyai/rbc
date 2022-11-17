@@ -1,7 +1,7 @@
 '''RBC String Dictionary Proxy type
 '''
 
-__all__ = ['StringDictionaryProxyNumbaType']
+__all__ = ['StringDictionaryProxyNumbaType', 'StringDictionaryProxy']
 
 
 from numba.core import extending, datamodel, cgutils
@@ -9,11 +9,28 @@ from numba.core import types as nb_types
 from rbc.errors import NumbaTypeError
 from rbc.heavydb.buffer import heavydb_buffer_constructor
 from rbc.typesystem import Type
+from .metatype import HeavyDBMetaType
+from . import text_encoding_none
 from llvmlite import ir
 
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
+
+
+class StringDictionaryProxy(metaclass=HeavyDBMetaType):
+
+    def getStringId(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
+        """
+        """
+
+    def getOrAddTransient(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
+        """
+        """
+
+    def getString(self, index: int) -> 'text_encoding_none.TextEncodingNone':
+        """
+        """
 
 
 class StringDictionaryProxyNumbaType(nb_types.Type):

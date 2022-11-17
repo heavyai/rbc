@@ -4,14 +4,21 @@ __all__ = ['HeavyDBColumnListType', 'ColumnList']
 import operator
 from numba.core import extending, cgutils, datamodel, imputils
 
-from rbc.heavydb.buffer import Buffer
+from .buffer import Buffer
+from .abstract_type import HeavyDBAbstractType
 from numba.core import types as nb_types
 from rbc.typesystem import Type
 from rbc import structure_type
 from rbc.targetinfo import TargetInfo
 
 
-class HeavyDBColumnListType(Type):
+class HeavyDBColumnListType(HeavyDBAbstractType):
+
+    def postprocess_type(self):
+        if self.tostring().startswith('HeavyDBColumnListType<HeavyDBArrayType'):
+            from .column_list_array import HeavyDBColumnListArrayType
+            return self.copy(cls=HeavyDBColumnListArrayType)
+        return self
 
     @property
     def element_type(self):
@@ -25,13 +32,30 @@ class HeavyDBColumnListType(Type):
         return ()
 
     @property
-    def __typesystem_type__(self):
-        ptrs_t = self.element_type.pointer().pointer().params(name='ptrs')
-        length_t = Type.fromstring('int64 length')
-        size_t = Type.fromstring('int64 size')
+    def numba_pointer_type(self):
+        return ColumnListType
+
+    @property
+    def custom_params(self):
+        return {
+            'NumbaPointerType': self.numba_pointer_type,
+        }
+
+    def tonumba(self, bool_is_int8=None):
+        ptrs = self.element_type.pointer().pointer().params(name='ptrs')
+        ncols = Type.fromstring('int64 num_cols_')
+        nrows = Type.fromstring('int64 num_rows_')
         extra_members = tuple(map(Type.fromobject, self.buffer_extra_members))
-        return Type(ptrs_t, length_t, size_t, *extra_members).params(
-            NumbaPointerType=ColumnListNumbaType).pointer()
+        extra_members = tuple(map(Type.fromobject, self.buffer_extra_members))
+        column_list_type = Type(
+            ptrs,
+            ncols,
+            nrows,
+            *extra_members
+        )
+        column_list_type.params(other=None, **self.custom_params)
+        numba_type = column_list_type.tonumba(bool_is_int8=True)
+        return self.numba_pointer_type(numba_type)
 
 
 @extending.intrinsic
@@ -56,7 +80,7 @@ def heavydb_columnlist_getitem(typingctx, lst, idx):
         col = col_ctor(context, builder)
 
         col.ptr = builder.load(builder.gep(collist.ptrs, [idx]))
-        col.sz = collist.size
+        col.sz = collist.num_rows_
         if is_text_encoding_dict:
             col.string_dict_proxy_ = builder.load(builder.gep(collist.string_dict_proxy_, [idx]))
         return col._getvalue()
@@ -74,8 +98,8 @@ class ColumnList(Buffer):
 
         {
             T** ptrs;
-            int64_t nrows;
-            int64_t ncols;
+            int64_t num_cols_;
+            int64_t num_rows_;
         }
 
     """
@@ -93,7 +117,7 @@ class ColumnList(Buffer):
         """
 
 
-class ColumnListNumbaType(structure_type.StructureNumbaPointerType, nb_types.IterableType):
+class ColumnListType(structure_type.StructureNumbaPointerType, nb_types.IterableType):
     def get_getitem_impl(self):
         def impl(x, i):
             return heavydb_columnlist_getitem(x, i)
@@ -122,17 +146,17 @@ class BufferPointerIteratorModel(datamodel.StructModel):
         super(BufferPointerIteratorModel, self).__init__(dmm, fe_type, members)
 
 
-@extending.overload_attribute(ColumnListNumbaType, 'nrows')
+@extending.overload_attribute(ColumnListType, 'nrows')
 def get_nrows(clst):
     def impl(clst):
-        return clst.size
+        return clst.num_rows_
     return impl
 
 
-@extending.overload_attribute(ColumnListNumbaType, 'ncols')
+@extending.overload_attribute(ColumnListType, 'ncols')
 def get_ncols(clst):
     def impl(clst):
-        return clst.length
+        return clst.num_cols_
     return impl
 
 
@@ -149,7 +173,7 @@ def iternext_BufferPointer(context, builder, sig, args, result):
 
     lst = context.make_helper(builder, iterbufty.buffer_type.dtype,
                               value=builder.load(buf))
-    count = lst.length
+    count = lst.num_cols_
 
     is_valid = builder.icmp_signed('<', idx, count)
     result.set_valid(is_valid)
@@ -164,7 +188,7 @@ def iternext_BufferPointer(context, builder, sig, args, result):
         builder.store(nidx, iterval.index)
 
 
-@extending.lower_builtin('getiter', ColumnListNumbaType)
+@extending.lower_builtin('getiter', ColumnListType)
 def getiter_buffer_pointer(context, builder, sig, args):
     [buffer] = args
 

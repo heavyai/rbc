@@ -1,4 +1,4 @@
-__all__ = ['HeavyDBRowFunctionManagerType']
+__all__ = ['HeavyDBRowFunctionManagerType', 'RowFunctionManager']
 
 
 from numba.core import extending, cgutils
@@ -8,6 +8,8 @@ from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
+from .metatype import HeavyDBMetaType
+from . import text_encoding_none, string_dict_proxy
 from llvmlite import ir
 
 
@@ -27,6 +29,31 @@ class HeavyDBRowFunctionManagerType(Type):
 
 class HeavyDBRowFunctionManagerNumbaType(structure_type.StructureNumbaPointerType):
     pass
+
+
+class RowFunctionManager(metaclass=HeavyDBMetaType):
+    """
+    TableFunctionManager is available in HeavyDB 6.2 or newer
+    """
+
+    TRANSIENT_DICT_DB_ID = 0
+    TRANSIENT_DICT_ID = 0
+
+    def getString(self, db_id: int, dict_id: int, str_arg: int) -> 'text_encoding_none.TextEncodingNone':  # noqa: E501
+        """
+        """
+
+    def getStringDictionaryProxy(self, db_id: int, dict_id: int) -> 'string_dict_proxy.StringDictionaryProxy':  # noqa: E501
+        """
+        """
+
+    def getDictDbId(self, func_name: str, arg_idx: int) -> int:
+        """
+        """
+
+    def getDictId(self, func_name: str, arg_idx: int) -> int:
+        """
+        """
 
 
 error_msg = 'RowFunctionManager is only available in HeavyDB 6.2 or newer (got %s)'

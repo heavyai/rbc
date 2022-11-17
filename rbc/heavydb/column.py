@@ -11,6 +11,7 @@ from llvmlite import ir
 from rbc import typesystem
 from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
+from . import text_encoding_none
 from rbc.targetinfo import TargetInfo
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
@@ -24,6 +25,16 @@ int32_t = ir.IntType(32)
 class HeavyDBColumnType(HeavyDBBufferType):
     """Heavydb Column type for RBC typesystem.
     """
+
+    def postprocess_type(self):
+        if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
+            from .column_array import HeavyDBColumnArrayType
+            return self.copy(cls=HeavyDBColumnArrayType)
+        elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
+            from .column_array import HeavyDBOutputColumnArrayType
+            return self.copy(cls=HeavyDBOutputColumnArrayType)
+        return self
+
     @property
     def pass_by_value(self):
         heavydb_version = TargetInfo().software[1][:3]
@@ -69,7 +80,7 @@ class Column(Buffer):
         Data type of the array elements.
         """
 
-    def getStringId(self, s: Union[str, 'TextEncodingNone']) -> int:  # noqa: F821
+    def getStringId(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: E501
         """
         Return the string ID for the given string ``s``.
 
