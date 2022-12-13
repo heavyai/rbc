@@ -3,7 +3,7 @@ namespace java com.mapd.thrift.calciteserver
 /* See QueryEngine/ExtensionFunctionsWhitelist.h for required
 values. It is ok if the following definition is out-of-date as
 get_device_parameters will contain up-to-date mapping of type names
-and enum values [OmnisciDB >= 5.2]. */
+and enum values [heavydb >= 5.2]. */
 
 enum TExtArgumentType {
   Int8,
