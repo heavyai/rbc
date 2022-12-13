@@ -15,6 +15,7 @@ dependencies:
   - numba>=0.55
   - llvmlite
   - clang==11.1
+  - clangxx==11.1
   - pytest
   - packaging
   - tblib
