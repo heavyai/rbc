@@ -160,9 +160,6 @@ def create_columns(heavydb):
 def test_text_encoding_shared_dict(heavydb, size):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
-    # if heavydb.version[:2] == (6, 2):
-    #     pytest.skip('test crashes HeavyDB 6.2')
-
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
     base = f"base_{size}"
@@ -185,9 +182,6 @@ def test_text_encoding_shared_dict(heavydb, size):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_shared_dict2(heavydb, size):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
-
-    # if heavydb.version[:2] == (6, 2):
-    #     pytest.skip('test crashes HeavyDB 6.2')
 
     fn = "test_shared_dict_copy2"
     table = f"{heavydb.base_name}_{size}"
@@ -213,9 +207,6 @@ def test_text_encoding_shared_dict2(heavydb, size):
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_text_encoding_shared_dict3(heavydb, col_name, size):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
-
-    # if heavydb.version[:2] == (6, 2):
-    #     pytest.skip('test crashes HeavyDB 6.2')
 
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
