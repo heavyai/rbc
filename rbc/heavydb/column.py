@@ -35,11 +35,6 @@ class HeavyDBColumnType(HeavyDBBufferType):
             return self.copy(cls=HeavyDBOutputColumnArrayType)
         return self
 
-    @property
-    def pass_by_value(self):
-        heavydb_version = TargetInfo().software[1][:3]
-        return heavydb_version <= (5, 7, 0)
-
     def match(self, other):
         if type(self) is type(other):
             return self[0] == other[0]
