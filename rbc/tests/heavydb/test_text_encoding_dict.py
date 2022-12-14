@@ -35,6 +35,7 @@ def define(heavydb):
             c[i] = z[i]
         return m * sz
 
+
     @heavydb("int32(ColumnList<TextEncodingDict>, RowMultiplier, OutputColumn<int32_t>)",
              devices=['cpu'])
     def test_copy_column_list(lst, m, y):
@@ -74,6 +75,7 @@ def define(heavydb):
             y[0] = x.string_dict_proxy.getStringId(text)
             return 1
 
+
         @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)',  # noqa: E501
                  devices=['cpu'])
         def test_empty_input_id(mgr, out):
@@ -106,6 +108,7 @@ def define(heavydb):
                     y[j] += len(col.string_dict_proxy.getString(j))
             return unique
 
+    if heavydb.version[:2] >= (6, 3):
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
         def fn_copy(mgr, t):
             db_id = mgr.getDictDbId('fn_copy', 0)
@@ -159,6 +162,9 @@ def create_columns(heavydb):
 def test_text_encoding_shared_dict(heavydb, size):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
 
+    # if heavydb.version[:2] == (6, 2):
+    #     pytest.skip('test crashes HeavyDB 6.2')
+
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
     base = f"base_{size}"
@@ -181,6 +187,9 @@ def test_text_encoding_shared_dict(heavydb, size):
 @pytest.mark.parametrize("size", (8, 16, 32,))
 def test_text_encoding_shared_dict2(heavydb, size):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5719")
+
+    # if heavydb.version[:2] == (6, 2):
+    #     pytest.skip('test crashes HeavyDB 6.2')
 
     fn = "test_shared_dict_copy2"
     table = f"{heavydb.base_name}_{size}"
@@ -206,6 +215,9 @@ def test_text_encoding_shared_dict2(heavydb, size):
 @pytest.mark.parametrize("size", (8, 16, 32))
 def test_text_encoding_shared_dict3(heavydb, col_name, size):
     heavydb.require_version((5, 7), "Requires heavydb-internal PR 5492")
+
+    # if heavydb.version[:2] == (6, 2):
+    #     pytest.skip('test crashes HeavyDB 6.2')
 
     fn = "test_shared_dict_copy"
     table = f"{heavydb.base_name}_{size}"
@@ -499,8 +511,8 @@ def test_getString_lst(heavydb, col):
 
 @pytest.mark.parametrize('col', ['t1'])
 def test_udf_copy_dict_encoded_string(heavydb, col):
-    if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB version 6.2 or newer')
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB version 6.3 or newer')
 
     table = f"{heavydb.base_name}text"
     query = f"SELECT fn_copy({col}) from {table}"
@@ -510,8 +522,8 @@ def test_udf_copy_dict_encoded_string(heavydb, col):
 
 
 def test_row_function_manager(heavydb):
-    if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB version 6.2 or newer')
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB version 6.3 or newer')
 
     @heavydb('int32(int32, RowFunctionManager)')
     def invalid_fn(a, mgr):
