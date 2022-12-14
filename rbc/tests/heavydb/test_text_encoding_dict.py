@@ -35,7 +35,6 @@ def define(heavydb):
             c[i] = z[i]
         return m * sz
 
-
     @heavydb("int32(ColumnList<TextEncodingDict>, RowMultiplier, OutputColumn<int32_t>)",
              devices=['cpu'])
     def test_copy_column_list(lst, m, y):
@@ -74,7 +73,6 @@ def define(heavydb):
         def test_getstringid_from_arg(x, m, text, y):
             y[0] = x.string_dict_proxy.getStringId(text)
             return 1
-
 
         @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)',  # noqa: E501
                  devices=['cpu'])
