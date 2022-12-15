@@ -27,7 +27,6 @@ from rbc.irtools import compile_to_LLVM
 from rbc.errors import ForbiddenNameError, HeavyDBServerError
 from rbc.utils import parse_version, version_date
 from rbc import ctools, typesystem
-from numba import _min_llvm_version
 
 
 __all__ = ['RemoteHeavyDB', 'RemoteCallCapsule', 'is_available',
@@ -1375,6 +1374,9 @@ class RemoteHeavyDB(RemoteJIT):
                 compiler = ctools.Compiler.get(std='c')
             if self.debug:
                 print(f'compiler={compiler}')
+
+            from numba import _min_llvm_version
+
             url = "https://numba.readthedocs.io/en/stable/user/installing.html#version-support-information"  # noqa: E501
             msg = (
                 f'{compiler.compiler_exe} version '
