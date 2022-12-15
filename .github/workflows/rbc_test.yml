@@ -101,7 +101,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: ['3.10', '3.9', '3.8']
         numba-version: ['0.56', '0.55']
-        heavydb-version: ['6.1', '6.0', '5.10']
+        heavydb-version: ['6.2', '6.1', '6.0']
         heavydb-from: [conda]
         # include:
         #   - os: ubuntu-latest
@@ -144,11 +144,7 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
-            mamba create -n heavydb-env omniscidb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
-          else
-            mamba create -n heavydb-env heavydb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
-          fi
+          mamba create -n heavydb-env heavydb=${{ matrix.heavydb-version }}*=*_cpu -c conda-forge
 
       - name: Build heavydb docker image and run it [docker]
         shell: bash -l {0}
@@ -173,20 +169,12 @@ jobs:
         shell: bash -l {0}
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
-            mkdir data
-            mamba run -n heavydb-env omnisci_initdb data -f
-            mamba run -n heavydb-env omnisci_server --version
-            RUN_FLAGS="--enable-runtime-udf --enable-table-functions --enable-dev-table-functions"
-            mamba run -n heavydb-env omnisci_server $RUN_FLAGS &> heavydb-output.txt &
-          else
-            mkdir storage
-            mamba run -n heavydb-env initheavy storage -f
-            mamba run -n heavydb-env heavydb --version
-            RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions --enable-udf-registration-for-all-users"
-            echo ${RUN_FLAGS}
-            mamba run -n heavydb-env heavydb $RUN_FLAGS &> heavydb-output.txt &
-          fi
+          mkdir storage
+          mamba run -n heavydb-env initheavy storage -f
+          mamba run -n heavydb-env heavydb --version
+          RUN_FLAGS="--enable-runtime-udfs --enable-table-functions --enable-dev-table-functions --enable-udf-registration-for-all-users"
+          echo ${RUN_FLAGS}
+          mamba run -n heavydb-env heavydb $RUN_FLAGS &> heavydb-output.txt &
           sleep 10
 
       - name: Create rbc test environment v${{ matrix.python-version }}
@@ -243,15 +231,9 @@ jobs:
         shell: bash -l {0}
         if: failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
-            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.INFO
-            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.WARNING
-            mamba run -n heavydb-env cat data/mapd_log/omnisci_server.ERROR
-          else
-            mamba run -n heavydb-env cat storage/mapd_log/heavydb.INFO
-            mamba run -n heavydb-env cat storage/mapd_log/heavydb.WARNING
-            mamba run -n heavydb-env cat storage/mapd_log/heavydb.ERROR
-          fi
+          mamba run -n heavydb-env cat storage/mapd_log/heavydb.INFO
+          mamba run -n heavydb-env cat storage/mapd_log/heavydb.WARNING
+          mamba run -n heavydb-env cat storage/mapd_log/heavydb.ERROR
 
       - name: Show Heavydb docker logs on failure [docker]
         shell: bash -l {0}
@@ -265,11 +247,7 @@ jobs:
         continue-on-error: true
         if: matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'conda'
         run: |
-          if [[ ${{ matrix.heavydb-version }} == "5.10" ]]; then
-            mamba run -n heavydb-env killall omnisci_server
-          else
-            mamba run -n heavydb-env killall heavydb
-          fi
+          mamba run -n heavydb-env killall heavydb
           sleep 5
 
       - name: Show Heavydb server output [conda]

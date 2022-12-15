@@ -29,7 +29,7 @@ from rbc.utils import parse_version, version_date
 from rbc import ctools, typesystem
 
 
-__all__ = ['RemoteHeavyDB', 'RemoteOmnisci', 'RemoteCallCapsule', 'is_available',
+__all__ = ['RemoteHeavyDB', 'RemoteCallCapsule', 'is_available',
            'type_to_type_name', 'get_client_config', 'global_heavydb_singleton']
 
 
@@ -95,8 +95,7 @@ def _global_heavydb():
     """Implements singleton of a global RemoteHeavyDB instance.
     """
     config = get_client_config()
-    remotedb = dict(heavyai=RemoteHeavyDB,
-                    omnisci=RemoteHeavyDB)[config['dbname']](**config)
+    remotedb = RemoteHeavyDB(**config)
     while True:
         yield remotedb
 
@@ -105,7 +104,7 @@ global_heavydb_singleton = _global_heavydb()  # generator object
 
 
 def is_available(_cache={}):
-    """Return version tuple and None if HeavyDB/OmnisciDB server is
+    """Return version tuple and None if HeavyDB server is
     accessible or recent enough. Otherwise return None and the reason
     about unavailability.
     """
@@ -130,9 +129,6 @@ def get_client_config(**config):
     """Retrieve the HeavyDB client configuration parameters from a client
     home directory.
 
-    Two HeavyDB brands (HEAVYDB_BRAND) are supported: heavyai and
-    omnisci.
-
     Note that here the client configurations parameters are those that
     are used to configure the client software such as rbc or pymapd.
     This is different from heavydb instance configuration described in
@@ -140,15 +136,15 @@ def get_client_config(**config):
     that is used for configuring the heavydb server software.
 
     In Linux clients, the HeavyDB client configuration is read from
-    :code:`$HOME/.config/$HEAVYDB_BRAND/client.conf`
+    :code:`$HOME/.config/heavyai/client.conf`
 
     In Windows clients, the configuration is read from
-    :code:`%UserProfile/.config/%HEAVYDB_BRAND%/client.conf` or
-    :code:`%AllUsersProfile/.config/%HEAVYDB_BRAND%/client.conf`
+    :code:`%UserProfile/.config/heavyai/client.conf` or
+    :code:`%AllUsersProfile/.config/heavyai/client.conf`
 
-    When :code:`HEAVYDB_CLIENT_CONF` or :code:`OMNISCI_CLIENT_CONF`
-    environment variable is defined then the configuration is read
-    from the file specified in this variable.
+    When :code:`HEAVYDB_CLIENT_CONF` environment variable is defined
+    then the configuration is read from the file specified in
+    this variable.
 
     The configuration file must use configuration language similar to
     one used in MS Windows INI files. For HeavyDB client
@@ -161,7 +157,7 @@ def get_client_config(**config):
       [server]
       host: <HeavyDB server host name or IP, defaults to localhost>
       port: <HeavyDB server port, defaults to 6274>
-      dbname: <HeavyDB database name, defaults to heavyai or omnisci>
+      dbname: <HeavyDB database name, defaults to heavyai>
 
     Parameters
     ----------
@@ -182,8 +178,7 @@ def get_client_config(**config):
     config = _config
 
     conf_file = None
-    for brand, client_conf_env in [('heavyai', 'HEAVYDB_CLIENT_CONF'),
-                                   ('omnisci', 'OMNISCI_CLIENT_CONF')]:
+    for brand, client_conf_env in [('heavyai', 'HEAVYDB_CLIENT_CONF')]:
         conf_file = os.environ.get(client_conf_env, None)
         if conf_file is not None and not os.path.isfile(conf_file):
             print('rbc.heavydb.get_client_config:'
@@ -264,7 +259,7 @@ def is_sizer(t):
 
 
 def get_sizer_enum(t):
-    """Return sizer enum value as defined by the omniscidb server.
+    """Return sizer enum value as defined by the heavydb server.
     """
     sizer = t.annotation()['sizer']
     sizer = output_buffer_sizer_map.get(sizer or None, sizer)
@@ -1561,8 +1556,3 @@ class RemoteHeavyDB(RemoteJIT):
             return numpy.array(list(result), dtype).view(numpy.recarray)
         else:
             return dtype[0][1](list(result)[0][0])
-
-
-class RemoteOmnisci(RemoteHeavyDB):
-    """Omnisci - the previous brand of HeavyAI
-    """

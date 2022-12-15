@@ -106,6 +106,7 @@ def define(heavydb):
                     y[j] += len(col.string_dict_proxy.getString(j))
             return unique
 
+    if heavydb.version[:2] >= (6, 3):
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
         def fn_copy(mgr, t):
             db_id = mgr.getDictDbId('fn_copy', 0)
@@ -499,8 +500,8 @@ def test_getString_lst(heavydb, col):
 
 @pytest.mark.parametrize('col', ['t1'])
 def test_udf_copy_dict_encoded_string(heavydb, col):
-    if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB version 6.2 or newer')
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB version 6.3 or newer')
 
     table = f"{heavydb.base_name}text"
     query = f"SELECT fn_copy({col}) from {table}"
@@ -510,8 +511,8 @@ def test_udf_copy_dict_encoded_string(heavydb, col):
 
 
 def test_row_function_manager(heavydb):
-    if heavydb.version[:2] < (6, 2):
-        pytest.skip('Requires HeavyDB version 6.2 or newer')
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB version 6.3 or newer')
 
     @heavydb('int32(int32, RowFunctionManager)')
     def invalid_fn(a, mgr):

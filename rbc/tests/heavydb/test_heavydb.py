@@ -12,7 +12,7 @@ available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
-@pytest.mark.parametrize("heavydb_brand", ['omnisci', 'heavyai'])
+@pytest.mark.parametrize("heavydb_brand", ['heavyai'])
 def test_get_client_config(tmpdir, heavydb_brand):
     d = tmpdir.mkdir(heavydb_brand)
     fh = d.join("client.conf")
@@ -34,8 +34,7 @@ use_host_target: False
 """)
     conf_file = os.path.join(fh.dirname, fh.basename)
 
-    client_conf_env = dict(heavyai='HEAVYDB_CLIENT_CONF',
-                           omnisci='OMNISCI_CLIENT_CONF')[heavydb_brand]
+    client_conf_env = dict(heavyai='HEAVYDB_CLIENT_CONF')[heavydb_brand]
     old_conf = os.environ.get(client_conf_env)
     os.environ[client_conf_env] = conf_file
 
