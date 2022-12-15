@@ -53,6 +53,7 @@ class HeavyDB(Library):
     _function_names = list('''
     allocate_varlen_buffer set_output_row_size
     TableFunctionManager_error_message TableFunctionManager_set_output_row_size
+    TableFunctionManager_set_output_array_values_total_number
     table_function_error
     extract_epoch extract_dateepoch extract_quarterday extract_hour
     extract_minute extract_second extract_millisecond extract_nanosecond
@@ -64,6 +65,8 @@ class HeavyDB(Library):
     StringDictionaryProxy_getStringId
     RowFunctionManager_getStringDictionaryProxy RowFunctionManager_getDictId
     RowFunctionManager_getDictDbId
+    ColumnArray_isNull ColumnArray_setNull ColumnArray_getItem
+    ColumnArray_setItem ColumnArray_concatItem
     '''.strip().split())
 
 

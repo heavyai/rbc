@@ -205,10 +205,6 @@ class _TextTestTable(_TestTable):
                 'TEXT ENCODING NONE', 'TEXT ENCODING NONE')
 
     @property
-    def colnames(self):
-        return ('t4', 't2', 't1', 's', 'n', 'n2')
-
-    @property
     def values(self):
         return {
             't4': ['foofoo', 'bar', 'fun', 'bar', 'foo'],

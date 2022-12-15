@@ -1,4 +1,4 @@
-__all__ = ['HeavyDBTableFunctionManagerType']
+__all__ = ['HeavyDBTableFunctionManagerType', 'TableFunctionManager']
 
 
 from numba.core import extending, types, cgutils
@@ -7,6 +7,7 @@ from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
+from .metatype import HeavyDBMetaType
 from llvmlite import ir
 
 
@@ -30,6 +31,35 @@ class HeavyDBTableFunctionManagerType(Type):
 
 class HeavyDBTableFunctionManagerNumbaType(structure_type.StructureNumbaPointerType):
     pass
+
+
+class TableFunctionManager(metaclass=HeavyDBMetaType):
+    """
+    TableFunctionManager is available in HeavyDB 5.9 or newer
+    """
+
+    def set_output_row_size(self, size: int) -> None:
+        """
+        Set the number of rows in an output column.
+
+        .. note::
+            Must be called before any assignment on output columns.
+        """
+
+    def error_message(self, msg: str) -> None:
+        """
+        .. note::
+            ``msg`` must be known at compile-time.
+        """
+
+    def set_output_array_values_total_number(self, index: int,
+                                             output_array_values_total_number: int) -> None:
+        """
+        Set the total number of array values in a column of arrays.
+
+        .. note::
+            Must be called before making any assignment on output columns.
+        """
 
 
 error_msg = 'TableFunctionManager is only available in HeavyDB 5.9 or newer (got %s)'
@@ -100,8 +130,42 @@ def heavydb_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
     return sig, codegen
 
 
+@extending.intrinsic
+def mgr_set_output_array_(typingctx, mgr, col_idx, value):
+    sig = types.void(mgr, col_idx, value)
+
+    target_info = TargetInfo()
+    # XXX: Check is heavydb 6.1 has this function
+    if target_info.software[1][:3] < (6, 1, 0):
+        raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
+
+    def codegen(context, builder, sig, args):
+        mgr_ptr, col_idx, value = args
+
+        mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
+
+        fnty = ir.FunctionType(ir.VoidType(), [i8p, i64, i64])
+        fn_name = "TableFunctionManager_set_output_array_values_total_number"
+        module = builder.module
+        fn = cgutils.get_or_insert_function(module, fnty, fn_name)
+
+        builder.call(fn, [mgr_i8ptr, col_idx, value])
+
+    return sig, codegen
+
+
 @extending.overload_method(HeavyDBTableFunctionManagerNumbaType, 'set_output_row_size')
 def heavydb_udtfmanager_set_output_row_size(mgr, num_rows):
     def impl(mgr, num_rows):
         return heavydb_udtfmanager_set_output_row_size_(mgr, num_rows)
+    return impl
+
+
+set_output_array = 'set_output_array_values_total_number'
+
+
+@extending.overload_method(HeavyDBTableFunctionManagerNumbaType, set_output_array)
+def mgr_set_output_array(mgr, col_idx, value):
+    def impl(mgr, col_idx, value):
+        return mgr_set_output_array_(mgr, col_idx, value)
     return impl

@@ -58,7 +58,6 @@ Externals
     externals.heavydb
     externals.stdio
 
-
 HeavyDB Backend
 ===============
 
@@ -75,9 +74,14 @@ one cannot create and use them inside the REPL, for instance.
 
     heavydb.Array
     heavydb.Column
+    heavydb.ColumnArray
+    heavydb.ColumnListArray
     heavydb.ColumnList
     heavydb.TextEncodingDict
     heavydb.TextEncodingNone
     heavydb.Timestamp
     heavydb.DayTimeInterval
     heavydb.YearMonthTimeInterval
+    heavydb.TableFunctionManager
+    heavydb.RowFunctionManager
+    heavydb.StringDictionaryProxy
