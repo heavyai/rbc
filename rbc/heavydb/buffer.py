@@ -43,12 +43,6 @@ fp64 = ir.DoubleType()
 class HeavyDBBufferType(HeavyDBAbstractType):
     """Typesystem type class for HeavyDB buffer structures.
     """
-    # When True, buffer type arguments are passed by value to
-    # functions [not recommended].
-    @property
-    def pass_by_value(self):
-        return False
-
     @property
     def numba_type(self):
         return BufferType
@@ -92,8 +86,6 @@ class HeavyDBBufferType(HeavyDBAbstractType):
         )
         buffer_type.params(other=None, **self.custom_params)
         numba_type = buffer_type.tonumba(bool_is_int8=True)
-        if self.pass_by_value:
-            return numba_type
         return self.numba_pointer_type(numba_type)
 
 
