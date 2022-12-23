@@ -119,7 +119,7 @@ class HeavyDBOutputColumnGeoPointType(HeavyDBColumnGeoPointType, HeavyDBOutputCo
 class ColumnGeoPointType(nb_types.Type):
     def __init__(self, dtype):
         self.dtype = 'GeoPoint'  # struct dtype
-        name = f"Column<GeoPoint>"
+        name = "Column<GeoPoint>"
         super().__init__(name)
 
     @property
@@ -146,7 +146,7 @@ class ColumnGeoPointPointer(nb_types.Type):
     def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
         self.eltype = dtype.eltype  # buffer element dtype
-        name = f"Column<GeoPoint>*"
+        name = "Column<GeoPoint>*"
         super().__init__(name)
 
     @property

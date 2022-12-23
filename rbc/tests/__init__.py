@@ -248,7 +248,8 @@ class _GeoPointTestTable(_TestTable):
 
 
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
-                    suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp', 'geopoint'],
+                    suffices=['', '10', 'null', 'array', 'arraynull', 'text',
+                              'timestamp', 'geopoint'],
                     load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 

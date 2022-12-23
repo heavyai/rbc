@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from rbc.heavydb import Point2D
 from rbc.tests import heavydb_fixture
 
 
@@ -26,10 +27,6 @@ def define(heavydb):
                 xcoords[i] = point.x
                 ycoords[i] = point.y
         return size
-
-
-    from rbc.externals.stdio import printf
-    from rbc.heavydb import Point2D
 
     @heavydb("int32(TableFunctionManager, Column<T>, double, double, OutputColumn<T>)",
              T=['GeoPoint'], devices=['cpu'])

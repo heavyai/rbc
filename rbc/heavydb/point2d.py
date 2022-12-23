@@ -85,15 +85,6 @@ def intrinsic_point2d_get(typingctx, point2d, pos):
     return sig, codegen
 
 
-@extending.intrinsic
-def set_x(typingctx, point, x):
-    sig = nb_types.void(point, x)
-
-    def codegen(context, builder, sig, args):
-        [p, x] = args
-        return builder.insert_value(p, x, [0])
-
-
 @extending.overload_attribute(Point2DNumbaType, 'x')
 def impl_poind2d_attr_x(point2d):
     def impl(point2d):
@@ -106,4 +97,3 @@ def impl_poind2d_attr_y(point2d):
     def impl(point2d):
         return intrinsic_point2d_get(point2d, 1)
     return impl
-
