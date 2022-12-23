@@ -6,7 +6,7 @@ from rbc.tests import heavydb_fixture
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), minimal_version=(6, 3),
+    for o in heavydb_fixture(globals(), minimal_version=(6, 4),
                              suffices=['geopoint']):
         define(o)
         yield o
@@ -45,8 +45,8 @@ def define(heavydb):
 @pytest.mark.parametrize('suffix', ('geopoint',))
 @pytest.mark.parametrize('col', ('p1', 'p2', 'p3', 'p4'))
 def test_ct_coords(heavydb, suffix, col):
-    if heavydb.version[:2] < (6, 3):
-        pytest.skip('Requires HeavyDB 6.3 or newer')
+    if heavydb.version[:2] < (6, 4):
+        pytest.skip('Requires HeavyDB 6.4 or newer')
 
     query = (f'select * from table(rbc_ct_coords(cursor(select {col} '
              f'from {heavydb.table_name}{suffix})));')
@@ -64,8 +64,8 @@ def test_ct_coords(heavydb, suffix, col):
 @pytest.mark.parametrize('suffix', ('geopoint',))
 @pytest.mark.parametrize('col', ('p1', 'p2', 'p3', 'p4'))
 def test_ct_shift(heavydb, suffix, col):
-    if heavydb.version[:2] < (6, 3):
-        pytest.skip('Requires HeavyDB 6.3 or newer')
+    if heavydb.version[:2] < (6, 4):
+        pytest.skip('Requires HeavyDB 6.4 or newer')
 
     query = (f'select * from table(rbc_ct_shift(cursor(select {col} '
              f'from {heavydb.table_name}{suffix}), 1.5, -2.5));')
