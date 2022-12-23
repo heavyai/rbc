@@ -271,9 +271,8 @@ class HeavyDBTimestampType(typesystem.Type):
     def tonumba(self, bool_is_int8=None):
         return TimestampNumbaType()
 
-    def tostring(self, use_typename=False, use_annotation=True, use_name=True,
-                 use_annotation_name=False, _skip_annotation=False):
-        return 'Timestamp'
+    def postprocess_type(self):
+        return self.params(shorttypename='Timestamp')
 
 
 @extending.type_callable(Timestamp)

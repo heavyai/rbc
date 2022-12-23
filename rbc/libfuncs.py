@@ -67,6 +67,8 @@ class HeavyDB(Library):
     RowFunctionManager_getDictDbId
     ColumnArray_isNull ColumnArray_setNull ColumnArray_getItem
     ColumnArray_setItem ColumnArray_concatItem
+    ColumnGeoPoint_isNull ColumnGeoPoint_setNull ColumnGeoPoint_getItem
+    ColumnGeoPoint_setItem
     '''.strip().split())
 
 

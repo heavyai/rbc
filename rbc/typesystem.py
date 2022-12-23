@@ -812,6 +812,8 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     s = str(a)
                 new_params.append(s)
+            if len(new_params) == 0:
+                return name + suffix
             return (name + '<' + ', '.join(new_params) + '>' + suffix)
         raise NotImplementedError(repr(self))
 
@@ -1071,6 +1073,9 @@ class Type(tuple, metaclass=MetaType):
         # atomic
         if s in cls.custom_types:
             return cls.custom_types[s](())
+        elif cls.aliases.get(s, None) in cls.custom_types:
+            custom = cls.aliases.get(s)
+            return cls.custom_types[custom](())
         return cls(s)
 
     @classmethod

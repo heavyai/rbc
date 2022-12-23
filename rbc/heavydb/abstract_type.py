@@ -11,11 +11,6 @@ class HeavyDBAbstractType(typesystem.Type):
 
     @property
     @abstractmethod
-    def pass_by_value(self):
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def numba_type(self):
         raise NotImplementedError
 

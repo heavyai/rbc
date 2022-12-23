@@ -82,7 +82,7 @@ class _DefaultTestTable(_TestTable):
         }
 
 
-class _10TestTable(_DefaultTestTable):
+class _10TestTable(_TestTable):
 
     @classmethod
     def suffix(cls):
@@ -101,7 +101,7 @@ class _10TestTable(_DefaultTestTable):
         }
 
 
-class _nullTestTable(_DefaultTestTable):
+class _nullTestTable(_TestTable):
 
     @classmethod
     def suffix(cls):
@@ -120,7 +120,7 @@ class _nullTestTable(_DefaultTestTable):
         }
 
 
-class _arrayTestTable(_DefaultTestTable):
+class _arrayTestTable(_TestTable):
 
     @classmethod
     def suffix(cls):
@@ -216,8 +216,39 @@ class _TextTestTable(_TestTable):
         }
 
 
+class _GeoPointTestTable(_TestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "geopoint"
+
+    @property
+    def sqltypes(self):
+        return ("POINT",
+                "GEOMETRY(POINT, 4326)",
+                "GEOMETRY(POINT, 4326) ENCODING NONE",
+                "GEOMETRY(POINT, 900913)",
+                "LINESTRING",
+                "GEOMETRY(LINESTRING, 4326) ENCODING NONE",
+                "GEOMETRY(LINESTRING, 4326) ENCODING NONE",
+                "GEOMETRY(LINESTRING, 900913)")
+
+    @property
+    def values(self):
+        return {
+            'p1': ['POINT(1 2)', 'POINT(9 8)'],
+            'p2': ['POINT(3 4)', 'POINT(7 6)'],
+            'p3': ['POINT(5 6)', 'POINT(5 4)'],
+            'p4': ['POINT(7 8)', 'POINT(3 2)'],
+            'l1': ['LINESTRING(1 2, 3 5)', 'LINESTRING(9 8, 11 11)'],
+            'l2': ['LINESTRING(3 4, 5 7)', 'LINESTRING(7 6, 9 9)'],
+            'l3': ['LINESTRING(5 6, 7 9)', 'LINESTRING(5 4, 7 7)'],
+            'l4': ['LINESTRING(7 8, 9 11)', 'LINESTRING(3 2, 5 5)'],
+        }
+
+
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
-                    suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'],
+                    suffices=['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp', 'geopoint'],
                     load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
@@ -257,6 +288,9 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
 
     f'{heavydb.table_name}timestamp' - contains timestamp t9, t6
                                   where 't' prefix is for timestamp.
+
+    f'{heavydb.table_name}geopoint' - contains columns with GeoPoint and
+                                      LinePoint
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
@@ -366,7 +400,8 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     # MULTIPOLYGON, See
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
     for cls in (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
-                _arraynullTestTable, _TextTestTable, _TimestampTestTable):
+                _arraynullTestTable, _TextTestTable, _TimestampTestTable,
+                _GeoPointTestTable):
         suffix = cls.suffix()
         if suffix in suffices:
             obj = cls()

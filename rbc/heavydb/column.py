@@ -33,6 +33,12 @@ class HeavyDBColumnType(HeavyDBBufferType):
         elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
             from .column_array import HeavyDBOutputColumnArrayType
             return self.copy(cls=HeavyDBOutputColumnArrayType)
+        elif self.tostring().startswith('HeavyDBColumnType<GeoPoint>'):
+            from .column_geopoint import HeavyDBColumnGeoPointType
+            return self.copy(cls=HeavyDBColumnGeoPointType)
+        elif self.tostring().startswith('HeavyDBOutputColumnType<GeoPoint>'):
+            from .column_geopoint import HeavyDBOutputColumnGeoPointType
+            return self.copy(cls=HeavyDBOutputColumnGeoPointType)
         return self
 
     def match(self, other):

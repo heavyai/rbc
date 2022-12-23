@@ -409,6 +409,8 @@ class RemoteHeavyDB(RemoteJIT):
         Timestamp='HeavyDBTimestampType',
         DayTimeInterval='HeavyDBDayTimeIntervalType',
         YearMonthTimeInterval='HeavyDBYearMonthTimeIntervalType',
+        GeoPoint='HeavyDBGeoPointType',
+        Point2D='HeavyDBPoint2D',
         UDTF='int32|kind=UDTF'
     )
 
@@ -744,6 +746,7 @@ class RemoteHeavyDB(RemoteJIT):
                         arr_nulls = [v is None for v in arr]
                         if True in arr_nulls:
                             # TODO: null support for text
+                            # TODO: null support for Geo Types
                             null_value = self._null_values[datumtype_map[datumtype]]
                             arr = [(null_value if v is None else v) for v in arr]
                     if datumtype in int_col_types:
@@ -950,6 +953,7 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float32', 'float'),
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
+                ('GeoPoint', 'GeoPoint'),
                 ('Timestamp', 'Timestamp'),
         ]:
             # Column<T>
@@ -957,7 +961,7 @@ class RemoteHeavyDB(RemoteJIT):
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
-            if T == 'Timestamp':
+            if T in ('Timestamp'):
                 # timestamp is only defined for Columns
                 continue
 
