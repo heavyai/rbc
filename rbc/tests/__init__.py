@@ -82,7 +82,7 @@ class _DefaultTestTable(_TestTable):
         }
 
 
-class _10TestTable(_TestTable):
+class _10TestTable(_DefaultTestTable):
 
     @classmethod
     def suffix(cls):
@@ -101,7 +101,7 @@ class _10TestTable(_TestTable):
         }
 
 
-class _nullTestTable(_TestTable):
+class _nullTestTable(_DefaultTestTable):
 
     @classmethod
     def suffix(cls):
@@ -227,8 +227,27 @@ class _GeoPointTestTable(_TestTable):
         return ("POINT",
                 "GEOMETRY(POINT, 4326)",
                 "GEOMETRY(POINT, 4326) ENCODING NONE",
-                "GEOMETRY(POINT, 900913)",
-                "LINESTRING",
+                "GEOMETRY(POINT, 900913)")
+
+    @property
+    def values(self):
+        return {
+            'p1': ['POINT(1 2)', 'POINT(9 8)', None],
+            'p2': ['POINT(3 4)', 'POINT(7 6)', None],
+            'p3': ['POINT(5 6)', 'POINT(5 4)', None],
+            'p4': ['POINT(7 8)', 'POINT(3 2)', None],
+        }
+
+
+class _LineStringTestTable(_TestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "linestring"
+
+    @property
+    def sqltypes(self):
+        return ("LINESTRING",
                 "GEOMETRY(LINESTRING, 4326) ENCODING NONE",
                 "GEOMETRY(LINESTRING, 4326) ENCODING NONE",
                 "GEOMETRY(LINESTRING, 900913)")
@@ -236,20 +255,23 @@ class _GeoPointTestTable(_TestTable):
     @property
     def values(self):
         return {
-            'p1': ['POINT(1 2)', 'POINT(9 8)'],
-            'p2': ['POINT(3 4)', 'POINT(7 6)'],
-            'p3': ['POINT(5 6)', 'POINT(5 4)'],
-            'p4': ['POINT(7 8)', 'POINT(3 2)'],
-            'l1': ['LINESTRING(1 2, 3 5)', 'LINESTRING(9 8, 11 11)'],
-            'l2': ['LINESTRING(3 4, 5 7)', 'LINESTRING(7 6, 9 9)'],
-            'l3': ['LINESTRING(5 6, 7 9)', 'LINESTRING(5 4, 7 7)'],
-            'l4': ['LINESTRING(7 8, 9 11)', 'LINESTRING(3 2, 5 5)'],
+            'l1': ['LINESTRING(1 2, 3 5)', 'LINESTRING(9 8, 11 11)', None],
+            'l2': ['LINESTRING(3 4, 5 7)', 'LINESTRING(7 6, 9 9)', None],
+            'l3': ['LINESTRING(5 6, 7 9)', 'LINESTRING(5 4, 7 7)', None],
+            'l4': ['LINESTRING(7 8, 9 11)', 'LINESTRING(3 2, 5 5)', None],
         }
 
 
+test_classes = (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
+                _arraynullTestTable, _TextTestTable, _TimestampTestTable,
+                _GeoPointTestTable, _LineStringTestTable)
+
+
+test_suffices = [t.suffix() for t in test_classes]
+
+
 def heavydb_fixture(caller_globals, minimal_version=(0, 0),
-                    suffices=['', '10', 'null', 'array', 'arraynull', 'text',
-                              'timestamp', 'geopoint'],
+                    suffices=test_suffices,
                     load_test_data=True, debug=False):
     """Usage from a rbc/tests/test_xyz.py file:
 
@@ -290,8 +312,9 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}timestamp' - contains timestamp t9, t6
                                   where 't' prefix is for timestamp.
 
-    f'{heavydb.table_name}geopoint' - contains columns with GeoPoint and
-                                      LinePoint
+    f'{heavydb.table_name}geopoint' - contains columns with GeoPoint
+
+    f'{heavydb.table_name}linestring' - contains columns with LineString
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
@@ -402,7 +425,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
     for cls in (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
                 _arraynullTestTable, _TextTestTable, _TimestampTestTable,
-                _GeoPointTestTable):
+                _GeoPointTestTable, _LineStringTestTable):
         suffix = cls.suffix()
         if suffix in suffices:
             obj = cls()

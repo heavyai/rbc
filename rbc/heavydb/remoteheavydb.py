@@ -665,6 +665,8 @@ class RemoteHeavyDB(RemoteJIT):
             'BIGINT[]': 'Array<int64>',
             'FLOAT[]': 'Array<float32>',
             'DOUBLE[]': 'Array<float64>',
+            'POINT': 'Point',
+            'LINESTRING': 'Linestring',
         }
 
         thrift = self.thrift_client.thrift
@@ -961,7 +963,7 @@ class RemoteHeavyDB(RemoteJIT):
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
-            if T in ('Timestamp'):
+            if T == 'Timestamp':
                 # timestamp is only defined for Columns
                 continue
 
@@ -1083,6 +1085,11 @@ class RemoteHeavyDB(RemoteJIT):
                     null_values_astype[tname] = null_value
         null_values_astype['Timestamp'] = null_values_astype['int64']
         null_values_asint['Timestamp'] = null_values_asint['int64']
+
+        # Point/Linestring
+        null_values_astype['Point'] = ''
+        null_values_astype['Linestring'] = ''
+
         self._null_values = null_values_astype
 
         targets = {}

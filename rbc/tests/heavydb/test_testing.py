@@ -1,8 +1,8 @@
 import pytest
-from rbc.tests import heavydb_fixture
+from rbc.tests import heavydb_fixture, test_suffices
 
 
-@pytest.mark.parametrize('suffix', ['', '10', 'null', 'array', 'arraynull', 'text', 'timestamp'])
+@pytest.mark.parametrize('suffix', test_suffices)
 def test_table_load(suffix):
 
     count = 0
@@ -77,5 +77,21 @@ def test_table_load(suffix):
             (65844122002002002, 1643767322002002002, None, 1643767322002002002, 65844122002002),
             (99975783003003003, 1677812583003003003, 2117152922002002002, 1677812583003003003, 99975783003003)  # noqa: E501
         ]
+    elif suffix == 'geopoint':
+        assert colnames == ['p1', 'p2', 'p3', 'p4']
+        assert result == [
+            ('POINT (1 2)', 'POINT (2.99999999022111 3.99999997299165)',
+             'POINT (5 6)', 'POINT (7 8)'),
+            ('POINT (9 8)', 'POINT (6.99999992130324 5.99999998044223)',
+             'POINT (5 4)', 'POINT (3 2)'),
+            (None, None, None, None)]
+    elif suffix == 'linestring':
+        assert colnames == ['l1', 'l2', 'l3', 'l4']
+        assert result == [
+            ('LINESTRING (1 2,3 5)', 'LINESTRING (3 4,5 7)',
+             'LINESTRING (5 6,7 9)', 'LINESTRING (7 8,9 11)'),
+            ('LINESTRING (9 8,11 11)', 'LINESTRING (7 6,9 9)',
+             'LINESTRING (5 4,7 7)', 'LINESTRING (3 2,5 5)'),
+            (None, None, None, None)]
     else:
         raise NotImplementedError(suffix)
