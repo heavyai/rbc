@@ -29,6 +29,9 @@ class Point2D(metaclass=HeavyDBMetaType):
         }
     """
 
+    def __init__(self, x: float, y: float) -> None:
+        pass
+
 
 class Point2DNumbaType(nb_types.Type):
     pass
