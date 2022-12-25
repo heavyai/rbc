@@ -46,7 +46,7 @@ class ColumnGeoPoint(metaclass=HeavyDBMetaType):
         }
 
     """
-    def get_item(self, index: int) -> int:
+    def get_item(self, index: int) -> 'point2d.Point2D':
         """
         Return ``self[index]``
 
@@ -54,7 +54,7 @@ class ColumnGeoPoint(metaclass=HeavyDBMetaType):
             Only available on ``CPU``
         """
 
-    def set_item(self, index: int, point: 'point2d.Point2D') -> int:
+    def set_item(self, index: int, point: 'point2d.Point2D') -> None:
         """
         ``self[index] = point``
 
@@ -62,7 +62,7 @@ class ColumnGeoPoint(metaclass=HeavyDBMetaType):
             Only available on ``CPU``
         """
 
-    def is_null(self, index: int) -> int:
+    def is_null(self, index: int) -> bool:
         """
         Check if the GeoPoint at ``index`` is null.
 
@@ -70,7 +70,7 @@ class ColumnGeoPoint(metaclass=HeavyDBMetaType):
             Only available on ``CPU``
         """
 
-    def set_null(self, index: int) -> int:
+    def set_null(self, index: int) -> None:
         """
         Set the GeoPoint at ``index`` to null.
 
