@@ -32,9 +32,6 @@ i64p = i64.as_pointer()
 void = ir.VoidType()
 
 
-_COLUMN_PARAM_NAME = 'ColumnGeoPoint_inner_type'
-
-
 class ColumnGeoPoint(metaclass=HeavyDBMetaType):
     """
     RBC ``Column<GeoPoint>`` type that corresponds to HeavyDB COLUMN<GEOPOINT>
@@ -162,14 +159,12 @@ def heavydb_column_getitem_(typingctx, x, i):
     def codegen(context, builder, sig, args):
         col, index = args
         fa = cgutils.create_struct_proxy(sig.return_type)(context, builder)
-        fnty = ir.FunctionType(void, [i8p, i64, i32, i8p])
+        fnty = ir.FunctionType(fa._get_be_type(fa._datamodel), [i8p, i64, i32])
         getItem = cgutils.get_or_insert_function(builder.module, fnty,
                                                  "ColumnGeoPoint_getItem")
         flatbuffer = builder.extract_value(col, [0])
         output_srid = i32(0)
-        point_ptr = builder.bitcast(fa._getpointer(), i8p)
-        builder.call(getItem, [flatbuffer, index, output_srid, point_ptr])
-        return fa._getvalue()
+        return builder.call(getItem, [flatbuffer, index, output_srid])
 
     return sig, codegen
 
