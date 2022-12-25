@@ -1,5 +1,5 @@
 
-'''RBC GeoPoint type that corresponds to HeavyDB type GEOPOINT.
+'''RBC Point2D type.
 '''
 
 __all__ = ['Point2D']
