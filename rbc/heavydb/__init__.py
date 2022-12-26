@@ -15,6 +15,7 @@ from .timestamp import *  # noqa: F401, F403
 from .day_time_interval import *  # noqa: F401, F403
 from .year_month_time_interval import *  # noqa: F401, F403
 from .geopoint import *  # noqa: F401, F403
+from .geolinestring import *  # noqa: F401, F403
 from .point2d import *  # noqa: F401, F403
 from .remoteheavydb import *  # noqa: F401, F403
 

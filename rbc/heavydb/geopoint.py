@@ -5,7 +5,6 @@ __all__ = ['HeavyDBGeoPointType', 'GeoPoint']
 
 from .metatype import HeavyDBMetaType
 from .abstract_type import HeavyDBAbstractType
-from rbc import typesystem
 from numba.core import types as nb_types
 
 
@@ -21,21 +20,23 @@ class HeavyDBGeoPointType(HeavyDBAbstractType):
     def postprocess_type(self):
         return self.params(shorttypename='GeoPoint')
 
-    def tonumba(self, bool_is_int8=None):
-        ptr_t = typesystem.Type.fromstring('int8_t* ptr')
-        sz_t = typesystem.Type.fromstring('int32_t sz')
-        compression_t = typesystem.Type.fromstring('int32_t compression')
-        input_srid_t = typesystem.Type.fromstring('int32_t input_srid')
-        output_srid_t = typesystem.Type.fromstring('int32_t output_srid')
-        struct = typesystem.Type(
-            ptr_t,
-            sz_t,
-            compression_t,
-            input_srid_t,
-            output_srid_t,
-        )
-        geopoint_type = typesystem.Type(struct, '*', name='Point')
-        return geopoint_type.tonumba(bool_is_int8=True)
+    # A GeoPoint is not materialized, so, just skip the code below for now
+    # as we can't test it.
+    # def tonumba(self, bool_is_int8=None):
+    #     ptr_t = typesystem.Type.fromstring('int8_t* ptr')
+    #     sz_t = typesystem.Type.fromstring('int32_t sz')
+    #     compression_t = typesystem.Type.fromstring('int32_t compression')
+    #     input_srid_t = typesystem.Type.fromstring('int32_t input_srid')
+    #     output_srid_t = typesystem.Type.fromstring('int32_t output_srid')
+    #     struct = typesystem.Type(
+    #         ptr_t,
+    #         sz_t,
+    #         compression_t,
+    #         input_srid_t,
+    #         output_srid_t,
+    #     )
+    #     geopoint_type = typesystem.Type(struct)
+    #     return geopoint_type.tonumba(bool_is_int8=True)
 
 
 class GeoPoint(object, metaclass=HeavyDBMetaType):

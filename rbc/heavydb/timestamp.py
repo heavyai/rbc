@@ -47,7 +47,7 @@ class Timestamp(metaclass=HeavyDBMetaType):
     All comparison (dunder methods) are implemented for this class.
     """
 
-    def __init__(self, time: Union[int, 'nb_types.LiteralString']) -> 'Timestamp':
+    def __init__(self, time: Union[int, 'nb_types.StringLiteral']) -> 'Timestamp':
         pass
 
     def truncateToMicroseconds(self) -> 'Timestamp':

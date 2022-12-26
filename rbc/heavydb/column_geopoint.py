@@ -11,8 +11,10 @@ __all__ = ['HeavyDBOutputColumnGeoPointType', 'HeavyDBColumnGeoPointType',
 import operator
 from typing import TypeVar
 from rbc import typesystem
+from rbc.external import external
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
 from . import point2d
+from .utils import as_voidptr, get_alloca, deref
 from .metatype import HeavyDBMetaType
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
@@ -154,74 +156,30 @@ class ColumnGeoPointPointer(nb_types.Type):
 @extending.intrinsic
 def heavydb_column_getitem_(typingctx, x, i):
     Point2D = typesystem.Type.fromstring('Point2D').tonumba()
+    # oddly enough, a Column<GeoPoint> returns a Point2D
     sig = Point2D(x, i)
 
     def codegen(context, builder, sig, args):
         col, index = args
-        fa = cgutils.create_struct_proxy(sig.return_type)(context, builder)
-        fnty = ir.FunctionType(fa._get_be_type(fa._datamodel), [i8p, i64, i32])
+        # fnty = ir.FunctionType(fa._get_be_type(fa._datamodel), [i8p, i64, i32, i8p])
+        fnty = ir.FunctionType(void, [i8p, i64, i32, i8p])
         getItem = cgutils.get_or_insert_function(builder.module, fnty,
                                                  "ColumnGeoPoint_getItem")
-        flatbuffer = builder.extract_value(col, [0])
         output_srid = i32(0)
-        return builder.call(getItem, [flatbuffer, index, output_srid])
+        col_ptr = builder.bitcast(col, i8p)
 
-    return sig, codegen
+        # Alloca Point2D
+        fa = context.make_helper(builder, sig.return_type)
 
+        # Point2D -> void*
+        result_ptr = builder.bitcast(fa._getpointer(), i8p)
 
-@extending.intrinsic
-def heavydb_column_setitem_(typingctx, x, i, point2d):
-    sig = nb_types.void(x, i, point2d)
+        # call func
+        builder.call(getItem, [col_ptr, index, output_srid, result_ptr])
 
-    def codegen(context, builder, sig, args):
-        col, index, point2d_ = args
-        fnty = ir.FunctionType(void, [i8p, i64, i8p])
-        getItem = cgutils.get_or_insert_function(builder.module, fnty,
-                                                 "ColumnGeoPoint_setItem")
-        flatbuffer = builder.extract_value(col, [0])
-        fa = cgutils.create_struct_proxy(point2d)(context, builder, value=point2d_)
-        builder.call(getItem, [flatbuffer, index, builder.bitcast(fa._getpointer(), i8p)])
-
-    return sig, codegen
-
-
-@extending.intrinsic
-def heavydb_column_is_null_(typingctx, x, i):
-    sig = nb_types.boolean(x, i)
-
-    def codegen(context, builder, sig, args):
-        col, index = args
-        fnty = ir.FunctionType(i1, [i8p, i64])
-        isNull = cgutils.get_or_insert_function(builder.module, fnty,
-                                                "ColumnGeoPoint_isNull")
-        flatbuffer = builder.extract_value(col, [0])
-        return builder.call(isNull, [flatbuffer, index])
-
-    return sig, codegen
-
-
-@extending.intrinsic
-def heavydb_column_set_null_(typingctx, x, i):
-    sig = nb_types.void(x, i)
-
-    def codegen(context, builder, sig, args):
-        col, index = args
-        fnty = ir.FunctionType(i1, [i8p, i64])
-        setNull = cgutils.get_or_insert_function(builder.module, fnty,
-                                                 "ColumnGeoPoint_setNull")
-        flatbuffer = builder.extract_value(col, [0])
-        builder.call(setNull, [flatbuffer, index])
-
-    return sig, codegen
-
-
-@extending.intrinsic
-def deref(typingctx, x):
-    sig = x.dtype(x)
-
-    def codegen(context, builder, sig, args):
-        [ptr] = args
-        return builder.load(ptr)
+        # convert void* -> Point2D
+        point_type = fa._get_be_type(fa._datamodel)
+        return builder.load(builder.bitcast(result_ptr, point_type.as_pointer()))
 
     return sig, codegen
 
@@ -242,7 +200,7 @@ def heavydb_column_len_(typingctx, x):
 def heavydb_column_getitem(x, i):
     if isinstance(x, ColumnGeoPointPointer):
         def impl(x, i):
-            return heavydb_column_getitem_(deref(x), i)
+            return heavydb_column_getitem_(x, i)
         return impl
     elif isinstance(x, ColumnGeoPointType):
         def impl(x, i):
@@ -253,39 +211,45 @@ def heavydb_column_getitem(x, i):
 @extending.overload_method(ColumnGeoPointPointer, 'is_null')
 @extending.overload_method(ColumnGeoPointType, 'is_null')
 def heavydb_column_ptr_is_null(x, i):
+    isNull = external('bool ColumnGeoPoint_isNull(int8_t*, int64_t)|cpu')
+
     if isinstance(x, ColumnGeoPointPointer):
         def impl(x, i):
-            return heavydb_column_is_null_(deref(x), i)
+            return isNull(as_voidptr(x), i)
         return impl
     elif isinstance(x, ColumnGeoPointType):
         def impl(x, i):
-            return heavydb_column_is_null_(x, i)
+            return isNull(get_alloca(x), i)
         return impl
 
 
 @extending.overload_method(ColumnGeoPointPointer, 'set_null')
 @extending.overload_method(ColumnGeoPointType, 'set_null')
 def heavydb_column_set_null(x, i):
+    setNull = external('void ColumnGeoPoint_setNull(int8_t*, int64_t)|cpu')
+
     if isinstance(x, ColumnGeoPointPointer):
         def impl(x, i):
-            return heavydb_column_set_null_(deref(x), i)
+            return setNull(as_voidptr(x), i)
         return impl
     elif isinstance(x, ColumnGeoPointType):
         def impl(x, i):
-            return heavydb_column_set_null_(x, i)
+            return setNull(get_alloca(x), i)
         return impl
 
 
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnGeoPointPointer, 'set_item')
 def heavydb_column_set_item(x, i, point):
+    setItem = external('void ColumnGeoPoint_setItem(int8_t*, int64_t, int8_t*)|cpu')
+
     if isinstance(x, ColumnGeoPointPointer):
         def impl(x, i, point):
-            return heavydb_column_setitem_(deref(x), i, point)
+            return setItem(as_voidptr(x), i, as_voidptr(get_alloca(point)))
         return impl
     elif isinstance(x, ColumnGeoPointType):
         def impl(x, i, point):
-            return heavydb_column_setitem_(x, i, point)
+            return setItem(get_alloca(x), i, as_voidptr(get_alloca(point)))
         return impl
 
 

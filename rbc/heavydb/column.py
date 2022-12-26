@@ -27,6 +27,7 @@ class HeavyDBColumnType(HeavyDBBufferType):
     """
 
     def postprocess_type(self):
+        # re-wire the implementation of Column<T> to a subtype of Column
         if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
             from .column_array import HeavyDBColumnArrayType
             return self.copy(cls=HeavyDBColumnArrayType)
@@ -39,6 +40,12 @@ class HeavyDBColumnType(HeavyDBBufferType):
         elif self.tostring().startswith('HeavyDBOutputColumnType<GeoPoint>'):
             from .column_geopoint import HeavyDBOutputColumnGeoPointType
             return self.copy(cls=HeavyDBOutputColumnGeoPointType)
+        elif self.tostring().startswith('HeavyDBColumnType<GeoLineString>'):
+            from .column_geolinestring import HeavyDBColumnGeoLineStringType
+            return self.copy(cls=HeavyDBColumnGeoLineStringType)
+        elif self.tostring().startswith('HeavyDBOutputColumnType<GeoLineString>'):
+            from .column_geolinestring import HeavyDBOutputColumnGeoLineStringType
+            return self.copy(cls=HeavyDBOutputColumnGeoLineStringType)
         return self
 
     def match(self, other):

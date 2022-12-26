@@ -61,6 +61,18 @@ class TableFunctionManager(metaclass=HeavyDBMetaType):
             Must be called before making any assignment on output columns.
         """
 
+    def set_output_item_values_total_number(self, index: int,
+                                            output_item_values_total_number: int) -> None:
+        """
+        set_output_item_values_total_number sets the total number of items
+        values in the index-th output Column of non-scalars.
+
+
+        .. note::
+            Must be called before ``set_output_row_size`` and making any
+            assignment on output columns.
+        """
+
 
 error_msg = 'TableFunctionManager is only available in HeavyDB 5.9 or newer (got %s)'
 i8p = ir.IntType(8).as_pointer()
@@ -135,7 +147,7 @@ def mgr_set_output_array_(typingctx, mgr, col_idx, value):
     sig = types.void(mgr, col_idx, value)
 
     target_info = TargetInfo()
-    # XXX: Check is heavydb 6.1 has this function
+    # XXX: Check if heavydb 6.1 has this function
     if target_info.software[1][:3] < (6, 1, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
@@ -143,9 +155,35 @@ def mgr_set_output_array_(typingctx, mgr, col_idx, value):
         mgr_ptr, col_idx, value = args
 
         mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
+        col_idx = builder.trunc(col_idx, i32)
 
-        fnty = ir.FunctionType(ir.VoidType(), [i8p, i64, i64])
+        fnty = ir.FunctionType(ir.VoidType(), [i8p, i32, i64])
         fn_name = "TableFunctionManager_set_output_array_values_total_number"
+        module = builder.module
+        fn = cgutils.get_or_insert_function(module, fnty, fn_name)
+
+        builder.call(fn, [mgr_i8ptr, col_idx, value])
+
+    return sig, codegen
+
+
+@extending.intrinsic
+def mgr_set_output_item_(typingctx, mgr, col_idx, value):
+    sig = types.void(mgr, col_idx, value)
+
+    target_info = TargetInfo()
+    # XXX: Check if heavydb 6.3 has this function
+    if target_info.software[1][:3] < (6, 3, 0):
+        raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
+
+    def codegen(context, builder, sig, args):
+        mgr_ptr, col_idx, value = args
+
+        mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
+        col_idx = builder.trunc(col_idx, i32)
+
+        fnty = ir.FunctionType(ir.VoidType(), [i8p, i32, i64])
+        fn_name = "TableFunctionManager_set_output_item_values_total_number"
         module = builder.module
         fn = cgutils.get_or_insert_function(module, fnty, fn_name)
 
@@ -168,4 +206,14 @@ set_output_array = 'set_output_array_values_total_number'
 def mgr_set_output_array(mgr, col_idx, value):
     def impl(mgr, col_idx, value):
         return mgr_set_output_array_(mgr, col_idx, value)
+    return impl
+
+
+set_output_item = 'set_output_item_values_total_number'
+
+
+@extending.overload_method(HeavyDBTableFunctionManagerNumbaType, set_output_item)
+def mgr_set_output_item(mgr, col_idx, value):
+    def impl(mgr, col_idx, value):
+        return mgr_set_output_item_(mgr, col_idx, value)
     return impl

@@ -410,6 +410,7 @@ class RemoteHeavyDB(RemoteJIT):
         DayTimeInterval='HeavyDBDayTimeIntervalType',
         YearMonthTimeInterval='HeavyDBYearMonthTimeIntervalType',
         GeoPoint='HeavyDBGeoPointType',
+        GeoLineString='HeavyDBGeoLineStringType',
         Point2D='HeavyDBPoint2D',
         UDTF='int32|kind=UDTF'
     )
@@ -956,6 +957,7 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('GeoPoint', 'GeoPoint'),
+                ('GeoLineString', 'GeoLineString'),
                 ('Timestamp', 'Timestamp'),
         ]:
             # Column<T>

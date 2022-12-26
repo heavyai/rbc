@@ -54,6 +54,7 @@ class HeavyDB(Library):
     allocate_varlen_buffer set_output_row_size
     TableFunctionManager_error_message TableFunctionManager_set_output_row_size
     TableFunctionManager_set_output_array_values_total_number
+    TableFunctionManager_set_output_item_values_total_number
     table_function_error
     extract_epoch extract_dateepoch extract_quarterday extract_hour
     extract_minute extract_second extract_millisecond extract_nanosecond
@@ -69,6 +70,10 @@ class HeavyDB(Library):
     ColumnArray_setItem ColumnArray_concatItem
     ColumnGeoPoint_isNull ColumnGeoPoint_setNull ColumnGeoPoint_getItem
     ColumnGeoPoint_setItem
+    ColumnGeoLineString_isNull ColumnGeoLineString_setNull
+    ColumnGeoLineString_getItem ColumnGeoLineString_setItem
+    ColumnGeoLineString_getNofValues
+    GeoLineString_op_assignment
     '''.strip().split())
 
 
