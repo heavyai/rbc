@@ -93,6 +93,6 @@ html_theme_options = {
 html_context = {
     "github_user": "xnd-project",
     "github_repo": "rbc",
-    "github_version": "master",
+    "github_version": "main",
     "doc_path": "doc",
 }
