@@ -88,6 +88,10 @@ html_logo = "images/xndlogo.png"
 html_theme_options = {
     "github_url": "https://github.com/xnd-project/rbc",
     "use_edit_page_button": True,
+   "logo": {
+      "image_light": html_logo,
+      "image_dark": html_logo,
+   }
 }
 
 html_context = {
