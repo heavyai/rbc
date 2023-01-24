@@ -54,23 +54,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          channels: conda-forge
-
-      - name: Configure miniconda
-        shell: bash -l {0}
-        run: |
-          conda env config vars set MAMBA_NO_BANNER=1
-      - name: Create rbc test environment v${{ matrix.python-version }}
+      - name: Create rbc test environment file v${{ matrix.python-version }}
         shell: bash -l {0}
         run: |
           cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
-          mamba env create  --file=rbc_test.yaml -n rbc
+
+      - name: Setup Conda Environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          use-mamba: true
+          channels: conda-forge
+          environment-file: rbc_test.yaml
+          auto-activate-base: false
+
+      - name: Configure miniconda
+        shell: bash -l {0}
+        run: |
+          conda env config vars set MAMBA_NO_BANNER=1
+
       - name: rbc conda config
         shell: bash -l {0}
         run: mamba run -n rbc conda config --show
@@ -79,10 +83,12 @@ jobs:
         shell: bash -l {0}
         run: |
           mamba run -n rbc conda list
+
       - name: Develop rbc
         shell: bash -l {0}
         run: |
           mamba run -n rbc python setup.py develop
+
       - name: Run rbc tests
         shell: bash -l {0}
         env:
@@ -131,7 +137,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
+          use-mamba: true
           channels: conda-forge
 
       - name: Configure miniconda
