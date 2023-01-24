@@ -120,11 +120,7 @@ def define(heavydb):
             db_id = mgr.getDictDbId('to_text_encoding_none_1', 0)
             dict_id = mgr.getDictId('to_text_encoding_none_1', 0)
             str = mgr.getString(db_id, dict_id, t)
-            n = len(str)
-            r = TextEncodingNone(n)
-            for i in range(n):
-                r[i] = str[i]
-            return r
+            return str
 
         @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
         def to_text_encoding_none_2(mgr, t):
