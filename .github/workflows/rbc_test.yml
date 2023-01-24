@@ -66,7 +66,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           use-mamba: true
+          mamba-version: "*"
           channels: conda-forge
+          channel-priority: true
           environment-file: rbc_test.yaml
           auto-activate-base: false
 
