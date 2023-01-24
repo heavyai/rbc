@@ -140,7 +140,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           use-mamba: true
+          mamba-version: "*"
           channels: conda-forge
+          channel-priority: true
 
       - name: Configure miniconda
         shell: bash -l {0}
