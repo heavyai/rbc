@@ -54,11 +54,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          channel-priority: strict
           channels: conda-forge
         run: |
           conda install mamba -c conda-forge -y
@@ -138,7 +136,6 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          channel-priority: strict
           channels: conda-forge
         run: |
           conda install mamba -c conda-forge -y
@@ -288,7 +285,6 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v2
           with:
             python-version: 3.8
-            channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml
           run: |
