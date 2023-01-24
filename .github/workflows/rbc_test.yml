@@ -57,9 +57,13 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
+          channel-priority: strict
           channels: conda-forge
+
+      - name: Install mamba
+        shell: bash -l {0}
         run: |
-          conda install mamba -c conda-forge -y
+          conda install mamba -c conda-forge
 
       - name: Configure miniconda
         shell: bash -l {0}
@@ -136,9 +140,13 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
+          channel-priority: strict
           channels: conda-forge
+
+      - name: Install mamba
+        shell: bash -l {0}
         run: |
-          conda install mamba -c conda-forge -y
+          conda install mamba -c conda-forge
 
       - name: Configure miniconda
         shell: bash -l {0}
@@ -285,14 +293,14 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v2
           with:
             python-version: 3.8
+            channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml
-          run: |
-            conda install mamba -c conda-forge -y
 
         - name: Install additional packages
           shell: bash -l {0}
           run: |
+            conda install mamba -c conda-forge -y
             mamba install -c conda-forge heavydb nbval ibis-heavyai matplotlib pandas
 
         - name: Start heavydb server
