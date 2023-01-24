@@ -58,10 +58,10 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          use-mamba: true
           channel-priority: strict
           channels: conda-forge
+        run: |
+          conda install mamba -c conda-forge -y
 
       - name: Configure miniconda
         shell: bash -l {0}
@@ -138,10 +138,10 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          use-mamba: true
           channel-priority: strict
           channels: conda-forge
+        run: |
+          conda install mamba -c conda-forge -y
 
       - name: Configure miniconda
         shell: bash -l {0}
@@ -288,11 +288,11 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v2
           with:
             python-version: 3.8
-            mamba-version: "*"
-            use-mamba: true
             channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml
+          run: |
+            conda install mamba -c conda-forge -y
 
         - name: Install additional packages
           shell: bash -l {0}
