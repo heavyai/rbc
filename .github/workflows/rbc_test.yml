@@ -43,7 +43,7 @@ jobs:
             python-version: '3.10'
             numba-version: '0.55'
 
-    needs: [lint, heavydb]
+    needs: [lint]
 
     steps:
       - name: Checkout code
@@ -57,13 +57,19 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
+          channel-priority: strict
           channels: conda-forge
+
+      - name: Install mamba
+        shell: bash -l {0}
+        run: |
+          conda install mamba -c conda-forge
 
       - name: Configure miniconda
         shell: bash -l {0}
         run: |
           conda env config vars set MAMBA_NO_BANNER=1
+
       - name: Create rbc test environment v${{ matrix.python-version }}
         shell: bash -l {0}
         run: |
@@ -71,6 +77,7 @@ jobs:
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
           mamba env create  --file=rbc_test.yaml -n rbc
+
       - name: rbc conda config
         shell: bash -l {0}
         run: mamba run -n rbc conda config --show
@@ -79,10 +86,12 @@ jobs:
         shell: bash -l {0}
         run: |
           mamba run -n rbc conda list
+
       - name: Develop rbc
         shell: bash -l {0}
         run: |
           mamba run -n rbc python setup.py develop
+
       - name: Run rbc tests
         shell: bash -l {0}
         env:
@@ -131,8 +140,13 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
+          channel-priority: strict
           channels: conda-forge
+
+      - name: Install mamba
+        shell: bash -l {0}
+        run: |
+          conda install mamba -c conda-forge
 
       - name: Configure miniconda
         shell: bash -l {0}
@@ -279,13 +293,14 @@ jobs:
         - uses: conda-incubator/setup-miniconda@v2
           with:
             python-version: 3.8
-            mamba-version: "*"
+            channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml
 
         - name: Install additional packages
           shell: bash -l {0}
           run: |
+            conda install mamba -c conda-forge -y
             mamba install -c conda-forge heavydb nbval ibis-heavyai matplotlib pandas
 
         - name: Start heavydb server
