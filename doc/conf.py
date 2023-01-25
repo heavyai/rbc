@@ -52,7 +52,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
-    'sphinx_autodoc_typehints',
+    # 'sphinx_autodoc_typehints',
     'numbadoc',
 ]
 
