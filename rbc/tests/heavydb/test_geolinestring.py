@@ -22,7 +22,9 @@ def define(heavydb):
             if linestrings.is_null(i):
                 copied_linestrings.set_null(i)
             else:
+                val = linestrings.get_item(i)
                 copied_linestrings.set_null(i)
+                # copied_linestrings.set_item(i, linestrings.get_item(i))
                 # copied_linestrings[i] = linestrings[i]
         return size
 

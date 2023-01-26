@@ -1,3 +1,5 @@
+from rbc import typesystem
+from rbc.errors import RequireLiteralValue
 from numba.core import extending
 from numba import types as nb_types
 from llvmlite import ir

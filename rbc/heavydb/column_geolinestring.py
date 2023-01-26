@@ -8,13 +8,14 @@ UDTFs.
 __all__ = ['HeavyDBOutputColumnGeoLineStringType', 'HeavyDBColumnGeoLineStringType',
            'ColumnGeoLineString']
 
+import operator
 from typing import TypeVar
 from rbc import typesystem
 from rbc.external import external
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
 from .metatype import HeavyDBMetaType
 from . import geolinestring
-from .utils import as_voidptr, deref
+from .utils import as_voidptr, deref, get_alloca
 from numba.core import extending
 from numba.core import types as nb_types
 from llvmlite import ir
@@ -252,12 +253,20 @@ def heavydb_column_getnofvalues(x):
 
 
 # @extending.overload(operator.getitem)
-# @extending.overload_method(ColumnGeoLineStringPointer, 'get_item')
-# def heavydb_column_getitem(x, i):
-#     if isinstance(x, ColumnGeoLineStringPointer):
-#         def impl(x, i):
-#             return heavydb_column_getitem_(deref(x), i)
-#         return impl
+@extending.overload_method(ColumnGeoLineStringPointer, 'get_item')
+def heavydb_column_getitem(x, i):
+    getItem = external('void ColumnGeoLineString_getItem(int8_t*, int64_t, int8_t*)|cpu')
+
+    from . import geolinestring
+    from rbc.externals.stdio import printf
+
+    if isinstance(x, ColumnGeoLineStringPointer):
+        def impl(x, i):
+            obj = geolinestring.GeoLineString()
+            printf("n: %d\n", obj.n_)
+            getItem(as_voidptr(x), i, as_voidptr(get_alloca(obj)))
+            return obj
+        return impl
 #     elif isinstance(x, ColumnGeoLineStringType):
 #         def impl(x, i):
 #             return heavydb_column_getitem_(x, i)
@@ -296,9 +305,11 @@ def heavydb_column_set_null(x, i):
 # @extending.overload(operator.setitem)
 # @extending.overload_method(ColumnGeoLineStringPointer, 'set_item')
 # def heavydb_column_set_item(x, i, rhs):
+#     setItem = external('void ColumnGeoLineString_setItem(int8_t*, int64_t, GeoLineString)')
 #     if isinstance(x, ColumnGeoLineStringPointer):
 #         def impl(x, i, rhs):
-#             operator.setitem(deref(x), i, rhs)
+#             setItem(as_voidptr(x), i, rhs)
+#             # operator.setitem(deref(x), i, rhs)
 #         return impl
 #     elif isinstance(x, ColumnGeoLineStringType):
 #         def impl(x, i, rhs):
