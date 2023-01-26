@@ -2,6 +2,7 @@ import os
 import pytest
 import itertools
 from rbc.tests import heavydb_fixture
+from rbc.heavydb import TextEncodingNone
 
 
 @pytest.fixture(scope="module")
@@ -113,6 +114,24 @@ def define(heavydb):
             dict_id = mgr.getDictId('fn_copy', 0)
             str = mgr.getString(db_id, dict_id, t)
             return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_DB_ID, mgr.TRANSIENT_DICT_ID, str)
+
+        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        def to_text_encoding_none_1(mgr, t):
+            db_id = mgr.getDictDbId('to_text_encoding_none_1', 0)
+            dict_id = mgr.getDictId('to_text_encoding_none_1', 0)
+            str = mgr.getString(db_id, dict_id, t)
+            return str
+
+        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        def to_text_encoding_none_2(mgr, t):
+            db_id = mgr.getDictDbId('to_text_encoding_none_2', 0)
+            dict_id = mgr.getDictId('to_text_encoding_none_2', 0)
+            str = mgr.getString(db_id, dict_id, t)
+            n = len(str)
+            r = TextEncodingNone(n)
+            for i in range(n):
+                r[i] = str[i]
+            return r
 
 
 @pytest.fixture(scope="module")
@@ -505,6 +524,19 @@ def test_udf_copy_dict_encoded_string(heavydb, col):
 
     table = f"{heavydb.base_name}text"
     query = f"SELECT fn_copy({col}) from {table}"
+    _, result = heavydb.sql_execute(query)
+
+    assert list(result) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
+
+
+@pytest.mark.parametrize('col', ['t1'])
+@pytest.mark.parametrize('fn', ['to_text_encoding_none_1', 'to_text_encoding_none_2'])
+def test_to_text_encoding_none(heavydb, fn, col):
+    if heavydb.version[:2] < (6, 3):
+        pytest.skip('Requires HeavyDB version 6.3 or newer')
+
+    table = f"{heavydb.base_name}text"
+    query = f"SELECT {fn}({col}) from {table}"
     _, result = heavydb.sql_execute(query)
 
     assert list(result) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
