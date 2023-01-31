@@ -15,7 +15,7 @@ from rbc.external import external
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
 from .metatype import HeavyDBMetaType
 from . import geolinestring
-from .utils import as_voidptr, deref, get_alloca
+from .utils import as_voidptr, deref
 from numba.core import extending
 from numba.core import types as nb_types
 from llvmlite import ir
@@ -224,7 +224,8 @@ def heavydb_column_set_null(x, i):
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'set_item')
 def heavydb_column_set_item(x, i, rhs):
-    setItem = external('void ColumnGeoLineString_setItem(int8_t*, int64_t, int8_t* column_ptr, int64_t index)')
+    sig = 'void ColumnGeoLineString_setItem(int8_t*, int64_t, int8_t* column_ptr, int64_t index)'
+    setItem = external(sig)
     if isinstance(x, ColumnGeoLineStringPointer):
         def impl(x, i, rhs):
             setItem(as_voidptr(x), i, rhs.column_ptr_, rhs.index_)
