@@ -4,7 +4,6 @@
 __all__ = ['HeavyDBGeoLineStringType', 'GeoLineString']
 
 from .metatype import HeavyDBMetaType
-from .abstract_type import HeavyDBAbstractType
 from rbc import typesystem
 from numba.core import types as nb_types
 from numba.core import extending
@@ -15,7 +14,7 @@ class GeoLineStringNumbaType(nb_types.Type):
         super().__init__(name='GeoLineStringNumbaType')
 
 
-class HeavyDBGeoLineStringType(HeavyDBAbstractType):
+class HeavyDBGeoLineStringType(typesystem.Type):
     """Typesystem type class for HeavyDB buffer structures.
     """
 
@@ -23,13 +22,11 @@ class HeavyDBGeoLineStringType(HeavyDBAbstractType):
         return self.params(shorttypename='GeoLineString')
 
     def tonumba(self, bool_is_int8=None):
-        flatbuffer_t = typesystem.Type.fromstring('int8_t* flatbuffer_')
-        index_t = typesystem.Type.fromstring('int64_t* index_')
-        n_t = typesystem.Type.fromstring('size_t n_')
+        col_ptr_t = typesystem.Type.fromstring('int8_t* column_ptr_')
+        index_t = typesystem.Type.fromstring('int64_t index_')
         geoline_type = typesystem.Type(
-            flatbuffer_t,
+            col_ptr_t,
             index_t,
-            n_t,
             name='GeoLineString')
         return geoline_type.tonumba(bool_is_int8=True)
 
@@ -41,11 +38,9 @@ class GeoLineString(object, metaclass=HeavyDBMetaType):
     .. code-block:: c
 
         {
-            int8_t* ptr;
-            int32_t sz;
-            int32_t compression;
-            int32_t input_srid;
-            int32_t output_srid;
+            int8_t* flatbuffer_;
+            int64_t index_[4];
+            int64_t n_;
         }
     """
     pass
@@ -53,14 +48,15 @@ class GeoLineString(object, metaclass=HeavyDBMetaType):
 
 @extending.type_callable(GeoLineString)
 def type_heavydb_timestamp(context):
-    def typer():
-        return typesystem.Type.fromstring('GeoLineString').tonumba()
+    def typer(ptr, idx):
+        if isinstance(ptr, nb_types.CPointer) and isinstance(idx, nb_types.Integer):
+            return typesystem.Type.fromstring('GeoLineString').tonumba()
     return typer
 
 
-@extending.lower_builtin(GeoLineString)
+@extending.lower_builtin(GeoLineString, nb_types.CPointer, nb_types.Integer)
 def heavydb_timestamp_int_ctor(context, builder, sig, args):
     fa = context.make_helper(builder, sig.return_type)
-    size_t = fa.n_.type
-    fa.n_ = size_t(0)
+    fa.column_ptr_ = args[0]
+    fa.index_ = args[1]
     return fa._getvalue()

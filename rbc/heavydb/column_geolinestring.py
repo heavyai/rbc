@@ -57,17 +57,7 @@ class ColumnGeoLineString(metaclass=HeavyDBMetaType):
         """
         pass
 
-    def set_item(self, index: int, polygon: 'geopolygon.GeoPolygon',
-                 ring_index: int) -> None:
-        """
-        ``self[index] = polygon[ring_index]``
-
-        .. note::
-            Only available on ``CPU``
-        """
-        pass
-
-    def set_item(self, index: int, buf: 'int8_t*', size: int) -> None:
+    def set_item(self, index: int, buf: 'geolinestring.GeoLineString') -> None:
         """
         Set line from a buffer of point coordindates
 
@@ -178,55 +168,6 @@ class ColumnGeoLineStringPointer(nb_types.Type):
         return self.dtype
 
 
-# @extending.intrinsic
-# def heavydb_column_getitem_(typingctx, x, i):
-#     LineString = typesystem.Type.fromstring('GeoLineString').tonumba()
-#     sig = LineString(x, i)
-
-#     def codegen(context, builder, sig, args):
-#         col, index = args
-#         fa = cgutils.create_struct_proxy(sig.return_type)(context, builder)
-#         fnty = ir.FunctionType(fa._get_be_type(fa._datamodel), [i8p, i64, i32])
-#         getItem = cgutils.get_or_insert_function(builder.module, fnty,
-#                                                  "ColumnGeoLineString_getItem")
-#         flatbuffer = builder.extract_value(col, [0])
-#         output_srid = i32(0)
-#         return builder.call(getItem, [flatbuffer, index, output_srid])
-
-#     return sig, codegen
-
-
-# @extending.intrinsic
-# def heavydb_column_setitem_(typingctx, x, i, geolinestring):
-#     sig = nb_types.void(x, i, geolinestring)
-
-#     def codegen(context, builder, sig, args):
-#         col, index, geolinestring_ = args
-#         fnty = ir.FunctionType(void, [i8p, i64, i8p])
-#         getItem = cgutils.get_or_insert_function(builder.module, fnty,
-#                                                  "ColumnGeoLineString_setItem")
-#         flatbuffer = builder.extract_value(col, [0])
-#         fa = cgutils.create_struct_proxy(geolinestring)(context, builder, value=geolinestring_)
-#         builder.call(getItem, [flatbuffer, index, builder.bitcast(fa._getpointer(), i8p)])
-
-#     return sig, codegen
-
-# @extending.intrinsic
-# def heavydb_geolinestring_assignment(typingctx, lhs, rhs):
-#     sig = lhs(lhs, rhs)
-
-#     def codegen(context, builder, sig, args):
-#         [l, r] = args
-#         fnty = ir.FunctionType(i8p, [i8p, i8p])
-#         fn = cgutils.get_or_insert_function(builder.module, fnty,
-#                                             "GeoLineString_op_assignment")
-#         l = builder.bitcast(l, i8p)
-#         r = builder.bitcast(r, i8p)
-#         return builder.call(fn, [l, r])
-
-#     return sig, codegen
-
-
 @extending.intrinsic
 def heavydb_column_len_(typingctx, x):
     sig = nb_types.int64(x)
@@ -246,31 +187,17 @@ def heavydb_column_getnofvalues(x):
         def impl(x):
             return getNofValues(as_voidptr(x))
         return impl
-    # elif isinstance(x, ColumnGeoLineStringType):
-    #     def impl(x):
-    #         return heavydb_column_getnofvalues_(x)
-    #     return impl
 
 
-# @extending.overload(operator.getitem)
+@extending.overload(operator.getitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'get_item')
 def heavydb_column_getitem(x, i):
-    getItem = external('void ColumnGeoLineString_getItem(int8_t*, int64_t, int8_t*)|cpu')
-
-    from . import geolinestring
-    from rbc.externals.stdio import printf
 
     if isinstance(x, ColumnGeoLineStringPointer):
         def impl(x, i):
-            obj = geolinestring.GeoLineString()
-            printf("n: %d\n", obj.n_)
-            getItem(as_voidptr(x), i, as_voidptr(get_alloca(obj)))
+            obj = geolinestring.GeoLineString(as_voidptr(x), i)
             return obj
         return impl
-#     elif isinstance(x, ColumnGeoLineStringType):
-#         def impl(x, i):
-#             return heavydb_column_getitem_(x, i)
-#         return impl
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'is_null')
@@ -282,10 +209,6 @@ def heavydb_column_ptr_is_null(x, i):
         def impl(x, i):
             return isNull(as_voidptr(x), i)
         return impl
-    # elif isinstance(x, ColumnGeoLineStringType):
-    #     def impl(x, i):
-    #         return heavydb_column_is_null_(x, i)
-    #     return impl
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'set_null')
@@ -296,28 +219,16 @@ def heavydb_column_set_null(x, i):
         def impl(x, i):
             setNull(as_voidptr(x), i)
         return impl
-    # elif isinstance(x, ColumnGeoLineStringType):
-    #     def impl(x, i):
-    #         heavydb_column_set_null_(x, i)
-    #     return impl
 
 
-# @extending.overload(operator.setitem)
-# @extending.overload_method(ColumnGeoLineStringPointer, 'set_item')
-# def heavydb_column_set_item(x, i, rhs):
-#     setItem = external('void ColumnGeoLineString_setItem(int8_t*, int64_t, GeoLineString)')
-#     if isinstance(x, ColumnGeoLineStringPointer):
-#         def impl(x, i, rhs):
-#             setItem(as_voidptr(x), i, rhs)
-#             # operator.setitem(deref(x), i, rhs)
-#         return impl
-#     elif isinstance(x, ColumnGeoLineStringType):
-#         def impl(x, i, rhs):
-#             lhs = ref(operator.getitem(x, i))
-#             rhs_ = ref(rhs)
-#             heavydb_geolinestring_assignment(lhs, rhs_)
-#             x.set_null(i)
-#         return impl
+@extending.overload(operator.setitem)
+@extending.overload_method(ColumnGeoLineStringPointer, 'set_item')
+def heavydb_column_set_item(x, i, rhs):
+    setItem = external('void ColumnGeoLineString_setItem(int8_t*, int64_t, int8_t* column_ptr, int64_t index)')
+    if isinstance(x, ColumnGeoLineStringPointer):
+        def impl(x, i, rhs):
+            setItem(as_voidptr(x), i, rhs.column_ptr_, rhs.index_)
+        return impl
 
 
 @extending.overload(len)
@@ -325,8 +236,4 @@ def heavydb_column_len(x):
     if isinstance(x, ColumnGeoLineStringPointer):
         def impl(x):
             return heavydb_column_len_(deref(x))
-        return impl
-    elif isinstance(x, ColumnGeoLineStringType):
-        def impl(x):
-            return heavydb_column_len_(x)
         return impl

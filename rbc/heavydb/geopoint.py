@@ -3,8 +3,8 @@
 
 __all__ = ['HeavyDBGeoPointType', 'GeoPoint']
 
+from rbc import typesystem
 from .metatype import HeavyDBMetaType
-from .abstract_type import HeavyDBAbstractType
 from numba.core import types as nb_types
 
 
@@ -13,7 +13,7 @@ class GeoPointNumbaType(nb_types.Type):
         super().__init__(name='GeoPointNumbaType')
 
 
-class HeavyDBGeoPointType(HeavyDBAbstractType):
+class HeavyDBGeoPointType(typesystem.Type):
     """Typesystem type class for HeavyDB buffer structures.
     """
 

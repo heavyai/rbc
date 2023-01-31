@@ -5,7 +5,6 @@
 __all__ = ['Point2D']
 
 from .metatype import HeavyDBMetaType
-from .abstract_type import HeavyDBAbstractType
 from rbc import typesystem
 from numba.core import types as nb_types
 from numba.core import extending, cgutils
@@ -41,7 +40,7 @@ class Point2DNumbaPointerType(nb_types.CPointer):
     pass
 
 
-class HeavyDBPoint2D(HeavyDBAbstractType):
+class HeavyDBPoint2D(typesystem.Type):
 
     @property
     def custom_params(self):
