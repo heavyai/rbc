@@ -71,9 +71,7 @@ class HeavyDB(Library):
     ColumnGeoPoint_isNull ColumnGeoPoint_setNull ColumnGeoPoint_getItem
     ColumnGeoPoint_setItem
     ColumnGeoLineString_isNull ColumnGeoLineString_setNull
-    ColumnGeoLineString_getItem ColumnGeoLineString_setItem
-    ColumnGeoLineString_getNofValues
-    GeoLineString_op_assignment
+    ColumnGeoLineString_setItem ColumnGeoLineString_getNofValues
     '''.strip().split())
 
 

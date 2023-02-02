@@ -31,12 +31,16 @@ class Point2D(metaclass=HeavyDBMetaType):
     def __init__(self, x: float, y: float) -> None:
         pass
 
+    @property
+    def x(self) -> float:
+        pass
+
+    @property
+    def y(self) -> float:
+        pass
+
 
 class Point2DNumbaType(nb_types.Type):
-    pass
-
-
-class Point2DNumbaPointerType(nb_types.CPointer):
     pass
 
 
@@ -47,7 +51,6 @@ class HeavyDBPoint2D(typesystem.Type):
         return {
             'name': 'Point2D',
             'NumbaType': Point2DNumbaType,
-            'NumbaPointerType': Point2DNumbaPointerType,
         }
 
     def tonumba(self, bool_is_int8=None):
@@ -66,7 +69,7 @@ def type_heavydb_point2d(context):
 
 
 @extending.lower_builtin(Point2D, nb_types.Float, nb_types.Float)
-def heavydb_timestamp_int_ctor(context, builder, sig, args):
+def heavydb_point2d_ctor(context, builder, sig, args):
     [x, y] = args
     typ = sig.return_type
     point = cgutils.create_struct_proxy(typ)(context, builder)

@@ -1,13 +1,15 @@
 __all__ = ['HeavyDBTableFunctionManagerType', 'TableFunctionManager']
 
 
-from numba.core import extending, types, cgutils
+from numba.core import extending, cgutils, types as nb_types
 from numba.core.cgutils import make_bytearray, global_constant
 from rbc import structure_type
 from rbc.errors import UnsupportedError, RequireLiteralValue
 from rbc.targetinfo import TargetInfo
 from rbc.typesystem import Type
+from rbc.external import external
 from .metatype import HeavyDBMetaType
+from .utils import as_voidptr
 from llvmlite import ir
 
 
@@ -82,13 +84,13 @@ i64 = ir.IntType(64)
 
 @extending.intrinsic
 def heavydb_udtfmanager_error_message_(typingctx, mgr, msg):
-    sig = types.int32(mgr, msg)
+    sig = nb_types.int32(mgr, msg)
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (5, 9, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    if not isinstance(msg, types.StringLiteral):
+    if not isinstance(msg, nb_types.StringLiteral):
         raise RequireLiteralValue(f"expected StringLiteral but got {type(msg).__name__}")
 
     def codegen(context, builder, signature, args):
@@ -122,7 +124,7 @@ def heavydb_udtfmanager_error_message(mgr, msg):
 
 @extending.intrinsic
 def heavydb_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
-    sig = types.void(mgr, num_rows)
+    sig = nb_types.void(mgr, num_rows)
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (5, 9, 0):
@@ -144,7 +146,7 @@ def heavydb_udtfmanager_set_output_row_size_(typingctx, mgr, num_rows):
 
 @extending.intrinsic
 def mgr_set_output_array_(typingctx, mgr, col_idx, value):
-    sig = types.void(mgr, col_idx, value)
+    sig = nb_types.void(mgr, col_idx, value)
 
     target_info = TargetInfo()
     # XXX: Check if heavydb 6.1 has this function
@@ -159,31 +161,6 @@ def mgr_set_output_array_(typingctx, mgr, col_idx, value):
 
         fnty = ir.FunctionType(ir.VoidType(), [i8p, i32, i64])
         fn_name = "TableFunctionManager_set_output_array_values_total_number"
-        module = builder.module
-        fn = cgutils.get_or_insert_function(module, fnty, fn_name)
-
-        builder.call(fn, [mgr_i8ptr, col_idx, value])
-
-    return sig, codegen
-
-
-@extending.intrinsic
-def mgr_set_output_item_(typingctx, mgr, col_idx, value):
-    sig = types.void(mgr, col_idx, value)
-
-    target_info = TargetInfo()
-    # XXX: Check if heavydb 6.3 has this function
-    if target_info.software[1][:3] < (6, 3, 0):
-        raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
-
-    def codegen(context, builder, sig, args):
-        mgr_ptr, col_idx, value = args
-
-        mgr_i8ptr = builder.bitcast(mgr_ptr, i8p)
-        col_idx = builder.trunc(col_idx, i32)
-
-        fnty = ir.FunctionType(ir.VoidType(), [i8p, i32, i64])
-        fn_name = "TableFunctionManager_set_output_item_values_total_number"
         module = builder.module
         fn = cgutils.get_or_insert_function(module, fnty, fn_name)
 
@@ -214,6 +191,16 @@ set_output_item = 'set_output_item_values_total_number'
 
 @extending.overload_method(HeavyDBTableFunctionManagerNumbaType, set_output_item)
 def mgr_set_output_item(mgr, col_idx, value):
+    fn_name = 'TableFunctionManager_set_output_item_values_total_number'
+    fn = external(f'void {fn_name}(int8_t*, int32_t, int64_t)|cpu')
+
+    # XXX: Check if heavydb 6.3 has this function
+    target_info = TargetInfo()
+    if target_info.software[1][:3] < (6, 3, 0):
+        error_msg = (f'{fn_name} is only available in HeavyDB 6.3 or newer '
+                     f'(got {".".join(map(str, target_info.software[1]))})')
+        raise UnsupportedError(error_msg)
+
     def impl(mgr, col_idx, value):
-        return mgr_set_output_item_(mgr, col_idx, value)
+        return fn(as_voidptr(mgr), nb_types.int32(col_idx), value)
     return impl

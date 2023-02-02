@@ -22,7 +22,6 @@ class HeavyDBGeoPointType(typesystem.Type):
         return self.params(shorttypename='GeoPoint')
 
 
-
 class GeoPoint(object, metaclass=HeavyDBMetaType):
     """
     RBC ``GeoPoint`` type that corresponds to HeavyDB type GEOPOINT.

@@ -9,7 +9,6 @@ __all__ = ['HeavyDBOutputColumnGeoPointType', 'HeavyDBColumnGeoPointType',
            'ColumnGeoPoint']
 
 import operator
-from typing import TypeVar
 from rbc import typesystem
 from rbc.external import external
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
@@ -19,9 +18,6 @@ from .metatype import HeavyDBMetaType
 from numba.core import extending, cgutils
 from numba.core import types as nb_types
 from llvmlite import ir
-
-
-T = TypeVar('T')
 
 
 i1 = ir.IntType(1)
@@ -122,10 +118,6 @@ class ColumnGeoPointType(nb_types.Type):
         super().__init__(name)
 
     @property
-    def key(self):
-        return self.dtype
-
-    @property
     def eltype(self):
         """
         Return buffer element dtype.
@@ -135,33 +127,22 @@ class ColumnGeoPointType(nb_types.Type):
 
 class ColumnGeoPointPointer(nb_types.Type):
     """Numba type class for pointers to HeavyDB buffer structures.
-
-    We are not deriving from CPointer because ColumnGeoPointPointer getitem is
-    used to access the data stored in Buffer ptr member.
     """
-    mutable = True
-    return_as_first_argument = True
-
     def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
         self.eltype = dtype.eltype  # buffer element dtype
         name = "Column<GeoPoint>*"
         super().__init__(name)
 
-    @property
-    def key(self):
-        return self.dtype
-
 
 @extending.intrinsic
-def heavydb_column_getitem_(typingctx, x, i):
+def heavydb_column_getitem_(typingctx, col, index):
     Point2D = typesystem.Type.fromstring('Point2D').tonumba()
     # oddly enough, a Column<GeoPoint> returns a Point2D
-    sig = Point2D(x, i)
+    sig = Point2D(col, index)
 
     def codegen(context, builder, sig, args):
         col, index = args
-        # fnty = ir.FunctionType(fa._get_be_type(fa._datamodel), [i8p, i64, i32, i8p])
         fnty = ir.FunctionType(void, [i8p, i64, i32, i8p])
         getItem = cgutils.get_or_insert_function(builder.module, fnty,
                                                  "ColumnGeoPoint_getItem")
@@ -185,8 +166,8 @@ def heavydb_column_getitem_(typingctx, x, i):
 
 
 @extending.intrinsic
-def heavydb_column_len_(typingctx, x):
-    sig = nb_types.int64(x)
+def heavydb_column_len_(typingctx, col):
+    sig = nb_types.int64(col)
 
     def codegen(context, builder, sig, args):
         [col] = args
@@ -197,69 +178,49 @@ def heavydb_column_len_(typingctx, x):
 
 @extending.overload(operator.getitem)
 @extending.overload_method(ColumnGeoPointPointer, 'get_item')
-def heavydb_column_getitem(x, i):
-    if isinstance(x, ColumnGeoPointPointer):
-        def impl(x, i):
-            return heavydb_column_getitem_(x, i)
-        return impl
-    elif isinstance(x, ColumnGeoPointType):
-        def impl(x, i):
-            return heavydb_column_getitem_(x, i)
+def heavydb_column_getitem(col, index):
+    if isinstance(col, ColumnGeoPointPointer):
+        def impl(col, index):
+            return heavydb_column_getitem_(col, index)
         return impl
 
 
 @extending.overload_method(ColumnGeoPointPointer, 'is_null')
 @extending.overload_method(ColumnGeoPointType, 'is_null')
-def heavydb_column_ptr_is_null(x, i):
+def heavydb_column_ptr_is_null(col, index):
     isNull = external('bool ColumnGeoPoint_isNull(int8_t*, int64_t)|cpu')
 
-    if isinstance(x, ColumnGeoPointPointer):
-        def impl(x, i):
-            return isNull(as_voidptr(x), i)
-        return impl
-    elif isinstance(x, ColumnGeoPointType):
-        def impl(x, i):
-            return isNull(get_alloca(x), i)
+    if isinstance(col, ColumnGeoPointPointer):
+        def impl(col, index):
+            return isNull(as_voidptr(col), index)
         return impl
 
 
 @extending.overload_method(ColumnGeoPointPointer, 'set_null')
 @extending.overload_method(ColumnGeoPointType, 'set_null')
-def heavydb_column_set_null(x, i):
+def heavydb_column_set_null(col, index):
     setNull = external('void ColumnGeoPoint_setNull(int8_t*, int64_t)|cpu')
 
-    if isinstance(x, ColumnGeoPointPointer):
-        def impl(x, i):
-            return setNull(as_voidptr(x), i)
-        return impl
-    elif isinstance(x, ColumnGeoPointType):
-        def impl(x, i):
-            return setNull(get_alloca(x), i)
+    if isinstance(col, ColumnGeoPointPointer):
+        def impl(col, index):
+            return setNull(as_voidptr(col), index)
         return impl
 
 
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnGeoPointPointer, 'set_item')
-def heavydb_column_set_item(x, i, point):
+def heavydb_column_set_item(col, index, point):
     setItem = external('void ColumnGeoPoint_setItem(int8_t*, int64_t, int8_t*)|cpu')
 
-    if isinstance(x, ColumnGeoPointPointer):
-        def impl(x, i, point):
-            return setItem(as_voidptr(x), i, as_voidptr(get_alloca(point)))
-        return impl
-    elif isinstance(x, ColumnGeoPointType):
-        def impl(x, i, point):
-            return setItem(get_alloca(x), i, as_voidptr(get_alloca(point)))
+    if isinstance(col, ColumnGeoPointPointer):
+        def impl(col, index, point):
+            return setItem(as_voidptr(col), index, as_voidptr(get_alloca(point)))
         return impl
 
 
 @extending.overload(len)
-def heavydb_column_len(x):
-    if isinstance(x, ColumnGeoPointPointer):
-        def impl(x):
-            return heavydb_column_len_(deref(x))
-        return impl
-    elif isinstance(x, ColumnGeoPointType):
-        def impl(x):
-            return heavydb_column_len_(x)
+def heavydb_column_len(col):
+    if isinstance(col, ColumnGeoPointPointer):
+        def impl(col):
+            return heavydb_column_len_(deref(col))
         return impl

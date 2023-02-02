@@ -9,7 +9,6 @@ __all__ = ['HeavyDBOutputColumnGeoLineStringType', 'HeavyDBColumnGeoLineStringTy
            'ColumnGeoLineString']
 
 import operator
-from typing import TypeVar
 from rbc import typesystem
 from rbc.external import external
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
@@ -19,9 +18,6 @@ from .utils import as_voidptr, deref
 from numba.core import extending
 from numba.core import types as nb_types
 from llvmlite import ir
-
-
-T = TypeVar('T')
 
 
 i1 = ir.IntType(1)
@@ -137,10 +133,6 @@ class ColumnGeoLineStringType(nb_types.Type):
         super().__init__(name)
 
     @property
-    def key(self):
-        return self.dtype
-
-    @property
     def eltype(self):
         """
         Return buffer element dtype.
@@ -150,22 +142,13 @@ class ColumnGeoLineStringType(nb_types.Type):
 
 class ColumnGeoLineStringPointer(nb_types.Type):
     """Numba type class for pointers to HeavyDB buffer structures.
-
-    We are not deriving from CPointer because ColumnGeoLineStringPointer getitem is
-    used to access the data stored in Buffer ptr member.
     """
-    mutable = True
-    return_as_first_argument = True
 
     def __init__(self, dtype):
         self.dtype = dtype    # struct dtype
         self.eltype = dtype.eltype  # buffer element dtype
         name = "Column<GeoLineString>*"
         super().__init__(name)
-
-    @property
-    def key(self):
-        return self.dtype
 
 
 @extending.intrinsic
@@ -192,6 +175,22 @@ def heavydb_column_getnofvalues(x):
 @extending.overload(operator.getitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'get_item')
 def heavydb_column_getitem(x, i):
+    # Column<Geo*>::getItem is a tricky operation to be implemented in RBC.
+    # One alternative was to have a extern "C" function in HeavyDB that would
+    # get the item and assign to an output Geo* type:
+    #
+    #     extern "C" void ColumnGeoLineString_getItem(Column<GeoLineString>& col,
+    #                                                 int64_t index,
+    #                                                 GeoLineString& ret) {
+    #         ret = col.getItem(index);
+    #     }
+    #
+    # This doesn't work because HeavyDB assumes certain properties of `ret` to
+    # be valid before the "ret = col.getItem(index)" to happen. In specific,
+    # "ret" must be a GeoLineString with a valid flatbuffer, and not just an
+    # empty struct value. For now, since we don't have support for plain Geo*
+    # args in UDTFs, the GeoLineString struct (and similars) just store a
+    # pointer to the column and the index when a getItem is dispatched.
 
     if isinstance(x, ColumnGeoLineStringPointer):
         def impl(x, i):
