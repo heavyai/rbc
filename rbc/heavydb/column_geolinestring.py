@@ -158,8 +158,8 @@ class ColumnGeoLineStringPointer(nb_types.Type):
 
 
 @extending.intrinsic
-def heavydb_column_len_(typingctx, x):
-    sig = nb_types.int64(x)
+def heavydb_column_len_(typingctx, col):
+    sig = nb_types.int64(col)
 
     def codegen(context, builder, sig, args):
         [col] = args
@@ -169,18 +169,18 @@ def heavydb_column_len_(typingctx, x):
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'get_n_of_values')
-def heavydb_column_getnofvalues(x):
+def heavydb_column_getnofvalues(col):
     getNofValues = external('int64_t ColumnGeoLineString_getNofValues(int8_t*)|cpu')
 
-    if isinstance(x, ColumnGeoLineStringPointer):
-        def impl(x):
-            return getNofValues(as_voidptr(x))
+    if isinstance(col, ColumnGeoLineStringPointer):
+        def impl(col):
+            return getNofValues(as_voidptr(col))
         return impl
 
 
 @extending.overload(operator.getitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'get_item')
-def heavydb_column_getitem(x, i):
+def heavydb_column_getitem(col, index):
     # Column<Geo*>::getItem is a tricky operation to be implemented in RBC.
     # One alternative was to have a extern "C" function in HeavyDB that would
     # get the item and assign to an output Geo* type:
@@ -198,48 +198,48 @@ def heavydb_column_getitem(x, i):
     # args in UDTFs, the GeoLineString struct (and similars) just store a
     # pointer to the column and the index when a getItem is dispatched.
 
-    if isinstance(x, ColumnGeoLineStringPointer):
-        def impl(x, i):
-            obj = geolinestring.GeoLineString(as_voidptr(x), i)
+    if isinstance(col, ColumnGeoLineStringPointer):
+        def impl(col, index):
+            obj = geolinestring.GeoLineString(as_voidptr(col), index)
             return obj
         return impl
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'is_null')
 @extending.overload_method(ColumnGeoLineStringType, 'is_null')
-def heavydb_column_ptr_is_null(x, i):
+def heavydb_column_ptr_is_null(col, index):
     isNull = external('bool ColumnGeoLineString_isNull(int8_t*, int64_t)|cpu')
 
-    if isinstance(x, ColumnGeoLineStringPointer):
-        def impl(x, i):
-            return isNull(as_voidptr(x), i)
+    if isinstance(col, ColumnGeoLineStringPointer):
+        def impl(col, index):
+            return isNull(as_voidptr(col), index)
         return impl
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'set_null')
 @extending.overload_method(ColumnGeoLineStringType, 'set_null')
-def heavydb_column_set_null(x, i):
+def heavydb_column_set_null(col, index):
     setNull = external('bool ColumnGeoLineString_setNull(int8_t*, int64_t)|cpu')
-    if isinstance(x, ColumnGeoLineStringPointer):
-        def impl(x, i):
-            setNull(as_voidptr(x), i)
+    if isinstance(col, ColumnGeoLineStringPointer):
+        def impl(col, index):
+            setNull(as_voidptr(col), index)
         return impl
 
 
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'set_item')
-def heavydb_column_set_item(x, i, rhs):
+def heavydb_column_set_item(col, index, rhs):
     sig = 'void ColumnGeoLineString_setItem(int8_t*, int64_t, int8_t* column_ptr, int64_t index)'
     setItem = external(sig)
-    if isinstance(x, ColumnGeoLineStringPointer):
-        def impl(x, i, rhs):
-            setItem(as_voidptr(x), i, rhs.column_ptr_, rhs.index_)
+    if isinstance(col, ColumnGeoLineStringPointer):
+        def impl(col, index, rhs):
+            setItem(as_voidptr(col), index, rhs.column_ptr_, rhs.index_)
         return impl
 
 
 @extending.overload(len)
-def heavydb_column_len(x):
-    if isinstance(x, ColumnGeoLineStringPointer):
-        def impl(x):
-            return heavydb_column_len_(deref(x))
+def heavydb_column_len(col):
+    if isinstance(col, ColumnGeoLineStringPointer):
+        def impl(col):
+            return heavydb_column_len_(deref(col))
         return impl
