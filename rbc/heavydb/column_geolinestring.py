@@ -9,16 +9,18 @@ __all__ = ['HeavyDBOutputColumnGeoLineStringType', 'HeavyDBColumnGeoLineStringTy
            'ColumnGeoLineString']
 
 import operator
-from rbc import typesystem
-from rbc.external import external
-from .column import HeavyDBColumnType, HeavyDBOutputColumnType
-from .metatype import HeavyDBMetaType
-from . import geolinestring
-from .utils import as_voidptr, deref
+
+from llvmlite import ir
 from numba.core import extending
 from numba.core import types as nb_types
-from llvmlite import ir
 
+from rbc import typesystem
+from rbc.external import external
+
+from . import geolinestring
+from .column import HeavyDBColumnType, HeavyDBOutputColumnType
+from .metatype import HeavyDBMetaType
+from .utils import as_voidptr, deref
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -115,6 +117,10 @@ class HeavyDBColumnGeoLineStringType(HeavyDBColumnType):
     @property
     def element_type(self):
         return typesystem.Type.fromstring('int8_t')
+
+    @property
+    def name(self):
+        return 'Column<GeoLineString>'
 
 
 class HeavyDBOutputColumnGeoLineStringType(HeavyDBColumnGeoLineStringType,

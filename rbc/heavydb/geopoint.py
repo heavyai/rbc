@@ -3,9 +3,11 @@
 
 __all__ = ['HeavyDBGeoPointType', 'GeoPoint']
 
-from rbc import typesystem
-from .metatype import HeavyDBMetaType
 from numba.core import types as nb_types
+
+from rbc import typesystem
+
+from .metatype import HeavyDBMetaType
 
 
 class GeoPointNumbaType(nb_types.Type):

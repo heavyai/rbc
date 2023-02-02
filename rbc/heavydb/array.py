@@ -3,15 +3,16 @@
 
 __all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType']
 
-from rbc import typesystem, errors
-from .buffer import (BufferPointer, Buffer,
-                     HeavyDBBufferType,
-                     heavydb_buffer_constructor)
-from numba.core import extending, cgutils
-from numba import types as nb_types
 from typing import Union
-from llvmlite import ir
 
+from llvmlite import ir
+from numba import types as nb_types
+from numba.core import cgutils, extending
+
+from rbc import errors, typesystem
+
+from .buffer import (Buffer, BufferPointer, HeavyDBBufferType,
+                     heavydb_buffer_constructor)
 
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)

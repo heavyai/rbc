@@ -9,16 +9,18 @@ __all__ = ['HeavyDBOutputColumnGeoPointType', 'HeavyDBColumnGeoPointType',
            'ColumnGeoPoint']
 
 import operator
+
+from llvmlite import ir
+from numba.core import cgutils, extending
+from numba.core import types as nb_types
+
 from rbc import typesystem
 from rbc.external import external
-from .column import HeavyDBColumnType, HeavyDBOutputColumnType
-from . import point2d
-from .utils import as_voidptr, get_alloca, deref
-from .metatype import HeavyDBMetaType
-from numba.core import extending, cgutils
-from numba.core import types as nb_types
-from llvmlite import ir
 
+from . import point2d
+from .column import HeavyDBColumnType, HeavyDBOutputColumnType
+from .metatype import HeavyDBMetaType
+from .utils import as_voidptr, deref, get_alloca
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -101,6 +103,10 @@ class HeavyDBColumnGeoPointType(HeavyDBColumnType):
     @property
     def element_type(self):
         return typesystem.Type.fromstring('int8_t')
+
+    @property
+    def name(self):
+        return 'Column<GeoPoint>'
 
 
 class HeavyDBOutputColumnGeoPointType(HeavyDBColumnGeoPointType, HeavyDBOutputColumnType):

@@ -4,12 +4,13 @@
 
 __all__ = ['Point2D']
 
-from .metatype import HeavyDBMetaType
-from rbc import typesystem
-from numba.core import types as nb_types
-from numba.core import extending, cgutils
 from llvmlite import ir
+from numba.core import cgutils, extending
+from numba.core import types as nb_types
 
+from rbc import typesystem
+
+from .metatype import HeavyDBMetaType
 
 i32 = ir.IntType(32)
 i64 = ir.IntType(64)

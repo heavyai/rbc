@@ -9,14 +9,16 @@ __all__ = ['HeavyDBOutputColumnArrayType', 'HeavyDBColumnArrayType', 'ColumnArra
 
 import operator
 from typing import TypeVar
-from rbc import typesystem
-from .column import HeavyDBColumnType
-from . import array
-from .metatype import HeavyDBMetaType
-from numba.core import extending, cgutils
-from numba.core import types as nb_types
-from llvmlite import ir
 
+from llvmlite import ir
+from numba.core import cgutils, extending
+from numba.core import types as nb_types
+
+from rbc import typesystem
+
+from . import array
+from .column import HeavyDBColumnType
+from .metatype import HeavyDBMetaType
 
 T = TypeVar('T')
 
@@ -114,11 +116,14 @@ class HeavyDBColumnArrayType(HeavyDBColumnType):
         return typesystem.Type.fromstring('int8_t')
 
     @property
+    def name(self):
+        return f"Column<Array<{self[0][0][0][0].tostring()}>>"
+
+    @property
     def custom_params(self):
         return {
             **super().custom_params,
             _COLUMN_PARAM_NAME: self[0][0],
-            'name': f'STRUCT_{self.mangling()}_{self[0][0][0][0].tostring()}'
         }
 
 

@@ -3,10 +3,12 @@
 
 __all__ = ['HeavyDBGeoLineStringType', 'GeoLineString']
 
-from .metatype import HeavyDBMetaType
-from rbc import typesystem
-from numba.core import types as nb_types
 from numba.core import extending
+from numba.core import types as nb_types
+
+from rbc import typesystem
+
+from .metatype import HeavyDBMetaType
 
 
 class GeoLineStringNumbaType(nb_types.Type):
