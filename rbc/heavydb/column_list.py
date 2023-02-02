@@ -11,7 +11,7 @@ from rbc import structure_type
 from rbc.targetinfo import TargetInfo
 
 
-class HeavyDBColumnListType(HeavyDBAbstractType):
+class HeavyDBColumnListType(Type):
 
     def postprocess_type(self):
         if self.tostring().startswith('HeavyDBColumnListType<HeavyDBArrayType'):
