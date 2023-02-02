@@ -194,7 +194,6 @@ def mgr_set_output_item(mgr, col_idx, value):
     fn_name = 'TableFunctionManager_set_output_item_values_total_number'
     fn = external(f'void {fn_name}(int8_t*, int32_t, int64_t)|cpu')
 
-    # XXX: Check if heavydb 6.3 has this function
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 3, 0):
         error_msg = (f'{fn_name} is only available in HeavyDB 6.3 or newer '

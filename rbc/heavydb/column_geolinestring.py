@@ -168,7 +168,7 @@ def heavydb_column_len_(typingctx, x):
     return sig, codegen
 
 
-@extending.overload_method(ColumnGeoLineStringPointer, 'getNofValues')
+@extending.overload_method(ColumnGeoLineStringPointer, 'get_n_of_values')
 def heavydb_column_getnofvalues(x):
     getNofValues = external('int64_t ColumnGeoLineString_getNofValues(int8_t*)|cpu')
 
@@ -185,7 +185,7 @@ def heavydb_column_getitem(x, i):
     # One alternative was to have a extern "C" function in HeavyDB that would
     # get the item and assign to an output Geo* type:
     #
-    #     extern "C" void ColumnGeoLineString_getItem(Column<GeoLineString>& col,
+    #     extern "C" void ColumnGeoLineString_getItem(Column<Geo::LineString>& col,
     #                                                 int64_t index,
     #                                                 GeoLineString& ret) {
     #         ret = col.getItem(index);

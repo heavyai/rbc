@@ -16,7 +16,7 @@ def define(heavydb):
              Z=['GeoLineString'], devices=['cpu'])
     def rbc_ct_copy(mgr, linestrings, copied_linestrings):
         size = len(linestrings)
-        mgr.set_output_item_values_total_number(0, linestrings.getNofValues())
+        mgr.set_output_item_values_total_number(0, linestrings.get_n_of_values())
         mgr.set_output_row_size(size)
         for i in range(size):
             if linestrings.is_null(i):
