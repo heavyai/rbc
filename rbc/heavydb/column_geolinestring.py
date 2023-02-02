@@ -11,7 +11,7 @@ __all__ = ['HeavyDBOutputColumnGeoLineStringType', 'HeavyDBColumnGeoLineStringTy
 import operator
 
 from llvmlite import ir
-from numba.core import extending
+from numba.core import extending, cgutils
 from numba.core import types as nb_types
 
 from rbc import typesystem
@@ -20,7 +20,7 @@ from rbc.external import external
 from . import geolinestring
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
 from .metatype import HeavyDBMetaType
-from .utils import as_voidptr, deref
+from .utils import as_voidptr, deref, get_alloca
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -168,6 +168,35 @@ def heavydb_column_len_(typingctx, col):
     return sig, codegen
 
 
+@extending.intrinsic
+def heavydb_column_getitem_(typingctx, col, index):
+    LS = typesystem.Type.fromstring('GeoLineString').tonumba()
+    sig = LS(col, index)
+
+    def codegen(context, builder, sig, args):
+        col, index = args
+        fnty = ir.FunctionType(void, [i8p, i64, i8p])
+        getItem = cgutils.get_or_insert_function(builder.module, fnty,
+                                                 "ColumnGeoLineString_getItem")
+        col_ptr = builder.bitcast(col, i8p)
+
+        # Alloca GeoLineString
+        fa = context.make_helper(builder, sig.return_type)
+        fa.n_ = fa.n_.type(1)
+
+        # GeoLineString -> void*
+        result_ptr = builder.bitcast(fa._getpointer(), i8p)
+
+        # call func
+        builder.call(getItem, [col_ptr, index, result_ptr])
+
+        # convert void* -> GeoLineString
+        point_type = fa._get_be_type(fa._datamodel)
+        return builder.load(builder.bitcast(result_ptr, point_type.as_pointer()))
+
+    return sig, codegen
+
+
 @extending.overload_method(ColumnGeoLineStringPointer, 'get_n_of_values')
 def heavydb_column_getnofvalues(col):
     getNofValues = external('int64_t ColumnGeoLineString_getNofValues(int8_t*)|cpu')
@@ -181,27 +210,9 @@ def heavydb_column_getnofvalues(col):
 @extending.overload(operator.getitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'get_item')
 def heavydb_column_getitem(col, index):
-    # Column<Geo*>::getItem is a tricky operation to be implemented in RBC.
-    # One alternative was to have a extern "C" function in HeavyDB that would
-    # get the item and assign to an output Geo* type:
-    #
-    #     extern "C" void ColumnGeoLineString_getItem(Column<Geo::LineString>& col,
-    #                                                 int64_t index,
-    #                                                 GeoLineString& ret) {
-    #         ret = col.getItem(index);
-    #     }
-    #
-    # This doesn't work because HeavyDB assumes certain properties of `ret` to
-    # be valid before the "ret = col.getItem(index)" to happen. In specific,
-    # "ret" must be a GeoLineString with a valid flatbuffer, and not just an
-    # empty struct value. For now, since we don't have support for plain Geo*
-    # args in UDTFs, the GeoLineString struct (and similars) just store a
-    # pointer to the column and the index when a getItem is dispatched.
-
     if isinstance(col, ColumnGeoLineStringPointer):
         def impl(col, index):
-            obj = geolinestring.GeoLineString(as_voidptr(col), index)
-            return obj
+            return heavydb_column_getitem_(col, index)
         return impl
 
 
@@ -229,11 +240,11 @@ def heavydb_column_set_null(col, index):
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnGeoLineStringPointer, 'set_item')
 def heavydb_column_set_item(col, index, rhs):
-    sig = 'void ColumnGeoLineString_setItem(int8_t*, int64_t, int8_t* column_ptr, int64_t index)'
+    sig = 'void ColumnGeoLineString_setItem(int8_t*, int64_t, int8_t* rhs)'
     setItem = external(sig)
     if isinstance(col, ColumnGeoLineStringPointer):
         def impl(col, index, rhs):
-            setItem(as_voidptr(col), index, rhs.column_ptr_, rhs.index_)
+            setItem(as_voidptr(col), index, as_voidptr(get_alloca(rhs)))
         return impl
 
 

@@ -3,7 +3,6 @@
 
 __all__ = ['HeavyDBGeoLineStringType', 'GeoLineString']
 
-from numba.core import extending
 from numba.core import types as nb_types
 
 from rbc import typesystem
@@ -24,11 +23,17 @@ class HeavyDBGeoLineStringType(typesystem.Type):
         return self.params(shorttypename='GeoLineString')
 
     def tonumba(self, bool_is_int8=None):
-        col_ptr_t = typesystem.Type.fromstring('int8_t* column_ptr_')
-        index_t = typesystem.Type.fromstring('int64_t index_')
+        flatbuffer_t = typesystem.Type.fromstring('int8_t* flatbuffer_')
+        index_t = typesystem.Type.fromstring('int64_t index_t')
+        n_t = typesystem.Type.fromstring('int64_t n_')
         geoline_type = typesystem.Type(
-            col_ptr_t,
+            flatbuffer_t,
+            # int64_t index[4]
             index_t,
+            index_t,
+            index_t,
+            index_t,
+            n_t,
             name='GeoLineString')
         return geoline_type.tonumba(bool_is_int8=True)
 
@@ -46,19 +51,3 @@ class GeoLineString(object, metaclass=HeavyDBMetaType):
         }
     """
     pass
-
-
-@extending.type_callable(GeoLineString)
-def type_heavydb_timestamp(context):
-    def typer(ptr, idx):
-        if isinstance(ptr, nb_types.CPointer) and isinstance(idx, nb_types.Integer):
-            return typesystem.Type.fromstring('GeoLineString').tonumba()
-    return typer
-
-
-@extending.lower_builtin(GeoLineString, nb_types.CPointer, nb_types.Integer)
-def heavydb_timestamp_int_ctor(context, builder, sig, args):
-    fa = context.make_helper(builder, sig.return_type)
-    fa.column_ptr_ = args[0]
-    fa.index_ = args[1]
-    return fa._getvalue()
