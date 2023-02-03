@@ -550,9 +550,6 @@ def test_column_aggregate(heavydb, prop, oper):
     heavydb.reset()
     heavydb.register()
 
-    if prop == 'groupby':
-        pytest.skip('heavydb server crashes')
-
     if oper == 'single_value':
         if prop:
             return
