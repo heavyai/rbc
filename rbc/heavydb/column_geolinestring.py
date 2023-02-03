@@ -119,8 +119,11 @@ class HeavyDBColumnGeoLineStringType(HeavyDBColumnType):
         return typesystem.Type.fromstring('int8_t')
 
     @property
-    def name(self):
-        return 'Column<GeoLineString>'
+    def custom_params(self):
+        return {
+            **super().custom_params(),
+            'name': 'Column<GeoLineString>',
+        }
 
 
 class HeavyDBOutputColumnGeoLineStringType(HeavyDBColumnGeoLineStringType,

@@ -71,15 +71,10 @@ class HeavyDBBufferType(typesystem.Type):
         return ()
 
     @property
-    def name(self):
-        return None  # use default mangling scheme
-
-    @property
     def custom_params(self):
         return {
             'NumbaType': self.numba_type,
             'NumbaPointerType': self.numba_pointer_type,
-            'name': self.name
         }
 
     def tonumba(self, bool_is_int8=None):

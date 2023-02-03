@@ -105,8 +105,11 @@ class HeavyDBColumnGeoPointType(HeavyDBColumnType):
         return typesystem.Type.fromstring('int8_t')
 
     @property
-    def name(self):
-        return 'Column<GeoPoint>'
+    def custom_params(self):
+        return {
+            **super().custom_params(),
+            'name': 'Column<GeoPoint>',
+        }
 
 
 class HeavyDBOutputColumnGeoPointType(HeavyDBColumnGeoPointType, HeavyDBOutputColumnType):
