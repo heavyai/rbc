@@ -5,7 +5,7 @@ __all__ = ['StringDictionaryProxyNumbaType', 'StringDictionaryProxy']
 
 
 from llvmlite import ir
-from numba.core import cgutils, datamodel, extending
+from numba.core import cgutils, extending
 from numba.core import types as nb_types
 
 from rbc.errors import NumbaTypeError
@@ -14,7 +14,7 @@ from rbc.typesystem import Type
 
 from . import text_encoding_none
 from .metatype import HeavyDBMetaType
-from .proxy import HeavyDBProxy, ProxyNumbaType
+from .opaque_pointer import HeavyDBOpaquePtr, OpaquePtrNumbaType
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -35,7 +35,7 @@ class StringDictionaryProxy(metaclass=HeavyDBMetaType):
         """
 
 
-class HeavyDBStringDictProxyType(HeavyDBProxy):
+class HeavyDBStringDictProxyType(HeavyDBOpaquePtr):
     """RowFunctionManager<> is a typesystem custom type that
     represents a class type with the following public interface:
 
@@ -47,17 +47,15 @@ class HeavyDBStringDictProxyType(HeavyDBProxy):
         return StringDictionaryProxyNumbaType
 
     @property
-    def typename(self):
+    def type_name(self):
         return "StringDictionaryProxy"
 
 
-class StringDictionaryProxyNumbaType(ProxyNumbaType):
+class StringDictionaryProxyNumbaType(OpaquePtrNumbaType):
     pass
 
 
-@extending.register_model(StringDictionaryProxyNumbaType)
-class ProxyPointerModel(datamodel.models.PointerModel):
-    pass
+HeavyDBStringDictProxyType().register_datamodel()
 
 
 @extending.intrinsic

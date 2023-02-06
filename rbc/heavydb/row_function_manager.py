@@ -1,7 +1,7 @@
 __all__ = ['HeavyDBRowFunctionManagerType', 'RowFunctionManager']
 
 
-from numba.core import datamodel, extending
+from numba.core import extending
 from numba.core import types as nb_types
 from numba.core.typing import signature
 
@@ -11,11 +11,11 @@ from rbc.targetinfo import TargetInfo
 
 from . import string_dict_proxy, text_encoding_none
 from .metatype import HeavyDBMetaType
-from .proxy import HeavyDBProxy, ProxyNumbaType
+from .opaque_pointer import HeavyDBOpaquePtr, OpaquePtrNumbaType
 from .utils import as_voidptr, global_str_constant
 
 
-class HeavyDBRowFunctionManagerType(HeavyDBProxy):
+class HeavyDBRowFunctionManagerType(HeavyDBOpaquePtr):
     """RowFunctionManager<> is a typesystem custom type that
     represents a class type with the following public interface:
 
@@ -27,16 +27,11 @@ class HeavyDBRowFunctionManagerType(HeavyDBProxy):
         return RowFunctionManagerNumbaType
 
     @property
-    def typename(self):
+    def type_name(self):
         return "RowFunctionManager"
 
 
-class RowFunctionManagerNumbaType(ProxyNumbaType):
-    pass
-
-
-@extending.register_model(RowFunctionManagerNumbaType)
-class ProxyPointerModel(datamodel.models.PointerModel):
+class RowFunctionManagerNumbaType(OpaquePtrNumbaType):
     pass
 
 

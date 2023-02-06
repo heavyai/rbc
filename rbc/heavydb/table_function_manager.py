@@ -1,18 +1,18 @@
 __all__ = ['HeavyDBTableFunctionManagerType', 'TableFunctionManager']
 
 
-from numba.core import datamodel, extending, types
+from numba.core import extending, types
 
 from rbc.errors import RequireLiteralValue, UnsupportedError
 from rbc.external import external
 from rbc.targetinfo import TargetInfo
 
 from .metatype import HeavyDBMetaType
-from .proxy import HeavyDBProxy, ProxyNumbaType
+from .opaque_pointer import HeavyDBOpaquePtr, OpaquePtrNumbaType
 from .utils import as_voidptr, global_str_constant
 
 
-class HeavyDBTableFunctionManagerType(HeavyDBProxy):
+class HeavyDBTableFunctionManagerType(HeavyDBOpaquePtr):
     """TableFunctionManager<> is a typesystem custom type that
     represents a class type with the following public interface:
 
@@ -29,16 +29,11 @@ class HeavyDBTableFunctionManagerType(HeavyDBProxy):
         return TableFunctionManagerNumbaType
 
     @property
-    def typename(self):
+    def type_name(self):
         return 'TableFunctionManager'
 
 
-class TableFunctionManagerNumbaType(ProxyNumbaType):
-    pass
-
-
-@extending.register_model(TableFunctionManagerNumbaType)
-class ProxyPointerModel(datamodel.models.PointerModel):
+class TableFunctionManagerNumbaType(OpaquePtrNumbaType):
     pass
 
 
