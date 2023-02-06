@@ -1,9 +1,8 @@
 __all__ = ['HeavyDBRowFunctionManagerType', 'RowFunctionManager']
 
 
-from numba.core import extending
+from numba.core import extending, typing
 from numba.core import types as nb_types
-from numba.core.typing import signature
 
 from rbc.errors import UnsupportedError
 from rbc.external import external
@@ -102,7 +101,7 @@ def heavydb_udf_manager_get_string_dict_proxy(mgr, db_id, dict_id):
     i8p = nb_types.CPointer(nb_types.int8)
     i32 = nb_types.int32
     proxy = string_dict_proxy.StringDictionaryProxyNumbaType()
-    sig = signature(proxy, i8p, i32, i32)
+    sig = typing.signature(proxy, i8p, i32, i32)
 
     symbol = 'RowFunctionManager_getStringDictionaryProxy'
     get_string_dict_proxy_ = nb_types.ExternalFunction(symbol, sig)
