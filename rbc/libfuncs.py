@@ -70,6 +70,20 @@ class HeavyDB(Library):
     '''.strip().split())
 
 
+class NRT(Library):
+
+    name = 'NRT'
+
+    _function_names = list('''
+    NRT_MemInfo_call_dtor
+    NRT_MemInfo_init
+    NRT_MemInfo_alloc
+    NRT_MemInfo_alloc_dtor
+    NRT_Allocate_External
+    nrt_alloc_meminfo_and_data
+    ''')
+
+
 class Stdlib(Library):
     """
     Reference: http://www.cplusplus.com/reference/cstdlib/

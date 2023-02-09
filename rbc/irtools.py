@@ -10,10 +10,12 @@ import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .errors import UnsupportedError
 from . import libfuncs
+from rbc.nrt import create_nrt_functions
 from rbc.externals import stdio
 from numba.core import codegen, cpu, compiler_lock, \
     registry, typing, compiler, sigutils, cgutils, \
     extending, imputils
+from numba.core.runtime.context import NRTContext
 from numba.core import errors as nb_errors
 
 
@@ -157,6 +159,46 @@ class JITRemoteTypingContext(typing.Context):
         super().load_additional_registries()
 
 
+class JITRemoteNRTContext():
+    def __init__(self, context, enabled):
+        ...
+        # super().__init__(context, enabled)
+        # In Numba 0.57, we can redefine methods with the following table:
+        # _NRT_MEMINFO_HEAVY_API = _NRT_Meminfo_Functions(
+        #     "NRT_MemInfo_alloc_safe",
+        #     "NRT_MemInfo_alloc_dtor_safe",
+        #     "NRT_MemInfo_alloc_safe_aligned")
+        # self._meminfo_api = _NRT_MEMINFO_HEAVY_API
+
+    def incref(self, builder, typ, value):
+        ...
+
+    def decref(self, builder, typ, value):
+        ...
+
+    def meminfo_alloc_unchecked(self, builder, size):
+        """
+        Allocate a new MemInfo with a data payload of `size` bytes.
+
+        A pointer to the MemInfo is returned.
+
+        Returns NULL to indicate error/failure to allocate.
+        """
+        import pdb; pdb.set_trace()
+        self._require_nrt()
+
+        mod = builder.module
+        fnty = ir.FunctionType(cgutils.voidptr_t, [cgutils.intp_t])
+        fn = cgutils.get_or_insert_function(mod, fnty,
+                                            self._meminfo_api.alloc)
+        fn.return_value.add_attribute("noalias")
+        return builder.call(fn, [size])
+
+
+    def define_nrt_allocate_meminfo_and_data(self, builder, module):
+        pass
+
+
 class JITRemoteTargetContext(cpu.CPUContext):
 
     @compiler_lock.global_compiler_lock
@@ -165,6 +207,10 @@ class JITRemoteTargetContext(cpu.CPUContext):
         self.address_size = target_info.bits
         self.is32bit = (self.address_size == 32)
         self._internal_codegen = JITRemoteCodegen("numba.exec")
+
+    # @property
+    # def nrt(self):
+    #     return JITRemoteNRTContext(self, self.enable_nrt)
 
     def load_additional_registries(self):
         self.install_registry(imputils.builtin_registry)
@@ -381,11 +427,14 @@ def compile_to_LLVM(functions_and_signatures,
     typing_context = JITRemoteTypingContext()
     target_context = JITRemoteTargetContext(typing_context)
 
+    create_nrt_functions()
+
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
+        print(target_context)
         main_library = codegen.create_library('rbc.irtools.compile_to_IR')
         main_module = main_library._final_module
 
