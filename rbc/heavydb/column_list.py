@@ -91,7 +91,6 @@ def heavydb_columnlist_getitem(typingctx, lst, idx):
 class ColumnList(Buffer):
     """
     RBC ``ColumnList<T>`` type that corresponds to HeavyDB COLUMN LIST
-    of arrays
 
     In HeavyDB, a ColumnList of type ``T`` is represented as follows:
 
