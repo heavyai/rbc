@@ -38,7 +38,9 @@ class External:
                     f"external function name not specified for signature {signature}"
                 )
 
-            for device in [a.upper() for a in t.annotation() or [] if a in ["CPU", "GPU"]] or [
+            for device in [
+                a.upper() for a in t.annotation() or [] if a.upper() in ["CPU", "GPU"]
+            ] or [
                 "CPU",
                 "GPU",
             ]:

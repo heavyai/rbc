@@ -83,7 +83,7 @@ def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)'
+    defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)|CPU'
     get_dict_db_id_ = external(defn)
 
     def impl(mgr, func_name, arg_idx):
