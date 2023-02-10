@@ -296,7 +296,10 @@ def compile_instance(func, sig,
                                       library=main_library,
                                       locals={},
                                       pipeline_class=pipeline_class)
-    except (UnsupportedError, nb_errors.TypingError, nb_errors.LoweringError) as msg:
+    except UnsupportedError as msg:
+        warnings.warn(f'Skipping {fname}: {msg.args[1]}')
+        return
+    except (nb_errors.TypingError, nb_errors.LoweringError) as msg:
         for m in re.finditer(r'UnsupportedError(.*?)\n', str(msg), re.S):
             warnings.warn(f'Skipping {fname}:{m.group(0)[18:]}')
             break

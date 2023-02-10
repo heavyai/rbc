@@ -42,8 +42,14 @@ class Compiler:
     @staticmethod
     def _get_compilers(_cache=[]):
         if not _cache:
+            from numba import _min_llvm_version
+            v = _min_llvm_version[0]
             # TODO: cuda support
-            for xmode, clang, suffix in [('c++', 'clang++', '.cpp'), ('c', 'clang', '.c')]:
+            for xmode, clang, suffix in [('c++', f'clang++-{v}', '.cpp'),
+                                         ('c++', 'clang++', '.cpp'),
+                                         ('c', f'clang-{v}', '.c'),
+                                         ('c', 'clang', '.c'),
+                                         ]:
                 exe = shutil.which(clang)
                 if exe is not None:
                     s, o = run(exe, '--version')
