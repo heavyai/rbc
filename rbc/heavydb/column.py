@@ -13,7 +13,7 @@ from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
 from . import text_encoding_none
 from rbc.targetinfo import TargetInfo
-from numba.core import extending, cgutils
+from numba.core import extending
 from numba.core import types as nb_types
 from typing import Union
 
@@ -172,11 +172,8 @@ def get_dict_proxy(typingctx, col_var):
         [col] = args
         if col.type.is_pointer:
             col = builder.load(col)
-        ptr = builder.extract_value(col, [2])
-        proxy_ctor = cgutils.create_struct_proxy(sig.return_type)
-        proxy = proxy_ctor(context, builder)
-        proxy.ptr = ptr
-        return proxy._getvalue()
+        proxy = builder.extract_value(col, [2])
+        return proxy
 
     return sig, codegen
 

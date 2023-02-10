@@ -188,12 +188,30 @@ def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
     return arr
 
 
+@extending.lower_builtin(TextEncodingNone, nb_types.CPointer, nb_types.Integer)
+def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
+    [ptr, sz] = args
+    fa = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64), [sz])
+    cgutils.memcpy(builder, fa.ptr, ptr, sz)
+    # string is null terminated
+    builder.store(fa.ptr.type.pointee(0), builder.gep(fa.ptr, [sz]))
+    return fa._getpointer()
+
+
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
-    def typer(arg):
-        if isinstance(arg, nb_types.UnicodeType):
+    def typer(sz):
+        if isinstance(sz, nb_types.UnicodeType):
             raise RequireLiteralValue('Requires StringLiteral')
-        if isinstance(arg, (nb_types.Integer, nb_types.StringLiteral)):
+        if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
+            return typesystem.Type.fromobject('TextEncodingNone').tonumba()
+    return typer
+
+
+@extending.type_callable(TextEncodingNone)
+def type_heavydb_text_encoding_none_typer2(context):
+    def typer(ptr, sz):
+        if isinstance(ptr, nb_types.CPointer) and isinstance(sz, nb_types.Integer):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
 
