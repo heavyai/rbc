@@ -1374,7 +1374,8 @@ class RemoteHeavyDB(RemoteJIT):
                 compiler = ctools.Compiler.get(std='c')
             if self.debug:
                 print(f'compiler={compiler}')
-
+            if compiler is None:
+                return
             from numba import _min_llvm_version
 
             url = "https://numba.readthedocs.io/en/stable/user/installing.html#version-support-information"  # noqa: E501
