@@ -38,7 +38,13 @@ def get_called_functions(library, funcname=None):
     for block in func.blocks:
         for instruction in block.instructions:
             if instruction.opcode == 'call':
-                name = list(instruction.operands)[-1].name
+                instr = list(instruction.operands)[-1]
+                name = instr.name
+                # ignore in a call to a function pointer
+                if 'bitcast' in str(instr):
+                    continue
+                if name == '':
+                    continue
                 f = module.get_function(name)
                 if name.startswith('llvm.'):
                     result['intrinsics'].add(name)
@@ -427,14 +433,13 @@ def compile_to_LLVM(functions_and_signatures,
     typing_context = JITRemoteTypingContext()
     target_context = JITRemoteTargetContext(typing_context)
 
-    create_nrt_functions()
+    nrt_module = create_nrt_functions(debug=debug)
 
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
     with replace_numba_internals_hack():
         codegen = target_context.codegen()
-        print(target_context)
         main_library = codegen.create_library('rbc.irtools.compile_to_IR')
         main_module = main_library._final_module
 
@@ -443,6 +448,8 @@ def compile_to_LLVM(functions_and_signatures,
                 user_defined_llvm_ir = llvm.parse_assembly(user_defined_llvm_ir)
             assert isinstance(user_defined_llvm_ir, llvm.ModuleRef)
             main_module.link_in(user_defined_llvm_ir, preserve=True)
+
+        main_library.add_ir_module(nrt_module)
 
         succesful_fids = []
         function_names = []

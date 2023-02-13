@@ -193,6 +193,8 @@ def test_nrt(heavydb):
         s2 = s + ', world'
         return len(s2) + len(t)
 
+    heavydb.register()
+
     table = heavydb.table_name + 'text'
     _, result = heavydb.sql_execute(f"select n, fn(n) from {table};")
     print(list(result))

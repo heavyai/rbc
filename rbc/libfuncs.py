@@ -24,6 +24,8 @@ class Library:
             r = LLVMIntrinsics()
         elif libname == 'heavydb':
             r = HeavyDB()
+        elif libname == 'NRT':
+            r = NRT()
         else:
             raise ValueError(f'Unknown library {libname}')
         _cache[libname] = r
@@ -77,11 +79,16 @@ class NRT(Library):
     _function_names = list('''
     NRT_MemInfo_call_dtor
     NRT_MemInfo_init
-    NRT_MemInfo_alloc
-    NRT_MemInfo_alloc_dtor
+    NRT_MemInfo_alloc NRT_MemInfo_alloc_safe
+    NRT_MemInfo_alloc_dtor NRT_MemInfo_alloc_dtor_safe
     NRT_Allocate_External
+    NRT_MemInfo_data_fast
+    NRT_incref NRT_decref
+    NRT_MemInfo_varsize_realloc
+    NRT_MemInfo_new_varsize_dtor
+    NRT_MemInfo_varsize_alloc
     nrt_alloc_meminfo_and_data
-    ''')
+    '''.strip().split())
 
 
 class Stdlib(Library):
