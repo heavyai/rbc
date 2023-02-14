@@ -13,16 +13,26 @@ def heavydb():
         yield o
 
 
-def test_nrt(heavydb):
+def test_list_simple(heavydb):
+
+    @heavydb("i32(TextEncodingNone)", devices=['cpu'])
+    def test_list(t):
+        l = list()
+        l.extend('abc')
+        return len(l)
+
+    heavydb.register()
+
+    table = heavydb.table_name + 'text'
+    _, result = heavydb.sql_execute(f"select n, test_list(n) from {table} limit 1;")
+    print(list(result))
+
+
+def test_set_simple(heavydb):
     @heavydb("i32(TextEncodingNone)", devices=['cpu'])
     def fn(t):
-        s = 'hello'
-        # l = []
-        # l.extend(s)
-        l = set(list(s))
-        # l = list(s)
-        return len(l)
-        # return TextEncodingNone('.'.join(list(t.to_string())))
+        s = set('ab')
+        return len(s)
 
     heavydb.register()
 

@@ -87,7 +87,6 @@ class NRT(Library):
     NRT_MemInfo_varsize_realloc
     NRT_MemInfo_new_varsize_dtor
     NRT_MemInfo_varsize_alloc
-    nrt_alloc_meminfo_and_data
     '''.strip().split())
 
 

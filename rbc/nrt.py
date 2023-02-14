@@ -78,6 +78,10 @@ malloc = 'malloc'
 free = 'free'
 realloc = 'realloc'
 
+nrt_debug_incr = 'nrt_debug_incr'
+nrt_debug_decr = 'nrt_debug_decr'
+nrt_debug_spaces = 'nrt_debug_spaces'
+nrt_global_var = '__nrt_global_var'
 
 function_types = {
     NRT_MemInfo_init: (ir.FunctionType(void, [MemInfo_ptr_t, i8p, i64, i8p, i8p, i8p]),
@@ -121,6 +125,11 @@ function_types = {
     malloc: (ir.FunctionType(i8p, [i64]), ('size',)),
     free: (ir.FunctionType(void, [i8p]), ('ptr',)),
     realloc: (ir.FunctionType(i8p, [i8p, i64]), ()),
+
+    # debug functions
+    nrt_debug_incr: (ir.FunctionType(void, []), ()),
+    nrt_debug_decr: (ir.FunctionType(void, []), ()),
+    nrt_debug_spaces: (ir.FunctionType(void, []), ()),
 }
 
 
@@ -136,29 +145,51 @@ class RBC_NRT:
     def __init__(self, verbose=False):
         self.module = ir.Module(name='RBC_nrt')
         self.verbose = verbose
+
+        gv = ir.GlobalVariable(self.module, i64, nrt_global_var)
+        gv.initializer = i64(0)
+
         self.define()
+
         if self.verbose:
             print(self.module)
 
-    def NRT_Debug(self, builder, fmt, *args):
+    def NRT_Debug(self, fmt, *args):
+        builder = self.CURRENT_BUILDER
+
         msg = f"[NRT] {fmt}"
         if not msg.endswith('\n'):
             msg += '\n'
+
+        gv = builder.load(self.module.get_global(nrt_global_var))
+        cgutils.printf(builder, "%*d", gv, gv)
+
         cgutils.printf(builder, msg, *args)
 
-    def debug_call(self, builder, fn, args, name=()):
-        debug_msg = f"calling function {fn.name}"
-        with self.debug_ctx(builder, debug_msg):
-            ret = builder.call(fn, args, name=name)
-        return ret
-
     @contextmanager
-    def debug_ctx(self, builder, debug_msg):
+    def nrt_debug_ctx(self):
+        builder = self.CURRENT_BUILDER
         try:
-            cgutils.printf(builder, f'[BEFORE] {debug_msg}\n')
+            builder.call(self.nrt_debug_incr, [])
+            self.NRT_Debug(self.CURRENT_FUNCTION)
             yield
         finally:
-            cgutils.printf(builder, f'[AFTER] {debug_msg}\n')
+            builder.call(self.nrt_debug_decr, [])
+
+    def define_nrt_debug_incr(self, builder, args):
+        gv = self.module.get_global(nrt_global_var)
+        builder.store(builder.add(builder.load(gv), i64(4)), gv)
+        builder.ret_void()
+
+    def define_nrt_debug_decr(self, builder, args):
+        gv = self.module.get_global(nrt_global_var)
+        builder.store(builder.sub(builder.load(gv), i64(4)), gv)
+        builder.ret_void()
+
+    def define_nrt_debug_spaces(self, builder, args):
+        cgutils.printf(builder, "\t")
+        gv = self.module.get_global(nrt_global_var)
+        builder.ret_void()
 
     def __getattribute__(self, __name):
         if __name in function_types.keys():
@@ -170,7 +201,8 @@ class RBC_NRT:
         block = fn.append_basic_block(name='entry')
         return ir.IRBuilder(block)
 
-    def _get_from_meminfo(self, builder, mi, kind):
+    def _get_from_meminfo(self, mi, kind):
+        builder = self.CURRENT_BUILDER
         table = {'refct': REFCT_IDX,
                  'dtor': DTOR_IDX,
                  'dtor_info': DTOR_INFO_IDX,
@@ -178,9 +210,11 @@ class RBC_NRT:
                  'size': SIZE_IDX,
                  'allocator': EXTERNAL_ALLOCATOR_IDX}
         idx = table[kind]
-        return builder.load(builder.gep(mi, [i32(0), i32(idx)]), name=kind)
+        return builder.load(builder.gep(mi, [i32(0), i32(idx)], inbounds=True),
+                            name=kind)
 
-    def _set_on_meminfo(self, builder, mi, kind, val):
+    def _set_on_meminfo(self, mi, kind, val):
+        builder = self.CURRENT_BUILDER
         table = {'refct': REFCT_IDX,
                  'dtor': DTOR_IDX,
                  'dtor_info': DTOR_INFO_IDX,
@@ -188,7 +222,7 @@ class RBC_NRT:
                  'size': SIZE_IDX,
                  'allocator': EXTERNAL_ALLOCATOR_IDX}
         idx = table[kind]
-        return builder.store(val, builder.gep(mi, [i32(0), i32(idx)]))
+        return builder.store(val, builder.gep(mi, [i32(0), i32(idx)], inbounds=True))
 
     def _get_function(self, fn_name):
         fnty = function_types[fn_name][0]
@@ -222,230 +256,256 @@ class RBC_NRT:
                 self._declare_function(fn_name)
                 builder = self._get_function_builder(fn_name)
                 args = builder.function.args
+                self.CURRENT_FUNCTION = fn_name
+                self.CURRENT_BUILDER = builder
                 meth(builder, args)
 
     def define_NRT_MemInfo_call_dtor(self, builder, args):
-        [mi] = args
-        self.NRT_Debug(builder, "NRT_MemInfo_call_dtor mi=%p\n", mi)
+        with self.nrt_debug_ctx():
+            [mi] = args
+            self.NRT_Debug("NRT_MemInfo_call_dtor mi=%p\n", mi)
 
-        dtor = builder.load(builder.gep(mi, [i32(0), i32(DTOR_IDX)]))
-        not_null = cgutils.is_not_null(builder, dtor)
-        with cgutils.if_likely(builder, not_null):
-            dtor_fn = builder.bitcast(dtor, NRT_DTOR_FUNCTION.as_pointer())
-            data = self._get_from_meminfo(builder, mi, 'data')
-            size = self._get_from_meminfo(builder, mi, 'size')
-            dtor_info = self._get_from_meminfo(builder, mi, 'dtor_info')
-            builder.call(dtor_fn, [data, size, dtor_info])
+            dtor = self._get_from_meminfo(mi, 'dtor')
+            not_null = cgutils.is_not_null(builder, dtor)
+            with cgutils.if_likely(builder, not_null):
+                dtor_fn = builder.bitcast(dtor, NRT_DTOR_FUNCTION.as_pointer())
+                data = self._get_from_meminfo(mi, 'data')
+                size = self._get_from_meminfo(mi, 'size')
+                dtor_info = self._get_from_meminfo(mi, 'dtor_info')
+                builder.call(dtor_fn, [data, size, dtor_info])
 
-        builder.call(self.NRT_MemInfo_destroy, [mi])
+            builder.call(self.NRT_MemInfo_destroy, [mi])
         builder.ret_void()
 
     def define_NRT_incref(self, builder, args):
+        # with self.nrt_debug_ctx():
+        #     pass
         builder.ret_void()
 
     def define_NRT_decref(self, builder, args):
+        # with self.nrt_debug_ctx():
+        #     pass
         builder.ret_void()
 
     def define_NRT_MemInfo_data_fast(self, builder, args):
-        [ptr] = builder.function.args
-        mi_ptr = builder.bitcast(ptr, MemInfo_ptr_t, name='meminfo_ptr')
-        data = builder.load(builder.gep(mi_ptr, [i32(0), i32(3)]), name='data')
+        with self.nrt_debug_ctx():
+            [ptr] = builder.function.args
+            mi_ptr = builder.bitcast(ptr, MemInfo_ptr_t, name='meminfo_ptr')
+            data = self._get_from_meminfo(mi_ptr, 'data')
+            self.NRT_Debug("data: %p\n", data)
         builder.ret(data)
 
     def define_NRT_Reallocate(self, builder, args):
-        reallocator = self._get_function(realloc)
-        [ptr, size] = args
-        new_ptr = builder.call(reallocator, [ptr, size])
+        with self.nrt_debug_ctx():
+            reallocator = self._get_function(realloc)
+            [ptr, size] = args
+            new_ptr = builder.call(reallocator, [ptr, size])
+            self.NRT_Debug("ptr=%p size=%d -> new_ptr=%p", ptr, size, new_ptr)
         builder.ret(new_ptr)
 
     def define_NRT_dealloc(self, builder, args):
-        [mi] = args
-        self.NRT_Debug(builder, "NRT_dealloc meminfo: %p\n", mi)
-        ptr = builder.bitcast(mi, i8p)
-        builder.call(self.NRT_Free, [ptr])
+        with self.nrt_debug_ctx():
+            [mi] = args
+            self.NRT_Debug("meminfo: %p\n", mi)
+            ptr = builder.bitcast(mi, i8p)
+            builder.call(self.NRT_Free, [ptr])
         builder.ret_void()
 
     def define_NRT_Free(self, builder, args):
-        [ptr] = args
-        self.NRT_Debug(builder, "NRT_Free %p\n", ptr)
-        builder.call(self.free, [ptr])
+        with self.nrt_debug_ctx():
+            [ptr] = args
+            self.NRT_Debug("NRT_Free %p\n", ptr)
+            # builder.call(self.free, [ptr])
         builder.ret_void()
 
     def define_NRT_MemInfo_varsize_alloc(self, builder, args):
-        [mi, size] = args
+        with self.nrt_debug_ctx():
+            [mi, size] = args
 
-        data = builder.call(self.NRT_Allocate, [size])
-        # TODO: check if data is NULL
-        builder.store(data, builder.gep(mi, [i32(0), i32(DATA_IDX)], inbounds=True))
-        builder.store(size, builder.gep(mi, [i32(0), i32(SIZE_IDX)], inbounds=True))
-        # self._set_on_meminfo(builder, mi, 'data', data)
-        # self._set_on_meminfo(builder, mi, 'size', size)
-        self.NRT_Debug(builder, "NRT_MemInfo_varsize_alloc %p size=%zu -> data=%p\n",
-                       mi, size, data)
+            data = builder.call(self.NRT_Allocate, [size])
+            # TODO: check if data is NULL
+            self._set_on_meminfo(mi, 'data', data)
+            self._set_on_meminfo(mi, 'size', size)
+            self.NRT_Debug("%p size=%zu -> data=%p\n",
+                        mi, size, data)
         builder.ret(data)
-        # return mi->data;
 
     def define_NRT_MemInfo_varsize_realloc(self, builder, args):
-        [mi, size] = args
-        data = self._get_from_meminfo(builder, mi, 'data')
-        new_data = builder.call(self.NRT_Reallocate, [data, size], name='new_data')
+        with self.nrt_debug_ctx():
+            [mi, size] = args
+            data = self._get_from_meminfo(mi, 'data')
+            new_data = builder.call(self.NRT_Reallocate, [data, size], name='new_data')
 
-        # TODO: check if new_data is NULL
-        self._set_on_meminfo(builder, mi, 'data', data)
-        self._set_on_meminfo(builder, mi, 'size', size)
+            # TODO: check if new_data is NULL
+            self._set_on_meminfo(mi, 'data', new_data)
+            self._set_on_meminfo(mi, 'size', size)
         builder.ret(new_data)
 
     def define_NRT_MemInfo_varsize_free(self, builder, args):
-        [mi, ptr] = args
-        builder.call(self.NRT_Free, [ptr])
+        with self.nrt_debug_ctx():
+            [mi, ptr] = args
+            builder.call(self.NRT_Free, [ptr])
 
-        mi_data = self._get_from_meminfo(builder, mi, 'data')
-        eq = builder.icmp_signed('==', ptr, mi_data)
-        with builder.if_then(eq):
-            builder.store(NULL, builder.gep(mi, [i32(0), i32(DATA_IDX)]))
+            mi_data = self._get_from_meminfo(mi, 'data')
+            eq = builder.icmp_signed('==', ptr, mi_data)
+            with builder.if_then(eq):
+                self._set_on_meminfo(mi, 'data', NULL)
         builder.ret_void()
 
     def define_NRT_MemInfo_destroy(self, builder, args):
-        [mi] = args
-        self.NRT_Debug(builder, "NRT_MemInfo_destroy mi=%p\n", mi)
-        builder.call(self.NRT_dealloc, [mi])
+        with self.nrt_debug_ctx():
+            [mi] = args
+            self.NRT_Debug("mi=%p\n", mi)
+            builder.call(self.NRT_dealloc, [mi])
         builder.ret_void()
 
     def define_nrt_internal_custom_dtor(self, builder, args):
-        [ptr, size, info] = args
+        with self.nrt_debug_ctx():
+            [ptr, size, info] = args
 
-        dtor = builder.bitcast(info, NRT_DTOR_FUNCTION.as_pointer())
-        self.NRT_Debug(builder, "nrt_internal_custom_dtor ptr=%p, info=%p\n",
-                       ptr, info)
+            dtor = builder.bitcast(info, NRT_DTOR_FUNCTION.as_pointer())
+            self.NRT_Debug("ptr=%p, info=%p\n",
+                        ptr, info)
 
-        not_null = cgutils.is_not_null(builder, dtor)
-        with cgutils.if_likely(builder, not_null):
-            info_ = NULL
-            builder.call(dtor, [ptr, size, info_])
+            not_null = cgutils.is_not_null(builder, dtor)
+            with cgutils.if_likely(builder, not_null):
+                info_ = NULL
+                builder.call(dtor, [ptr, size, info_])
         builder.ret_void()
 
     def define_nrt_allocate_meminfo_and_data(self, builder, args):
-        [size, mi_out, allocator] = args
-        # TODO: replace this by `get_abi_sizeof(...)`
-        alloc_size = builder.add(size, sizeof_MemInfo_t)
-        base = builder.call(self.NRT_Allocate_External,
-                            [alloc_size, allocator])
-        builder.store(base, mi_out)
-        out = builder.gep(base, [sizeof_MemInfo_t], inbounds=True)
+        with self.nrt_debug_ctx():
+            [size, mi_out, allocator] = args
+            # TODO: replace this by `get_abi_sizeof(...)`
+            alloc_size = builder.add(size, sizeof_MemInfo_t)
+            base = builder.call(self.NRT_Allocate_External,
+                                [alloc_size, allocator])
+            builder.store(base, mi_out)
+            out = builder.gep(base, [sizeof_MemInfo_t], inbounds=True)
+            self.NRT_Debug("base=%p out=%p\n", base, out)
         builder.ret(out)
 
     def define_NRT_Allocate(self, builder, args):
         # allocator is always null as we don't use this argument in RBC/HeavyDB
-        [size] = args
-        self.NRT_Debug(builder, "NRT_Allocate")
-        # allocator = builder.bitcast(self._get_function(malloc), i8p)
-        allocator = NULL
-        ret = builder.call(self.NRT_Allocate_External, [size, allocator])
+        with self.nrt_debug_ctx():
+            [size] = args
+            # allocator = builder.bitcast(self._get_function(malloc), i8p)
+            allocator = NULL
+            ret = builder.call(self.NRT_Allocate_External, [size, allocator])
         builder.ret(ret)
 
     def define_NRT_Allocate_External(self, builder, args):
         # allocator is always null as we don't use this argument in RBC/HeavyDB
-        [size, allocator_] = args
+        with self.nrt_debug_ctx():
+            [size, allocator_] = args
 
-        # fnty = function_types[malloc][0]
-        # allocator = builder.bitcast(allocator_, fnty.as_pointer(), name='external_allocator')
-        allocator = self._get_function(malloc)
-        ptr = builder.call(allocator, [size])
-        self.NRT_Debug(builder,
-                       "NRT_Allocate_External allocator=%p bytes=%zu ptr=%p",
-                       allocator, size, ptr)
+            # fnty = function_types[malloc][0]
+            # allocator = builder.bitcast(allocator_, fnty.as_pointer(), name='external_allocator')
+            allocator = self._get_function(malloc)
+            ptr = builder.call(allocator, [size])
+            self.NRT_Debug("bytes=%zu -> ptr=%p", size, ptr)
         builder.ret(ptr)
 
     def define_NRT_MemInfo_alloc_dtor(self, builder, args):
-        mi = builder.alloca(MemInfo_ptr_t, name='mi')
-        mi_cast = builder.bitcast(mi, i8pp, 'mi_cast')
-        [size, dtor] = args
-        allocator = NULL
-        data = builder.call(self.nrt_allocate_meminfo_and_data,
-                            [size, mi_cast, allocator], name='data')
+        with self.nrt_debug_ctx():
+            mi = builder.alloca(MemInfo_ptr_t, name='mi')
+            mi_cast = builder.bitcast(mi, i8pp, 'mi_cast')
+            [size, dtor] = args
+            allocator = NULL
+            data = builder.call(self.nrt_allocate_meminfo_and_data,
+                                [size, mi_cast, allocator], name='data')
 
-        self.NRT_Debug(builder, "NRT_MemInfo_alloc_dtor %p %zu\n", data, size)
-        # TODO: check if data is null
-        dtor_function = builder.bitcast(self._get_function(nrt_internal_custom_dtor), i8p)
-        dtor_info = builder.bitcast(dtor, i8p)
-        allocator = NULL
-        builder.call(self.NRT_MemInfo_init,
-                     [builder.load(mi), data, size, dtor_function, dtor_info, allocator])
+            self.NRT_Debug("data=%p size=%zu\n", data, size)
+            # TODO: check if data is null
+            dtor_function = builder.bitcast(self._get_function(nrt_internal_custom_dtor), i8p)
+            dtor_info = builder.bitcast(dtor, i8p)
+            allocator = NULL
+            builder.call(self.NRT_MemInfo_init,
+                         [builder.load(mi), data, size, dtor_function,
+                          dtor_info, allocator])
         builder.ret(builder.load(mi))
 
     def define_NRT_MemInfo_alloc(self, builder, args):
-        mi = builder.alloca(MemInfo_ptr_t, name='mi')
-        mi_cast = builder.bitcast(mi, i8pp, name='mi_cast')
-        [size] = args
-        allocator = NULL
-        data = builder.call(self.nrt_allocate_meminfo_and_data,
-                            [size, mi_cast, allocator], name='data')
-        # TODO: check if data is null
+        with self.nrt_debug_ctx():
+            mi = builder.alloca(MemInfo_ptr_t, name='mi')
+            mi_cast = builder.bitcast(mi, i8pp, name='mi_cast')
+            [size] = args
+            allocator = NULL
+            data = builder.call(self.nrt_allocate_meminfo_and_data,
+                                [size, mi_cast, allocator], name='data')
+            # TODO: check if data is null
 
-        self.NRT_Debug(builder, "NRT_MemInfo_alloc %p\n", data)
-        dtor = NULL
-        dtor_info = NULL
-        allocator = NULL
-        builder.call(self.NRT_MemInfo_init,
-                     [builder.load(mi), data, size, dtor, dtor_info, allocator])
+            self.NRT_Debug("%p\n", data)
+            dtor = NULL
+            dtor_info = NULL
+            allocator = NULL
+            builder.call(self.NRT_MemInfo_init,
+                        [builder.load(mi), data, size, dtor, dtor_info, allocator])
         builder.ret(builder.load(mi))
 
     def define_NRT_MemInfo_new_varsize(self, builder, args):
-        [size] = args
+        with self.nrt_debug_ctx():
+            [size] = args
 
-        # TODO: check if data is null
-        data = builder.call(self.NRT_Allocate, [size])
-        mi = builder.call(self.NRT_MemInfo_new, [data, size, NULL, NULL], name='mi')
-        self.NRT_Debug(builder,
-                       "NRT_MemInfo_new_varsize size=%zu -> meminfo=%p, data=%p\n",
-                       size, mi, data)
+            # TODO: check if data is null
+            data = builder.call(self.NRT_Allocate, [size])
+            mi = builder.call(self.NRT_MemInfo_new, [data, size, NULL, NULL], name='mi')
+            self.NRT_Debug("size=%zu -> meminfo=%p, data=%p\n",
+                           size, mi, data)
         builder.ret(mi)
 
     def define_NRT_MemInfo_new(self, builder, args):
-        [data, size, dtor, dtor_info] = args
-        ptr = builder.call(self.NRT_Allocate, [sizeof_MemInfo_t])
-        mi = builder.bitcast(ptr, MemInfo_ptr_t, name='mi')
+        with self.nrt_debug_ctx():
+            [data, size, dtor, dtor_info] = args
+            ptr = builder.call(self.NRT_Allocate, [sizeof_MemInfo_t])
+            mi = builder.bitcast(ptr, MemInfo_ptr_t, name='mi')
 
-        is_not_null = cgutils.is_not_null(builder, mi)
-        with cgutils.if_likely(builder, is_not_null):
-            self.NRT_Debug(builder, "NRT_MemInfo_new mi=%p\n", mi)
-            builder.call(self.NRT_MemInfo_init, [mi, data, size, dtor, dtor_info, NULL])
+            is_not_null = cgutils.is_not_null(builder, mi)
+            with cgutils.if_likely(builder, is_not_null):
+                self.NRT_Debug("mi=%p data=%p size=%d dtor=%p dtor_info=%p\n",
+                               mi, data, size, dtor, dtor_info)
+                builder.call(self.NRT_MemInfo_init, [mi, data, size, dtor, dtor_info, NULL])
         builder.ret(mi)
 
     def define_NRT_MemInfo_new_varsize_dtor(self, builder, args):
-        [size, dtor] = args
-        mi = builder.call(self.NRT_MemInfo_new_varsize, [size])
+        with self.nrt_debug_ctx():
+            [size, dtor] = args
+            self.NRT_Debug("size: %d\n", size)
+            mi = builder.call(self.NRT_MemInfo_new_varsize, [size])
 
-        is_not_null = cgutils.is_not_null(builder, mi)
-        with cgutils.if_likely(builder, is_not_null):
-            builder.store(dtor, builder.gep(mi, [i32(0), i32(DTOR_IDX)]))
+            is_not_null = cgutils.is_not_null(builder, mi)
+            with cgutils.if_likely(builder, is_not_null):
+                self._set_on_meminfo(mi, 'dtor', dtor)
         builder.ret(mi)
 
     def define_NRT_MemInfo_alloc_safe(self, builder, args):
-        size = builder.function.args[0]
-        self.NRT_Debug(builder, "NRT_MemInfo_alloc_safe -> NRT_MemInfo_alloc_dtor_safe\n")
-        NRT_dtor_function = NULL
-        ret = builder.call(self.NRT_MemInfo_alloc_dtor_safe, [size, NRT_dtor_function])
+        with self.nrt_debug_ctx():
+            [size] = args
+            self.NRT_Debug("NRT_MemInfo_alloc_safe -> NRT_MemInfo_alloc_dtor_safe\n")
+            NRT_dtor_function = NULL
+            ret = builder.call(self.NRT_MemInfo_alloc_dtor_safe, [size, NRT_dtor_function])
         builder.ret(ret)
 
     def define_NRT_MemInfo_alloc_dtor_safe(self, builder, args):
-        # wire implementation to unsafe version
-        [size, dtor] = args
-        data = builder.call(self.NRT_MemInfo_alloc_dtor, [size, dtor], name='data')
-        self.NRT_Debug(builder, "NRT_MemInfo_alloc_dtor_safe data=%p size=%zu\n", data, size)
+        with self.nrt_debug_ctx():
+            # wire implementation to unsafe version
+            [size, dtor] = args
+            data = builder.call(self.NRT_MemInfo_alloc_dtor, [size, dtor], name='data')
+            self.NRT_Debug("data=%p size=%zu\n", data, size)
         builder.ret(data)
 
     def define_NRT_MemInfo_init(self, builder, args):
-        [mi, data, size, dtor, dtor_info, external_allocator] = args
-        zero = i32(0)
+        with self.nrt_debug_ctx():
+            [mi, data, size, dtor, dtor_info, external_allocator] = args
+            zero = i32(0)
 
-        builder.store(i64(1), builder.gep(mi, [zero, zero], inbounds=True))
-        builder.store(dtor, builder.gep(mi, [zero, i32(1)], inbounds=True))
-        builder.store(dtor_info, builder.gep(mi, [zero, i32(2)], inbounds=True))
-        builder.store(data, builder.gep(mi, [zero, i32(3)], inbounds=True))
-        builder.store(size, builder.gep(mi, [zero, i32(4)], inbounds=True))
-        builder.store(external_allocator, builder.gep(mi, [zero, i32(5)], inbounds=True))
-        self.NRT_Debug(builder, "NRT_MemInfo_init mi=%p\n", mi)
+            self._set_on_meminfo(mi, 'refct', i64(1))
+            self._set_on_meminfo(mi, 'dtor', dtor)
+            self._set_on_meminfo(mi, 'dtor_info', dtor_info)
+            self._set_on_meminfo(mi, 'data', data)
+            self._set_on_meminfo(mi, 'size', size)
+            self._set_on_meminfo(mi, 'allocator', external_allocator)
+            self.NRT_Debug("mi=%p data=%p size=%d\n", mi, data, size)
         builder.ret_void()
 
 
