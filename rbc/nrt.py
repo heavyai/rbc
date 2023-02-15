@@ -1,4 +1,5 @@
 from numba.core import cgutils
+from numba.cpython.hashing import _hashsecret as hashsecret
 from llvmlite import ir
 from contextlib import contextmanager
 
@@ -150,9 +151,15 @@ class RBC_NRT:
         gv.initializer = i64(0)
 
         self.define()
+        self.set_hashsecrets()
 
         if self.verbose:
             print(self.module)
+
+    def set_hashsecrets(self):
+        for v in hashsecret.values():
+            gv = ir.GlobalVariable(self.module, i64, v.symbol)
+            gv.initializer = i64(v.value.value)
 
     def NRT_Debug(self, fmt, *args):
         builder = self.CURRENT_BUILDER
@@ -289,7 +296,8 @@ class RBC_NRT:
 
     def define_NRT_MemInfo_data_fast(self, builder, args):
         with self.nrt_debug_ctx():
-            [ptr] = builder.function.args
+            [ptr] = args
+            self.NRT_Debug("ptr=%p\n", ptr)
             mi_ptr = builder.bitcast(ptr, MemInfo_ptr_t, name='meminfo_ptr')
             data = self._get_from_meminfo(mi_ptr, 'data')
             self.NRT_Debug("data: %p\n", data)
@@ -297,10 +305,9 @@ class RBC_NRT:
 
     def define_NRT_Reallocate(self, builder, args):
         with self.nrt_debug_ctx():
-            reallocator = self._get_function(realloc)
             [ptr, size] = args
-            new_ptr = builder.call(reallocator, [ptr, size])
-            self.NRT_Debug("ptr=%p size=%d -> new_ptr=%p", ptr, size, new_ptr)
+            new_ptr = builder.call(self.realloc, [ptr, size])
+            self.NRT_Debug("ptr=%p size=%zu -> new_ptr=%p", ptr, size, new_ptr)
         builder.ret(new_ptr)
 
     def define_NRT_dealloc(self, builder, args):
@@ -315,7 +322,7 @@ class RBC_NRT:
         with self.nrt_debug_ctx():
             [ptr] = args
             self.NRT_Debug("NRT_Free %p\n", ptr)
-            # builder.call(self.free, [ptr])
+            builder.call(self.free, [ptr])
         builder.ret_void()
 
     def define_NRT_MemInfo_varsize_alloc(self, builder, args):
@@ -327,7 +334,7 @@ class RBC_NRT:
             self._set_on_meminfo(mi, 'data', data)
             self._set_on_meminfo(mi, 'size', size)
             self.NRT_Debug("%p size=%zu -> data=%p\n",
-                        mi, size, data)
+                           mi, size, data)
         builder.ret(data)
 
     def define_NRT_MemInfo_varsize_realloc(self, builder, args):
@@ -364,8 +371,7 @@ class RBC_NRT:
             [ptr, size, info] = args
 
             dtor = builder.bitcast(info, NRT_DTOR_FUNCTION.as_pointer())
-            self.NRT_Debug("ptr=%p, info=%p\n",
-                        ptr, info)
+            self.NRT_Debug("ptr=%p, info=%p dtor=%p\n", ptr, info, dtor)
 
             not_null = cgutils.is_not_null(builder, dtor)
             with cgutils.if_likely(builder, not_null):
@@ -399,10 +405,7 @@ class RBC_NRT:
         with self.nrt_debug_ctx():
             [size, allocator_] = args
 
-            # fnty = function_types[malloc][0]
-            # allocator = builder.bitcast(allocator_, fnty.as_pointer(), name='external_allocator')
-            allocator = self._get_function(malloc)
-            ptr = builder.call(allocator, [size])
+            ptr = builder.call(self.malloc, [size])
             self.NRT_Debug("bytes=%zu -> ptr=%p", size, ptr)
         builder.ret(ptr)
 
@@ -446,6 +449,7 @@ class RBC_NRT:
     def define_NRT_MemInfo_new_varsize(self, builder, args):
         with self.nrt_debug_ctx():
             [size] = args
+            self.NRT_Debug("size=%zu\n", size)
 
             # TODO: check if data is null
             data = builder.call(self.NRT_Allocate, [size])
@@ -459,10 +463,11 @@ class RBC_NRT:
             [data, size, dtor, dtor_info] = args
             ptr = builder.call(self.NRT_Allocate, [sizeof_MemInfo_t])
             mi = builder.bitcast(ptr, MemInfo_ptr_t, name='mi')
+            self.NRT_Debug("ptr=%p\n", ptr)
 
             is_not_null = cgutils.is_not_null(builder, mi)
             with cgutils.if_likely(builder, is_not_null):
-                self.NRT_Debug("mi=%p data=%p size=%d dtor=%p dtor_info=%p\n",
+                self.NRT_Debug("mi=%p data=%p size=%zu dtor=%p dtor_info=%p\n",
                                mi, data, size, dtor, dtor_info)
                 builder.call(self.NRT_MemInfo_init, [mi, data, size, dtor, dtor_info, NULL])
         builder.ret(mi)
@@ -471,7 +476,9 @@ class RBC_NRT:
         with self.nrt_debug_ctx():
             [size, dtor] = args
             self.NRT_Debug("size: %d\n", size)
+
             mi = builder.call(self.NRT_MemInfo_new_varsize, [size])
+            self.NRT_Debug("mi=%p\n", mi)
 
             is_not_null = cgutils.is_not_null(builder, mi)
             with cgutils.if_likely(builder, is_not_null):
@@ -497,15 +504,13 @@ class RBC_NRT:
     def define_NRT_MemInfo_init(self, builder, args):
         with self.nrt_debug_ctx():
             [mi, data, size, dtor, dtor_info, external_allocator] = args
-            zero = i32(0)
-
             self._set_on_meminfo(mi, 'refct', i64(1))
             self._set_on_meminfo(mi, 'dtor', dtor)
             self._set_on_meminfo(mi, 'dtor_info', dtor_info)
             self._set_on_meminfo(mi, 'data', data)
             self._set_on_meminfo(mi, 'size', size)
             self._set_on_meminfo(mi, 'allocator', external_allocator)
-            self.NRT_Debug("mi=%p data=%p size=%d\n", mi, data, size)
+            self.NRT_Debug("mi=%p data=%p size=%zu\n", mi, data, size)
         builder.ret_void()
 
 

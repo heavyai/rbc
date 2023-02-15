@@ -29,13 +29,14 @@ def test_list_simple(heavydb):
 
 
 def test_set_simple(heavydb):
-    @heavydb("i32(TextEncodingNone)", devices=['cpu'])
-    def fn(t):
+
+    @heavydb("i32(i32)", devices=['cpu'])
+    def test_set(t):
         s = set('ab')
         return len(s)
 
     heavydb.register()
 
     table = heavydb.table_name + 'text'
-    _, result = heavydb.sql_execute(f"select n, fn(n) from {table} limit 1;")
+    _, result = heavydb.sql_execute(f"select test_set(1) from {table};")
     print(list(result))
