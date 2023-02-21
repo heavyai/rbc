@@ -195,7 +195,6 @@ class RBC_NRT:
 
     def define_nrt_debug_spaces(self, builder, args):
         cgutils.printf(builder, "\t")
-        gv = self.module.get_global(nrt_global_var)
         builder.ret_void()
 
     def __getattribute__(self, __name):
@@ -298,10 +297,22 @@ class RBC_NRT:
         with self.nrt_debug_ctx():
             [ptr] = args
             self.NRT_Debug("ptr=%p\n", ptr)
-            mi_ptr = builder.bitcast(ptr, MemInfo_ptr_t, name='meminfo_ptr')
-            data = self._get_from_meminfo(mi_ptr, 'data')
-            self.NRT_Debug("data: %p\n", data)
-        builder.ret(data)
+            not_null = builder.icmp_signed('!=', ptr, NULL)
+            with builder.if_else(not_null, likely=True) as (then, otherwise):
+                with then:
+                    bb_then = builder.basic_block
+                    mi_ptr = builder.bitcast(ptr, MemInfo_ptr_t, name='meminfo_ptr')
+                    data = self._get_from_meminfo(mi_ptr, 'data')
+                    self.NRT_Debug("data: %p\n", data)
+                with otherwise:
+                    # there is a specific case where ptr is NULL and doesn't
+                    # crash Numba
+                    bb_else = builder.basic_block
+                    data_null = NULL
+            phi = builder.phi(i8p)
+            phi.add_incoming(data, bb_then)
+            phi.add_incoming(data_null, bb_else)
+        builder.ret(phi)
 
     def define_NRT_Reallocate(self, builder, args):
         with self.nrt_debug_ctx():
@@ -443,7 +454,7 @@ class RBC_NRT:
             dtor_info = NULL
             allocator = NULL
             builder.call(self.NRT_MemInfo_init,
-                        [builder.load(mi), data, size, dtor, dtor_info, allocator])
+                         [builder.load(mi), data, size, dtor, dtor_info, allocator])
         builder.ret(builder.load(mi))
 
     def define_NRT_MemInfo_new_varsize(self, builder, args):
