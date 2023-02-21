@@ -30,6 +30,18 @@ _COLUMN_PARAM_NAME = 'ColumnListArray_inner_type'
 
 class ColumnListArray(ColumnList):
     """
+    RBC ``ColumnList<Array<T>>`` type that corresponds to HeavyDB COLUMN LIST
+    of arrays.
+
+    In HeavyDB, a ColumnList<Array<T>> of type ``T`` is represented as follows:
+
+    .. code-block:: c
+
+        {
+            int8_t* flatbuffer_;
+            int64_t size_;
+        }
+
     """
 
 
