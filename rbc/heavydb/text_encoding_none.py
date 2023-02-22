@@ -56,16 +56,15 @@ class TextEncodingNonePointer(ArrayPointer):
         element_size = int64_t(ptr_type.dtype.bitwidth // 8)
 
         struct_load = builder.load(val)
-        src = builder.extract_value(struct_load, 0, name='text_buff_ptr')
-        element_count = builder.extract_value(struct_load, 1, name='text_size')
-        is_null = builder.extract_value(struct_load, 2, name='text_is_null')
+        fa = context.make_helper(builder, self.dtype, value=struct_load)
 
+        cgutils.printf(builder, "element count: %d\n", fa.sz)
         zero, one, two = int32_t(0), int32_t(1), int32_t(2)
-        ptr = memalloc(context, builder, ptr_type, element_count, element_size)
-        cgutils.raw_memcpy(builder, ptr, src, element_count, element_size)
+        ptr = memalloc(context, builder, ptr_type, fa.sz, element_size)
+        cgutils.raw_memcpy(builder, ptr, fa.ptr, fa.sz, element_size)
         builder.store(ptr, builder.gep(retptr, [zero, zero]))
-        builder.store(element_count, builder.gep(retptr, [zero, one]))
-        builder.store(is_null, builder.gep(retptr, [zero, two]))
+        builder.store(fa.sz, builder.gep(retptr, [zero, one]))
+        builder.store(fa.is_null, builder.gep(retptr, [zero, two]))
 
 
 class TextEncodingNone(Buffer):
@@ -205,25 +204,27 @@ def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
     return fa._getpointer()
 
 
-@extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
-def text_encoding_none_unicode_ctor(context, builder, sig, args):
+# @extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
+# def text_encoding_none_unicode_ctor(context, builder, sig, args):
 
-    unichr = context.make_helper(builder, sig.args[0], value=args[0])
-    length = unichr.length
-    text = heavydb_buffer_constructor(context, builder,
-                                      sig.return_type(nb_types.int64),
-                                      [length])
-    cgutils.memcpy(builder, text.ptr, unichr.data, unichr.length)
-    # string is null terminated
-    builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [length]))
-    return text._getpointer()
+#     unichr = context.make_helper(builder, sig.args[0], value=args[0])
+#     length = unichr.length
+#     text = heavydb_buffer_constructor(context, builder,
+#                                       sig.return_type(nb_types.int64),
+#                                       [length])
+#     cgutils.memcpy(builder, text.ptr, unichr.data, unichr.length)
+#     # string is null terminated
+#     builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [length]))
+#     return text._getpointer()
 
 
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
     def typer(sz):
         if isinstance(sz, nb_types.UnicodeType):
-            return typesystem.Type.fromobject('TextEncodingNone').tonumba()
+            from rbc.errors import RequireLiteralValue
+            raise RequireLiteralValue('Requires StringLiteral')
+            # return typesystem.Type.fromobject('TextEncodingNone').tonumba()
         if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
@@ -291,15 +292,15 @@ def ol_attr_is_null(text):
     return impl
 
 
-@extending.overload_method(TextEncodingNonePointer, 'to_string')
-def ol_to_string(text):
-    def impl(text):
-        kind = PY_UNICODE_1BYTE_KIND
-        length = len(text)
-        is_ascii = True
-        s = _empty_string(kind, length, is_ascii)
-        for i in range(length):
-            ch = text[i]
-            _set_code_point(s, i, ch)
-        return s
-    return impl
+# @extending.overload_method(TextEncodingNonePointer, 'to_string')
+# def ol_to_string(text):
+#     def impl(text):
+#         kind = PY_UNICODE_1BYTE_KIND
+#         length = len(text)
+#         is_ascii = True
+#         s = _empty_string(kind, length, is_ascii)
+#         for i in range(length):
+#             ch = text[i]
+#             _set_code_point(s, i, ch)
+#         return s
+#     return impl
