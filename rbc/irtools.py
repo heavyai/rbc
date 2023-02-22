@@ -359,6 +359,12 @@ def add_metadata_flag(main_library, **kwargs):
     main_library.add_ir_module(module)
 
 
+def read_unicodetype_db():
+    with open('rbc/unicodetype_db.ll', 'r') as f:
+        s = ''.join(f.readlines())
+    return llvm.parse_assembly(s)
+
+
 def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
@@ -389,6 +395,7 @@ def compile_to_LLVM(functions_and_signatures,
     target_context = JITRemoteTargetContext(typing_context)
 
     nrt_module = create_nrt_functions(debug=debug)
+    unicodetype_db = read_unicodetype_db()
 
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
@@ -404,6 +411,7 @@ def compile_to_LLVM(functions_and_signatures,
             assert isinstance(user_defined_llvm_ir, llvm.ModuleRef)
             main_module.link_in(user_defined_llvm_ir, preserve=True)
 
+        main_module.link_in(unicodetype_db)
         main_library.add_ir_module(nrt_module)
 
         succesful_fids = []

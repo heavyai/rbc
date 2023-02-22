@@ -5,18 +5,19 @@ RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
 __all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'HeavyDBTextEncodingNoneType']
 
 import operator
-from rbc import typesystem
-from rbc.targetinfo import TargetInfo
-from rbc.errors import RequireLiteralValue
-from .buffer import (
-    Buffer, HeavyDBBufferType,
-    heavydb_buffer_constructor)
-from numba.core import extending, cgutils
-from numba.core import types as nb_types
-from .array import ArrayPointer
-from llvmlite import ir
 from typing import Union
 
+from llvmlite import ir
+from numba.core import cgutils, extending
+from numba.core import types as nb_types
+from numba.core.pythonapi import PY_UNICODE_1BYTE_KIND
+from numba.cpython.unicode import _empty_string, _set_code_point
+
+from rbc import typesystem
+from rbc.targetinfo import TargetInfo
+
+from .array import ArrayPointer
+from .buffer import Buffer, HeavyDBBufferType, heavydb_buffer_constructor
 
 int32_t = ir.IntType(32)
 int64_t = ir.IntType(64)
@@ -57,6 +58,7 @@ class TextEncodingNonePointer(ArrayPointer):
         struct_load = builder.load(val)
         src = builder.extract_value(struct_load, 0, name='text_buff_ptr')
         element_count = builder.extract_value(struct_load, 1, name='text_size')
+        cgutils.printf(builder, "element count: %d\n", element_count)
         is_null = builder.extract_value(struct_load, 2, name='text_is_null')
 
         zero, one, two = int32_t(0), int32_t(1), int32_t(2)
@@ -198,22 +200,26 @@ def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
     return fa._getpointer()
 
 
-# @extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
-# def text_encoding_none_unicode_ctor(context, builder, sig, args):
+@extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
+def text_encoding_none_unicode_ctor(context, builder, sig, args):
 
-#     text = context.make_helper(builder, TextEncodingNonePointer)
-#     # fn = get_copy_bytes_fn(builder.module, arr, src_data, sz)
-#     text.sz = text.sz.type(0)
-#     text.is_null = text.is_null.type(1)
-#     return text
+    unichr = context.make_helper(builder, sig.args[0], value=args[0])
+    length = unichr.length
+    text = heavydb_buffer_constructor(context, builder,
+                                      sig.return_type(nb_types.int64),
+                                      [length])
+    cgutils.memcpy(builder, text.ptr, unichr.data, unichr.length)
+    # string is null terminated
+    builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [length]))
+    return text._getpointer()
 
 
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
     def typer(sz):
         if isinstance(sz, nb_types.UnicodeType):
-            # return typesystem.Type.fromobject('TextEncodingNone').tonumba()
-            raise RequireLiteralValue('Requires StringLiteral')
+            return typesystem.Type.fromobject('TextEncodingNone').tonumba()
+            # raise RequireLiteralValue('Requires StringLiteral')
         if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
@@ -281,8 +287,15 @@ def ol_attr_is_null(text):
     return impl
 
 
-# @extending.overload_method(TextEncodingNonePointer, 'to_string')
-# def ol_to_string(text):
-#     def impl(text):
-#         return 'abcd'
-#     return impl
+@extending.overload_method(TextEncodingNonePointer, 'to_string')
+def ol_to_string(text):
+    def impl(text):
+        kind = PY_UNICODE_1BYTE_KIND
+        length = len(text)
+        is_ascii = True
+        s = _empty_string(kind, length, is_ascii)
+        for i in range(length):
+            ch = text[i]
+            _set_code_point(s, i, ch)
+        return s
+    return impl
