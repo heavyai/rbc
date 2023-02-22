@@ -85,6 +85,7 @@ class NRT(Library):
     NRT_MemInfo_data_fast
     NRT_incref NRT_decref
     NRT_MemInfo_varsize_realloc
+    NRT_MemInfo_new_varsize
     NRT_MemInfo_new_varsize_dtor
     NRT_MemInfo_varsize_alloc
     NRT_MemInfo_varsize_free
