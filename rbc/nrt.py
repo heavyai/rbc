@@ -1,3 +1,4 @@
+import os
 from numba.core import cgutils
 from numba.cpython.hashing import _hashsecret as hashsecret
 from llvmlite import ir
@@ -134,6 +135,9 @@ function_types = {
 }
 
 
+_debug_functions = (nrt_debug_incr, nrt_debug_decr, nrt_debug_spaces)
+
+
 # defined in nrt.h
 NRT_DTOR_FUNCTION = ir.FunctionType(void, [i8p, i64, i8p])
 
@@ -146,6 +150,7 @@ class RBC_NRT:
     def __init__(self, verbose=False):
         self.module = ir.Module(name='RBC_nrt')
         self.verbose = verbose
+        self.debug_nrt = True if os.environ.get('RBC_DEBUG_NRT', False) else False
 
         gv = ir.GlobalVariable(self.module, i64, nrt_global_var)
         gv.initializer = i64(0)
@@ -162,26 +167,34 @@ class RBC_NRT:
             gv.initializer = i64(v.value.value)
 
     def NRT_Debug(self, fmt, *args):
-        builder = self.CURRENT_BUILDER
+        # only debug if verbose is on
+        if self.debug_nrt:
+            builder = self.CURRENT_BUILDER
 
-        msg = f"[NRT] {fmt}"
-        if not msg.endswith('\n'):
-            msg += '\n'
+            msg = f"[NRT] {fmt}"
+            if not msg.endswith('\n'):
+                msg += '\n'
 
-        gv = builder.load(self.module.get_global(nrt_global_var))
-        cgutils.printf(builder, "%*d", gv, gv)
+            gv = builder.load(self.module.get_global(nrt_global_var))
+            cgutils.printf(builder, "%*d", gv, gv)
 
-        cgutils.printf(builder, msg, *args)
+            cgutils.printf(builder, msg, *args)
 
     @contextmanager
     def nrt_debug_ctx(self):
-        builder = self.CURRENT_BUILDER
-        try:
-            builder.call(self.nrt_debug_incr, [])
-            self.NRT_Debug(self.CURRENT_FUNCTION)
-            yield
-        finally:
-            builder.call(self.nrt_debug_decr, [])
+        if self.debug_nrt:
+            builder = self.CURRENT_BUILDER
+            try:
+                builder.call(self.nrt_debug_incr, [])
+                self.NRT_Debug(self.CURRENT_FUNCTION)
+                yield
+            finally:
+                builder.call(self.nrt_debug_decr, [])
+        else:
+            try:
+                yield
+            finally:
+                pass
 
     def define_nrt_debug_incr(self, builder, args):
         gv = self.module.get_global(nrt_global_var)
@@ -255,16 +268,21 @@ class RBC_NRT:
                 getattr(self, defn), defn
 
         for name in dir(self):
-            if name.startswith('define_'):
-                meth = getattr(self, name)
-                fn_name = name[len('define_'):]
-                # TODO: put function names
-                self._declare_function(fn_name)
-                builder = self._get_function_builder(fn_name)
-                args = builder.function.args
-                self.CURRENT_FUNCTION = fn_name
-                self.CURRENT_BUILDER = builder
-                meth(builder, args)
+            if not name.startswith('define_'):
+                continue
+
+            if name in _debug_functions and not self.debug_nrt:
+                continue
+
+            meth = getattr(self, name)
+            fn_name = name[len('define_'):]
+            # TODO: put function names
+            self._declare_function(fn_name)
+            builder = self._get_function_builder(fn_name)
+            args = builder.function.args
+            self.CURRENT_FUNCTION = fn_name
+            self.CURRENT_BUILDER = builder
+            meth(builder, args)
 
     def define_NRT_MemInfo_call_dtor(self, builder, args):
         with self.nrt_debug_ctx():
@@ -406,7 +424,6 @@ class RBC_NRT:
         # allocator is always null as we don't use this argument in RBC/HeavyDB
         with self.nrt_debug_ctx():
             [size] = args
-            # allocator = builder.bitcast(self._get_function(malloc), i8p)
             allocator = NULL
             ret = builder.call(self.NRT_Allocate_External, [size, allocator])
         builder.ret(ret)
@@ -417,6 +434,11 @@ class RBC_NRT:
             [size, allocator_] = args
 
             ptr = builder.call(self.malloc, [size])
+            # allocate_varlen_buffer calls malloc using the formula:
+            #   malloc((elem_count + 1) * elem_size)
+            # elem_count = builder.sub(size, i64(1), name='element_count')
+            # elem_size = i64(1)
+            # ptr = builder.call(self.allocate_varlen_buffer, [elem_count, elem_size])
             self.NRT_Debug("bytes=%zu -> ptr=%p", size, ptr)
         builder.ret(ptr)
 
