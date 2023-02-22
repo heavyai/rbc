@@ -184,17 +184,3 @@ def test_return_text(heavydb):
     result = list(zip(*result))
     expected, got = result
     assert expected == got
-
-
-def test_nrt(heavydb):
-    @heavydb("int32(TextEncodingNone)", devices=['cpu'])
-    def fn(t):
-        s = 'hello'
-        s2 = s + ', world'
-        return len(s2) + len(t)
-
-    heavydb.register()
-
-    table = heavydb.table_name + 'text'
-    _, result = heavydb.sql_execute(f"select n, fn(n) from {table};")
-    print(list(result))

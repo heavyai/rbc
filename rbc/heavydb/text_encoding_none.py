@@ -224,7 +224,6 @@ def type_heavydb_text_encoding_none(context):
     def typer(sz):
         if isinstance(sz, nb_types.UnicodeType):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
-            # raise RequireLiteralValue('Requires StringLiteral')
         if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer

@@ -150,7 +150,7 @@ class RBC_NRT:
     def __init__(self, verbose=False):
         self.module = ir.Module(name='RBC_nrt')
         self.verbose = verbose
-        self.debug_nrt = True if os.environ.get('RBC_DEBUG_NRT', False) else False
+        self.debug_nrt = int(os.environ.get('RBC_DEBUG', False))
 
         gv = ir.GlobalVariable(self.module, i64, nrt_global_var)
         gv.initializer = i64(0)
