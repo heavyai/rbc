@@ -104,6 +104,12 @@ class TextEncodingNone(Buffer):
     def __init__(self, size: Union[int, str]):
         pass
 
+    def to_string(self) -> str:
+        """
+        Returns a Python string
+        """
+        pass
+
 
 @extending.overload(operator.eq)
 def text_encoding_none_eq(a, b):
