@@ -58,7 +58,6 @@ class TextEncodingNonePointer(ArrayPointer):
         struct_load = builder.load(val)
         src = builder.extract_value(struct_load, 0, name='text_buff_ptr')
         element_count = builder.extract_value(struct_load, 1, name='text_size')
-        cgutils.printf(builder, "element count: %d\n", element_count)
         is_null = builder.extract_value(struct_load, 2, name='text_is_null')
 
         zero, one, two = int32_t(0), int32_t(1), int32_t(2)
