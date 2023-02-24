@@ -394,7 +394,7 @@ def compile_to_LLVM(functions_and_signatures,
     typing_context = JITRemoteTypingContext()
     target_context = JITRemoteTargetContext(typing_context)
 
-    nrt_module = create_nrt_functions(debug=debug)
+    nrt_module = create_nrt_functions(target_context, debug=debug)
     unicodetype_db = read_unicodetype_db()
 
     # Bring over Array overloads (a hack):

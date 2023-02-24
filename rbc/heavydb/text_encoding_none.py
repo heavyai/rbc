@@ -204,27 +204,27 @@ def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
     return fa._getpointer()
 
 
-# @extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
-# def text_encoding_none_unicode_ctor(context, builder, sig, args):
+@extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
+def text_encoding_none_unicode_ctor(context, builder, sig, args):
 
-#     unichr = context.make_helper(builder, sig.args[0], value=args[0])
-#     length = unichr.length
-#     text = heavydb_buffer_constructor(context, builder,
-#                                       sig.return_type(nb_types.int64),
-#                                       [length])
-#     cgutils.memcpy(builder, text.ptr, unichr.data, unichr.length)
-#     # string is null terminated
-#     builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [length]))
-#     return text._getpointer()
+    unichr = context.make_helper(builder, sig.args[0], value=args[0])
+    length = unichr.length
+    text = heavydb_buffer_constructor(context, builder,
+                                      sig.return_type(nb_types.int64),
+                                      [length])
+    cgutils.memcpy(builder, text.ptr, unichr.data, unichr.length)
+    # string is null terminated
+    builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [length]))
+    return text._getpointer()
 
 
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
     def typer(sz):
         if isinstance(sz, nb_types.UnicodeType):
-            from rbc.errors import RequireLiteralValue
-            raise RequireLiteralValue('Requires StringLiteral')
-            # return typesystem.Type.fromobject('TextEncodingNone').tonumba()
+            # from rbc.errors import RequireLiteralValue
+            # raise RequireLiteralValue('Requires StringLiteral')
+            return typesystem.Type.fromobject('TextEncodingNone').tonumba()
         if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
@@ -292,15 +292,15 @@ def ol_attr_is_null(text):
     return impl
 
 
-# @extending.overload_method(TextEncodingNonePointer, 'to_string')
-# def ol_to_string(text):
-#     def impl(text):
-#         kind = PY_UNICODE_1BYTE_KIND
-#         length = len(text)
-#         is_ascii = True
-#         s = _empty_string(kind, length, is_ascii)
-#         for i in range(length):
-#             ch = text[i]
-#             _set_code_point(s, i, ch)
-#         return s
-#     return impl
+@extending.overload_method(TextEncodingNonePointer, 'to_string')
+def ol_to_string(text):
+    def impl(text):
+        kind = PY_UNICODE_1BYTE_KIND
+        length = len(text)
+        is_ascii = True
+        s = _empty_string(kind, length, is_ascii)
+        for i in range(length):
+            ch = text[i]
+            _set_code_point(s, i, ch)
+        return s
+    return impl
