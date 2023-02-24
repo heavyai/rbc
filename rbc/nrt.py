@@ -94,7 +94,8 @@ class RBC_NRT:
         size_t = ir.IntType(ti.type_sizeof["size_t"] * 8)
 
         # atomic_size_t = ir.global_context.get_identified_type('atomic_size_t')
-        # atomic_size_t.set_body(size_t)
+        # if atomic_size_t.elements is None:
+        #     atomic_size_t.set_body(size_t)
 
         # struct MemInfo {
         #     std::atomic_size_t     refct;
@@ -111,7 +112,8 @@ class RBC_NRT:
 
         MemInfo_t = ir.global_context.get_identified_type("Struct.MemInfo")
         # First argument must be "atomic_i64_t" instead of size_t
-        MemInfo_t.set_body(size_t, i8p, i8p, i8p, size_t, i8p)
+        if MemInfo_t.elements is None:
+            MemInfo_t.set_body(size_t, i8p, i8p, i8p, size_t, i8p)
         MemInfo_ptr_t = MemInfo_t.as_pointer()
 
         self.size_t = size_t
