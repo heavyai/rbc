@@ -303,7 +303,8 @@ class RBC_NRT:
             assert len(argnames) == len(fn.args), (len(argnames), len(fn.args))
             for arg, name in zip(fn.args, argnames):
                 arg.name = name
-        fn.attributes.add("noinline")
+        if self.debug_nrt:
+            fn.attributes.add("noinline")
         return fn
 
     def define(self):
