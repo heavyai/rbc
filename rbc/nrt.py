@@ -44,6 +44,7 @@ NRT_MemInfo_varsize_alloc = "NRT_MemInfo_varsize_alloc"
 NRT_MemInfo_varsize_realloc = "NRT_MemInfo_varsize_realloc"
 NRT_MemInfo_varsize_free = "NRT_MemInfo_varsize_free"
 NRT_MemInfo_new_varsize = "NRT_MemInfo_new_varsize"
+NRT_MemInfo_alloc_safe_aligned = "NRT_MemInfo_alloc_safe_aligned"
 NRT_Reallocate = "NRT_Reallocate"
 NRT_dealloc = "NRT_dealloc"
 NRT_Free = "NRT_Free"
@@ -73,7 +74,7 @@ class RBC_NRT:
         self.module = ir.Module(name="RBC_nrt")
         self.target_context = target_context
         self.verbose = verbose
-        self.debug_nrt = int(os.environ.get("RBC_DEBUG", False))
+        self.debug_nrt = int(os.environ.get("RBC_DEBUG_NRT", False))
 
         gv = ir.GlobalVariable(self.module, i64, nrt_global_var)
         gv.initializer = i64(0)
@@ -83,9 +84,6 @@ class RBC_NRT:
 
         self.define()
         self.set_hashsecrets()
-
-        if self.verbose:
-            print(self.module)
 
     def _define_types(self):
         ti = TargetInfo()
@@ -158,6 +156,10 @@ class RBC_NRT:
             NRT_MemInfo_new: (
                 ir.FunctionType(MemInfo_ptr_t, [i8p, size_t, i8p, i8p]),
                 ("data", "size", "dtor", "dtor_info"),
+            ),
+            NRT_MemInfo_alloc_safe_aligned: (
+                ir.FunctionType(MemInfo_ptr_t, [size_t, i32]),
+                ("size", "aligned"),
             ),
             NRT_MemInfo_new_varsize: (
                 ir.FunctionType(MemInfo_ptr_t, [size_t]),
@@ -359,6 +361,14 @@ class RBC_NRT:
         # with self.nrt_debug_ctx():
         #     pass
         builder.ret_void()
+
+    def define_NRT_MemInfo_alloc_safe_aligned(self, builder, args):
+        # Just call the non-aligned version for now
+        with self.nrt_debug_ctx():
+            [size, align] = args
+            ptr = builder.call(self.NRT_MemInfo_alloc_safe, [size])
+            self.NRT_Debug("ptr=%p\n", ptr)
+        builder.ret(ptr)
 
     def define_NRT_MemInfo_data_fast(self, builder, args):
         with self.nrt_debug_ctx():
