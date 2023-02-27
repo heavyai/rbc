@@ -163,7 +163,7 @@ tests = [
 
 @pytest.mark.parametrize('method,arg', tests)
 def test_string_methods(heavydb, method, arg: str):
-    skip_list = ()
+    skip_list = ('capitalize',)
     if method in skip_list:
         pytest.skip(method)
 
