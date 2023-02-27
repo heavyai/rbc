@@ -154,7 +154,6 @@ def test_TextEncodingNone_ne(heavydb):
     assert ne2('world').execute() == 0
 
 
-@pytest.mark.xfail
 def test_if_else_assignment(heavydb):
     heavydb.require_version((5, 8), 'Requires heavydb 5.8 or newer')
 

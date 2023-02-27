@@ -18,8 +18,13 @@ from rbc.targetinfo import TargetInfo
 
 from .array import ArrayPointer
 from .buffer import Buffer, HeavyDBBufferType, heavydb_buffer_constructor
+from .allocator import allocate_varlen_buffer
 
-int32_t = ir.IntType(32)
+i8 = ir.IntType(8)
+i8p = i8.as_pointer()
+i32 = ir.IntType(32)
+i64 = ir.IntType(64)
+void = ir.VoidType()
 int64_t = ir.IntType(64)
 
 
@@ -51,17 +56,19 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
 
 class TextEncodingNonePointer(ArrayPointer):
     def deepcopy(self, context, builder, val, retptr):
-        from .buffer import memalloc
-        ptr_type = self.dtype.members[0]
-        element_size = int64_t(ptr_type.dtype.bitwidth // 8)
-
         struct_load = builder.load(val)
         fa = context.make_helper(builder, self.dtype, value=struct_load)
 
-        cgutils.printf(builder, "element count: %d\n", fa.sz)
-        zero, one, two = int32_t(0), int32_t(1), int32_t(2)
-        ptr = memalloc(context, builder, ptr_type, fa.sz, element_size)
-        cgutils.raw_memcpy(builder, ptr, fa.ptr, fa.sz, element_size)
+        zero, one, two = i32(0), i32(1), i32(2)
+
+        ptr = allocate_varlen_buffer(builder, fa.sz)
+        # fn = get_copy_bytes_fn(builder)
+        # builder.call(fn, [ptr, fa.ptr, fa.sz])
+        cgutils.raw_memcpy(builder,
+                           dst=ptr,
+                           src=fa.ptr,
+                           count=fa.sz,
+                           itemsize=i64(1))
         builder.store(ptr, builder.gep(retptr, [zero, zero]))
         builder.store(fa.sz, builder.gep(retptr, [zero, one]))
         builder.store(fa.is_null, builder.gep(retptr, [zero, two]))
@@ -147,51 +154,24 @@ def heavydb_text_encoding_none_constructor(context, builder, sig, args):
     return heavydb_buffer_constructor(context, builder, sig, args)._getpointer()
 
 
-def get_copy_bytes_fn(module, arr, src_data, sz):
+def get_copy_bytes_fn(builder):
 
-    fn_name = 'copy_bytes_fn'
-    try:
-        return module.get_global(fn_name)
-    except KeyError:
-        pass
+    module = builder.module
 
-    # create function and prevent llvm from optimizing it
-    fnty = ir.FunctionType(ir.VoidType(), [arr.type, src_data.type, sz.type])
-    func = ir.Function(module, fnty, fn_name)
-    func.attributes.add('noinline')
+    name = 'copy_bytes_fn'
+    fnty = ir.FunctionType(void, [i8p, i8p, i64])
+    fn = cgutils.get_or_insert_function(module, fnty, name)
+    fn.linkage = 'linkonce'
+    fn.attributes.add('noinline')
 
-    block = func.append_basic_block(name="entry")
+    block = fn.append_basic_block(name="entry")
     builder = ir.IRBuilder(block)
     sizeof_char = TargetInfo().sizeof('char')
-    dest_data = builder.extract_value(builder.load(func.args[0]), [0])
-    cgutils.raw_memcpy(builder, dest_data, func.args[1], func.args[2], sizeof_char)
+    [dst, src, size] = fn.args
+    cgutils.raw_memcpy(builder, dst, src, size, sizeof_char)
     builder.ret_void()
 
-    return func
-
-
-@extending.lower_builtin(TextEncodingNone, nb_types.StringLiteral)
-def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
-    int64_t = ir.IntType(64)
-    int8_t_ptr = ir.IntType(8).as_pointer()
-
-    literal_value = sig.args[0].literal_value
-    sz = int64_t(len(literal_value))
-
-    # arr = {ptr, size, is_null}*
-    arr = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64), [sz])._getpointer()  # noqa: E501
-
-    msg_bytes = literal_value.encode('utf-8')
-    msg_const = cgutils.make_bytearray(msg_bytes + b'\0')
-    try:
-        msg_global_var = builder.module.get_global(literal_value)
-    except KeyError:
-        msg_global_var = cgutils.global_constant(builder.module, literal_value, msg_const)
-    src_data = builder.bitcast(msg_global_var, int8_t_ptr)
-
-    fn = get_copy_bytes_fn(builder.module, arr, src_data, sz)
-    builder.call(fn, [arr, src_data, sz])
-    return arr
+    return fn
 
 
 @extending.lower_builtin(TextEncodingNone, nb_types.CPointer, nb_types.Integer)
@@ -206,26 +186,30 @@ def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
 
 @extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
 def text_encoding_none_unicode_ctor(context, builder, sig, args):
+    uni_str = context.make_helper(builder, sig.args[0], value=args[0])
+    fa = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64),
+                                    [uni_str.length])
+    # ret.ptr = allocate_varlen_buffer(builder, uni_str.length)
+    # ret.sz = uni_str.length
+    # ret.is_null = i8(0)
 
-    unichr = context.make_helper(builder, sig.args[0], value=args[0])
-    length = unichr.length
-    text = heavydb_buffer_constructor(context, builder,
-                                      sig.return_type(nb_types.int64),
-                                      [length])
-    cgutils.memcpy(builder, text.ptr, unichr.data, unichr.length)
+    # fn = get_copy_bytes_fn(builder)
+    # builder.call(fn, [fa.ptr, uni_str.data, uni_str.length])
+
+    cgutils.raw_memcpy(builder,
+                       dst=fa.ptr,
+                       src=uni_str.data,
+                       count=uni_str.length,
+                       itemsize=i64(1))
     # string is null terminated
-    builder.store(text.ptr.type.pointee(0), builder.gep(text.ptr, [length]))
-    return text._getpointer()
+    builder.store(fa.ptr.type.pointee(0), builder.gep(fa.ptr, [uni_str.length]))
+    return fa._getpointer()
 
 
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
-    def typer(sz):
-        if isinstance(sz, nb_types.UnicodeType):
-            # from rbc.errors import RequireLiteralValue
-            # raise RequireLiteralValue('Requires StringLiteral')
-            return typesystem.Type.fromobject('TextEncodingNone').tonumba()
-        if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
+    def typer(arg):
+        if isinstance(arg, (nb_types.Integer, nb_types.UnicodeType)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
 
