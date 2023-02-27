@@ -238,8 +238,9 @@ jobs:
           EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
           RBC_TESTS_FULL: TRUE
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k heavydb
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k "not heavydb"
+          RBC_DEBUG=1 RBC_DEBUG_NRT=1 mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k test_split
+          # mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k heavydb
+          # mamba run -n rbc pytest -sv -r A rbc/tests/ -x -k "not heavydb"
 
       - name: Show Heavydb conda logs on failure [conda]
         shell: bash -l {0}
