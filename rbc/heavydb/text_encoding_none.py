@@ -56,22 +56,37 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
 
 class TextEncodingNonePointer(ArrayPointer):
     def deepcopy(self, context, builder, val, retptr):
-        struct_load = builder.load(val)
-        fa = context.make_helper(builder, self.dtype, value=struct_load)
-
         zero, one, two = i32(0), i32(1), i32(2)
 
-        ptr = allocate_varlen_buffer(builder, fa.sz)
-        # fn = get_copy_bytes_fn(builder)
-        # builder.call(fn, [ptr, fa.ptr, fa.sz])
-        cgutils.raw_memcpy(builder,
-                           dst=ptr,
-                           src=fa.ptr,
-                           count=fa.sz,
-                           itemsize=i64(1))
-        builder.store(ptr, builder.gep(retptr, [zero, zero]))
-        builder.store(fa.sz, builder.gep(retptr, [zero, one]))
-        builder.store(fa.is_null, builder.gep(retptr, [zero, two]))
+        src = builder.load(builder.gep(val, [zero, zero]))
+        sz = builder.load(builder.gep(val, [zero, one]))
+        is_null = builder.load(builder.gep(val, [zero, two]))
+
+        dst = allocate_varlen_buffer(builder, sz)
+        cgutils.raw_memcpy(builder, dst=dst, src=src, count=sz, itemsize=i64(1))
+        # string is null terminated
+        builder.store(i8(0), builder.gep(dst, [sz]))
+
+        builder.store(dst, builder.gep(retptr, [zero, zero]))
+        builder.store(sz, builder.gep(retptr, [zero, one]))
+        builder.store(is_null, builder.gep(retptr, [zero, two]))
+
+        # struct_load = builder.load(val)
+        # fa = context.make_helper(builder, self.dtype, value=struct_load)
+
+        # zero, one, two = i32(0), i32(1), i32(2)
+
+        # ptr = allocate_varlen_buffer(builder, fa.sz)
+        # # fn = get_copy_bytes_fn(builder)
+        # # builder.call(fn, [ptr, fa.ptr, fa.sz])
+        # cgutils.raw_memcpy(builder,
+        #                    dst=ptr,
+        #                    src=fa.ptr,
+        #                    count=fa.sz,
+        #                    itemsize=i64(1))
+        # builder.store(ptr, builder.gep(retptr, [zero, zero]))
+        # builder.store(fa.sz, builder.gep(retptr, [zero, one]))
+        # builder.store(fa.is_null, builder.gep(retptr, [zero, two]))
 
 
 class TextEncodingNone(Buffer):
@@ -186,24 +201,50 @@ def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
 
 @extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
 def text_encoding_none_unicode_ctor(context, builder, sig, args):
+    # Note to the future:
+    # You shall be tempted to use "context.make_helper",
+    # "cgutils.make_struct_proxy" or "builder.extract_value", but avoid it at
+    # all cost! LLVM -O2 runs SROA (Scalar Replacement Of Aggregates) and
+    # suddenly some IR nodes becomes NULL values which are deleted by DCE.
+    # Stick to plain allocas + load/store and you'll be fine.
+
     uni_str = context.make_helper(builder, sig.args[0], value=args[0])
-    fa = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64),
-                                    [uni_str.length])
-    # ret.ptr = allocate_varlen_buffer(builder, uni_str.length)
-    # ret.sz = uni_str.length
-    # ret.is_null = i8(0)
 
-    # fn = get_copy_bytes_fn(builder)
-    # builder.call(fn, [fa.ptr, uni_str.data, uni_str.length])
+    llty = context.get_value_type(sig.return_type.dtype)
+    st_ptr = builder.alloca(llty)
+    zero, one, two = i32(0), i32(1), i32(2)
 
-    cgutils.raw_memcpy(builder,
-                       dst=fa.ptr,
-                       src=uni_str.data,
-                       count=uni_str.length,
-                       itemsize=i64(1))
-    # string is null terminated
-    builder.store(fa.ptr.type.pointee(0), builder.gep(fa.ptr, [uni_str.length]))
-    return fa._getpointer()
+    eq = builder.icmp_signed('==', uni_str.length, uni_str.length.type(0))
+    with builder.if_else(eq, likely=False) as (then, otherwise):
+        with then:
+            bb_then = builder.basic_block
+            p1 = cgutils.get_null_value(i8p)
+            n1 = i8(1)
+        with otherwise:
+            bb_else = builder.basic_block
+            p2 = allocate_varlen_buffer(builder, uni_str.length)
+            cgutils.raw_memcpy(builder, dst=p2, src=uni_str.data,
+                               count=uni_str.length, itemsize=i64(1))
+            # string is null terminated
+            builder.store(i8(0), builder.gep(p2, [uni_str.length]))
+            n2 = i8(0)
+
+    # {i8*, i64, i8}
+    #  ^^^
+    ptr = builder.phi(i8p)
+    ptr.add_incoming(p1, bb_then)
+    ptr.add_incoming(p2, bb_else)
+
+    # {i8*, i64, i8}
+    #            ^^
+    is_null = builder.phi(i8)
+    is_null.add_incoming(n1, bb_then)
+    is_null.add_incoming(n2, bb_else)
+
+    builder.store(ptr, builder.gep(st_ptr, [zero, zero]))
+    builder.store(uni_str.length, builder.gep(st_ptr, [zero, one]))
+    builder.store(is_null, builder.gep(st_ptr, [zero, two]))
+    return st_ptr
 
 
 @extending.type_callable(TextEncodingNone)

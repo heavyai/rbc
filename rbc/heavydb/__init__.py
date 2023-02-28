@@ -1,4 +1,5 @@
 from .array import *  # noqa: F401, F403
+from .allocator import *  # noqa: F401, F403
 from .column import *  # noqa: F401, F403
 from .column_array import *  # noqa: F401, F403
 from .buffer import *  # noqa: F401, F403

@@ -161,13 +161,8 @@ tests = [
 ]
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,arg', tests)
 def test_string_methods(heavydb, method, arg: str):
-    skip_list = ('capitalize',)
-    if method in skip_list:
-        pytest.skip(method)
-
     _, result = heavydb.sql_execute(f"select test_string('{arg}', '{method}');")
 
     fn = getattr(arg, method)
@@ -175,7 +170,6 @@ def test_string_methods(heavydb, method, arg: str):
     assert list(result)[0] == (ans,)
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,word', [
     ('count', 'I love apples, apples are my favorite fruit', 'apple'),
     ('count', 'I love apples, apples are my favorite fruit', 'orange'),
@@ -192,7 +186,6 @@ def test_string_two_arg(heavydb, method, string, word):
     assert list(result)[0] == (ans,)
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,sep', [
     ('split', 'BMW-Telsa-Range Rover', '-'),
     ('rsplit', 'BMW-Telsa-Range Rover', '-'),
@@ -208,7 +201,6 @@ def test_split(heavydb, method, string, sep):
     assert list(result)[0] == (ans,)
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,width', [
     ('center', 'banana', 20),
     ('expandtabs', 'H\te\tl\tl\to', 2),
@@ -222,7 +214,6 @@ def test_string_just(heavydb, method, string, width):
     assert list(result)[0] == (ans,)
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,value', [
     ('endswith', 'Hello, welcome to my world.', '.'),
     ('endswith', 'Hello, HeavyDB', 'HeavyAI'),
@@ -235,7 +226,6 @@ def test_string_endswith(heavydb, method, string, value):
     assert list(result)[0] == (ans,)
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('string,old,new', [
     ('bat ball', 'ba', 'ro'),
 ])
@@ -245,7 +235,6 @@ def test_replace(heavydb, string, old, new):
     assert list(result)[0] == (ans,)
 
 
-@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string', [
     ('isalnum', 'Hello, welcome to my world.'),
     ('isalnum', 'Company12'),
