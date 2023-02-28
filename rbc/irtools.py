@@ -1,6 +1,7 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
+import os
 import re
 import warnings
 from contextlib import contextmanager
@@ -360,7 +361,9 @@ def add_metadata_flag(main_library, **kwargs):
 
 
 def read_unicodetype_db():
-    with open('rbc/unicodetype_db.ll', 'r') as f:
+    unicode_file = os.path.join(os.path.dirname(__file__),
+                                'unicodetype_db.ll')
+    with open(unicode_file, 'r') as f:
         s = ''.join(f.readlines())
     return llvm.parse_assembly(s)
 
