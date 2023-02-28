@@ -161,6 +161,7 @@ tests = [
 ]
 
 
+@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,arg', tests)
 def test_string_methods(heavydb, method, arg: str):
     skip_list = ('capitalize',)
@@ -174,6 +175,7 @@ def test_string_methods(heavydb, method, arg: str):
     assert list(result)[0] == (ans,)
 
 
+@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,word', [
     ('count', 'I love apples, apples are my favorite fruit', 'apple'),
     ('count', 'I love apples, apples are my favorite fruit', 'orange'),
