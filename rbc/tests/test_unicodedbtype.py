@@ -1,6 +1,7 @@
 import pytest
 from rbc.irtools import read_unicodetype_db
 
+
 @pytest.fixture(scope='module')
 def db():
     return read_unicodetype_db()
