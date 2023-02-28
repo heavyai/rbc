@@ -3,7 +3,8 @@ os.environ["NUMBA_CAPTURED_ERRORS"] = "new_style"
 os.environ["NUMBA_LOOP_VECTORIZE"] = "0"
 os.environ["NUMBA_SLP_VECTORIZE"] = "0"
 # TODO: line below is just for debugging purposes
-os.environ["NUMBA_OPT"] = "1"
+if os.environ.get("NUMBA_OPT", None) is None:
+    os.environ["NUMBA_OPT"] = "1"
 # os.environ["RBC_DEBUG"] = "0"
 # os.environ["RBC_DEBUG_NRT"] = "0"
 
