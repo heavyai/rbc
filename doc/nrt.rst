@@ -2,8 +2,6 @@
 Numba Runtime
 =============
 
-The Numba Runtime (NRT)
-
 RBC includes a simplified implementation of the Numba Runtime written in pure
 LLVM, which differs from the original C-written implementation. This approach
 enables RBC to extend its support to a broader range of Python datatypes,
