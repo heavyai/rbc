@@ -90,7 +90,9 @@ html_theme_options = {
    "logo": {
       "image_light": html_logo,
       "image_dark": html_logo,
-   }
+   },
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1220
+    "icon_links": [],
 }
 
 html_context = {
