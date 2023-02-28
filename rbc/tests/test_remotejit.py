@@ -212,7 +212,6 @@ def test_rjit_add(rjit):
         assert add(1j, 2) == 2+1j
 
 
-@pytest.mark.xfail(strict=False)
 def test_options_local(rjit):
 
     @rjit
