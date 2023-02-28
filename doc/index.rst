@@ -22,4 +22,5 @@ and llvmlite tools.
    api
    releases
    developer
+   nrt
    envvars
