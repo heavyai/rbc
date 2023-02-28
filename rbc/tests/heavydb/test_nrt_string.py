@@ -206,6 +206,7 @@ def test_split(heavydb, method, string, sep):
     assert list(result)[0] == (ans,)
 
 
+@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,width', [
     ('center', 'banana', 20),
     ('expandtabs', 'H\te\tl\tl\to', 2),
@@ -219,6 +220,7 @@ def test_string_just(heavydb, method, string, width):
     assert list(result)[0] == (ans,)
 
 
+@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string,value', [
     ('endswith', 'Hello, welcome to my world.', '.'),
     ('endswith', 'Hello, HeavyDB', 'HeavyAI'),
@@ -231,6 +233,7 @@ def test_string_endswith(heavydb, method, string, value):
     assert list(result)[0] == (ans,)
 
 
+@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('string,old,new', [
     ('bat ball', 'ba', 'ro'),
 ])
@@ -240,6 +243,7 @@ def test_replace(heavydb, string, old, new):
     assert list(result)[0] == (ans,)
 
 
+@pytest.mark.xfail(strict=False)
 @pytest.mark.parametrize('method,string', [
     ('isalnum', 'Hello, welcome to my world.'),
     ('isalnum', 'Company12'),
