@@ -52,53 +52,53 @@ Set methods supported
 String methods supported
 ------------------------
 
-* [X] 'capitalize'
-* [X] 'casefold'
-* [X] 'center'
-* [X] 'count'
-* [ ] 'encode'
-* [X] 'endswith'
-* [X] 'expandtabs'
-* [X] 'find'
-* [ ] 'format'
-* [ ] 'format_map'
-* [X] 'index'
-* [X] 'isalnum'
-* [X] 'isalpha'
-* [X] 'isascii'
-* [X] 'isdecimal'
-* [X] 'isdigit'
-* [X] 'isidentifier'
-* [X] 'islower'
-* [X] 'isnumeric'
-* [X] 'isprintable'
-* [X] 'isspace'
-* [X] 'istitle'
-* [X] 'isupper'
-* [X] 'join'
-* [X] 'ljust'
-* [X] 'lower'
-* [X] 'lstrip'
-* [ ] 'maketrans'
-* [ ] 'partition'
-* [X] 'removeprefix'
-* [X] 'removesuffix'
-* [X] 'replace'
-* [X] 'rfind'
-* [X] 'rindex'
-* [X] 'rjust'
-* [ ] 'rpartition'
-* [X] 'rsplit'
-* [X] 'rstrip'
-* [X] 'split'
-* [X] 'splitlines'
-* [X] 'startswith'
-* [X] 'strip'
-* [X] 'swapcase'
-* [X] 'title'
-* [ ] 'translate'
-* [X] 'upper'
-* [X] 'zfill'
+* [X] string.capitalize
+* [X] string.casefold
+* [X] string.center
+* [X] string.count
+* [ ] string.encode
+* [X] string.endswith
+* [X] string.expandtabs
+* [X] string.find
+* [ ] string.format
+* [ ] string.format_map
+* [X] string.index
+* [X] string.isalnum
+* [X] string.isalpha
+* [X] string.isascii
+* [X] string.isdecimal
+* [X] string.isdigit
+* [X] string.isidentifier
+* [X] string.islower
+* [X] string.isnumeric
+* [X] string.isprintable
+* [X] string.isspace
+* [X] string.istitle
+* [X] string.isupper
+* [X] string.join
+* [X] string.ljust
+* [X] string.lower
+* [X] string.lstrip
+* [ ] string.maketrans
+* [ ] string.partition
+* [X] string.removeprefix
+* [X] string.removesuffix
+* [X] string.replace
+* [X] string.rfind
+* [X] string.rindex
+* [X] string.rjust
+* [ ] string.rpartition
+* [X] string.rsplit
+* [X] string.rstrip
+* [X] string.split
+* [X] string.splitlines
+* [X] string.startswith
+* [X] string.strip
+* [X] string.swapcase
+* [X] string.title
+* [ ] string.translate
+* [X] string.upper
+* [X] string.zfill
 
 Additionally, one can convert a text encoding none type to a python string using
 ``TextEncodingNone.to_string`` method.
