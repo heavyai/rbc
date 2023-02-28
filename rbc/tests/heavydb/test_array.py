@@ -546,3 +546,17 @@ def test_return_array(heavydb):
     result = list(zip(*result))
     expected, got = result
     assert expected == got
+
+
+def test_to_list(heavydb):
+
+    @heavydb('int64[](int64[])', devices=['cpu'])
+    def fn(a):
+        lst = a.to_list()
+        return Array(lst)
+
+    heavydb.register()
+    _, result = heavydb.sql_execute(f'select i8, fn(i8) from {heavydb.table_name} limit 1')
+    result = list(zip(*result))
+    expected, got = result
+    assert expected == got

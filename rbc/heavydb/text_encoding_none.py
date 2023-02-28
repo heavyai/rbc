@@ -62,7 +62,7 @@ class TextEncodingNonePointer(ArrayPointer):
         sz = builder.load(builder.gep(val, [zero, one]))
         is_null = builder.load(builder.gep(val, [zero, two]))
 
-        dst = allocate_varlen_buffer(builder, sz)
+        dst = allocate_varlen_buffer(builder, sz, i64(1))
         cgutils.raw_memcpy(builder, dst=dst, src=src, count=sz, itemsize=i64(1))
         # string is null terminated
         builder.store(i8(0), builder.gep(dst, [sz]))
@@ -70,23 +70,6 @@ class TextEncodingNonePointer(ArrayPointer):
         builder.store(dst, builder.gep(retptr, [zero, zero]))
         builder.store(sz, builder.gep(retptr, [zero, one]))
         builder.store(is_null, builder.gep(retptr, [zero, two]))
-
-        # struct_load = builder.load(val)
-        # fa = context.make_helper(builder, self.dtype, value=struct_load)
-
-        # zero, one, two = i32(0), i32(1), i32(2)
-
-        # ptr = allocate_varlen_buffer(builder, fa.sz)
-        # # fn = get_copy_bytes_fn(builder)
-        # # builder.call(fn, [ptr, fa.ptr, fa.sz])
-        # cgutils.raw_memcpy(builder,
-        #                    dst=ptr,
-        #                    src=fa.ptr,
-        #                    count=fa.sz,
-        #                    itemsize=i64(1))
-        # builder.store(ptr, builder.gep(retptr, [zero, zero]))
-        # builder.store(fa.sz, builder.gep(retptr, [zero, one]))
-        # builder.store(fa.is_null, builder.gep(retptr, [zero, two]))
 
 
 class TextEncodingNone(Buffer):
@@ -222,7 +205,7 @@ def text_encoding_none_unicode_ctor(context, builder, sig, args):
             n1 = i8(1)
         with otherwise:
             bb_else = builder.basic_block
-            p2 = allocate_varlen_buffer(builder, uni_str.length)
+            p2 = allocate_varlen_buffer(builder, uni_str.length, i64(1))
             cgutils.raw_memcpy(builder, dst=p2, src=uni_str.data,
                                count=uni_str.length, itemsize=i64(1))
             # string is null terminated
@@ -320,7 +303,7 @@ def ol_attr_is_null(text):
 @extending.overload_method(TextEncodingNonePointer, 'to_string')
 def ol_to_string(text):
     def impl(text):
-        kind = PY_UNICODE_1BYTE_KIND
+        kind = PY_UNICODE_1BYTE_KIND  # ASCII characters only
         length = len(text)
         is_ascii = True
         s = _empty_string(kind, length, is_ascii)

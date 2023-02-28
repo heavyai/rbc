@@ -58,9 +58,9 @@ class ArrayPointer(BufferPointer):
             with otherwise:
                 # we can't just copy the pointer here because return buffers need
                 # to have their own memory, as input buffers are freed upon returning
-                ptr = memalloc(context, builder, ptr_type, element_count, element_size)
-                cgutils.raw_memcpy(builder, ptr, src, element_count, element_size)
-                builder.store(ptr, builder.gep(retptr, [zero, zero]))
+                dst = memalloc(context, builder, ptr_type, element_count, element_size)
+                cgutils.raw_memcpy(builder, dst, src, element_count, element_size)
+                builder.store(dst, builder.gep(retptr, [zero, zero]))
         builder.store(element_count, builder.gep(retptr, [zero, one]))
         builder.store(is_null, builder.gep(retptr, [zero, two]))
 
@@ -102,6 +102,12 @@ class Array(Buffer):
         pass
 
     def is_null(self) -> bool:
+        pass
+
+    def to_list(self) -> list:
+        """
+        Returns a Python list with elements from the array
+        """
         pass
 
     @property
@@ -168,6 +174,19 @@ def heavydb_array_constructor(context, builder, sig, args):
     return heavydb_buffer_constructor(context, builder, sig, args)._getpointer()
 
 
+@extending.lower_builtin(Array, nb_types.List)
+def heavydb_array_ctor_list(context, builder, sig, args):
+    dtype = sig.args[0].dtype
+
+    def ctor(lst):
+        sz = len(lst)
+        arr = Array(sz, dtype)
+        for i in range(sz):
+            arr[i] = lst[i]
+        return arr
+    return context.compile_internal(builder, ctor, sig, args)
+
+
 @extending.type_callable(Array)
 def type_heavydb_array(context):
     def typer(size, dtype):
@@ -178,6 +197,15 @@ def type_heavydb_array(context):
         else:
             raise errors.NumbaNotImplementedError(repr(dtype))
         return HeavyDBArrayType((element_type,)).tonumba()
+    return typer
+
+
+@extending.type_callable(Array)
+def type_heavydb_array_lst(context):
+    def typer(lst):
+        if isinstance(lst, nb_types.List):
+            dtype = lst.dtype
+            return HeavyDBArrayType((dtype,)).tonumba()
     return typer
 
 
@@ -192,4 +220,15 @@ def get_ndim(arr):
 def get_size(arr):
     def impl(arr):
         return len(arr)
+    return impl
+
+
+@extending.overload_method(ArrayPointer, 'to_list')
+def ol_to_list(arr):
+    def impl(arr):
+        lst = list()
+        sz = len(arr)
+        for i in range(sz):
+            lst.append(arr[i])
+        return lst
     return impl
