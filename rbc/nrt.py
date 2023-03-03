@@ -212,6 +212,14 @@ class RBC_NRT:
         # only debug if verbose is on
         if self.debug_nrt:
             builder = self.CURRENT_BUILDER
+            funcs = (
+                NRT_Allocate_External,
+                NRT_Reallocate,
+                NRT_Free,
+                NRT_MemInfo_varsize_realloc,
+            )
+            if self.CURRENT_FUNCTION not in funcs:
+                return
 
             msg = f"[NRT] {fmt}"
             if not msg.endswith("\n"):
@@ -222,13 +230,17 @@ class RBC_NRT:
 
             cgutils.printf(builder, msg, *args)
 
+            # fflush_fnty = ir.FunctionType(i32, [i8p])
+            # fflush_fn = cgutils.get_or_insert_function(builder.module, fflush_fnty, name="fflush")
+            # builder.call(fflush_fn, [NULL])
+
     @contextmanager
     def nrt_debug_ctx(self):
         if self.debug_nrt:
             builder = self.CURRENT_BUILDER
             try:
-                builder.call(self.nrt_debug_incr, [])
                 self.NRT_Debug(self.CURRENT_FUNCTION)
+                builder.call(self.nrt_debug_incr, [])
                 yield
             finally:
                 builder.call(self.nrt_debug_decr, [])
@@ -326,7 +338,7 @@ class RBC_NRT:
                 continue
 
             meth = getattr(self, name)
-            fn_name = name[len("define_"):]
+            fn_name = name[len("define_") :]
             # TODO: put function names
             self._declare_function(fn_name)
             builder = self._get_function_builder(fn_name)
@@ -395,8 +407,13 @@ class RBC_NRT:
 
     def define_NRT_Reallocate(self, builder, args):
         with self.nrt_debug_ctx():
+            # Because the previously reallocated memory might be freed by
+            # realloc, RBC cannot call it in this function. Therefore, instead
+            # of reallocation, RBC allocates a new block of memory and returns
+            # it to the caller. The caller is responsible for copying memory
+            # from the old buffer into the most recent allocated one."
             [ptr, size] = args
-            new_ptr = builder.call(self.realloc, [ptr, size])
+            new_ptr = builder.call(self.NRT_Allocate_External, [size, NULL])
             self.NRT_Debug("ptr=%p size=%zu -> new_ptr=%p", ptr, size, new_ptr)
         builder.ret(new_ptr)
 
@@ -409,10 +426,11 @@ class RBC_NRT:
         builder.ret_void()
 
     def define_NRT_Free(self, builder, args):
+        # this is a no-op function
         with self.nrt_debug_ctx():
             [ptr] = args
             self.NRT_Debug("NRT_Free %p\n", ptr)
-            builder.call(self.free, [ptr])
+            # free is done automatically in HeavyDB
         builder.ret_void()
 
     def define_NRT_MemInfo_varsize_alloc(self, builder, args):
@@ -430,7 +448,30 @@ class RBC_NRT:
         with self.nrt_debug_ctx():
             [mi, size] = args
             data = self._get_from_meminfo(mi, "data")
-            new_data = builder.call(self.NRT_Reallocate, [data, size], name="new_data")
+
+            # Is this the only function that calls NRT_Reallocate?
+            new_data = builder.call(self.NRT_Reallocate, [data, size],
+                                    name="new_data")
+
+            # RBC/NRT cannot use realloc as the old memory gets freed in the
+            # process. Instead, memory is copied from the old buffer to the new
+            # one here. The previous memory is freed upon UD[T]F return
+            old_size = self._get_from_meminfo(mi, "size")
+            cond = builder.icmp_signed("<", old_size, size)
+            memcpy_size = builder.select(cond, old_size, size)
+
+            self.NRT_Debug(
+                "memcpy %zu bytes from data=%p --> new_data=%p",
+                memcpy_size,
+                data,
+                new_data,
+            )
+
+            cgutils.raw_memcpy(
+                builder, dst=new_data, src=data, count=memcpy_size, itemsize=i64(1)
+            )
+
+            self.NRT_Debug("new_data=%p - size=%zu\n", new_data, size)
 
             # TODO: check if new_data is NULL
             self._set_on_meminfo(mi, "data", new_data)
@@ -491,13 +532,16 @@ class RBC_NRT:
         with self.nrt_debug_ctx():
             [size, allocator_] = args
 
-            ptr = builder.call(self.malloc, [size])
+            # ptr = builder.call(self.malloc, [size])
             # allocate_varlen_buffer calls malloc using the formula:
             #   malloc((elem_count + 1) * elem_size)
-            # elem_count = builder.sub(size, i64(1), name='element_count')
-            # elem_size = i64(1)
-            # ptr = builder.call(self.allocate_varlen_buffer, [elem_count, elem_size])
-            self.NRT_Debug("bytes=%zu -> ptr=%p", size, ptr)
+            elem_count = builder.sub(size, i64(1), name="element_count")
+            elem_size = i64(1)
+            ptr = builder.call(self.allocate_varlen_buffer, [elem_count, elem_size])
+            self.NRT_Debug(
+                "allocate_varlen_buffer=%p - element_count: %ld", ptr, elem_count
+            )
+            # self.NRT_Debug("malloc: bytes=%zu -> ptr=%p", size, ptr)
         builder.ret(ptr)
 
     def define_NRT_MemInfo_alloc_dtor(self, builder, args):
