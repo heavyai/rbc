@@ -230,10 +230,6 @@ class RBC_NRT:
 
             cgutils.printf(builder, msg, *args)
 
-            # fflush_fnty = ir.FunctionType(i32, [i8p])
-            # fflush_fn = cgutils.get_or_insert_function(builder.module, fflush_fnty, name="fflush")
-            # builder.call(fflush_fn, [NULL])
-
     @contextmanager
     def nrt_debug_ctx(self):
         if self.debug_nrt:
@@ -338,7 +334,7 @@ class RBC_NRT:
                 continue
 
             meth = getattr(self, name)
-            fn_name = name[len("define_") :]
+            fn_name = name[len("define_"):]
             # TODO: put function names
             self._declare_function(fn_name)
             builder = self._get_function_builder(fn_name)
