@@ -11,8 +11,9 @@ from llvmlite import ir
 from rbc import typesystem
 from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
 from .column_list import HeavyDBColumnListType
+from . import text_encoding_none
 from rbc.targetinfo import TargetInfo
-from numba.core import extending, cgutils
+from numba.core import extending
 from numba.core import types as nb_types
 from typing import Union
 
@@ -24,10 +25,15 @@ int32_t = ir.IntType(32)
 class HeavyDBColumnType(HeavyDBBufferType):
     """Heavydb Column type for RBC typesystem.
     """
-    @property
-    def pass_by_value(self):
-        heavydb_version = TargetInfo().software[1][:3]
-        return heavydb_version <= (5, 7, 0)
+
+    def postprocess_type(self):
+        if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
+            from .column_array import HeavyDBColumnArrayType
+            return self.copy(cls=HeavyDBColumnArrayType)
+        elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
+            from .column_array import HeavyDBOutputColumnArrayType
+            return self.copy(cls=HeavyDBOutputColumnArrayType)
+        return self
 
     def match(self, other):
         if type(self) is type(other):
@@ -69,7 +75,7 @@ class Column(Buffer):
         Data type of the array elements.
         """
 
-    def getStringId(self, s: Union[str, 'TextEncodingNone']) -> int:  # noqa: F821
+    def getStringId(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: E501
         """
         Return the string ID for the given string ``s``.
 
@@ -166,11 +172,8 @@ def get_dict_proxy(typingctx, col_var):
         [col] = args
         if col.type.is_pointer:
             col = builder.load(col)
-        ptr = builder.extract_value(col, [2])
-        proxy_ctor = cgutils.create_struct_proxy(sig.return_type)
-        proxy = proxy_ctor(context, builder)
-        proxy.ptr = ptr
-        return proxy._getvalue()
+        proxy = builder.extract_value(col, [2])
+        return proxy
 
     return sig, codegen
 

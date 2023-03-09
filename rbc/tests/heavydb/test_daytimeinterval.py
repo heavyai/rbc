@@ -11,6 +11,15 @@ def heavydb():
     for o in heavydb_fixture(
         globals(), debug=False, load_test_data=False, minimal_version=(6, 2)
     ):
+        try:
+            o.sql_execute('select * from table(generate_series(0, 10, 1));')
+        except Exception as e:
+            msg = "Undefined function call 'generate_series' in SQL statement"
+            if msg in str(e):
+                pytest.skip('test requires server to be compiled with SYSTEM_TFS '
+                            f'enabled ({e}):')
+            else:
+                raise
         define(o)
         yield o
 
@@ -20,6 +29,7 @@ def define(heavydb):
         "int32_t(TableFunctionManager, T start, T stop, K step, OutputColumn<T> generate_series)",
         T=["Timestamp"],
         K=["YearMonthTimeInterval", "DayTimeInterval"],
+        devices=['cpu']
     )
     def rbc_generate_series(mgr, start, stop, step, series_output):
         if step.timeval == 0:
@@ -132,7 +142,7 @@ inputs = [
 @pytest.mark.parametrize("start, stop, step, order", inputs)
 def test_generate_time_series(heavydb, start, stop, step, order):
 
-    if heavydb.version[:2] >= (6, 2):
+    if heavydb.version[:2] < (6, 2):
         pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     RBC_FUNC = "rbc_generate_series"
@@ -181,7 +191,7 @@ invalid_inputs = [
 @pytest.mark.parametrize("start, stop, step, error_msg", invalid_inputs)
 def test_generate_series_invalid_inputs(heavydb, start, stop, step, error_msg):
 
-    if heavydb.version[:2] >= (6, 2):
+    if heavydb.version[:2] < (6, 2):
         pytest.skip('Requires HeavyDB version 6.2 or newer')
 
     query = (

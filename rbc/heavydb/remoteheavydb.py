@@ -17,9 +17,10 @@ from rbc.thrift import Client as ThriftClient
 from . import (
     HeavyDBArrayType, HeavyDBTextEncodingNoneType, HeavyDBTextEncodingDictType,
     HeavyDBOutputColumnType, HeavyDBColumnType,
+    HeavyDBOutputColumnArrayType, HeavyDBColumnArrayType,
     HeavyDBCompilerPipeline, HeavyDBCursorType,
     BufferMeta, HeavyDBColumnListType, HeavyDBTableFunctionManagerType,
-    HeavyDBRowFunctionManagerType,
+    HeavyDBRowFunctionManagerType, HeavyDBColumnListArrayType,
 )
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
@@ -28,7 +29,7 @@ from rbc.utils import parse_version, version_date
 from rbc import ctools, typesystem
 
 
-__all__ = ['RemoteHeavyDB', 'RemoteOmnisci', 'RemoteCallCapsule', 'is_available',
+__all__ = ['RemoteHeavyDB', 'RemoteCallCapsule', 'is_available',
            'type_to_type_name', 'get_client_config', 'global_heavydb_singleton']
 
 
@@ -94,8 +95,7 @@ def _global_heavydb():
     """Implements singleton of a global RemoteHeavyDB instance.
     """
     config = get_client_config()
-    remotedb = dict(heavyai=RemoteHeavyDB,
-                    omnisci=RemoteHeavyDB)[config['dbname']](**config)
+    remotedb = RemoteHeavyDB(**config)
     while True:
         yield remotedb
 
@@ -104,7 +104,7 @@ global_heavydb_singleton = _global_heavydb()  # generator object
 
 
 def is_available(_cache={}):
-    """Return version tuple and None if HeavyDB/OmnisciDB server is
+    """Return version tuple and None if HeavyDB server is
     accessible or recent enough. Otherwise return None and the reason
     about unavailability.
     """
@@ -129,9 +129,6 @@ def get_client_config(**config):
     """Retrieve the HeavyDB client configuration parameters from a client
     home directory.
 
-    Two HeavyDB brands (HEAVYDB_BRAND) are supported: heavyai and
-    omnisci.
-
     Note that here the client configurations parameters are those that
     are used to configure the client software such as rbc or pymapd.
     This is different from heavydb instance configuration described in
@@ -139,15 +136,15 @@ def get_client_config(**config):
     that is used for configuring the heavydb server software.
 
     In Linux clients, the HeavyDB client configuration is read from
-    :code:`$HOME/.config/$HEAVYDB_BRAND/client.conf`
+    :code:`$HOME/.config/heavyai/client.conf`
 
     In Windows clients, the configuration is read from
-    :code:`%UserProfile/.config/%HEAVYDB_BRAND%/client.conf` or
-    :code:`%AllUsersProfile/.config/%HEAVYDB_BRAND%/client.conf`
+    :code:`%UserProfile/.config/heavyai/client.conf` or
+    :code:`%AllUsersProfile/.config/heavyai/client.conf`
 
-    When :code:`HEAVYDB_CLIENT_CONF` or :code:`OMNISCI_CLIENT_CONF`
-    environment variable is defined then the configuration is read
-    from the file specified in this variable.
+    When :code:`HEAVYDB_CLIENT_CONF` environment variable is defined
+    then the configuration is read from the file specified in
+    this variable.
 
     The configuration file must use configuration language similar to
     one used in MS Windows INI files. For HeavyDB client
@@ -160,7 +157,7 @@ def get_client_config(**config):
       [server]
       host: <HeavyDB server host name or IP, defaults to localhost>
       port: <HeavyDB server port, defaults to 6274>
-      dbname: <HeavyDB database name, defaults to heavyai or omnisci>
+      dbname: <HeavyDB database name, defaults to heavyai>
 
     Parameters
     ----------
@@ -181,8 +178,7 @@ def get_client_config(**config):
     config = _config
 
     conf_file = None
-    for brand, client_conf_env in [('heavyai', 'HEAVYDB_CLIENT_CONF'),
-                                   ('omnisci', 'OMNISCI_CLIENT_CONF')]:
+    for brand, client_conf_env in [('heavyai', 'HEAVYDB_CLIENT_CONF')]:
         conf_file = os.environ.get(client_conf_env, None)
         if conf_file is not None and not os.path.isfile(conf_file):
             print('rbc.heavydb.get_client_config:'
@@ -248,7 +244,9 @@ def is_udtf(sig):
         return True
     for a in sig[1]:
         if isinstance(a, (HeavyDBOutputColumnType, HeavyDBColumnType,
-                          HeavyDBColumnListType, HeavyDBTableFunctionManagerType)):
+                          HeavyDBOutputColumnArrayType, HeavyDBColumnArrayType,
+                          HeavyDBColumnListType, HeavyDBColumnListArrayType,
+                          HeavyDBTableFunctionManagerType)):
             return True
     return False
 
@@ -899,6 +897,7 @@ class RemoteHeavyDB(RemoteJIT):
             'GeoMultiPolygon': typemap['TExtArgumentType'].get(
                 'GeoMultiPolygon'),
             'GeoMultiLineString': typemap['TExtArgumentType'].get('GeoMultiLineString'),
+            'GeoMultiPoint': typemap['TExtArgumentType'].get('GeoMultiPoint'),
             'TextEncodingNone': typemap['TExtArgumentType'].get('TextEncodingNone'),
             'TextEncodingDict': typemap['TExtArgumentType'].get('TextEncodingDict'),
             'Timestamp': typemap['TExtArgumentType'].get('Timestamp'),
@@ -922,8 +921,17 @@ class RemoteHeavyDB(RemoteJIT):
                 ('double', 'Double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('TextEncodingNone', 'TextEncodingNone'),
-                ('Timestamp', 'Timestamp')]:
+                ('Timestamp', 'Timestamp'),
+                ('GeoLineString', 'GeoLineString'),
+                ('GeoPolygon', 'GeoPolygon'),
+                ('GeoMultiPoint', 'GeoMultiPoint'),
+                ('GeoMultiLineString', 'GeoMultiLineString'),
+                ('GeoPoint', 'GeoPoint'),
+                ('GeoMultiPolygon', 'GeoMultiPolygon'),
+                ]:
             ext_arguments_map[f'Column<{T}>'] = typemap['TExtArgumentType'].get(f'Column{Tname}')
+            if T == 'Timestamp':
+                continue
             ext_arguments_map[f'ColumnList<{T}>'] = typemap['TExtArgumentType'].get(
                 f'ColumnList{Tname}')
             ext_arguments_map[f'ColumnArray<{T}>'] = typemap['TExtArgumentType'].get(
@@ -944,16 +952,36 @@ class RemoteHeavyDB(RemoteJIT):
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('Timestamp', 'Timestamp'),
         ]:
-            ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
-                = ext_arguments_map.get('Array<%s>' % T)
+            # Column<T>
             ext_arguments_map['HeavyDBColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
                 = ext_arguments_map.get('Column<%s>' % T)
+            if T == 'Timestamp':
+                # timestamp is only defined for Columns
+                continue
+
+            # Array<T>
+            ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
+                = ext_arguments_map.get('Array<%s>' % T)
+            # ColumnList<T>
             ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
             ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
                 = ext_arguments_map.get('ColumnList<%s>' % T)
+            # Column<Array<T>>
+            ext_arguments_map[f'HeavyDBColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
+                = ext_arguments_map.get(f'ColumnArray<{T}>')
+            ext_arguments_map[f'HeavyDBOutputColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
+                = ext_arguments_map.get(f'ColumnArray<{T}>')
+            # ColumnList<T>
+            ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
+                = ext_arguments_map.get('ColumnList<%s>' % T)
+            # ColumnList<Array<T>>
+            ext_arguments_map[f'HeavyDBColumnListArrayType<HeavyDBArrayType<{ptr_type}>>'] \
+                = ext_arguments_map.get(f'ColumnListArray<{T}>')
 
         ext_arguments_map['HeavyDBTextEncodingNoneType<char8>'] = \
             ext_arguments_map.get('TextEncodingNone')
@@ -1151,12 +1179,13 @@ class RemoteHeavyDB(RemoteJIT):
                     consumed_index += 1
 
             else:
-                if isinstance(a, HeavyDBOutputColumnType):
+                if isinstance(a, (HeavyDBOutputColumnType, HeavyDBOutputColumnArrayType)):
                     atype = self.type_to_extarg(a)
                     outputArgTypes.append(atype)
                 else:
                     atype = self.type_to_extarg(a)
-                    if isinstance(a, (HeavyDBColumnType, HeavyDBColumnListType)):
+                    if isinstance(a, (HeavyDBColumnType, HeavyDBColumnArrayType,
+                                      HeavyDBColumnListType)):
                         sqlArgTypes.append(self.type_to_extarg('Cursor'))
                         inputArgTypes.append(atype)
                     else:
@@ -1345,6 +1374,24 @@ class RemoteHeavyDB(RemoteJIT):
                 compiler = ctools.Compiler.get(std='c')
             if self.debug:
                 print(f'compiler={compiler}')
+            if compiler is None:
+                return
+            from numba import _min_llvm_version
+
+            url = "https://numba.readthedocs.io/en/stable/user/installing.html#version-support-information"  # noqa: E501
+            msg = (
+                f'{compiler.compiler_exe} version '
+                f'({".".join(map(str, compiler.version[:3]))}) '
+                'is different than LLVM shipped with Numba '
+                f'({_min_llvm_version}). It is important to be aware that not '
+                'all LLVM IR generated by clang with a version higher than '
+                'what is supported by Numba can be successfully parsed by '
+                'llvmlite. It is recommended to use a clang version that is '
+                'supported by Numba to ensure compatibility with llvmlite and '
+                f'avoid potential problems. For more information, see {url}'
+            )
+            if compiler.version[:2] > _min_llvm_version[:2]:
+                warnings.warn(msg)
             self._compiler = compiler
         return self._compiler
 
@@ -1368,7 +1415,7 @@ class RemoteHeavyDB(RemoteJIT):
                     atype.annotation(sizer=sizer)
                 elif isinstance(atype, HeavyDBTableFunctionManagerType):
                     continue
-                elif isinstance(atype, HeavyDBOutputColumnType):
+                elif isinstance(atype, (HeavyDBOutputColumnType, HeavyDBOutputColumnArrayType)):
                     rtypes.append(atype.copy(HeavyDBColumnType))
                     continue
                 atypes.append(atype)
@@ -1527,8 +1574,3 @@ class RemoteHeavyDB(RemoteJIT):
             return numpy.array(list(result), dtype).view(numpy.recarray)
         else:
             return dtype[0][1](list(result)[0][0])
-
-
-class RemoteOmnisci(RemoteHeavyDB):
-    """Omnisci - the previous brand of HeavyAI
-    """

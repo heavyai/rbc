@@ -52,7 +52,6 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
-    'sphinx_autodoc_typehints',
     'numbadoc',
 ]
 
@@ -88,11 +87,17 @@ html_logo = "images/xndlogo.png"
 html_theme_options = {
     "github_url": "https://github.com/xnd-project/rbc",
     "use_edit_page_button": True,
+   "logo": {
+      "image_light": html_logo,
+      "image_dark": html_logo,
+   },
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1220
+    "icon_links": [],
 }
 
 html_context = {
     "github_user": "xnd-project",
     "github_repo": "rbc",
-    "github_version": "master",
+    "github_version": "main",
     "doc_path": "doc",
 }

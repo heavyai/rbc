@@ -84,7 +84,7 @@ def process_folder(path):
 
 def main():
     return
-    rootdir = '/path/to/omniscidb-internal/'
+    rootdir = '/path/to/heavydb-internal/'
     rootdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     symbols = set()

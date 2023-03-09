@@ -1,9 +1,11 @@
 from .array import *  # noqa: F401, F403
 from .column import *  # noqa: F401, F403
+from .column_array import *  # noqa: F401, F403
 from .buffer import *  # noqa: F401, F403
 from .metatype import *  # noqa: F401, F403
 from .pipeline import *  # noqa: F401, F403
 from .column_list import *  # noqa: F401, F403
+from .column_list_array import *  # noqa: F401, F403
 from .table_function_manager import *  # noqa: F401, F403
 from .row_function_manager import *  # noqa: F401, F403
 from .text_encoding_dict import *  # noqa: F401, F403

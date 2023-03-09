@@ -229,10 +229,6 @@ class _TextTestTable(_TestTable):
                 'TEXT ENCODING NONE', 'TEXT ENCODING NONE')
 
     @property
-    def colnames(self):
-        return ('t4', 't2', 't1', 's', 'n', 'n2')
-
-    @property
     def values(self):
         return {
             't4': ['foofoo', 'bar', 'fun', 'bar', 'foo'],
@@ -334,7 +330,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
         if not available_version:
             pytest.skip(reason)
         # Requires update when heavydb-internal bumps up version number:
-        current_development_version = Version("6.3.0")
+        current_development_version = Version("6.4.0")
 
         curr_version = Version('.'.join(map(str, available_version[:2])))
 

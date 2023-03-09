@@ -12,7 +12,7 @@ available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
-@pytest.mark.parametrize("heavydb_brand", ['omnisci', 'heavyai'])
+@pytest.mark.parametrize("heavydb_brand", ['heavyai'])
 def test_get_client_config(tmpdir, heavydb_brand):
     d = tmpdir.mkdir(heavydb_brand)
     fh = d.join("client.conf")
@@ -34,8 +34,7 @@ use_host_target: False
 """)
     conf_file = os.path.join(fh.dirname, fh.basename)
 
-    client_conf_env = dict(heavyai='HEAVYDB_CLIENT_CONF',
-                           omnisci='OMNISCI_CLIENT_CONF')[heavydb_brand]
+    client_conf_env = dict(heavyai='HEAVYDB_CLIENT_CONF')[heavydb_brand]
     old_conf = os.environ.get(client_conf_env)
     os.environ[client_conf_env] = conf_file
 
@@ -751,6 +750,8 @@ def test_format_type(heavydb):
     assert test('Column<Array<int32>>') == 'Column<Array<int32>>'
     assert test('Column<Array<TextEncodingNone>>') == 'Column<Array<TextEncodingNone>>'
 
+    assert test('ColumnList<Array<int32>>') == 'ColumnList<Array<int32>>'
+
     assert test('OutputColumn<int32>') == 'OutputColumn<int32>'
     assert test('ColumnList<int32>') == 'ColumnList<int32>'
 
@@ -797,6 +798,8 @@ def test_format_type(heavydb):
     assert test2('UDTF(Constant, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert test2('UDTF(PreFlight, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
     assert test2('UDTF(TableFunctionManager, OutputColumn<int32>)') == '(void) -> (Column<int32>)'
+    assert (test2('UDTF(RowMultiplier, OutputColumn<Array<int32>>)')
+            == '(RowMultiplier) -> (Column<Array<int32>>)')
     assert (test2('UDTF(RowMultiplier, OutputColumn<Array<TextEncodingNone>>)')
             == '(RowMultiplier) -> (Column<Array<TextEncodingNone>>)')
 
