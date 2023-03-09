@@ -15,6 +15,9 @@ for fname, (retty, args) in libdevicefuncs.functions.items():
     funcs.append((fname, str(retty), argtys, has_ptr_arg))
 
 
+fns = {}
+
+
 @pytest.fixture(scope="module")
 def heavydb():
 
@@ -50,6 +53,7 @@ def define(heavydb):
 
         fn.__name__ = f"{heavydb.table_name}_{fname[5:]}"
         fn = heavydb(f"{retty}({', '.join(argtypes)})", devices=["gpu"])(fn)
+        fns[fname] = fn
 
     for fname, retty, argtys, has_ptr_arg in funcs:
         if has_ptr_arg:
@@ -84,4 +88,7 @@ def test_externals_libdevice(heavydb, fname, retty, argtys, has_ptr_arg):
         cols = ", ".join(tuple(map(lambda x: cols_dict[x], argtys)))
         query = f"SELECT {func_name}({cols}) FROM {table}"
 
-    _, _ = heavydb.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
+
+    assert fname in str(fns[fname])
+    # to-do: check results

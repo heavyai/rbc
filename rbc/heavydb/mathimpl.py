@@ -1,9 +1,18 @@
+import warnings
 import math
-from rbc.externals import gen_codegen, dispatch_codegen
-from numba.core.typing.templates import infer_global
-from numba.core.imputils import lower_builtin
-from numba.core.typing.templates import ConcreteTemplate, signature
-from numba.types import float32, float64, int32, int64, uint64, intp
+from rbc.externals import gen_codegen
+from numba.core.typing.templates import ConcreteTemplate, signature, infer_global
+from numba.core.types import float32, float64, int32, int64, uint64, intp
+from numba.core.intrinsics import INTR_TO_CMATH
+from numba.core.extending import lower_builtin as lower_cpu
+from numba.cuda.mathimpl import lower as lower_gpu  # noqa: F401
+# from .heavydb_compiler import heavydb_cpu_registry, heavydb_gpu_registry
+
+# lower_cpu = heavydb_cpu_registry.lower
+# lower_gpu = heavydb_gpu_registry.lower
+
+# registry = Registry()
+# infer_global = registry.register_global
 
 
 # Adding missing cases in Numba
@@ -75,22 +84,71 @@ unarys += [("trunc", "truncf", math.trunc)]
 binarys = []
 binarys += [("copysign", "copysignf", math.copysign)]
 binarys += [("atan2", "atan2f", math.atan2)]
-binarys += [("pow", "powf", math.pow)]
 binarys += [("fmod", "fmodf", math.fmod)]
 binarys += [("hypot", "hypotf", math.hypot)]
 binarys += [("remainder", "remainderf", math.remainder)]
 
 
+rbc_INTR_TO_CMATH = {
+    "powf": "llvm.pow.f32",
+    "pow": "llvm.pow.f64",
+
+    "sinf": "llvm.sin.f32",
+    "sin": "llvm.sin.f64",
+
+    "cosf": "llvm.cos.f32",
+    "cos": "llvm.cos.f64",
+
+    "sqrtf": "llvm.sqrt.f32",
+    "sqrt": "llvm.sqrt.f64",
+
+    "expf": "llvm.exp.f32",
+    "exp": "llvm.exp.f64",
+
+    "logf": "llvm.log.f32",
+    "log": "llvm.log.f64",
+
+    "log10f": "llvm.log10.f32",
+    "log10": "llvm.log10.f64",
+
+    "fabsf": "llvm.fabs.f32",
+    "fabs": "llvm.fabs.f64",
+
+    "floorf": "llvm.floor.f32",
+    "floor": "llvm.floor.f64",
+
+    "ceilf": "llvm.ceil.f32",
+    "ceil": "llvm.ceil.f64",
+
+    "truncf": "llvm.trunc.f32",
+    "trunc": "llvm.trunc.f64",
+}
+
+
+if len(rbc_INTR_TO_CMATH) != len(INTR_TO_CMATH):
+    warnings.warn("List of intrinsics is outdated! Please update!")
+
+
 def impl_unary(fname, key, typ):
-    cpu = gen_codegen(fname)
-    gpu = gen_codegen(f"__nv_{fname}")
-    lower_builtin(key, typ)(dispatch_codegen(cpu, gpu))
+    if fname in rbc_INTR_TO_CMATH.keys():
+        # use llvm intrinsics when possible
+        cpu = gen_codegen(rbc_INTR_TO_CMATH.get(fname))
+    else:
+        cpu = gen_codegen(fname)
+    # gpu = gen_codegen(f"__nv_{fname}")
+    lower_cpu(key, typ)(cpu)
+    # lower_gpu(key, typ)(gpu)
 
 
 def impl_binary(fname, key, typ):
-    cpu = gen_codegen(fname)
-    gpu = gen_codegen(f"__nv_{fname}")
-    lower_builtin(key, typ, typ)(dispatch_codegen(cpu, gpu))
+    if fname in rbc_INTR_TO_CMATH.keys():
+        # use llvm intrinsics when possible
+        cpu = gen_codegen(rbc_INTR_TO_CMATH.get(fname))
+    else:
+        cpu = gen_codegen(fname)
+    # gpu = gen_codegen(f"__nv_{fname}")
+    lower_cpu(key, typ, typ)(cpu)
+    # lower_gpu(key, typ, typ)(gpu)
 
 
 for fname64, fname32, key in unarys:
@@ -105,17 +163,42 @@ for fname64, fname32, key in binarys:
 
 # manual mapping
 def impl_ldexp():
+    # cpu
     ldexp_cpu = gen_codegen('ldexp')
-    ldexp_gpu = gen_codegen('__nv_ldexp')
-
     ldexpf_cpu = gen_codegen('ldexpf')
-    ldexpf_gpu = gen_codegen('__nv_ldexpf')
+    lower_cpu(math.ldexp, float64, int32)(ldexp_cpu)
+    lower_cpu(math.ldexp, float32, int32)(ldexpf_cpu)
 
-    lower_builtin(math.ldexp, float64, int32)(dispatch_codegen(ldexp_cpu, ldexp_gpu))
-    lower_builtin(math.ldexp, float32, int32)(dispatch_codegen(ldexpf_cpu, ldexpf_gpu))
+    # gpu
+    # ldexp_gpu = gen_codegen('__nv_ldexp')
+    # ldexpf_gpu = gen_codegen('__nv_ldexpf')
+    # lower_gpu(math.ldexp, float64, int32)(ldexp_gpu)
+    # lower_gpu(math.ldexp, float32, int32)(ldexpf_gpu)
+
+
+def impl_pow():
+    # cpu
+    pow_cpu = gen_codegen('pow')
+    powf_cpu = gen_codegen('powf')
+    lower_cpu(math.pow, float64, float64)(pow_cpu)
+    lower_cpu(math.pow, float32, float32)(powf_cpu)
+    lower_cpu(math.pow, float64, int32)(pow_cpu)
+    lower_cpu(math.pow, float32, int32)(powf_cpu)
+
+    # gpu
+    # pow_gpu = gen_codegen('__nv_pow')
+    # powf_gpu = gen_codegen('__nv_powf')
+    # powi_gpu = gen_codegen('__nv_powi')
+    # powif_gpu = gen_codegen('__nv_powif')
+    # lower_gpu(math.pow, float64, float64)(pow_gpu)
+    # lower_gpu(math.pow, float32, float32)(powf_gpu)
+    # lower_gpu(math.pow, float64, int32)(powi_gpu)
+    # lower_gpu(math.pow, float32, int32)(powif_gpu)
 
 
 impl_ldexp()
+impl_pow()
+
 
 # CPU only:
 # math.gcd

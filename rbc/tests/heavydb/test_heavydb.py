@@ -370,30 +370,6 @@ def test_casting(heavydb):
     float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
     double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
 
-    OmnisciDB version 5.8
-    ----------------------
-             | Functions applied to <itype value>
-    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
-    ---------+------+------+------+------+------+------+
-    tinyint  | OK   | OK   | OK   | OK   | OK   | OK   |
-    smallint | FAIL | OK   | OK   | OK   | OK   | OK   |
-    int      | FAIL | FAIL | OK   | OK   | OK   | OK   |
-    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | OK   |
-    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
-    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
-
-    OmnisciDB version 5.7 and older
-    -------------------------------
-             | Functions applied to <itype value>
-    itype    | i8   | i16  | i32  | i64  | f32  | f64  |
-    ---------+------+------+------+------+------+------+
-    tinyint  | OK   | OK   | OK   | OK   | FAIL | FAIL |
-    smallint | FAIL | OK   | OK   | OK   | FAIL | FAIL |
-    int      | FAIL | FAIL | OK   | OK   | FAIL | FAIL |
-    bigint   | FAIL | FAIL | FAIL | OK   | FAIL | FAIL |
-    float    | FAIL | FAIL | FAIL | FAIL | OK   | OK   |
-    double   | FAIL | FAIL | FAIL | FAIL | FAIL | OK   |
-
     test_binding is superior test with respect to successful UDF
     executions but it does not check exception messages.
     """
@@ -841,7 +817,7 @@ def test_reconnect(heavydb):
 
 
 def test_non_admin_user(heavydb):
-    heavydb.require_version((5, 9), 'Requires omniscidb 5.9 or newer')
+    heavydb.require_version((5, 9), 'Requires HeavyDB 5.9 or newer')
 
     user = 'rbc_test_non_admin_user'
     password = 'Xy2kq_3lM'

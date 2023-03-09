@@ -114,6 +114,7 @@ def test_heavydb_array_binary_math(heavydb, method, signature, columns):
     heavydb.reset()
 
     s = f'def np_{method}(a, b): return array_api.{method}(a, b)'
+    print(s)
     exec(s, globals())
 
     heavydb(signature)(eval('np_{}'.format(method)))

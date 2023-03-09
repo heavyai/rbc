@@ -259,7 +259,7 @@ def is_sizer(t):
 
 
 def get_sizer_enum(t):
-    """Return sizer enum value as defined by the heavydb server.
+    """Return sizer enum value as defined by the HeavyDB server.
     """
     sizer = t.annotation()['sizer']
     sizer = output_buffer_sizer_map.get(sizer or None, sizer)
@@ -1102,7 +1102,7 @@ class RemoteHeavyDB(RemoteJIT):
                 target_info.add_library('stdlib')
                 target_info.add_library('heavydb')
             elif target_info.is_gpu:
-                if self.version < (6, 2):
+                if self.version < (6, 4):
                     # BC note: older heavydb versions do not define
                     # has_libdevice and assume that libdevice exists
                     self.has_cuda_libdevice = True

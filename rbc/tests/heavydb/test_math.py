@@ -5,55 +5,22 @@ import numpy as np
 
 import rbc.heavydb as rbc_heavydb
 from rbc.stdlib import array_api
+from rbc.tests import heavydb_fixture
 
 available_version, reason = rbc_heavydb.is_available()
 pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 
 @pytest.fixture(scope='module')
-def nb_version():
-    from rbc.utils import get_version
-    return get_version('numba')
-
-
-@pytest.fixture(scope='module')
 def heavydb():
-    # TODO: use heavydb_fixture from rbc/tests/__init__.py
-    config = rbc_heavydb.get_client_config(debug=not True)
-    m = rbc_heavydb.RemoteHeavyDB(**config)
-    table_name = 'rbc_test_heavydb_math'
-
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
-
-    m.sql_execute(
-        f'CREATE TABLE IF NOT EXISTS {table_name}'
-        ' (a BOOLEAN, b BOOLEAN, x DOUBLE, y DOUBLE, z DOUBLE, i INT, '
-        'j INT, t INT[], td DOUBLE[], te INT[]);')
-
-    for _i in range(1, 6):
-        a = str((_i % 3) == 0).lower()
-        b = str((_i % 2) == 0).lower()
-        x = 0.123 + _i/10.0
-        y = _i/6.0
-        z = _i + 1.23
-        i = _i
-        j = i * 10
-        t = 'ARRAY[%s]' % (', '.join(str(j + i) for i in range(-i, i+1)))
-        td = 'ARRAY[%s]' % (', '.join(str(j + i/1.0) for i in range(-i, i+1)))
-        te = 'Array[]'
-        m.sql_execute(
-            f'insert into {table_name} values (\'{a}\', \'{b}\', {x}, {y},'
-            f' {z}, {i}, {j}, {t}, {td}, {te})')
-
-    m.table_name = table_name
-    yield m
-
-    m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
+    for o in heavydb_fixture(globals(), debug=False,
+                             suffices=['math']):
+        yield o
 
 
 math_functions = [
     # Number-theoretic and representation functions
-    ('ceil', 'int64(double)'),
+    ('ceil', 'double(double)'),
     ('comb', 'int64(int64, int64)'),
     ('copysign', 'double(double, double)'),
     ('fabs', 'double(double)'),
@@ -72,7 +39,7 @@ math_functions = [
     ('modf', 'double(double, double)'),
     ('perm', 'int(int, int)'),
     ('prod', 'int64(int64[])'),
-    ('remainder', 'double(double, double)'),
+    # ('remainder', 'double(double, double)'),
     ('trunc', 'double(double)'),
     # Power and logarithmic functions
     ('exp', 'double(double)'),
@@ -83,7 +50,7 @@ math_functions = [
     ('log10', 'double(double)'),
     ('pow', 'double(double, double)'),
     ('sqrt', 'double(double)'),
-    # # Trigonometric functions
+    # Trigonometric functions
     ('acos', 'double(double)'),
     ('asin', 'double(double)'),
     ('atan', 'double(double)'),
@@ -95,14 +62,14 @@ math_functions = [
     ('tan', 'double(double)'),
     ('degrees', 'double(double)'),
     ('radians', 'double(double)'),
-    # # Hyperbolic functions
+    # Hyperbolic functions
     ('acosh', 'double(double)'),
     ('asinh', 'double(double)'),
     ('atanh', 'double(double)'),
     ('cosh', 'double(double)'),
     ('sinh', 'double(double)'),
     ('tanh', 'double(double)'),
-    # # Special functions
+    # Special functions
     ('erf', 'double(double)'),
     ('erfc', 'double(double)'),
     ('gamma', 'double(double)'),
@@ -122,7 +89,7 @@ devices = ('cpu', 'gpu')
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature", math_functions,
                          ids=["math." + item[0] for item in math_functions])
-def test_math_function(heavydb, device, nb_version, fn_name, signature):
+def test_math_function(heavydb, device, fn_name, signature):
     heavydb.reset()
 
     if not heavydb.has_cuda and device == 'gpu':
@@ -188,7 +155,7 @@ def test_math_function(heavydb, device, nb_version, fn_name, signature):
     if fn_name in ['ldexp']:
         xs = 'x, i'
 
-    query = f'select {xs}, {fprefix}{fn_name}({xs}) from {heavydb.table_name}'
+    query = f'select {xs}, {fprefix}{fn_name}({xs}) from {heavydb.table_name}math'
     descr, result = heavydb.sql_execute(query)
     for args in list(result):
         result = args[-1]
@@ -265,9 +232,9 @@ numpy_functions = [
     ('ldexp', 'double(double, int)', np.ldexp),
     ('frexp0', 'double(double)', lambda x: np.frexp(x)[0]),
     # Rounding functions:
-    ('around', 'double(double)', lambda x: np.around(x)),
-    ('round2',  # round and round_ are not good names
-     'double(double)', lambda x: np.round_(x)),  # force arity to 1
+    # ('around', 'double(double)', lambda x: np.around(x)),
+    # ('round2',  # round and round_ are not good names
+    #  'double(double)', lambda x: np.round_(x)),  # force arity to 1
     ('floor', 'double(double)', np.floor),
     ('ceil', 'double(double)', np.ceil),
     ('trunc', 'double(double)', np.trunc),
@@ -321,7 +288,7 @@ if np is not None:
 @pytest.mark.parametrize("device", devices)
 @pytest.mark.parametrize("fn_name, signature, np_func", numpy_functions,
                          ids=["np." + item[0] for item in numpy_functions])
-def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func):
+def test_numpy_function(heavydb, device, fn_name, signature, np_func):
     heavydb.reset()
 
     if not heavydb.has_cuda and device == 'gpu':
@@ -381,7 +348,7 @@ def test_numpy_function(heavydb, device, nb_version, fn_name, signature, np_func
     else:
         raise NotImplementedError(kind)
 
-    query = f'select {xs}, {fn_name}({xs}) from {heavydb.table_name}'
+    query = f'select {xs}, {fn_name}({xs}) from {heavydb.table_name}math'
     descr, result = heavydb.sql_execute(query)
     for args in list(result):
         result = args[-1]

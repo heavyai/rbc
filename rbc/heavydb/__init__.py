@@ -15,6 +15,7 @@ from .timestamp import *  # noqa: F401, F403
 from .day_time_interval import *  # noqa: F401, F403
 from .year_month_time_interval import *  # noqa: F401, F403
 from .remoteheavydb import *  # noqa: F401, F403
+from .heavydb_compiler import *  # noqa: F401, F403
 
 from . import mathimpl as math  # noqa: F401
 from . import npyimpl as np  # noqa: F401

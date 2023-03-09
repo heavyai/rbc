@@ -3,6 +3,8 @@ import os
 from collections import defaultdict
 import pytest
 import numpy as np
+import math
+from numba import njit
 
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
@@ -820,6 +822,26 @@ def test_column_different_sizes(heavydb):
 
     expected = [(10.0,), (60.0,), (180.0,), (240.0,), (300.0,)]
     assert list(result) == expected
+
+
+def test_issue343(heavydb):
+    # Before generating llvm code, the irtools entry point needs
+    # to switch the target context from CPU to GPU, so that functions
+    # are bind to the correct target. In the case below, math.exp
+    # is bind to '@llvm.exp.f64' on CPU and '@__nv_exp' on GPU.
+    if not (heavydb.has_cuda and heavydb.has_libdevice):
+        pytest.skip('test requires heavydb build with GPU support and libdevice')
+
+    @njit
+    def bar(x):
+        return math.exp(x)
+
+    @heavydb('double(double)', devices=['cpu', 'gpu'])
+    def foo(x):
+        return math.exp(x) + bar(x)
+
+    assert '__nv_exp' in str(foo)
+    assert 'llvm.exp.f64' in str(foo)
 
 
 def test_column_dtype(heavydb):
