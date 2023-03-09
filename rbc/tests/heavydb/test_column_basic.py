@@ -892,17 +892,3 @@ def test_column_enumerate(heavydb):
         f'select rowid, i4 from {heavydb.table_name} order by rowid;')
     for (r,), (_, e) in zip(list(result), list(expected_result)):
         assert r == e
-
-
-def test_foo(heavydb):
-    from rbc.externals.heavydb import set_output_row_size
-
-    @heavydb('int32(Column<int32>, OutputColumn<int32>)')
-    def col_enumerate(x, y):
-        sz = len(x)
-        # set_output_row_size(sz)
-        # for i, e in enumerate(x):
-        #     y[i] = e
-        return sz
-
-    heavydb.register()

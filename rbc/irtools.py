@@ -274,8 +274,11 @@ def compile_to_LLVM(functions_and_signatures,
     # * remotejit imports irtools
     # * irtools import heavydb
     # * heavydb import remotejit
-    from rbc.heavydb import JITRemoteTypingContext, JITRemoteTargetContext, \
-        heavydb_cpu_target, heavydb_gpu_target
+    from rbc.heavydb import (JITRemoteCPUTypingContext,
+                             JITRemoteGPUTypingContext,
+                             JITRemoteTargetContext,
+                             heavydb_cpu_target,
+                             heavydb_gpu_target)
 
     device = target_info.name
     software = target_info.software[0]
@@ -283,7 +286,8 @@ def compile_to_LLVM(functions_and_signatures,
     if software == 'HeavyDB':
         target_name = f'heavydb_{device}'
         target_desc = heavydb_cpu_target if device == 'cpu' else heavydb_gpu_target
-        typing_context = JITRemoteTypingContext()
+        typing_context = JITRemoteCPUTypingContext() if device == 'cpu' else \
+            JITRemoteGPUTypingContext()
         target_context = JITRemoteTargetContext(typing_context, target_name)
     else:
         target_name = 'cpu'

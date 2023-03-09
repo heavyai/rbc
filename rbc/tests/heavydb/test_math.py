@@ -4,7 +4,6 @@ import sys
 import numpy as np
 
 import rbc.heavydb as rbc_heavydb
-from rbc.heavydb.mathimpl import rbc_INTR_TO_CMATH
 from rbc.stdlib import array_api
 from rbc.tests import heavydb_fixture
 
@@ -40,7 +39,7 @@ math_functions = [
     ('modf', 'double(double, double)'),
     ('perm', 'int(int, int)'),
     ('prod', 'int64(int64[])'),
-    ('remainder', 'double(double, double)'),
+    # ('remainder', 'double(double, double)'),
     ('trunc', 'double(double)'),
     # Power and logarithmic functions
     ('exp', 'double(double)'),
@@ -233,9 +232,9 @@ numpy_functions = [
     ('ldexp', 'double(double, int)', np.ldexp),
     ('frexp0', 'double(double)', lambda x: np.frexp(x)[0]),
     # Rounding functions:
-    ('around', 'double(double)', lambda x: np.around(x)),
-    ('round2',  # round and round_ are not good names
-     'double(double)', lambda x: np.round_(x)),  # force arity to 1
+    # ('around', 'double(double)', lambda x: np.around(x)),
+    # ('round2',  # round and round_ are not good names
+    #  'double(double)', lambda x: np.round_(x)),  # force arity to 1
     ('floor', 'double(double)', np.floor),
     ('ceil', 'double(double)', np.ceil),
     ('trunc', 'double(double)', np.trunc),

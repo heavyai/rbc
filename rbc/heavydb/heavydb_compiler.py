@@ -1,21 +1,18 @@
 import warnings
-from functools import partial
 from contextlib import contextmanager
+from functools import partial
+
 import llvmlite.binding as llvm
-from rbc.targetinfo import TargetInfo
-from numba.np import ufunc_db
 from numba import _dynfunc, njit
-from numba.core import (
-    codegen, compiler_lock, typing,
-    base, cpu, utils, descriptors,
-    dispatcher, callconv, imputils,
-    options,)
-from numba.core.target_extension import (
-    Generic,
-    target_registry,
-    dispatcher_registry,
-    jit_registry,
-)
+from numba.core import (base, callconv, codegen, compiler_lock, cpu,
+                        descriptors, dispatcher, imputils, options, typing,
+                        utils)
+from numba.core.target_extension import (Generic, dispatcher_registry,
+                                         jit_registry, target_registry)
+from numba.cuda.target import CUDATypingContext
+from numba.np import ufunc_db
+
+from rbc.targetinfo import TargetInfo
 
 
 class HeavyDB_CPU(Generic):
@@ -41,8 +38,9 @@ def custom_jit(*args, target=None, **kwargs):
 jit_registry[target_registry['heavydb_cpu']] = partial(custom_jit, target='heavydb_cpu')
 jit_registry[target_registry['heavydb_gpu']] = partial(custom_jit, target='heavydb_gpu')
 
-heavydb_cpu_registry = imputils.Registry(name='heavydb_cpu_registry')
-heavydb_gpu_registry = imputils.Registry(name='heavydb_gpu_registry')
+
+# heavydb_cpu_registry = imputils.Registry(name='heavydb_cpu_registry')
+# heavydb_gpu_registry = imputils.Registry(name='heavydb_gpu_registry')
 
 
 class _NestedContext(object):
@@ -101,7 +99,8 @@ class HeavyDBTarget(descriptors.TargetDescriptor):
     @utils.cached_property
     def _toplevel_typing_context(self):
         # Lazily-initialized top-level typing context, for all threads
-        return JITRemoteTypingContext()
+        return {'heavydb_cpu': JITRemoteCPUTypingContext,
+                'heavydb_gpu': JITRemoteGPUTypingContext}[self._target_name]()
 
     @property
     def target_context(self):
@@ -240,14 +239,14 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
         return None
 
 
-class JITRemoteTypingContext(typing.Context):
+class JITRemoteCPUTypingContext(typing.Context):
     """JITRemote Typing Context
     """
 
-    # def load_additional_registries(self):
-    #     from . import mathimpl
-    #     self.install_registry(mathimpl.registry)
-    #     return super().load_additional_registries()
+
+class JITRemoteGPUTypingContext(CUDATypingContext):
+    """JITRemote Typing Context
+    """
 
 
 class JITRemoteTargetContext(base.BaseContext):
@@ -268,43 +267,53 @@ class JITRemoteTargetContext(base.BaseContext):
         self._target_data = llvm.create_target_data(target_info.datalayout)
 
     def refresh(self):
-        if self.target_name == 'heavydb_cpu':
-            registry = heavydb_cpu_registry
-        else:
-            registry = heavydb_gpu_registry
+        # if self.target_name == 'heavydb_cpu':
+        #     registry = heavydb_cpu_registry
+        # else:
+        #     registry = heavydb_gpu_registry
 
-        try:
-            loader = self._registries[registry]
-        except KeyError:
-            loader = imputils.RegistryLoader(registry)
-            self._registries[registry] = loader
+        # try:
+        #     loader = self._registries[registry]
+        # except KeyError:
+        #     loader = imputils.RegistryLoader(registry)
+        #     self._registries[registry] = loader
 
-        self.install_registry(registry)
+        # self.install_registry(registry)
         # Also refresh typing context, since @overload declarations can
         # affect it.
-        self.typing_context.refresh()
+        # self.typing_context.refresh()
         super().refresh()
 
     def load_additional_registries(self):
         # Add implementations that work via import
-        from numba.cpython import (builtins, charseq, enumimpl, hashing, heapq,  # noqa: F401
-                                   iterators, listobj, numbers, rangeobj,
-                                   setobj, slicing, tupleobj, unicode,)
+        from numba.cpython import (builtins, charseq, enumimpl,  # noqa: F401
+                                   hashing, heapq, iterators, listobj, numbers,
+                                   rangeobj, setobj, slicing, tupleobj,
+                                   unicode)
 
         self.install_registry(imputils.builtin_registry)
 
         # uncomment as needed!
         # from numba.core import optional
-        from numba.np import linalg, polynomial
+        # from numba.np import linalg, polynomial
         # from numba.typed import typeddict, dictimpl
         # from numba.typed import typedlist, listobject
         # from numba.experimental import jitclass, function_type
         # from numba.np import npdatetime
-        from numba.np import arraymath, arrayobj  # noqa: F401
+        # from numba.np import arraymath, arrayobj  # noqa: F401
+
+        # from rbc.heavydb import mathimpl
 
         # Add target specific implementations
-        from numba.np import npyimpl
         from numba.cpython import mathimpl
+        from numba.cuda import mathimpl as cuda_mathimpl
+        from numba.np import npyimpl
+
+        if self.target_name == 'heavydb_cpu':
+            self.install_registry(npyimpl.registry)
+            self.install_registry(mathimpl.registry)
+        else:
+            self.install_registry(cuda_mathimpl.registry)
         # from numba.cpython import cmathimpl, mathimpl, printimpl, randomimpl
         # from numba.misc import cffiimpl
         # from numba.experimental.jitclass.base import ClassBuilder as \
@@ -312,7 +321,6 @@ class JITRemoteTargetContext(base.BaseContext):
         # self.install_registry(cmathimpl.registry)
         # self.install_registry(cffiimpl.registry)
         # self.install_registry(mathimpl.registry)
-        self.install_registry(npyimpl.registry)
         # self.install_registry(printimpl.registry)
         # self.install_registry(randomimpl.registry)
         # self.install_registry(jitclassimpl.class_impl_registry)
