@@ -1,7 +1,8 @@
 __all__ = ['HeavyDBTableFunctionManagerType', 'TableFunctionManager']
 
 
-from numba.core import extending, types as nb_types
+from numba.core import extending
+from numba.core import types as nb_types
 
 from rbc.errors import RequireLiteralValue, UnsupportedError
 from rbc.external import external
@@ -10,8 +11,6 @@ from rbc.targetinfo import TargetInfo
 from .metatype import HeavyDBMetaType
 from .opaque_pointer import HeavyDBOpaquePtr, OpaquePtrNumbaType
 from .utils import as_voidptr, global_str_constant
-
-from llvmlite import ir
 
 
 class HeavyDBTableFunctionManagerType(HeavyDBOpaquePtr):
