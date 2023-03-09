@@ -52,7 +52,6 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
-    'sphinx_autodoc_typehints',
     'numbadoc',
 ]
 
@@ -91,7 +90,9 @@ html_theme_options = {
    "logo": {
       "image_light": html_logo,
       "image_dark": html_logo,
-   }
+   },
+    # https://github.com/pydata/pydata-sphinx-theme/issues/1220
+    "icon_links": [],
 }
 
 html_context = {
