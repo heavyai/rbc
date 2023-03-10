@@ -152,26 +152,6 @@ def heavydb_text_encoding_none_constructor(context, builder, sig, args):
     return heavydb_buffer_constructor(context, builder, sig, args)
 
 
-def get_copy_bytes_fn(builder):
-
-    module = builder.module
-
-    name = 'copy_bytes_fn'
-    fnty = ir.FunctionType(void, [i8p, i8p, i64])
-    fn = cgutils.get_or_insert_function(module, fnty, name)
-    fn.linkage = 'linkonce'
-    fn.attributes.add('noinline')
-
-    block = fn.append_basic_block(name="entry")
-    builder = ir.IRBuilder(block)
-    sizeof_char = TargetInfo().sizeof('char')
-    [dst, src, size] = fn.args
-    cgutils.raw_memcpy(builder, dst, src, size, sizeof_char)
-    builder.ret_void()
-
-    return fn
-
-
 @extending.lower_builtin(TextEncodingNone, nb_types.CPointer, nb_types.Integer)
 def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
     [ptr, sz] = args
