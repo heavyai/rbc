@@ -306,8 +306,12 @@ class RBC_NRT:
         fn = cgutils.get_or_insert_function(self.module, fnty, fn_name)
         return fn
 
-    def _declare_function(self, fn_name, argnames=None):
+    def _get_function_arg_names(self, fn_name):
+        return self.function_types[fn_name][1]
+
+    def _declare_function(self, fn_name):
         fn = self._get_function(fn_name)
+        argnames = self._get_function_arg_names(fn_name)
         if argnames is not None:
             assert isinstance(argnames, tuple), argnames
             assert len(argnames) == len(fn.args), (len(argnames), len(fn.args))
@@ -317,7 +321,7 @@ class RBC_NRT:
             fn.attributes.add("noinline")
         return fn
 
-    def define(self):
+    def _ensure_impl_exists(self):
         # Ensure for each function in function_types, there is a corresponding
         # implementation
         skip_list = ("allocate_varlen_buffer", "realloc", "malloc", "free")
@@ -325,6 +329,9 @@ class RBC_NRT:
             if fn_name not in skip_list:
                 defn = f"define_{fn_name}"
                 getattr(self, defn), defn
+
+    def define(self):
+        self._ensure_impl_exists()
 
         for name in dir(self):
             if not name.startswith("define_"):
@@ -335,7 +342,6 @@ class RBC_NRT:
 
             meth = getattr(self, name)
             fn_name = name[len("define_"):]
-            # TODO: put function names
             self._declare_function(fn_name)
             builder = self._get_function_builder(fn_name)
             args = builder.function.args
