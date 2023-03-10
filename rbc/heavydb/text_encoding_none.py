@@ -14,7 +14,6 @@ from numba.core.pythonapi import PY_UNICODE_1BYTE_KIND
 from numba.cpython.unicode import _empty_string, _set_code_point
 
 from rbc import typesystem
-from rbc.targetinfo import TargetInfo
 
 from .array import ArrayPointer
 from .buffer import Buffer, HeavyDBBufferType, heavydb_buffer_constructor
