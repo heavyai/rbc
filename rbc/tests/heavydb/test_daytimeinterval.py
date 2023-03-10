@@ -11,6 +11,15 @@ def heavydb():
     for o in heavydb_fixture(
         globals(), debug=False, load_test_data=False, minimal_version=(6, 2)
     ):
+        try:
+            o.sql_execute('select * from table(generate_series(0, 10, 1));')
+        except Exception as e:
+            msg = "Undefined function call 'generate_series' in SQL statement"
+            if msg in str(e):
+                pytest.skip('test requires server to be compiled with SYSTEM_TFS '
+                            f'enabled ({e}):')
+            else:
+                raise
         define(o)
         yield o
 
