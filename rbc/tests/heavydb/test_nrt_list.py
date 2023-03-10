@@ -117,12 +117,9 @@ def test_list_methods(heavydb, method, ans):
 @pytest.mark.parametrize('strategy', ['array', 'arraynull'])
 def test_to_list(heavydb, strategy):
 
-    from rbc.externals.stdio import printf
-
     @heavydb('int64[](int64[])', devices=['cpu'])
     def to_list(a):
         if a.is_null():
-            printf("input is null\n")
             other = Array(0, 'int64')
             other.set_null()
             return other
