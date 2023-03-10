@@ -1,4 +1,5 @@
 from rbc.tests import heavydb_fixture
+from rbc.heavydb import Array
 import pytest
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
@@ -8,8 +9,9 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 
 @pytest.fixture(scope='module')
 def heavydb():
-    for o in heavydb_fixture(globals(), load_test_data=False):
-        define(o)
+    for o in heavydb_fixture(globals(),
+                             suffices=['array', 'arraynull']):
+        # define(o)
         yield o
 
 
@@ -110,3 +112,36 @@ def define(heavydb):
 def test_list_methods(heavydb, method, ans):
     _, result = heavydb.sql_execute(f"select list_{method}(1);")
     assert list(result)[0] == (ans,)
+
+
+@pytest.mark.parametrize('strategy', ['array', 'arraynull'])
+def test_to_list(heavydb, strategy):
+
+    from rbc.externals.stdio import printf
+
+    @heavydb('int64[](int64[])', devices=['cpu'])
+    def to_list(a):
+        if a.is_null():
+            printf("input is null\n")
+            other = Array(0, 'int64')
+            other.set_null()
+            return other
+        else:
+            lst = a.to_list()
+            return Array(lst)
+
+    heavydb.register()
+    table = heavydb.table_name + strategy
+
+    _, result = heavydb.sql_execute(f'select i8, to_list(i8) from {table}')
+    result = list(zip(*result))
+    expected, got = result
+    for e, g in zip(expected, got):
+        if e == []:
+            # It is not possible to distinguish an empty list created by a null
+            # array from one created by an empty array
+            #   list(null array) -> []
+            #   list(empty array) -> []
+            assert g is None
+        else:
+            assert e == g

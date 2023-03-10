@@ -149,7 +149,7 @@ def text_encoding_none_ne(a, b):
 
 @extending.lower_builtin(TextEncodingNone, nb_types.Integer)
 def heavydb_text_encoding_none_constructor(context, builder, sig, args):
-    return heavydb_buffer_constructor(context, builder, sig, args)._getpointer()
+    return heavydb_buffer_constructor(context, builder, sig, args)
 
 
 def get_copy_bytes_fn(builder):
@@ -176,10 +176,11 @@ def get_copy_bytes_fn(builder):
 def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
     [ptr, sz] = args
     fa = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64), [sz])
-    cgutils.memcpy(builder, fa.ptr, ptr, sz)
+    fa_ptr = builder.load(builder.gep(fa, [i32(0), i32(0)]))
+    cgutils.memcpy(builder, fa_ptr, ptr, sz)
     # string is null terminated
-    builder.store(fa.ptr.type.pointee(0), builder.gep(fa.ptr, [sz]))
-    return fa._getpointer()
+    builder.store(fa_ptr.type.pointee(0), builder.gep(fa_ptr, [sz]))
+    return fa
 
 
 @extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
