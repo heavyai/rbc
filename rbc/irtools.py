@@ -13,6 +13,7 @@ from .errors import UnsupportedError
 from . import libfuncs
 from rbc.nrt import create_nrt_functions
 from rbc.externals import stdio
+from typing import Optional
 from numba.core import codegen, cpu, compiler_lock, \
     registry, typing, compiler, sigutils, cgutils, \
     extending, imputils
@@ -21,6 +22,29 @@ from numba.core import errors as nb_errors
 
 int32_t = ir.IntType(32)
 int1_t = ir.IntType(1)
+
+
+def find_at_words(text: str) -> Optional[str]:
+    """
+    Find called function name from a CallInst to a bitcast.
+
+    Example usage
+
+        >>> text = "i8* (i64)* bitcast (%Struct.MemInfo.5* (i64)* @NRT_MemInfo_alloc_safe to i8* (i64)*)"  # noqa: E501
+        >>> find_at_words(text)
+        "NRT_MemInfo_alloc_safe
+        >>> text = "%.5 = bitcast i8* %info to void (i8*, i64, i8*)*"
+        >>> find_at_words(text)
+        None
+
+    """
+    pattern = r"@\w+"
+    words = re.findall(pattern, text)
+    if words == []:
+        return None
+    assert len(words) == 1
+    [word] = words
+    return word[1:]
 
 
 def get_called_functions(library, funcname=None):
@@ -40,12 +64,22 @@ def get_called_functions(library, funcname=None):
             if instruction.opcode == 'call':
                 instr = list(instruction.operands)[-1]
                 name = instr.name
-                # ignore in a call to a function pointer
-                if 'bitcast' in str(instr):
-                    continue
-                if name == '':
-                    continue
-                f = module.get_function(name)
+                try:
+                    f = module.get_function(name)
+                except NameError:
+                    if 'bitcast' not in str(instr):
+                        raise  # re-raise
+
+                    # attempt to find caller symbol in instr
+                    name = find_at_words(str(instr))
+                    if name is None:
+                        # ignore call to function pointer
+                        msg = (f'Ignoring call to bitcast instruction:\n'
+                               f'{instr}')
+                        warnings.warn(msg)
+                        continue
+                    f = module.get_function(name)
+
                 if name.startswith('llvm.'):
                     result['intrinsics'].add(name)
                 elif f.is_declaration:
@@ -432,7 +466,7 @@ def compile_to_LLVM(functions_and_signatures,
         add_metadata_flag(main_library,
                           pass_column_arguments_by_value=0,
                           manage_memory_buffer=1)
-        main_library._optimize_final_module()
+        # main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
