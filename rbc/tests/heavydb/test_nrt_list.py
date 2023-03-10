@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def heavydb():
     for o in heavydb_fixture(globals(),
                              suffices=['array', 'arraynull']):
-        # define(o)
+        define(o)
         yield o
 
 
