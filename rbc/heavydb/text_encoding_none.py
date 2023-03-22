@@ -171,6 +171,8 @@ def text_encoding_none_unicode_ctor(context, builder, sig, args):
     # suddenly some IR nodes becomes NULL values which are deleted by DCE.
     # Stick to plain allocas + load/store and you'll be fine.
 
+    # It seems to be safe to use context.make_helper on a previous allocated
+    # memory!
     uni_str = context.make_helper(builder, sig.args[0], value=args[0])
 
     llty = context.get_value_type(sig.return_type.dtype)

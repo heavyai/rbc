@@ -1,25 +1,26 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
+import functools
 import os
 import re
 import warnings
-from contextlib import contextmanager
 from collections import defaultdict
-from llvmlite import ir
-from functools import lru_cache
-import llvmlite.binding as llvm
-from .targetinfo import TargetInfo
-from .errors import UnsupportedError
-from . import libfuncs
-from rbc.nrt import create_nrt_functions
-from rbc.externals import stdio
+from contextlib import contextmanager
 from typing import Optional
-from numba.core import codegen, cpu, compiler_lock, \
-    registry, typing, compiler, sigutils, cgutils, \
-    extending, imputils
-from numba.core import errors as nb_errors
 
+import llvmlite.binding as llvm
+from llvmlite import ir
+from numba.core import cgutils, codegen, compiler, compiler_lock, cpu
+from numba.core import errors as nb_errors
+from numba.core import extending, imputils, registry, sigutils, typing
+
+from rbc.externals import stdio
+from rbc.nrt import create_nrt_functions
+
+from .errors import UnsupportedError
+from .libfuncs import Library
+from .targetinfo import TargetInfo
 
 int32_t = ir.IntType(32)
 int1_t = ir.IntType(1)
@@ -359,8 +360,8 @@ def compile_instance(func, sig,
         warnings.warn(f'Skipping {fname} that uses undefined function `{f}`')
         return
 
-    nvvmlib = libfuncs.Library.get('nvvm')
-    llvmlib = libfuncs.Library.get('llvm')
+    nvvmlib = Library.get('nvvm')
+    llvmlib = Library.get('llvm')
     for f in result['intrinsics']:
         if target.is_gpu:
             if f in nvvmlib:
@@ -394,13 +395,17 @@ def add_metadata_flag(main_library, **kwargs):
     main_library.add_ir_module(module)
 
 
-@lru_cache(maxsize=1)  # A single file is read here
 def read_unicodetype_db():
-    unicode_file = os.path.join(os.path.dirname(__file__),
-                                'unicodetype_db.ll')
-    with open(unicode_file, 'r') as f:
-        s = f.read()
-    return llvm.parse_assembly(s)
+
+    @functools.lru_cache()
+    def _read_file():
+        unicode_file = os.path.join(os.path.dirname(__file__),
+                                    'unicodetype_db.ll')
+        with open(unicode_file, 'r') as f:
+            s = f.read()
+        return s
+
+    return llvm.parse_assembly(_read_file())
 
 
 def compile_to_LLVM(functions_and_signatures,

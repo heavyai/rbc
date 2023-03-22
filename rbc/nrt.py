@@ -46,6 +46,7 @@ NRT_MemInfo_varsize_free = "NRT_MemInfo_varsize_free"
 NRT_MemInfo_new_varsize = "NRT_MemInfo_new_varsize"
 NRT_MemInfo_alloc_safe_aligned = "NRT_MemInfo_alloc_safe_aligned"
 NRT_Reallocate = "NRT_Reallocate"
+NRT_Reallocate_NoCopy = "NRT_Reallocate_NoCopy"
 NRT_dealloc = "NRT_dealloc"
 NRT_Free = "NRT_Free"
 NRT_MemInfo_destroy = "NRT_MemInfo_destroy"
@@ -182,6 +183,9 @@ class RBC_NRT:
                 ("mi", "size"),
             ),
             NRT_Reallocate: (ir.FunctionType(i8p, [i8p, size_t]), ("ptr", "size")),
+            NRT_Reallocate_NoCopy: (
+                ir.FunctionType(i8p, [i8p, size_t]),
+                ("ptr", "size")),
             NRT_dealloc: (ir.FunctionType(void, [MemInfo_ptr_t]), ("mi",)),
             NRT_Free: (ir.FunctionType(void, [i8p]), ("ptr",)),
             NRT_MemInfo_destroy: (ir.FunctionType(void, [MemInfo_ptr_t]), ("mi",)),
@@ -212,22 +216,12 @@ class RBC_NRT:
         # only debug if verbose is on
         if self.debug_nrt:
             builder = self.CURRENT_BUILDER
-            funcs = (
-                NRT_Allocate_External,
-                NRT_Reallocate,
-                NRT_Free,
-                NRT_MemInfo_varsize_realloc,
-            )
-            if self.CURRENT_FUNCTION not in funcs:
-                return
-
             msg = f"[NRT] {fmt}"
             if not msg.endswith("\n"):
                 msg += "\n"
 
             gv = builder.load(self.module.get_global(nrt_global_var))
             cgutils.printf(builder, "%*d", gv, gv)
-
             cgutils.printf(builder, msg, *args)
 
     @contextmanager
@@ -242,10 +236,6 @@ class RBC_NRT:
                 builder.call(self.nrt_debug_decr, [])
         else:
             yield
-            # try:
-            #     yield
-            # finally:
-            #     pass
 
     def define_nrt_debug_incr(self, builder, args):
         gv = self.module.get_global(nrt_global_var)
@@ -408,6 +398,18 @@ class RBC_NRT:
             phi.add_incoming(data_null, bb_else)
         builder.ret(phi)
 
+    def define_NRT_Reallocate_NoCopy(self, builder, args):
+        with self.nrt_debug_ctx():
+            # Because the previously reallocated memory might be freed by
+            # realloc, RBC cannot call it in this function. Therefore, instead
+            # of reallocation, RBC allocates a new block of memory and returns
+            # it to the caller. The caller is responsible for copying memory
+            # from the old buffer into the most recent allocated one."
+            [ptr, size] = args
+            new_ptr = builder.call(self.NRT_Allocate_External, [size, NULL])
+            self.NRT_Debug("ptr=%p size=%zu -> new_ptr=%p", ptr, size, new_ptr)
+        builder.ret(new_ptr)
+
     def define_NRT_Reallocate(self, builder, args):
         with self.nrt_debug_ctx():
             # Because the previously reallocated memory might be freed by
@@ -418,6 +420,17 @@ class RBC_NRT:
             [ptr, size] = args
             new_ptr = builder.call(self.NRT_Allocate_External, [size, NULL])
             self.NRT_Debug("ptr=%p size=%zu -> new_ptr=%p", ptr, size, new_ptr)
+            msg = ('The "NRT_Reallocate" function is a custom implementation '
+                   'of the "realloc" function from the C standard library. '
+                   'Unlike the original "realloc" function, this '
+                   'implementation does not copy memory from the old buffer to '
+                   'the new one. Instead, it simply allocates a new buffer '
+                   'with the given size and returns a pointer to it. The old '
+                   'buffer remains unchanged, and it is the responsibility of '
+                   'the caller to copy data from the old buffer to the new one '
+                   'if necessary.\n'
+                   'See RBC issue #536')
+            self.NRT_Debug(msg)
         builder.ret(new_ptr)
 
     def define_NRT_dealloc(self, builder, args):
@@ -453,7 +466,7 @@ class RBC_NRT:
             data = self._get_from_meminfo(mi, "data")
 
             # Is this the only function that calls NRT_Reallocate?
-            new_data = builder.call(self.NRT_Reallocate, [data, size],
+            new_data = builder.call(self.NRT_Reallocate_NoCopy, [data, size],
                                     name="new_data")
 
             # RBC/NRT cannot use realloc as the old memory gets freed in the

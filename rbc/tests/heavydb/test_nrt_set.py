@@ -38,50 +38,51 @@ def define(heavydb):
 
     @heavydb("i32(i32, TextEncodingNone)", devices=['cpu'])
     def test_set(t, method):
+        method_str = method.to_string()
         s = set([1, 2, 3, 4, 5])
-        if method == 'add':
+        if method_str == 'add':
             return len(s)
-        elif method == 'clear':
+        elif method_str == 'clear':
             s.clear()
             return len(s) == 0
-        elif method == 'copy':
+        elif method_str == 'copy':
             s2 = s.copy()
             return len(s) == len(s2) == 5
-        elif method == 'difference':
+        elif method_str == 'difference':
             s2 = set([1, 3, 5])
             return s.difference(s2) == {2, 4}
-        elif method == 'difference_update':
+        elif method_str == 'difference_update':
             s.difference_update({1, 2, 3})
             return len(s) == 2
-        elif method == 'discard':
+        elif method_str == 'discard':
             s.discard(1)
             return len(s) == 4
-        elif method == 'intersection':
+        elif method_str == 'intersection':
             return s.intersection({1, 3, 5}) == {1, 3, 5}
-        elif method == 'intersection_update':
+        elif method_str == 'intersection_update':
             s.intersection_update({1, 2})
             return len(s) == 2
-        elif method == 'isdisjoint':
+        elif method_str == 'isdisjoint':
             return s.isdisjoint({0, 6})
-        elif method == 'issubset':
+        elif method_str == 'issubset':
             return s.issubset({0, 1, 2, 3, 4, 5})
-        elif method == 'issuperset':
+        elif method_str == 'issuperset':
             return s.issuperset({1, 2, 3})
-        elif method == 'pop':
+        elif method_str == 'pop':
             s.pop()
             return len(s) == 4
-        elif method == 'remove':
+        elif method_str == 'remove':
             s.remove(2)
             return len(s) == 4
-        elif method == 'symmetric_difference':
+        elif method_str == 'symmetric_difference':
             s2 = {1, 2}
             return len(s.symmetric_difference(s2)) == 3
-        elif method == 'symmetric_difference_update':
+        elif method_str == 'symmetric_difference_update':
             s.symmetric_difference_update({0, 6})
             return len(s) == 7
-        # elif method == 'union':
+        # elif method_str == 'union':
         #     return len(s.union({0})) == 6
-        elif method == 'update':
+        elif method_str == 'update':
             s.update({0})
             return len(s) == 6
         return 0
