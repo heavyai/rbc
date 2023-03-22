@@ -49,12 +49,12 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions(library, funcname=None):
+def get_called_functions(library, funcname=None, debug=False):
     result = defaultdict(set)
     module = library._final_module
     if funcname is None:
         for df in library.get_defined_functions():
-            for k, v in get_called_functions(library, df.name).items():
+            for k, v in get_called_functions(library, df.name, debug).items():
                 result[k].update(v)
         return result
 
@@ -77,7 +77,8 @@ def get_called_functions(library, funcname=None):
                     if name is None:
                         # ignore call to function pointer
                         msg = f'Ignoring call to bitcast instruction:\n{instr}'
-                        warnings.warn(msg)
+                        if debug:
+                            warnings.warn(msg)
                         continue
                     f = module.get_function(name)
 
@@ -91,7 +92,7 @@ def get_called_functions(library, funcname=None):
                                 result['defined'].add(name)
                                 result['libraries'].add(lib)
                                 found = True
-                                for k, v in get_called_functions(lib, name).items():
+                                for k, v in get_called_functions(lib, name, debug).items():
                                     result[k].update(v)
                                 break
                         if found:
@@ -100,7 +101,7 @@ def get_called_functions(library, funcname=None):
                         result['declarations'].add(name)
                 else:
                     result['defined'].add(name)
-                    for k, v in get_called_functions(library, name).items():
+                    for k, v in get_called_functions(library, name, debug).items():
                         result[k].update(v)
     return result
 
@@ -352,7 +353,7 @@ def compile_instance(func, sig,
     except Exception:
         raise
 
-    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name)
+    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
 
     for f in result['declarations']:
         if target.supports(f):
@@ -477,10 +478,10 @@ def compile_to_LLVM(functions_and_signatures,
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            for k, v in get_called_functions(main_library, fname).items():
+            for k, v in get_called_functions(main_library, fname, debug).items():
                 used_symbols[k].update(v)
 
-        all_symbols = get_called_functions(main_library)
+        all_symbols = get_called_functions(main_library, debug=debug)
 
         unused_symbols = defaultdict(set)
         for k, lst in all_symbols.items():
