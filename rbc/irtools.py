@@ -7,6 +7,7 @@ import warnings
 from contextlib import contextmanager
 from collections import defaultdict
 from llvmlite import ir
+from functools import lru_cache
 import llvmlite.binding as llvm
 from .targetinfo import TargetInfo
 from .errors import UnsupportedError
@@ -24,17 +25,17 @@ int32_t = ir.IntType(32)
 int1_t = ir.IntType(1)
 
 
-def find_at_words(text: str) -> Optional[str]:
+def find_at_word(text: str) -> Optional[str]:
     """
     Find called function name from a CallInst to a bitcast.
 
     Example usage
 
         >>> text = "i8* (i64)* bitcast (%Struct.MemInfo.5* (i64)* @NRT_MemInfo_alloc_safe to i8* (i64)*)"  # noqa: E501
-        >>> find_at_words(text)
+        >>> find_at_word(text)
         "NRT_MemInfo_alloc_safe
         >>> text = "%.5 = bitcast i8* %info to void (i8*, i64, i8*)*"
-        >>> find_at_words(text)
+        >>> find_at_word(text)
         None
 
     """
@@ -71,11 +72,10 @@ def get_called_functions(library, funcname=None):
                         raise  # re-raise
 
                     # attempt to find caller symbol in instr
-                    name = find_at_words(str(instr))
+                    name = find_at_word(str(instr))
                     if name is None:
                         # ignore call to function pointer
-                        msg = (f'Ignoring call to bitcast instruction:\n'
-                               f'{instr}')
+                        msg = f'Ignoring call to bitcast instruction:\n{instr}'
                         warnings.warn(msg)
                         continue
                     f = module.get_function(name)
@@ -394,11 +394,12 @@ def add_metadata_flag(main_library, **kwargs):
     main_library.add_ir_module(module)
 
 
+@lru_cache(maxsize=1)  # A single file is read here
 def read_unicodetype_db():
     unicode_file = os.path.join(os.path.dirname(__file__),
                                 'unicodetype_db.ll')
     with open(unicode_file, 'r') as f:
-        s = ''.join(f.readlines())
+        s = f.read()
     return llvm.parse_assembly(s)
 
 
@@ -466,7 +467,7 @@ def compile_to_LLVM(functions_and_signatures,
         add_metadata_flag(main_library,
                           pass_column_arguments_by_value=0,
                           manage_memory_buffer=1)
-        # main_library._optimize_final_module()
+        main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)

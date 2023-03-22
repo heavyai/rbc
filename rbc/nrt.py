@@ -91,22 +91,22 @@ class RBC_NRT:
         # type_sizeof stores each size in bytes
         size_t = ir.IntType(ti.type_sizeof["size_t"] * 8)
 
-        # atomic_size_t = ir.global_context.get_identified_type('atomic_size_t')
-        # if atomic_size_t.elements is None:
-        #     atomic_size_t.set_body(size_t)
-
+        # As a reference, here's a copy of the MemInfo struct defined in
+        # numba/core/context/nrt.cpp
+        #
         # struct MemInfo {
         #     std::atomic_size_t     refct;
         #     NRT_dtor_function dtor;
         #     void              *dtor_info;
         #     void              *data;
-        #     size_t            size;    /* only used for NRT allocated memory */
+        #     size_t            size;   /* only used for NRT allocated memory */
         #     void* external_allocator;
         # };
-
-        # { %"struct.std::atomic", void (i8*, i64, i8*)*, i8*, i8*, i64, i8* }
-        # %"struct.std::atomic" = type { %"struct.std::__atomic_base" }
-        # %"struct.std::__atomic_base" = type { i64 }
+        #
+        # And the LLVM representation of the struct above:
+        #   { %"struct.std::atomic", void (i8*, i64, i8*)*, i8*, i8*, i64, i8* }
+        #   %"struct.std::atomic" = type { %"struct.std::__atomic_base" }
+        #   %"struct.std::__atomic_base" = type { i64 }
 
         MemInfo_t = ir.global_context.get_identified_type("Struct.MemInfo")
         # First argument must be "atomic_i64_t" instead of size_t
@@ -241,10 +241,11 @@ class RBC_NRT:
             finally:
                 builder.call(self.nrt_debug_decr, [])
         else:
-            try:
-                yield
-            finally:
-                pass
+            yield
+            # try:
+            #     yield
+            # finally:
+            #     pass
 
     def define_nrt_debug_incr(self, builder, args):
         gv = self.module.get_global(nrt_global_var)
@@ -264,7 +265,7 @@ class RBC_NRT:
         try:
             return super().__getattribute__(__name)
         except AttributeError:
-            if __name in self.function_types.keys():
+            if __name in self.function_types:
                 return self._get_function(__name)
             raise
 
@@ -431,7 +432,7 @@ class RBC_NRT:
         # this is a no-op function
         with self.nrt_debug_ctx():
             [ptr] = args
-            self.NRT_Debug("NRT_Free %p\n", ptr)
+            self.NRT_Debug("# NRT_Free %p\n", ptr)
             # free is done automatically in HeavyDB
         builder.ret_void()
 

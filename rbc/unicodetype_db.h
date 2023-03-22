@@ -1,8 +1,8 @@
 #include <stdint.h>
-#include "path/to/numba/_unicodetype_db.h"
+#include "_unicodetype_db.h"
 
-// To generate unicodetype_db.ll, fix the include above and compile it with
-//      clang -S -emit-llvm -O2 unicodetype_db.h -o unicodetype_db.ll
+// To generate unicodetype_db.ll, compile it with
+//      clang -S -emit-llvm -O2 -Ipath/to/numba unicodetype_db.h -o unicodetype_db.ll
 
 
 /* This function is a modified copy of the private function gettyperecord from

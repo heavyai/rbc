@@ -5,6 +5,9 @@ from llvmlite import ir
 
 
 def allocate_varlen_buffer(builder, element_count, element_size):
+    """
+    Allocates ``(element_count + 1) * element_size`` bytes
+    """
     i8p = ir.IntType(8).as_pointer()
     i64 = ir.IntType(64)
 

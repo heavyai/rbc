@@ -111,7 +111,7 @@ def define(heavydb):
                                         ('reverse', 1), ('copy', 3)])
 def test_list_methods(heavydb, method, ans):
     _, result = heavydb.sql_execute(f"select list_{method}(1);")
-    assert list(result)[0] == (ans,)
+    assert list(result) == [(ans,)]
 
 
 @pytest.mark.parametrize('strategy', ['array', 'arraynull'])

@@ -53,13 +53,12 @@ How to generate ``unicodetype_db.ll``
 
 Alongside with NRT, unicode strings also required functions which are
 implemented using C, in Numba. In RBC, those functions were copied to
-``unicodetype_db.h``. To generate the ``.ll`` file, simply update the
-``#include`` statement on line 2, and run the clang to generate the bitcode
-file:
+``unicodetype_db.h``. To generate the ``.ll`` file, run the clang command below
+to generate the bitcode file:
 
 .. code-block:: bash
 
-    $ clang -S -emit-llvm -O2 unicodetype_db.h -o unicodetype_db.ll
+    $ clang -S -emit-llvm -O2 -Ipath/to/numba unicodetype_db.h -o unicodetype_db.ll
 
 
 Supported Python Containers
