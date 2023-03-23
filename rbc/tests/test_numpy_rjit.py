@@ -6,7 +6,7 @@ import numpy as np
 
 @pytest.fixture(scope="module")
 def rjit(request):
-    rjit = RemoteJIT()
+    rjit = RemoteJIT(port=11541)
     rjit.start_server(background=True)
     request.addfinalizer(rjit.stop_server)
     atexit.register(rjit.stop_server)

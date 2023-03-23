@@ -43,7 +43,7 @@ jobs:
             python-version: '3.10'
             numba-version: '0.55'
 
-    needs: [lint]
+    needs: [lint, heavydb]
 
     steps:
       - name: Checkout code

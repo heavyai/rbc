@@ -1114,6 +1114,7 @@ class RemoteHeavyDB(RemoteJIT):
                 target_info.add_library('stdio')
                 target_info.add_library('stdlib')
                 target_info.add_library('heavydb')
+                target_info.add_library('NRT')
             elif target_info.is_gpu:
                 if self.version < (6, 2):
                     # BC note: older heavydb versions do not define

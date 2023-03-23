@@ -5,20 +5,25 @@ RBC TextEncodingNone type that corresponds to HeavyDB type TEXT ENCODED NONE.
 __all__ = ['TextEncodingNonePointer', 'TextEncodingNone', 'HeavyDBTextEncodingNoneType']
 
 import operator
-from rbc import typesystem
-from rbc.targetinfo import TargetInfo
-from rbc.errors import RequireLiteralValue
-from .buffer import (
-    Buffer, HeavyDBBufferType,
-    heavydb_buffer_constructor)
-from numba.core import extending, cgutils
-from numba.core import types as nb_types
-from .array import ArrayPointer
-from llvmlite import ir
 from typing import Union
 
+from llvmlite import ir
+from numba.core import cgutils, extending
+from numba.core import types as nb_types
+from numba.core.pythonapi import PY_UNICODE_1BYTE_KIND
+from numba.cpython.unicode import _empty_string, _set_code_point
 
-int32_t = ir.IntType(32)
+from rbc import typesystem
+
+from .array import ArrayPointer
+from .buffer import Buffer, HeavyDBBufferType, heavydb_buffer_constructor
+from .allocator import allocate_varlen_buffer
+
+i8 = ir.IntType(8)
+i8p = i8.as_pointer()
+i32 = ir.IntType(32)
+i64 = ir.IntType(64)
+void = ir.VoidType()
 int64_t = ir.IntType(64)
 
 
@@ -50,20 +55,19 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
 
 class TextEncodingNonePointer(ArrayPointer):
     def deepcopy(self, context, builder, val, retptr):
-        from .buffer import memalloc
-        ptr_type = self.dtype.members[0]
-        element_size = int64_t(ptr_type.dtype.bitwidth // 8)
+        zero, one, two = i32(0), i32(1), i32(2)
 
-        struct_load = builder.load(val)
-        src = builder.extract_value(struct_load, 0, name='text_buff_ptr')
-        element_count = builder.extract_value(struct_load, 1, name='text_size')
-        is_null = builder.extract_value(struct_load, 2, name='text_is_null')
+        src = builder.load(builder.gep(val, [zero, zero]))
+        sz = builder.load(builder.gep(val, [zero, one]))
+        is_null = builder.load(builder.gep(val, [zero, two]))
 
-        zero, one, two = int32_t(0), int32_t(1), int32_t(2)
-        ptr = memalloc(context, builder, ptr_type, element_count, element_size)
-        cgutils.raw_memcpy(builder, ptr, src, element_count, element_size)
-        builder.store(ptr, builder.gep(retptr, [zero, zero]))
-        builder.store(element_count, builder.gep(retptr, [zero, one]))
+        dst = allocate_varlen_buffer(builder, sz, i64(1))
+        cgutils.raw_memcpy(builder, dst=dst, src=src, count=sz, itemsize=i64(1))
+        # string is null terminated
+        builder.store(i8(0), builder.gep(dst, [sz]))
+
+        builder.store(dst, builder.gep(retptr, [zero, zero]))
+        builder.store(sz, builder.gep(retptr, [zero, one]))
         builder.store(is_null, builder.gep(retptr, [zero, two]))
 
 
@@ -102,6 +106,12 @@ class TextEncodingNone(Buffer):
     def __init__(self, size: Union[int, str]):
         pass
 
+    def to_string(self) -> str:
+        """
+        Returns a Python string
+        """
+        pass
+
 
 @extending.overload(operator.eq)
 def text_encoding_none_eq(a, b):
@@ -138,72 +148,74 @@ def text_encoding_none_ne(a, b):
 
 @extending.lower_builtin(TextEncodingNone, nb_types.Integer)
 def heavydb_text_encoding_none_constructor(context, builder, sig, args):
-    return heavydb_buffer_constructor(context, builder, sig, args)._getpointer()
-
-
-def get_copy_bytes_fn(module, arr, src_data, sz):
-
-    fn_name = 'copy_bytes_fn'
-    try:
-        return module.get_global(fn_name)
-    except KeyError:
-        pass
-
-    # create function and prevent llvm from optimizing it
-    fnty = ir.FunctionType(ir.VoidType(), [arr.type, src_data.type, sz.type])
-    func = ir.Function(module, fnty, fn_name)
-    func.attributes.add('noinline')
-
-    block = func.append_basic_block(name="entry")
-    builder = ir.IRBuilder(block)
-    sizeof_char = TargetInfo().sizeof('char')
-    dest_data = builder.extract_value(builder.load(func.args[0]), [0])
-    cgutils.raw_memcpy(builder, dest_data, func.args[1], func.args[2], sizeof_char)
-    builder.ret_void()
-
-    return func
-
-
-@extending.lower_builtin(TextEncodingNone, nb_types.StringLiteral)
-def heavydb_text_encoding_none_constructor_literal(context, builder, sig, args):
-    int64_t = ir.IntType(64)
-    int8_t_ptr = ir.IntType(8).as_pointer()
-
-    literal_value = sig.args[0].literal_value
-    sz = int64_t(len(literal_value))
-
-    # arr = {ptr, size, is_null}*
-    arr = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64), [sz])._getpointer()  # noqa: E501
-
-    msg_bytes = literal_value.encode('utf-8')
-    msg_const = cgutils.make_bytearray(msg_bytes + b'\0')
-    try:
-        msg_global_var = builder.module.get_global(literal_value)
-    except KeyError:
-        msg_global_var = cgutils.global_constant(builder.module, literal_value, msg_const)
-    src_data = builder.bitcast(msg_global_var, int8_t_ptr)
-
-    fn = get_copy_bytes_fn(builder.module, arr, src_data, sz)
-    builder.call(fn, [arr, src_data, sz])
-    return arr
+    return heavydb_buffer_constructor(context, builder, sig, args)
 
 
 @extending.lower_builtin(TextEncodingNone, nb_types.CPointer, nb_types.Integer)
 def heavydb_text_encoding_none_constructor_memcpy(context, builder, sig, args):
     [ptr, sz] = args
     fa = heavydb_buffer_constructor(context, builder, sig.return_type(nb_types.int64), [sz])
-    cgutils.memcpy(builder, fa.ptr, ptr, sz)
+    fa_ptr = builder.load(builder.gep(fa, [i32(0), i32(0)]))
+    cgutils.memcpy(builder, fa_ptr, ptr, sz)
     # string is null terminated
-    builder.store(fa.ptr.type.pointee(0), builder.gep(fa.ptr, [sz]))
-    return fa._getpointer()
+    builder.store(fa_ptr.type.pointee(0), builder.gep(fa_ptr, [sz]))
+    return fa
+
+
+@extending.lower_builtin(TextEncodingNone, nb_types.UnicodeType)
+def text_encoding_none_unicode_ctor(context, builder, sig, args):
+    # Note to the future:
+    # You shall be tempted to use "context.make_helper",
+    # "cgutils.make_struct_proxy" or "builder.extract_value", but avoid it at
+    # all cost! LLVM -O2 runs SROA (Scalar Replacement Of Aggregates) and
+    # suddenly some IR nodes becomes NULL values which are deleted by DCE.
+    # Stick to plain allocas + load/store and you'll be fine.
+
+    # It seems to be safe to use context.make_helper on a previous allocated
+    # memory!
+    uni_str = context.make_helper(builder, sig.args[0], value=args[0])
+
+    llty = context.get_value_type(sig.return_type.dtype)
+    st_ptr = builder.alloca(llty)
+    zero, one, two = i32(0), i32(1), i32(2)
+
+    eq = builder.icmp_signed('==', uni_str.length, uni_str.length.type(0))
+    with builder.if_else(eq, likely=False) as (then, otherwise):
+        with then:
+            bb_then = builder.basic_block
+            p1 = cgutils.get_null_value(i8p)
+            n1 = i8(1)
+        with otherwise:
+            bb_else = builder.basic_block
+            p2 = allocate_varlen_buffer(builder, uni_str.length, i64(1))
+            cgutils.raw_memcpy(builder, dst=p2, src=uni_str.data,
+                               count=uni_str.length, itemsize=i64(1))
+            # string is null terminated
+            builder.store(i8(0), builder.gep(p2, [uni_str.length]))
+            n2 = i8(0)
+
+    # {i8*, i64, i8}
+    #  ^^^
+    ptr = builder.phi(i8p)
+    ptr.add_incoming(p1, bb_then)
+    ptr.add_incoming(p2, bb_else)
+
+    # {i8*, i64, i8}
+    #            ^^
+    is_null = builder.phi(i8)
+    is_null.add_incoming(n1, bb_then)
+    is_null.add_incoming(n2, bb_else)
+
+    builder.store(ptr, builder.gep(st_ptr, [zero, zero]))
+    builder.store(uni_str.length, builder.gep(st_ptr, [zero, one]))
+    builder.store(is_null, builder.gep(st_ptr, [zero, two]))
+    return st_ptr
 
 
 @extending.type_callable(TextEncodingNone)
 def type_heavydb_text_encoding_none(context):
-    def typer(sz):
-        if isinstance(sz, nb_types.UnicodeType):
-            raise RequireLiteralValue('Requires StringLiteral')
-        if isinstance(sz, (nb_types.Integer, nb_types.StringLiteral)):
+    def typer(arg):
+        if isinstance(arg, (nb_types.Integer, nb_types.UnicodeType)):
             return typesystem.Type.fromobject('TextEncodingNone').tonumba()
     return typer
 
@@ -267,4 +279,18 @@ def ol_attr_sz(text):
 def ol_attr_is_null(text):
     def impl(text):
         return ol_attr_is_null_(text)
+    return impl
+
+
+@extending.overload_method(TextEncodingNonePointer, 'to_string')
+def ol_to_string(text):
+    def impl(text):
+        kind = PY_UNICODE_1BYTE_KIND  # ASCII characters only
+        length = len(text)
+        is_ascii = True
+        s = _empty_string(kind, length, is_ascii)
+        for i in range(length):
+            ch = text[i]
+            _set_code_point(s, i, ch)
+        return s
     return impl
