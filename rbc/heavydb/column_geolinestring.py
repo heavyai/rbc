@@ -121,7 +121,7 @@ class HeavyDBColumnGeoLineStringType(HeavyDBColumnType):
     @property
     def custom_params(self):
         return {
-            **super().custom_params(),
+            **super().custom_params,
             'name': 'Column<GeoLineString>',
         }
 
