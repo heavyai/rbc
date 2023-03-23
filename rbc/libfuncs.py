@@ -24,6 +24,8 @@ class Library:
             r = LLVMIntrinsics()
         elif libname == 'heavydb':
             r = HeavyDB()
+        elif libname == 'NRT':
+            r = NRT()
         else:
             raise ValueError(f'Unknown library {libname}')
         _cache[libname] = r
@@ -67,6 +69,29 @@ class HeavyDB(Library):
     RowFunctionManager_getDictDbId
     ColumnArray_isNull ColumnArray_setNull ColumnArray_getItem
     ColumnArray_setItem ColumnArray_concatItem
+    '''.strip().split())
+
+
+class NRT(Library):
+
+    name = 'NRT'
+
+    _function_names = list('''
+    NRT_MemInfo_call_dtor
+    NRT_MemInfo_init
+    NRT_MemInfo_alloc NRT_MemInfo_alloc_safe
+    NRT_MemInfo_alloc_dtor NRT_MemInfo_alloc_dtor_safe
+    NRT_Allocate_External
+    NRT_MemInfo_data_fast
+    NRT_incref NRT_decref
+    NRT_MemInfo_varsize_realloc
+    NRT_MemInfo_new_varsize
+    NRT_MemInfo_new_varsize_dtor
+    NRT_MemInfo_varsize_alloc
+    NRT_MemInfo_varsize_free
+    NRT_MemInfo_alloc_safe_aligned
+    numba_gettyperecord
+    numba_get_PyUnicode_ExtendedCase
     '''.strip().split())
 
 

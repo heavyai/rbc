@@ -761,7 +761,7 @@ class RemoteJIT:
         """
         thrift_file = os.path.join(os.path.dirname(__file__),
                                    'remotejit.thrift')
-        print('staring rpc.thrift server: %s' % (thrift_file), end='',
+        print(f'starting rpc.thrift server ({self.host}:{self.port}): {thrift_file}', end='',
               flush=True)
         if self.debug:
             print(flush=True)
@@ -777,13 +777,13 @@ class RemoteJIT:
             Server.run(dispatcher, thrift_file,
                        dict(host=self.host, port=self.port,
                             debug=self.debug))
-            print('... rpc.thrift server stopped', flush=True)
+            print(f'... rpc.thrift server ({self.host}:{self.port}) stopped', flush=True)
 
     def stop_server(self):
         """Stop remotejit server from client.
         """
         if self.server_process is not None and self.server_process.is_alive():
-            print('... stopping rpc.thrift server')
+            print(f'... stopping rpc.thrift server {self.host}:{self.port}', flush=True)
             self.server_process.terminate()
             self.server_process = None
 

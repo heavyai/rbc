@@ -206,18 +206,23 @@ def heavydb_buffer_constructor(context, builder, sig, args):
 
     ptr = memalloc(context, builder, ptr_type, element_count, element_size)
 
-    fa = cgutils.create_struct_proxy(sig.return_type.dtype)(context, builder)
-    fa.ptr = ptr                  # T*
-    fa.sz = element_count         # size_t
+    llty = context.get_value_type(sig.return_type.dtype)
+    st_ptr = builder.alloca(llty)
+
+    zero, one, two = int32_t(0), int32_t(1), int32_t(2)
+    builder.store(ptr, builder.gep(st_ptr, [zero, zero]))
+    builder.store(element_count, builder.gep(st_ptr, [zero, one]))
+
     if null_type is not None:
         is_zero = builder.icmp_signed('==', element_count, int64_t(0))
         with builder.if_else(is_zero) as (then, orelse):
             with then:
                 is_null = context.get_value_type(null_type)(1)
+                builder.store(is_null, builder.gep(st_ptr, [zero, two]))
             with orelse:
                 is_null = context.get_value_type(null_type)(0)
-        fa.is_null = is_null      # int8_t
-    return fa
+                builder.store(is_null, builder.gep(st_ptr, [zero, two]))
+    return st_ptr
 
 
 @extending.intrinsic
@@ -422,9 +427,9 @@ def heavydb_buffer_set_null_(typingctx, data):
     sig = types.none(data)
 
     def codegen(context, builder, sig, args):
-        rawptr = cgutils.alloca_once_value(builder, value=args[0])
-        ptr = builder.load(rawptr)
-        builder.store(int8_t(1), builder.gep(ptr, [int32_t(0), int32_t(2)]))
+        [ptr] = args
+        zero, two = int32_t(0), int32_t(2)
+        builder.store(int8_t(1), builder.gep(ptr, [zero, two]))
 
     return sig, codegen
 

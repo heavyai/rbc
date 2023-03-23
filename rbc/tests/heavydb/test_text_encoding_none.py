@@ -184,3 +184,17 @@ def test_return_text(heavydb):
     result = list(zip(*result))
     expected, got = result
     assert expected == got
+
+
+def test_to_string(heavydb):
+
+    @heavydb("TextEncodingNone(TextEncodingNone)", devices=['cpu'])
+    def to_string(t):
+        s = t.to_string()
+        return TextEncodingNone(s)
+
+    table = heavydb.table_name + 'text'
+    _, result = heavydb.sql_execute(f"select n, to_string(n) from {table};")
+    result = list(zip(*result))
+    expected, got = result
+    assert expected == got

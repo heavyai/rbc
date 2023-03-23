@@ -16,7 +16,7 @@ win32 = sys.platform == 'win32'
 @pytest.fixture(scope="module")
 def rjit(request):
     local = False
-    rjit = RemoteJIT(debug=not True, local=local)
+    rjit = RemoteJIT(debug=not True, local=local, port=11540)
     if not local:
         rjit.start_server(background=True)
         request.addfinalizer(rjit.stop_server)
@@ -26,12 +26,12 @@ def rjit(request):
 
 @pytest.fixture(scope="module")
 def ljit(request):
-    ljit = RemoteJIT(debug=not True, local=True)
+    ljit = RemoteJIT(debug=not True, local=True, port=11539)
     return ljit
 
 
 def with_localjit(test_func):
-    ljit = RemoteJIT(local=True)
+    ljit = RemoteJIT(local=True, port=11538)
     device = tuple(ljit.targets)[0]
     target_info = ljit.targets[device]
 

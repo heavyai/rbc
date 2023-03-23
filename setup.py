@@ -66,7 +66,7 @@ def setup_package():
             "Topic :: Software Development",
         ],
         packages=find_packages(),
-        package_data={'': ['*.thrift']},
+        package_data={'': ['*.thrift', 'unicodetype_db.ll']},
         install_requires=install_requires,
         tests_require=tests_require,
     )
