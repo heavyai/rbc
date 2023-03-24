@@ -3,23 +3,27 @@
 
 __all__ = ["HeavyDBGeoMultiPolygonType", "GeoMultiPolygon"]
 
-from .geo_base import HeavyDBGeoBase, GeoBaseNumbaType, GeoBase
+from .geo_nested_array import HeavyDBGeoNestedArray, GeoNestedArrayNumbaType, GeoNestedArray
 
 
-class GeoMultiPolygonNumbaType(GeoBaseNumbaType):
+class GeoMultiPolygonNumbaType(GeoNestedArrayNumbaType):
     def __init__(self):
         super().__init__(name="GeoMultiPolygonNumbaType")
 
 
-class HeavyDBGeoMultiPolygonType(HeavyDBGeoBase):
+class HeavyDBGeoMultiPolygonType(HeavyDBGeoNestedArray):
     """Typesystem type class for HeavyDB buffer structures."""
 
     @property
     def type_name(self):
         return "GeoMultiPolygon"
 
+    @property
+    def item_type(self):
+        return "Polygon"
 
-class GeoMultiPolygon(GeoBase):
+
+class GeoMultiPolygon(GeoNestedArray):
     """
     RBC ``GeoMultiPolygon`` type that corresponds to HeavyDB type GeoMultiPolygon.
 

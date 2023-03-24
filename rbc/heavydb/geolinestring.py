@@ -3,23 +3,27 @@
 
 __all__ = ["HeavyDBGeoLineStringType", "GeoLineString"]
 
-from .geo_base import HeavyDBGeoBase, GeoBaseNumbaType, GeoBase
+from .geo_nested_array import HeavyDBGeoNestedArray, GeoNestedArrayNumbaType, GeoNestedArray
 
 
-class GeoLineStringNumbaType(GeoBaseNumbaType):
+class GeoLineStringNumbaType(GeoNestedArrayNumbaType):
     def __init__(self):
         super().__init__(name="GeoLineStringNumbaType")
 
 
-class HeavyDBGeoLineStringType(HeavyDBGeoBase):
+class HeavyDBGeoLineStringType(HeavyDBGeoNestedArray):
     """Typesystem type class for HeavyDB buffer structures."""
 
     @property
     def type_name(self):
         return "GeoLineString"
 
+    @property
+    def item_type(self):
+        return "Point2D"
 
-class GeoLineString(GeoBase):
+
+class GeoLineString(GeoNestedArray):
     """
     RBC ``GeoLineString`` type that corresponds to HeavyDB type GEOLINESTRING.
 

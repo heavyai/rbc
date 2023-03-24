@@ -93,6 +93,12 @@ class HeavyDB(Library):
     ColumnGeoMultiPolygon_isNull ColumnGeoMultiPolygon_setNull
     ColumnGeoMultiPolygon_setItem ColumnGeoMultiPolygon_getNofValues
     ColumnGeoMultiPolygon_getItem
+
+    GeoMultiPoint_size GeoMultiPoint_isNull GeoMultiPoint_getItem
+    GeoPolygon_size GeoPolygon_isNull GeoPolygon_getItem
+    GeoMultiPolygon_size GeoMultiPolygon_isNull GeoMultiPolygon_getItem
+    GeoLineString_size GeoLineString_isNull GeoLineString_getItem
+    GeoMultiLineString_size GeoMultiLineString_isNull GeoMultiLineString_getItem
     '''.strip().split())
 
 

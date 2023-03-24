@@ -3,15 +3,15 @@
 
 __all__ = ["HeavyDBGeoPointType", "GeoPoint"]
 
-from .geo_base import HeavyDBGeoBase, GeoBaseNumbaType, GeoBase
+from .geo_nested_array import HeavyDBGeoNestedArray, GeoNestedArrayNumbaType, GeoNestedArray
 
 
-class GeoPointNumbaType(GeoBaseNumbaType):
+class GeoPointNumbaType(GeoNestedArrayNumbaType):
     def __init__(self):
         super().__init__(name="GeoPointNumbaType")
 
 
-class HeavyDBGeoPointType(HeavyDBGeoBase):
+class HeavyDBGeoPointType(HeavyDBGeoNestedArray):
     """Typesystem type class for HeavyDB buffer structures."""
 
     @property
@@ -19,7 +19,7 @@ class HeavyDBGeoPointType(HeavyDBGeoBase):
         return "GeoPoint"
 
 
-class GeoPoint(GeoBase):
+class GeoPoint(GeoNestedArray):
     """
     RBC ``GeoPoint`` type that corresponds to HeavyDB type GEOPOINT.
     """

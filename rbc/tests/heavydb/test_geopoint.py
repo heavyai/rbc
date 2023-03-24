@@ -7,7 +7,7 @@ from rbc.tests import heavydb_fixture
 @pytest.fixture(scope='module')
 def heavydb():
     for o in heavydb_fixture(globals(), minimal_version=(6, 4),
-                             suffices=['geopoint']):
+                             suffices=['geopoint', 'multipoint']):
         define(o)
         yield o
 
