@@ -34,18 +34,19 @@ class HeavyDBColumnType(HeavyDBBufferType):
         elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
             from .column_array import HeavyDBOutputColumnArrayType
             return self.copy(cls=HeavyDBOutputColumnArrayType)
-        elif self.tostring().startswith('HeavyDBColumnType<GeoPoint>'):
-            from .column_geopoint import HeavyDBColumnGeoPointType
-            return self.copy(cls=HeavyDBColumnGeoPointType)
-        elif self.tostring().startswith('HeavyDBOutputColumnType<GeoPoint>'):
-            from .column_geopoint import HeavyDBOutputColumnGeoPointType
-            return self.copy(cls=HeavyDBOutputColumnGeoPointType)
-        elif self.tostring().startswith('HeavyDBColumnType<GeoLineString>'):
-            from .column_geolinestring import HeavyDBColumnGeoLineStringType
-            return self.copy(cls=HeavyDBColumnGeoLineStringType)
-        elif self.tostring().startswith('HeavyDBOutputColumnType<GeoLineString>'):
-            from .column_geolinestring import HeavyDBOutputColumnGeoLineStringType
-            return self.copy(cls=HeavyDBOutputColumnGeoLineStringType)
+
+        # re-wire for Column<Geo>
+        from rbc import heavydb  # is there a better way to do this?
+        geo_columns = [t for t in dir(heavydb) if t.startswith('Geo')]
+        kind = ['', 'Output']
+        for p in kind:
+            for s in geo_columns:
+                column_name = f'HeavyDB{p}ColumnType<{s}>'
+                if self.tostring().startswith(column_name):
+                    typename = f'HeavyDB{p}Column{s}Type'
+                    cls = getattr(heavydb, typename)
+                    return self.copy(cls=cls)
+
         return self
 
     def match(self, other):

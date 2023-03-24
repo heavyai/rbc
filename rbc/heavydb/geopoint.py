@@ -1,31 +1,25 @@
-'''RBC GeoPoint type that corresponds to HeavyDB type GEOPOINT.
-'''
+"""RBC GeoPoint type that corresponds to HeavyDB type GEOPOINT.
+"""
 
-__all__ = ['HeavyDBGeoPointType', 'GeoPoint']
+__all__ = ["HeavyDBGeoPointType", "GeoPoint"]
 
-from numba.core import types as nb_types
-
-from rbc import typesystem
-
-from .metatype import HeavyDBMetaType
+from .geo_base import HeavyDBGeoBase, GeoBaseNumbaType, GeoBase
 
 
-class GeoPointNumbaType(nb_types.Type):
+class GeoPointNumbaType(GeoBaseNumbaType):
     def __init__(self):
-        super().__init__(name='GeoPointNumbaType')
+        super().__init__(name="GeoPointNumbaType")
 
 
-class HeavyDBGeoPointType(typesystem.Type):
-    """Typesystem type class for HeavyDB buffer structures.
-    """
+class HeavyDBGeoPointType(HeavyDBGeoBase):
+    """Typesystem type class for HeavyDB buffer structures."""
 
-    # A GeoPoint is not materialized
-    def postprocess_type(self):
-        return self.params(shorttypename='GeoPoint')
+    @property
+    def type_name(self):
+        return "GeoPoint"
 
 
-class GeoPoint(object, metaclass=HeavyDBMetaType):
+class GeoPoint(GeoBase):
     """
     RBC ``GeoPoint`` type that corresponds to HeavyDB type GEOPOINT.
     """
-    pass

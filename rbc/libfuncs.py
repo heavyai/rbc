@@ -70,11 +70,29 @@ class HeavyDB(Library):
     RowFunctionManager_getDictDbId
     ColumnArray_isNull ColumnArray_setNull ColumnArray_getItem
     ColumnArray_setItem ColumnArray_concatItem
+
     ColumnGeoPoint_isNull ColumnGeoPoint_setNull ColumnGeoPoint_getItem
     ColumnGeoPoint_setItem
+
+    ColumnGeoMultiPoint_isNull ColumnGeoMultiPoint_setNull
+    ColumnGeoMultiPoint_setItem ColumnGeoMultiPoint_getNofValues
+    ColumnGeoMultiPoint_getItem
+
     ColumnGeoLineString_isNull ColumnGeoLineString_setNull
     ColumnGeoLineString_setItem ColumnGeoLineString_getNofValues
     ColumnGeoLineString_getItem
+
+    ColumnGeoMultiLineString_isNull ColumnGeoMultiLineString_setNull
+    ColumnGeoMultiLineString_setItem ColumnGeoMultiLineString_getNofValues
+    ColumnGeoMultiLineString_getItem
+
+    ColumnGeoPolygon_isNull ColumnGeoPolygon_setNull
+    ColumnGeoPolygon_setItem ColumnGeoPolygon_getNofValues
+    ColumnGeoPolygon_getItem
+
+    ColumnGeoMultiPolygon_isNull ColumnGeoMultiPolygon_setNull
+    ColumnGeoMultiPolygon_setItem ColumnGeoMultiPolygon_getNofValues
+    ColumnGeoMultiPolygon_getItem
     '''.strip().split())
 
 

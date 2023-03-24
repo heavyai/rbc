@@ -1,7 +1,7 @@
 __all__ = ['heavydb_fixture', 'sql_execute']
 
 
-from abc import abstractclassmethod, abstractproperty
+from abc import abstractproperty
 import numpy as np
 import os
 import pytest
@@ -37,12 +37,16 @@ def sql_execute(query):
 
 class _TestTable:
 
-    @abstractclassmethod
+    @classmethod
     def suffix(cls):
-        pass
+        assert cls.__name__.startswith('_')
+        assert cls.__name__.endswith('TestTable')
+        return cls.__name__[1:].removesuffix('TestTable').lower()
 
     @abstractproperty
     def sqltypes(self):
+        # TODO: for readability, sqltypes should return a mapping from
+        # column name -> column type
         pass
 
     @property
@@ -218,10 +222,6 @@ class _TextTestTable(_TestTable):
 
 class _GeoPointTestTable(_TestTable):
 
-    @classmethod
-    def suffix(cls):
-        return "geopoint"
-
     @property
     def sqltypes(self):
         return ("POINT",
@@ -241,10 +241,6 @@ class _GeoPointTestTable(_TestTable):
 
 class _LineStringTestTable(_TestTable):
 
-    @classmethod
-    def suffix(cls):
-        return "linestring"
-
     @property
     def sqltypes(self):
         return ("LINESTRING",
@@ -262,9 +258,123 @@ class _LineStringTestTable(_TestTable):
         }
 
 
+class _MultiLineStringTestTable(_TestTable):
+
+    @property
+    def sqltypes(self):
+        return ("MULTILINESTRING",
+                "GEOMETRY(MULTILINESTRING, 4326) ENCODING NONE",
+                "GEOMETRY(MULTILINESTRING, 4326) ENCODING NONE",
+                "GEOMETRY(MULTILINESTRING, 900913)")
+
+    @property
+    def values(self):
+        return {
+            'ml1': ['MULTILINESTRING((1 2,3 4,5 6,7 8,9 10),(2 3,3 4,1 2))',
+                    'MULTILINESTRING((0 0,5 0,5 5,0 5))',
+                    'MULTILINESTRING((1 2,3 4,5 6,7 8,9 10),(3 4,1 2,2 3),(5 6,7 8,9 10))',
+                    None],
+            'ml2': ['MULTILINESTRING((0 0,5 0,5 5,0 5),(2 2, 2 1,1 1,1 2))',
+                    'MULTILINESTRING((0 0,6 0,6 6,0 6))',
+                    'MULTILINESTRING((0 0,5 0,5 5,0 5),(2 2,2 1,1 1,1 2),(0 0,0 1,1 0))',
+                    None],
+            'ml3': ['MULTILINESTRING((0 0,6 0,6 6,0 6),(3 3,3 2,2 2,2 3))',
+                    'MULTILINESTRING((0 0,7 0,7 7,0 7))',
+                    'MULTILINESTRING((0 0,6 0,6 6,0 6),(3 3,3 2,2 2,2 3),(0 0,0 1,1 0))',
+                    None],
+            'ml4': ['MULTILINESTRING((0 0,7 0,7 7,0 7),(4 4,2 4, 2 3,4 2))',
+                    'MULTILINESTRING((0 0,4 0,4 4,0 4))',
+                    'MULTILINESTRING((0 0,7 0,7 7,0 7),(4 4,2 4, 2 3,4 2),(0 0,0 1,1 0))',
+                    None],
+        }
+
+
+class _MultiPointTestTable(_TestTable):
+
+    @property
+    def sqltypes(self):
+        return ("MULTIPOINT",
+                "GEOMETRY(MULTIPOINT, 4326)",  # uses geoint compression
+                "GEOMETRY(MULTIPOINT, 4326) ENCODING NONE",
+                "GEOMETRY(MULTIPOINT, 900913)")
+
+    @property
+    def values(self):
+        return {
+            'mp1': ['MULTIPOINT(1 2, 3 5)', 'MULTIPOINT(9 8, 11 11)', None],
+            'mp2': ['MULTIPOINT(3 4, 5 7)', 'MULTIPOINT(7 6, 9 9)', None],
+            'mp3': ['MULTIPOINT(5 6, 7 9)', 'MULTIPOINT(5 4, 7 7)', None],
+            'mp4': ['MULTIPOINT(7 8, 9 11)', 'MULTIPOINT(3 2, 5 5)', None],
+        }
+
+
+class _PolygonTestTable(_TestTable):
+
+    @property
+    def sqltypes(self):
+        return ("POLYGON",
+                "GEOMETRY(POLYGON, 4326)",  # uses geoint compression
+                "GEOMETRY(POLYGON, 4326) ENCODING NONE",
+                "GEOMETRY(POLYGON, 900913)")
+
+    @property
+    def values(self):
+        return {
+            'p1': ['POLYGON((1 2,3 4,5 6,7 8,9 10),(2 3,3 4,1 2))',
+                   'POLYGON((0 0,5 0,5 5,0 5,0 0))',
+                   'POLYGON((1 2,3 4,5 6,7 8,9 10),(3 4,1 2,2 3),(5 6,7 8,9 10))',
+                   None],
+            'p2': ['POLYGON((0 0,5 0,5 5,0 5,0 0),(2 2, 2 1,1 1,1 2,2 2))',
+                   'POLYGON((0 0,6 0,6 6,0 6,0 0))',
+                   'POLYGON((0 0,5 0,5 5,0 5,0 0),(2 2,2 1,1 1,1 2,2 2),(0 0,0 1,1 0))',
+                   None],
+            'p3': ['POLYGON((0 0,7 0,7 7,0 7,0 0),(4 4,2 4, 2 3,4 2,4 4))',
+                   'POLYGON((0 0,7 0,7 7,0 7,0 0))',
+                   'POLYGON((0 0,6 0,6 6,0 6,0 0),(3 3,3 2,2 2,2 3,3 3),(0 0,0 1,1 0))',
+                   None],
+            'p4': ['POLYGON((0 0,6 0,6 6,0 6,0 0),(3 3,3 2,2 2,2 3,3 3))',
+                   'POLYGON((0 0,4 0,4 4,0 4,0 0))',
+                   'POLYGON((0 0,7 0,7 7,0 7,0 0),(4 4,2 4, 2 3,4 2,4 4),(0 0,0 1,1 0))',
+                   None],
+        }
+
+
+class _MultiPolygonTestTable(_TestTable):
+
+    @property
+    def sqltypes(self):
+        return ("MULTIPOLYGON",
+                "GEOMETRY(MULTIPOLYGON, 4326)",  # uses geoint compression
+                "GEOMETRY(MULTIPOLYGON, 4326) ENCODING NONE",
+                "GEOMETRY(MULTIPOLYGON, 900913)")
+
+    @property
+    def values(self):
+        return {
+            'mp1': ['MULTIPOLYGON(((1 2,3 4,5 6,7 8,9 10),(2 3,3 4,1 2)))',
+                    'MULTIPOLYGON(((0 0,5 0,5 5,0 5,0 0)))',
+                    'MULTIPOLYGON(((1 2,3 4,5 6,7 8,9 10),(3 4,1 2,2 3),(5 6,7 8,9 10)))',
+                    None],
+            'mp2': ['MULTIPOLYGON(((0 0,5 0,5 5,0 5,0 0),(2 2, 2 1,1 1,1 2,2 2)))',
+                    'MULTIPOLYGON(((0 0,6 0,6 6,0 6,0 0)))',
+                    'MULTIPOLYGON(((0 0,5 0,5 5,0 5,0 0),(2 2,2 1,1 1,1 2,2 2),(0 0,0 1,1 0)))',
+                    None],
+            'mp3': ['MULTIPOLYGON(((0 0,6 0,6 6,0 6,0 0),(3 3,3 2,2 2,2 3,3 3)))',
+                    'MULTIPOLYGON(((0 0,7 0,7 7,0 7,0 0)))',
+                    'MULTIPOLYGON(((0 0,6 0,6 6,0 6,0 0),(3 3,3 2,2 2,2 3,3 3),(0 0,0 1,1 0)))',
+                    None],
+            'mp4': ['MULTIPOLYGON(((0 0,7 0,7 7,0 7,0 0),(4 4,2 4, 2 3,4 2,4 4)))',
+                    'MULTIPOLYGON(((0 0,4 0,4 4,0 4,0 0)))',
+                    'MULTIPOLYGON(((0 0,7 0,7 7,0 7,0 0),(4 4,2 4, 2 3,4 2,4 4),(0 0,0 1,1 0)))',
+                    None],
+        }
+
+
 test_classes = (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
                 _arraynullTestTable, _TextTestTable, _TimestampTestTable,
-                _GeoPointTestTable, _LineStringTestTable)
+                _GeoPointTestTable, _MultiPointTestTable,
+                _LineStringTestTable, _MultiLineStringTestTable,
+                _PolygonTestTable, _MultiPolygonTestTable)
 
 
 test_suffices = [t.suffix() for t in test_classes]
@@ -315,6 +425,10 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}geopoint' - contains columns with GeoPoint
 
     f'{heavydb.table_name}linestring' - contains columns with LineString
+
+    f'{heavydb.table_name}multipoint' - contains columns with MultiPoint
+
+    f'{heavydb.table_name}polygon' - contains columns with Polygon
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()
@@ -423,9 +537,7 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
-    for cls in (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
-                _arraynullTestTable, _TextTestTable, _TimestampTestTable,
-                _GeoPointTestTable, _LineStringTestTable):
+    for cls in test_classes:
         suffix = cls.suffix()
         if suffix in suffices:
             obj = cls()

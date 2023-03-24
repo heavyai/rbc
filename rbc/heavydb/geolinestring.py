@@ -1,44 +1,25 @@
-'''RBC GeoLineString type that corresponds to HeavyDB type GEOLINESTRING.
-'''
+"""RBC GeoLineString type that corresponds to HeavyDB type GEOLINESTRING.
+"""
 
-__all__ = ['HeavyDBGeoLineStringType', 'GeoLineString']
+__all__ = ["HeavyDBGeoLineStringType", "GeoLineString"]
 
-from numba.core import types as nb_types
-
-from rbc import typesystem
-
-from .metatype import HeavyDBMetaType
+from .geo_base import HeavyDBGeoBase, GeoBaseNumbaType, GeoBase
 
 
-class GeoLineStringNumbaType(nb_types.Type):
+class GeoLineStringNumbaType(GeoBaseNumbaType):
     def __init__(self):
-        super().__init__(name='GeoLineStringNumbaType')
+        super().__init__(name="GeoLineStringNumbaType")
 
 
-class HeavyDBGeoLineStringType(typesystem.Type):
-    """Typesystem type class for HeavyDB buffer structures.
-    """
+class HeavyDBGeoLineStringType(HeavyDBGeoBase):
+    """Typesystem type class for HeavyDB buffer structures."""
 
-    def postprocess_type(self):
-        return self.params(shorttypename='GeoLineString')
-
-    def tonumba(self, bool_is_int8=None):
-        flatbuffer_t = typesystem.Type.fromstring('int8_t* flatbuffer_')
-        index_t = typesystem.Type.fromstring('int64_t index_t')
-        n_t = typesystem.Type.fromstring('int64_t n_')
-        geoline_type = typesystem.Type(
-            flatbuffer_t,
-            # int64_t index[4]
-            index_t,
-            index_t,
-            index_t,
-            index_t,
-            n_t,
-            name='GeoLineString')
-        return geoline_type.tonumba(bool_is_int8=True)
+    @property
+    def type_name(self):
+        return "GeoLineString"
 
 
-class GeoLineString(object, metaclass=HeavyDBMetaType):
+class GeoLineString(GeoBase):
     """
     RBC ``GeoLineString`` type that corresponds to HeavyDB type GEOLINESTRING.
 
@@ -50,4 +31,3 @@ class GeoLineString(object, metaclass=HeavyDBMetaType):
             int64_t n_;
         }
     """
-    pass

@@ -410,7 +410,11 @@ class RemoteHeavyDB(RemoteJIT):
         DayTimeInterval='HeavyDBDayTimeIntervalType',
         YearMonthTimeInterval='HeavyDBYearMonthTimeIntervalType',
         GeoPoint='HeavyDBGeoPointType',
+        GeoMultiPoint='HeavyDBGeoMultiPointType',
         GeoLineString='HeavyDBGeoLineStringType',
+        GeoMultiLineString='HeavyDBGeoMultiLineStringType',
+        GeoPolygon='HeavyDBGeoPolygonType',
+        GeoMultiPolygon='HeavyDBGeoMultiPolygonType',
         Point2D='HeavyDBPoint2D',
         UDTF='int32|kind=UDTF'
     )
@@ -649,7 +653,7 @@ class RemoteHeavyDB(RemoteJIT):
                          'DECIMAL', 'TIME', 'TIMESTAMP', 'DATE']
         real_col_types = ['FLOAT', 'DOUBLE']
         str_col_types = ['STR', 'POINT', 'LINESTRING', 'POLYGON',
-                         'MULTIPOLYGON']
+                         'MULTIPOINT', 'MULTIPOLYGON', 'MULTILINESTRING']
 
         datumtype_map = {
             'BOOL': 'boolean8',
@@ -667,7 +671,11 @@ class RemoteHeavyDB(RemoteJIT):
             'FLOAT[]': 'Array<float32>',
             'DOUBLE[]': 'Array<float64>',
             'POINT': 'Point',
-            'LINESTRING': 'Linestring',
+            'LINESTRING': 'LineString',
+            'MULTILINESTRING': 'MultiLineString',
+            'MULTIPOINT': 'MultiPoint',
+            'POLYGON': 'Polygon',
+            'MULTIPOLYGON': 'MultiPolygon',
         }
 
         thrift = self.thrift_client.thrift
@@ -797,7 +805,9 @@ class RemoteHeavyDB(RemoteJIT):
             'DOUBLE': 'real',
             'STR': 'str',
             'POINT': 'str',
+            'MULTIPOINT': 'str',
             'LINESTRING': 'str',
+            'MULTILINESTRING': 'str',
             'POLYGON': 'str',
             'MULTIPOLYGON': 'str',
             'TINYINT': 'int',
@@ -957,7 +967,11 @@ class RemoteHeavyDB(RemoteJIT):
                 ('float64', 'double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('GeoPoint', 'GeoPoint'),
+                ('GeoMultiPoint', 'GeoMultiPoint'),
                 ('GeoLineString', 'GeoLineString'),
+                ('GeoMultiLineString', 'GeoMultiLineString'),
+                ('GeoPolygon', 'GeoPolygon'),
+                ('GeoMultiPolygon', 'GeoMultiPolygon'),
                 ('Timestamp', 'Timestamp'),
         ]:
             # Column<T>
@@ -1088,9 +1102,13 @@ class RemoteHeavyDB(RemoteJIT):
         null_values_astype['Timestamp'] = null_values_astype['int64']
         null_values_asint['Timestamp'] = null_values_asint['int64']
 
-        # Point/Linestring
+        # Point/Linestring/MultiLineString/MultiPoint/Polygon/MultiPolygon
         null_values_astype['Point'] = ''
-        null_values_astype['Linestring'] = ''
+        null_values_astype['MultiPoint'] = ''
+        null_values_astype['LineString'] = ''
+        null_values_astype['MultiLineString'] = ''
+        null_values_astype['Polygon'] = ''
+        null_values_astype['MultiPolygon'] = ''
 
         self._null_values = null_values_astype
 
