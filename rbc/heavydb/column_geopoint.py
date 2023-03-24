@@ -195,7 +195,6 @@ def heavydb_column_getitem(col, index):
 
 
 @extending.overload_method(ColumnGeoPointPointer, 'is_null')
-@extending.overload_method(ColumnGeoPointType, 'is_null')
 def heavydb_column_ptr_is_null(col, index):
     isNull = external('bool ColumnGeoPoint_isNull(int8_t*, int64_t)|cpu')
 
@@ -206,7 +205,6 @@ def heavydb_column_ptr_is_null(col, index):
 
 
 @extending.overload_method(ColumnGeoPointPointer, 'set_null')
-@extending.overload_method(ColumnGeoPointType, 'set_null')
 def heavydb_column_set_null(col, index):
     setNull = external('void ColumnGeoPoint_setNull(int8_t*, int64_t)|cpu')
 

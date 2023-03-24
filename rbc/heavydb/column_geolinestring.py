@@ -220,7 +220,6 @@ def heavydb_column_getitem(col, index):
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'is_null')
-@extending.overload_method(ColumnGeoLineStringType, 'is_null')
 def heavydb_column_ptr_is_null(col, index):
     isNull = external('bool ColumnGeoLineString_isNull(int8_t*, int64_t)|cpu')
 
@@ -231,7 +230,6 @@ def heavydb_column_ptr_is_null(col, index):
 
 
 @extending.overload_method(ColumnGeoLineStringPointer, 'set_null')
-@extending.overload_method(ColumnGeoLineStringType, 'set_null')
 def heavydb_column_set_null(col, index):
     setNull = external('bool ColumnGeoLineString_setNull(int8_t*, int64_t)|cpu')
     if isinstance(col, ColumnGeoLineStringPointer):
