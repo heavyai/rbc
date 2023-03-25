@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from rbc.heavydb import Array
 from rbc.tests import heavydb_fixture
 
 
@@ -54,31 +55,9 @@ def define(heavydb):
             if x.is_null(i) or y.is_null(i):
                 linestrings.set_null(i)
             else:
-                line = [x[i], y[i], x[i] + dx, y[i] + dy]
-                linestrings.set_null(i)
-                # linestrings[i].fromCoords(line)
+                line = Array([x[i], y[i], x[i] + dx, y[i] + dy])
+                linestrings[i].fromCoords(line)
         return size
-
-
-# EXTENSION_NOINLINE int32_t ct_make_linestring2__cpu_(TableFunctionManager& mgr,
-#                                                      const Column<double>& x,
-#                                                      const Column<double>& y,
-#                                                      double dx,
-#                                                      double dy,
-#                                                      Column<GeoLineString>& linestrings) {
-#   auto size = x.size();
-#   mgr.set_output_item_values_total_number(0, size * 4);
-#   mgr.set_output_row_size(size);
-#   for (int64_t i = 0; i < size; i++) {
-#     if (x.isNull(i) || y.isNull(i)) {
-#       linestrings.setNull(i);
-#     } else {
-#       std::vector<double> line{x[i], y[i], x[i] + dx, y[i] + dy};
-#       linestrings[i].fromCoords(line);
-#     }
-#   }
-#   return size;
-# }
 
 
 @pytest.mark.parametrize('suffix,col', [

@@ -20,7 +20,7 @@ class HeavyDBGeoMultiLineStringType(HeavyDBGeoNestedArray):
 
     @property
     def item_type(self):
-        return "LineString"
+        return "GeoLineString"
 
 
 class GeoMultiLineString(GeoNestedArray):

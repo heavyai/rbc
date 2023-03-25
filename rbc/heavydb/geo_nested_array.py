@@ -16,6 +16,7 @@ from rbc import typesystem
 
 from .utils import as_voidptr, get_alloca
 from .metatype import HeavyDBMetaType
+from .array import ArrayPointer
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -84,7 +85,7 @@ class HeavyDBGeoNestedArray(typesystem.Type):
         flatbuffer_t = typesystem.Type.fromstring("int8_t* flatbuffer_")
         index_t = typesystem.Type.fromstring("int64_t index_t")
         n_t = typesystem.Type.fromstring("int64_t n_")
-        geoline_type = typesystem.Type(
+        typ = typesystem.Type(
             flatbuffer_t,
             # int64_t index[4]
             index_t,
@@ -93,8 +94,8 @@ class HeavyDBGeoNestedArray(typesystem.Type):
             index_t,
             n_t,
         )
-        geoline_type.params(other=None, **self.custom_params)
-        return geoline_type.tonumba(bool_is_int8=True)
+        typ.params(other=None, **self.custom_params)
+        return typ.tonumba(bool_is_int8=True)
 
 
 @extending.intrinsic
@@ -130,30 +131,53 @@ def heavydb_geo_getitem_(typingctx, geo, index):
 
 @extending.overload(len)
 @extending.overload_method(GeoNestedArrayNumbaType, 'size')
-def heavydb_geo_len(geo_nested_array):
-    base_type = geo_nested_array.base_type
-    size_ = external(f"int64_t {base_type}_size(int8_t*)|cpu")
+def heavydb_geo_len(geo):
+    if isinstance(geo, GeoNestedArrayNumbaType):
+        base_type = geo.base_type
+        size_ = external(f"int64_t {base_type}_size(int8_t*)|cpu")
 
-    if isinstance(geo_nested_array, GeoNestedArrayNumbaType):
-        def impl(geo_nested_array):
-            return size_(as_voidptr(get_alloca(geo_nested_array)))
+        def impl(geo):
+            return size_(as_voidptr(get_alloca(geo)))
         return impl
 
 
 @extending.overload_method(GeoNestedArrayNumbaType, 'is_null')
-def heavydb_geo_isNull(geo_nested_array):
-    base_type = geo_nested_array.base_type
-    isNull = external(f"bool {base_type}_isNull(int8_t*)|cpu")
+def heavydb_geo_isNull(geo):
+    if isinstance(geo, GeoNestedArrayNumbaType):
+        base_type = geo.base_type
+        isNull = external(f"bool {base_type}_isNull(int8_t*)|cpu")
 
-    if isinstance(geo_nested_array, GeoNestedArrayNumbaType):
-        def impl(geo_nested_array):
-            return isNull(as_voidptr(get_alloca(geo_nested_array)))
+        def impl(geo):
+            return isNull(as_voidptr(get_alloca(geo)))
         return impl
 
 
 @extending.overload(operator.getitem)
 @extending.overload_method(GeoNestedArrayNumbaType, "get_item")
 def heavydb_geo_getitem(geo, index):
-    def impl(geo, index):
-        return heavydb_geo_getitem_(geo, index)
-    return impl
+    if isinstance(geo, GeoNestedArrayNumbaType):
+        def impl(geo, index):
+            return heavydb_geo_getitem_(geo, index)
+        return impl
+
+
+@extending.overload_method(GeoNestedArrayNumbaType, 'fromCoords')
+def heavydb_geo_fromCoords(geo, arr):
+    if isinstance(geo, GeoNestedArrayNumbaType) and isinstance(arr, ArrayPointer):
+        base_type = geo.base_type
+        fromCoords = external(f"void {base_type}_fromCoords(int8_t*, int8_t*)|cpu")
+
+        def impl(geo, arr):
+            return fromCoords(as_voidptr(get_alloca(geo)), as_voidptr(arr))
+        return impl
+
+
+@extending.overload_method(GeoNestedArrayNumbaType, 'toCoords')
+def heavydb_geo_toCoords(geo):
+    if isinstance(geo, GeoNestedArrayNumbaType):
+        base_type = geo.base_type
+        fromCoords = external(f"void {base_type}_toCoords(int8_t*)|cpu")
+
+        def impl(geo, arr):
+            return fromCoords(as_voidptr(get_alloca(geo)), as_voidptr(arr))
+        return impl

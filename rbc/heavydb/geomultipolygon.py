@@ -20,7 +20,7 @@ class HeavyDBGeoMultiPolygonType(HeavyDBGeoNestedArray):
 
     @property
     def item_type(self):
-        return "Polygon"
+        return "GeoPolygon"
 
 
 class GeoMultiPolygon(GeoNestedArray):
