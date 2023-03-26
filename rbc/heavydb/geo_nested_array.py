@@ -2,21 +2,25 @@
 Base classes for GEO types
 """
 
-__all__ = ["GeoNestedArrayNumbaType", "HeavyDBGeoNestedArray", "GeoNestedArray"]
+__all__ = [
+    "GeoNestedArrayNumbaType",
+    "HeavyDBGeoNestedArray",
+    "GeoNestedArray",
+    "heavydb_geo_fromCoords_vec2",
+]
 
 import operator
 
 from llvmlite import ir
-
+from numba.core import cgutils, extending
 from numba.core import types as nb_types
-from numba.core import extending, cgutils
 
-from rbc.external import external
 from rbc import typesystem
+from rbc.external import external
 
-from .utils import as_voidptr, get_alloca
+from .allocator import allocate_varlen_buffer
 from .metatype import HeavyDBMetaType
-from .array import ArrayPointer
+from .utils import as_voidptr, get_alloca
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -44,14 +48,15 @@ class GeoNestedArray(metaclass=HeavyDBMetaType):
             int64_t n_;
         }
     """
+
     pass
 
 
 class GeoNestedArrayNumbaType(nb_types.Type):
     def __init__(self, name):
         super().__init__(name)
-        self.base_type = self.__typesystem_type__._params['base_type']
-        self.item_type = self.__typesystem_type__._params['item_type']
+        self.base_type = self.__typesystem_type__._params["base_type"]
+        self.item_type = self.__typesystem_type__._params["item_type"]
 
 
 class HeavyDBGeoNestedArray(typesystem.Type):
@@ -75,7 +80,7 @@ class HeavyDBGeoNestedArray(typesystem.Type):
     @property
     def custom_params(self):
         return {
-            'NumbaType': self.numba_type,
+            "NumbaType": self.numba_type,
             "name": self.type_name,
             "base_type": self.type_name,
             "item_type": self.item_type,
@@ -99,6 +104,24 @@ class HeavyDBGeoNestedArray(typesystem.Type):
 
 
 @extending.intrinsic
+def get_c_ptr(typingctx, sz, typ):
+    t = typ.dtype
+    sig = nb_types.CPointer(t)(sz, typ)
+
+    def codegen(context, builder, sig, args):
+        [sz, _] = args
+        # TODO: replace i64(8) by i64(sizeof(double))
+        # TODO: The allocated memory will be automatically freed?
+        ptr = allocate_varlen_buffer(builder, sz, i64(8))
+        typ = sig.args[1].dtype
+        llty = context.get_value_type(typ)
+        llty_p = llty.as_pointer()
+        return builder.bitcast(ptr, llty_p)
+
+    return sig, codegen
+
+
+@extending.intrinsic
 def heavydb_geo_getitem_(typingctx, geo, index):
     retty = typesystem.Type.fromstring(geo.item_type).tonumba()
     sig = retty(geo, index)
@@ -110,8 +133,8 @@ def heavydb_geo_getitem_(typingctx, geo, index):
             builder.module, fnty, f"{sig.args[0].base_type}_getItem"
         )
         geo_ptr = builder.bitcast(
-            context.make_helper(builder, sig.args[0], value=geo)._getpointer(),
-            i8p)
+            context.make_helper(builder, sig.args[0], value=geo)._getpointer(), i8p
+        )
 
         # Alloca ItemType
         fa = context.make_helper(builder, sig.return_type)
@@ -130,7 +153,7 @@ def heavydb_geo_getitem_(typingctx, geo, index):
 
 
 @extending.overload(len)
-@extending.overload_method(GeoNestedArrayNumbaType, 'size')
+@extending.overload_method(GeoNestedArrayNumbaType, "size")
 def heavydb_geo_len(geo):
     if isinstance(geo, GeoNestedArrayNumbaType):
         base_type = geo.base_type
@@ -138,10 +161,11 @@ def heavydb_geo_len(geo):
 
         def impl(geo):
             return size_(as_voidptr(get_alloca(geo)))
+
         return impl
 
 
-@extending.overload_method(GeoNestedArrayNumbaType, 'is_null')
+@extending.overload_method(GeoNestedArrayNumbaType, "is_null")
 def heavydb_geo_isNull(geo):
     if isinstance(geo, GeoNestedArrayNumbaType):
         base_type = geo.base_type
@@ -149,6 +173,7 @@ def heavydb_geo_isNull(geo):
 
         def impl(geo):
             return isNull(as_voidptr(get_alloca(geo)))
+
         return impl
 
 
@@ -156,28 +181,55 @@ def heavydb_geo_isNull(geo):
 @extending.overload_method(GeoNestedArrayNumbaType, "get_item")
 def heavydb_geo_getitem(geo, index):
     if isinstance(geo, GeoNestedArrayNumbaType):
+
         def impl(geo, index):
             return heavydb_geo_getitem_(geo, index)
+
         return impl
 
 
-@extending.overload_method(GeoNestedArrayNumbaType, 'fromCoords')
-def heavydb_geo_fromCoords(geo, arr):
-    if isinstance(geo, GeoNestedArrayNumbaType) and isinstance(arr, ArrayPointer):
-        base_type = geo.base_type
-        fromCoords = external(f"void {base_type}_fromCoords(int8_t*, int8_t*)|cpu")
+def heavydb_geo_fromCoords_vec(geo, lst):
+    base_type = geo.base_type
+    fromCoords = external(
+        f"void {base_type}_fromCoords(int8_t*, double*, int64_t size)|cpu"
+    )
 
-        def impl(geo, arr):
-            return fromCoords(as_voidptr(get_alloca(geo)), as_voidptr(arr))
-        return impl
+    def impl(geo, lst):
+        sz = len(lst)
+
+        f64p = get_c_ptr(sz, nb_types.double)
+        for i in range(sz):
+            f64p[i] = lst[i]
+
+        return fromCoords(as_voidptr(get_alloca(geo)), f64p, sz)
+
+    return impl
 
 
-@extending.overload_method(GeoNestedArrayNumbaType, 'toCoords')
-def heavydb_geo_toCoords(geo):
-    if isinstance(geo, GeoNestedArrayNumbaType):
-        base_type = geo.base_type
-        fromCoords = external(f"void {base_type}_toCoords(int8_t*)|cpu")
+def heavydb_geo_fromCoords_vec2(geo, lst):
+    base_type = geo.base_type
+    fromCoords = external(
+        f"void {base_type}_fromCoords(int8_t*, double*, int64_t*, int64_t)|cpu"
+    )
 
-        def impl(geo, arr):
-            return fromCoords(as_voidptr(get_alloca(geo)), as_voidptr(arr))
-        return impl
+    def impl(geo, lst):
+        nrows = len(lst)
+        geo_ptr = as_voidptr(get_alloca(geo))
+
+        indices = get_c_ptr(nrows, nb_types.int64)
+        n_elems = 0
+        for i in range(nrows):
+            n_elems += len(lst[i])
+            indices[i] = len(lst[i])
+
+        data = get_c_ptr(n_elems, nb_types.double)
+        idx = 0
+        for i in range(nrows):
+            ncols = len(lst[i])
+            for j in range(ncols):
+                data[idx] = lst[i][j]
+                idx += 1
+
+        return fromCoords(geo_ptr, data, indices, nrows)
+
+    return impl

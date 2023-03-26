@@ -244,9 +244,9 @@ def heavydb_column_set_null(col, index):
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnFlatBufferPointer, "set_item")
 def heavydb_column_set_item(col, index, rhs):
-    sig = f"void Column{col.eltype}_setItem(int8_t*, int64_t, int8_t* rhs)"
-    setItem = external(sig)
     if isinstance(col, ColumnFlatBufferPointer):
+        sig = f"void Column{col.eltype}_setItem(int8_t*, int64_t, int8_t* rhs)"
+        setItem = external(sig)
 
         def impl(col, index, rhs):
             setItem(as_voidptr(col), index, as_voidptr(get_alloca(rhs)))

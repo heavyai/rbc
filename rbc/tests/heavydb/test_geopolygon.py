@@ -41,38 +41,10 @@ def define(heavydb):
             if polygons.is_null(i):
                 mlinestrings.set_null(i)
             else:
-                mlinestrings.set_null(i)
                 polygon_coords = polygons[i].toCoords()
-                # mlinestrings[i].fromCoords(polygon_coords)
+                mlinestrings[i].fromCoords(polygon_coords)
         return size
 
-
-
-
-# EXTENSION_NOINLINE int32_t
-# ct_to_multilinestring__cpu_(TableFunctionManager& mgr,
-#                             const Column<GeoPolygon>& polygons,
-#                             Column<GeoMultiLineString>& mlinestrings) {
-#   auto size = polygons.size();
-#   mgr.set_output_item_values_total_number(0, polygons.getNofValues());
-#   mgr.set_output_row_size(size);
-#   // Initialize mlinestrings
-#   int count_nulls = 0;
-#   FlatBufferManager::Status status{};
-#   for (int64_t i = 0; i < size; i++) {
-#     if (polygons.isNull(i)) {
-#       mlinestrings.setNull(i);
-#       count_nulls++;
-#     } else {
-#       std::vector<std::vector<double>> polygon_coords = polygons[i].toCoords();
-#       status = mlinestrings[i].fromCoords(polygon_coords);
-#       if (status != FlatBufferManager::Status::Success) {
-#         return mgr.ERROR_MESSAGE("fromCoords failed: " + ::toString(status));
-#       }
-#     }
-#   }
-#   return size;
-# }
 
 @pytest.mark.parametrize('n', ('1', '2', '3'))
 @pytest.mark.parametrize('col', ('p1', 'p2', 'p3', 'p4'))

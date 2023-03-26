@@ -3,16 +3,25 @@
 
 __all__ = ["HeavyDBGeoLineStringType", "GeoLineString"]
 
-from .geo_nested_array import HeavyDBGeoNestedArray, GeoNestedArrayNumbaType, GeoNestedArray
+from numba.core import extending
+from numba.core import types as nb_types
+
+from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
+                               HeavyDBGeoNestedArray,
+                               heavydb_geo_fromCoords_vec2)
 
 
 class GeoLineStringNumbaType(GeoNestedArrayNumbaType):
-    def __init__(self):
-        super().__init__(name="GeoLineStringNumbaType")
+    def __init__(self, name):
+        super().__init__(name)
 
 
 class HeavyDBGeoLineStringType(HeavyDBGeoNestedArray):
     """Typesystem type class for HeavyDB buffer structures."""
+
+    @property
+    def numba_type(self):
+        return GeoLineStringNumbaType
 
     @property
     def type_name(self):
@@ -35,3 +44,9 @@ class GeoLineString(GeoNestedArray):
             int64_t n_;
         }
     """
+
+
+@extending.overload_method(GeoLineStringNumbaType, "fromCoords")
+def heavydb_geo_fromCoords(geo, lst):
+    if isinstance(geo, GeoLineStringNumbaType) and isinstance(lst, nb_types.List):
+        return heavydb_geo_fromCoords_vec2(geo, lst)

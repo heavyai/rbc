@@ -3,7 +3,8 @@
 
 __all__ = ["HeavyDBGeoMultiPolygonType", "GeoMultiPolygon"]
 
-from .geo_nested_array import HeavyDBGeoNestedArray, GeoNestedArrayNumbaType, GeoNestedArray
+from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
+                               HeavyDBGeoNestedArray)
 
 
 class GeoMultiPolygonNumbaType(GeoNestedArrayNumbaType):

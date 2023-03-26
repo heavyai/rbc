@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from rbc.heavydb import Array
 from rbc.tests import heavydb_fixture
 
 
@@ -55,7 +54,7 @@ def define(heavydb):
             if x.is_null(i) or y.is_null(i):
                 linestrings.set_null(i)
             else:
-                line = Array([x[i], y[i], x[i] + dx, y[i] + dy])
+                line = [x[i], y[i], x[i] + dx, y[i] + dy]
                 linestrings[i].fromCoords(line)
         return size
 
