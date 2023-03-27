@@ -4,12 +4,12 @@
 __all__ = ["HeavyDBGeoPolygonType", "GeoPolygon"]
 
 from numba.core import extending
-
-from rbc.external import external
+from numba.core import types as nb_types
 
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
-                               HeavyDBGeoNestedArray)
-from .utils import as_voidptr, get_alloca
+                               HeavyDBGeoNestedArray,
+                               heavydb_geo_fromCoords_vec2,
+                               heavydb_geo_toCoords_vec2)
 
 
 class GeoPolygonNumbaType(GeoNestedArrayNumbaType):
@@ -47,27 +47,12 @@ class GeoPolygon(GeoNestedArray):
     """
 
 
+@extending.overload_method(GeoPolygonNumbaType, "fromCoords")
+def heavydb_geopolygon_fromCoords(geo, lst):
+    if isinstance(lst, nb_types.List):
+        return heavydb_geo_fromCoords_vec2(geo, lst)
+
+
 @extending.overload_method(GeoPolygonNumbaType, "toCoords")
 def heavydb_geopolygon_toCoords(geo):
-    base_type = geo.base_type
-    get_nrows = external(f"int64_t {base_type}_toCoords_get_nrows(int8_t*)|cpu")
-    get_ncols = external(
-        f"int64_t {base_type}_toCoords_get_ncols(int8_t*, int64_t)|cpu"
-    )
-    get_value = external(
-        f"double {base_type}_toCoords_get_value(int8_t*, int64_t, int64_t)|cpu"
-    )
-
-    def impl(geo):
-        lst = []
-        geo_ptr = as_voidptr(get_alloca(geo))
-        nrows = get_nrows(geo_ptr)
-        for i in range(nrows):
-            ncols = get_ncols(geo_ptr, i)
-            inner = []
-            for j in range(ncols):
-                inner.append(get_value(geo_ptr, i, j))
-            lst.append(inner)
-        return lst
-
-    return impl
+    return heavydb_geo_toCoords_vec2(geo)

@@ -6,8 +6,12 @@ __all__ = [
     "GeoNestedArrayNumbaType",
     "HeavyDBGeoNestedArray",
     "GeoNestedArray",
+    "heavydb_geo_fromCoords_vec",
     "heavydb_geo_fromCoords_vec2",
     "heavydb_geo_fromCoords_vec3",
+    "heavydb_geo_toCoords_vec",
+    "heavydb_geo_toCoords_vec2",
+    "heavydb_geo_toCoords_vec3",
 ]
 
 import operator
@@ -273,7 +277,50 @@ def heavydb_geo_fromCoords_vec3(geo, lst):
         for j, e in enumerate(indices_j):
             indices_j_[j] = e
 
-        return fromCoords(geo_ptr, data, indices_i_, indices_j_,
-                          len(indices_i), len(indices_j))
+        return fromCoords(
+            geo_ptr, data, indices_i_, indices_j_, len(indices_i), len(indices_j)
+        )
+
+    return impl
+
+
+def heavydb_geo_toCoords_vec(geo):
+    base_type = geo.base_type
+    get_nrows = external(f"int64_t {base_type}_toCoords_get_nrows(int8_t*)|cpu")
+    get_value = external(f"double {base_type}_toCoords_get_value(int8_t*, int64_t)|cpu")
+
+    def impl(geo):
+        geo_ptr = as_voidptr(get_alloca(geo))
+
+        lst = []
+        nrows = get_nrows(geo_ptr)
+        for i in range(nrows):
+            lst.append(get_value(geo_ptr, i))
+        return lst
+
+    return impl
+
+
+def heavydb_geo_toCoords_vec2(geo):
+    base_type = geo.base_type
+    get_nrows = external(f"int64_t {base_type}_toCoords_get_nrows(int8_t*)|cpu")
+    get_ncols = external(
+        f"int64_t {base_type}_toCoords_get_ncols(int8_t*, int64_t)|cpu"
+    )
+    get_value = external(
+        f"double {base_type}_toCoords_get_value(int8_t*, int64_t, int64_t)|cpu"
+    )
+
+    def impl(geo):
+        lst = []
+        geo_ptr = as_voidptr(get_alloca(geo))
+        nrows = get_nrows(geo_ptr)
+        for i in range(nrows):
+            ncols = get_ncols(geo_ptr, i)
+            inner = []
+            for j in range(ncols):
+                inner.append(get_value(geo_ptr, i, j))
+            lst.append(inner)
+        return lst
 
     return impl

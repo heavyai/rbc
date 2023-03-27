@@ -3,8 +3,13 @@
 
 __all__ = ["HeavyDBGeoMultiPointType", "GeoMultiPoint"]
 
+from numba.core import extending
+from numba.core import types as nb_types
+
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
-                               HeavyDBGeoNestedArray)
+                               HeavyDBGeoNestedArray,
+                               heavydb_geo_fromCoords_vec,
+                               heavydb_geo_toCoords_vec)
 
 
 class GeoMultiPointNumbaType(GeoNestedArrayNumbaType):
@@ -36,3 +41,14 @@ class GeoMultiPoint(GeoNestedArray):
             int64_t n_;
         }
     """
+
+
+@extending.overload_method(GeoMultiPointNumbaType, "toCoords")
+def heavydb_geomultipoint_toCoords(geo):
+    return heavydb_geo_toCoords_vec(geo)
+
+
+@extending.overload_method(GeoMultiPointNumbaType, "fromCoords")
+def heavydb_geomultipoint_fromCoords(geo, lst):
+    if isinstance(geo, GeoMultiPointNumbaType) and isinstance(lst, nb_types.List):
+        return heavydb_geo_fromCoords_vec(geo, lst)

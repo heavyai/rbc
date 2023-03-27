@@ -47,6 +47,6 @@ class GeoMultiPolygon(GeoNestedArray):
 
 
 @extending.overload_method(GeoMultiPolygonNumbaType, "fromCoords")
-def heavydb_geo_fromCoords(geo, lst):
+def heavydb_geomultipolygon_fromCoords(geo, lst):
     if isinstance(geo, GeoMultiPolygonNumbaType) and isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec3(geo, lst)

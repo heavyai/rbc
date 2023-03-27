@@ -9,7 +9,8 @@ from numba.core import types as nb_types
 
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
                                HeavyDBGeoNestedArray,
-                               heavydb_geo_fromCoords_vec2)
+                               heavydb_geo_fromCoords_vec2,
+                               heavydb_geo_toCoords_vec2)
 
 
 class GeoMultiLineStringNumbaType(GeoNestedArrayNumbaType):
@@ -51,3 +52,8 @@ class GeoMultiLineString(GeoNestedArray):
 def heavydb_geomultilinestring_fromCoords(geo, lst):
     if isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec2(geo, lst)
+
+
+@extending.overload_method(GeoMultiLineStringNumbaType, "toCoords")
+def heavydb_geomultilinestring_toCoords(geo):
+    return heavydb_geo_toCoords_vec2(geo)
