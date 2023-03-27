@@ -3,17 +3,25 @@
 
 __all__ = ["HeavyDBGeoMultiPolygonType", "GeoMultiPolygon"]
 
+from numba.core import extending
+from numba.core import types as nb_types
+
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
-                               HeavyDBGeoNestedArray)
+                               HeavyDBGeoNestedArray,
+                               heavydb_geo_fromCoords_vec3)
 
 
 class GeoMultiPolygonNumbaType(GeoNestedArrayNumbaType):
-    def __init__(self):
-        super().__init__(name="GeoMultiPolygonNumbaType")
+    def __init__(self, name):
+        super().__init__(name)
 
 
 class HeavyDBGeoMultiPolygonType(HeavyDBGeoNestedArray):
     """Typesystem type class for HeavyDB buffer structures."""
+
+    @property
+    def numba_type(self):
+        return GeoMultiPolygonNumbaType
 
     @property
     def type_name(self):
@@ -36,3 +44,9 @@ class GeoMultiPolygon(GeoNestedArray):
             int64_t n_;
         }
     """
+
+
+@extending.overload_method(GeoMultiPolygonNumbaType, "fromCoords")
+def heavydb_geo_fromCoords(geo, lst):
+    if isinstance(geo, GeoMultiPolygonNumbaType) and isinstance(lst, nb_types.List):
+        return heavydb_geo_fromCoords_vec3(geo, lst)

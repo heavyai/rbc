@@ -7,6 +7,7 @@ __all__ = [
     "HeavyDBGeoNestedArray",
     "GeoNestedArray",
     "heavydb_geo_fromCoords_vec2",
+    "heavydb_geo_fromCoords_vec3",
 ]
 
 import operator
@@ -231,5 +232,48 @@ def heavydb_geo_fromCoords_vec2(geo, lst):
                 idx += 1
 
         return fromCoords(geo_ptr, data, indices, nrows)
+
+    return impl
+
+
+def heavydb_geo_fromCoords_vec3(geo, lst):
+    base_type = geo.base_type
+    fromCoords = external(
+        f"void {base_type}_fromCoords(int8_t*, double*, int64_t*, int64_t*, int64_t, int64_t)|cpu"
+    )
+
+    def impl(geo, lst):
+        geo_ptr = as_voidptr(get_alloca(geo))
+
+        indices_i = []
+        indices_j = []
+        flatten = []
+
+        n_matrices = len(lst)
+        for i in range(n_matrices):
+            cnt = 0
+            nrows = len(lst[i])
+            for j in range(nrows):
+                ncols = len(lst[i][j])
+                cnt += ncols
+                indices_j.append(ncols)
+                for k in range(ncols):
+                    flatten.append(lst[i][j][k])
+            indices_i.append(cnt)
+
+        data = get_c_ptr(len(flatten), nb_types.double)
+        for i, e in enumerate(flatten):
+            data[i] = e
+
+        indices_i_ = get_c_ptr(len(indices_i), nb_types.int64)
+        for i, e in enumerate(indices_i):
+            indices_i_[i] = e
+
+        indices_j_ = get_c_ptr(len(indices_j), nb_types.int64)
+        for j, e in enumerate(indices_j):
+            indices_j_[j] = e
+
+        return fromCoords(geo_ptr, data, indices_i_, indices_j_,
+                          len(indices_i), len(indices_j))
 
     return impl
