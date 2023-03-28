@@ -11,7 +11,7 @@ __all__ = [
     "heavydb_geo_fromCoords_vec3",
     "heavydb_geo_toCoords_vec",
     "heavydb_geo_toCoords_vec2",
-    "heavydb_geo_toCoords_vec3",
+    # "heavydb_geo_toCoords_vec3",
 ]
 
 import operator

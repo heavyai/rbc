@@ -47,5 +47,3 @@ def test_ct_to_polygon(heavydb, col):
     result = list(result)
     expected = list(expected)
     np.testing.assert_equal(result, expected)
-
-
