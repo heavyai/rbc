@@ -55,7 +55,7 @@ def define(heavydb):
                 linestrings.set_null(i)
             else:
                 line = [x[i], y[i], x[i] + dx, y[i] + dy]
-                linestrings[i].fromCoords(line)
+                linestrings[i].from_coords(line)
         return size
 
     @heavydb("int32(TableFunctionManager, Cursor<T, T, T>, OutputColumn<Z>, OutputColumn<int>)",
@@ -73,14 +73,14 @@ def define(heavydb):
                 sizes.set_null(i)
             else:
                 polygon_coords = []
-                polygon_coords.append(rings[i].toCoords())
+                polygon_coords.append(rings[i].to_coords())
                 if not holes1.is_null(i):
-                    polygon_coords.append(holes1[i].toCoords())
+                    polygon_coords.append(holes1[i].to_coords())
                     if not holes2.is_null(i):
-                        polygon_coords.append(holes2[i].toCoords())
+                        polygon_coords.append(holes2[i].to_coords())
 
                 polygon = polygons[i]
-                polygon.fromCoords(polygon_coords)
+                polygon.from_coords(polygon_coords)
 
                 n_of_points = 0
                 for j in range(len(polygon)):

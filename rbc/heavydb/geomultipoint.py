@@ -43,12 +43,12 @@ class GeoMultiPoint(GeoNestedArray):
     """
 
 
-@extending.overload_method(GeoMultiPointNumbaType, "toCoords")
+@extending.overload_method(GeoMultiPointNumbaType, "to_coords")
 def heavydb_geomultipoint_toCoords(geo):
     return heavydb_geo_toCoords_vec(geo)
 
 
-@extending.overload_method(GeoMultiPointNumbaType, "fromCoords")
+@extending.overload_method(GeoMultiPointNumbaType, "from_coords")
 def heavydb_geomultipoint_fromCoords(geo, lst):
     if isinstance(geo, GeoMultiPointNumbaType) and isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec(geo, lst)

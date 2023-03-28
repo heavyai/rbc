@@ -23,8 +23,8 @@ def define(heavydb):
             if mlinestrings.is_null(i):
                 polygons.set_null(i)
             else:
-                coords = mlinestrings[i].toCoords()
-                polygons[i].fromCoords(coords)
+                coords = mlinestrings[i].to_coords()
+                polygons[i].from_coords(coords)
         return size
 
 

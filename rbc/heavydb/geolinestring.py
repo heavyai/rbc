@@ -47,12 +47,12 @@ class GeoLineString(GeoNestedArray):
     """
 
 
-@extending.overload_method(GeoLineStringNumbaType, "toCoords")
+@extending.overload_method(GeoLineStringNumbaType, "to_coords")
 def heavydb_geolinestring_toCoords(geo):
     return heavydb_geo_toCoords_vec(geo)
 
 
-@extending.overload_method(GeoLineStringNumbaType, "fromCoords")
+@extending.overload_method(GeoLineStringNumbaType, "from_coords")
 def heavydb_geolinestring_fromCoords(geo, lst):
     if isinstance(geo, GeoLineStringNumbaType) and isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec(geo, lst)

@@ -41,8 +41,8 @@ def define(heavydb):
             if polygons.is_null(i):
                 mlinestrings.set_null(i)
             else:
-                polygon_coords = polygons[i].toCoords()
-                mlinestrings[i].fromCoords(polygon_coords)
+                polygon_coords = polygons[i].to_coords()
+                mlinestrings[i].from_coords(polygon_coords)
         return size
 
     @heavydb("int32(TableFunctionManager, Column<Z>, OutputColumn<K>)",
@@ -55,8 +55,8 @@ def define(heavydb):
             if polygons.is_null(i):
                 mpolygons.set_null(i)
             else:
-                polygon_coords = polygons[i].toCoords()
-                mpolygons[i].fromCoords([polygon_coords])
+                polygon_coords = polygons[i].to_coords()
+                mpolygons[i].from_coords([polygon_coords])
         return size
 
 

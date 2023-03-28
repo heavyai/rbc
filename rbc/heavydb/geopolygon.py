@@ -47,12 +47,12 @@ class GeoPolygon(GeoNestedArray):
     """
 
 
-@extending.overload_method(GeoPolygonNumbaType, "fromCoords")
+@extending.overload_method(GeoPolygonNumbaType, "from_coords")
 def heavydb_geopolygon_fromCoords(geo, lst):
     if isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec2(geo, lst)
 
 
-@extending.overload_method(GeoPolygonNumbaType, "toCoords")
+@extending.overload_method(GeoPolygonNumbaType, "to_coords")
 def heavydb_geopolygon_toCoords(geo):
     return heavydb_geo_toCoords_vec2(geo)
