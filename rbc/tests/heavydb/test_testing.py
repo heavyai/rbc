@@ -12,6 +12,9 @@ def test_table_load(suffix):
         if suffix == 'arraynull':
             heavydb.require_version((5, 7, 0),
                                     'Requires heavydb-internal PR 5492 [rbc issue 245]')
+        if suffix in ('multipoint', 'multilinestring'):
+            heavydb.require_version((6, 2, 0),
+                                    'Requires HeavyDB 6.2 or newer')
         count += 1
         descr, result = heavydb.sql_execute(f'select * from {heavydb.table_name}{suffix}')
         result = list(result)
@@ -157,6 +160,23 @@ def test_table_load(suffix):
              'MULTIPOLYGON (((0 0,7 0,7 7,0 7,0 0),(4 4,4 2,2 3,2 4,4 4),(0 0,0 1,1 0,0 '
              '0)))'),
             (None, None, None, None)
+        ]
+    elif suffix == 'multilinestring':
+        assert colnames == ['ml1', 'ml2', 'ml3', 'ml4']
+        assert result == [
+            ('MULTILINESTRING ((1 2,3 4,5 6,7 8,9 10),(2 3,3 4,1 2))',
+             'MULTILINESTRING ((0 0,5 0,5 5,0 5),(2 2,2 1,1 1,1 2))',
+             'MULTILINESTRING ((0 0,6 0,6 6,0 6),(3 3,3 2,2 2,2 3))',
+             'MULTILINESTRING ((0 0,7 0,7 7,0 7),(4 4,2 4,2 3,4 2))'),
+            ('MULTILINESTRING ((0 0,5 0,5 5,0 5))',
+             'MULTILINESTRING ((0 0,6 0,6 6,0 6))',
+             'MULTILINESTRING ((0 0,7 0,7 7,0 7))',
+             'MULTILINESTRING ((0 0,4 0,4 4,0 4))'),
+            ('MULTILINESTRING ((1 2,3 4,5 6,7 8,9 10),(3 4,1 2,2 3),(5 6,7 8,9 10))',
+             'MULTILINESTRING ((0 0,5 0,5 5,0 5),(2 2,2 1,1 1,1 2),(0 0,0 1,1 0))',
+             'MULTILINESTRING ((0 0,6 0,6 6,0 6),(3 3,3 2,2 2,2 3),(0 0,0 1,1 0))',
+             'MULTILINESTRING ((0 0,7 0,7 7,0 7),(4 4,2 4,2 3,4 2),(0 0,0 1,1 0))'),
+            (None, None, None, None),
         ]
     else:
         raise NotImplementedError(suffix)

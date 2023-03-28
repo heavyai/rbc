@@ -61,6 +61,10 @@ class _TestTable:
     def table_defn(self):
         return ',\n'.join(f'{n} {t}' for n, t in zip(self.colnames, self.sqltypes))
 
+    @property
+    def require_version(self):
+        return (5, 7, 0)
+
 
 class _DefaultTestTable(_TestTable):
 
@@ -261,6 +265,10 @@ class _LineStringTestTable(_TestTable):
 class _MultiLineStringTestTable(_TestTable):
 
     @property
+    def require_version(self):
+        return (6, 2, 0)
+
+    @property
     def sqltypes(self):
         return ("MULTILINESTRING",
                 "GEOMETRY(MULTILINESTRING, 4326) ENCODING NONE",
@@ -290,6 +298,10 @@ class _MultiLineStringTestTable(_TestTable):
 
 
 class _MultiPointTestTable(_TestTable):
+
+    @property
+    def require_version(self):
+        return (6, 2, 0)
 
     @property
     def sqltypes(self):
@@ -537,10 +549,14 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     # DATE, DECIMAL/NUMERIC, GEOMETRY: POINT, LINESTRING, POLYGON,
     # MULTIPOLYGON, See
     # https://docs.heavy.ai/sql/data-definition-ddl/datatypes-and-fixed-encoding
+    curr_version = Version('.'.join(map(str, m.version[:2])))
     for cls in test_classes:
         suffix = cls.suffix()
         if suffix in suffices:
             obj = cls()
+            version = Version('.'.join(map(str, obj.require_version)))
+            if version > curr_version:
+                continue
             m.sql_execute(f'DROP TABLE IF EXISTS {table_name}{suffix}')
             m.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name}{suffix} ({obj.table_defn})')
             m.load_table_columnar(f'{table_name}{suffix}', **obj.values)
