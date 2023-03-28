@@ -48,6 +48,14 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
     """
 
+    def __getitem__(self, index: int) -> T:
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
     def get_item(self, index: int) -> T:
         """
         Return ``self[index]``
@@ -64,9 +72,17 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
             Only available on ``CPU``
         """
 
+    def __setitem__(self, index: int, buf: T) -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
+
     def is_null(self, index: int) -> bool:
         """
-        Check if T at ``index`` is null.
+        Check if element at ``index`` is null.
 
         .. note::
             Only available on ``CPU``
@@ -74,7 +90,7 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
     def set_null(self, index: int) -> None:
         """
-        Set the GeoMultiPoint at ``index`` to null.
+        Set element at ``index`` to null.
 
         .. note::
             Only available on ``CPU``
@@ -86,6 +102,14 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
         .. note::
             Only available on ``CPU``
+        """
+
+    def size(self) -> int:
+        """
+        Return the length of the Column[T]
+
+        ..  note::
+             Only available on ``CPU``
         """
 
     def __len__(self) -> int:

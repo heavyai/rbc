@@ -7,6 +7,7 @@ __all__ = ["HeavyDBGeoMultiLineStringType", "GeoMultiLineString"]
 from numba.core import extending
 from numba.core import types as nb_types
 
+from . import geolinestring
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
                                HeavyDBGeoNestedArray,
                                heavydb_geo_fromCoords_vec2,
@@ -36,16 +37,38 @@ class HeavyDBGeoMultiLineStringType(HeavyDBGeoNestedArray):
 
 class GeoMultiLineString(GeoNestedArray):
     """
-    RBC ``GeoMultiLineString`` type that corresponds to HeavyDB type GeoMultiLineString.
+    RBC ``GeoMultiLineString`` type that corresponds to HeavyDB type
+    ``MULTILINESTRING``.
 
     .. code-block:: c
 
-        {
+        struct MultiLineString {
             int8_t* flatbuffer_;
             int64_t index_[4];
             int64_t n_;
         }
     """
+    def __getitem__(self, index: int) -> 'geolinestring.GeoLineString':
+        """
+        Return the ``LINESTRING`` at given index
+        """
+
+    def get_item(self, index: int) -> 'geolinestring.GeoLineString':
+        """
+        Return the ``LINESTRING`` at given index
+        """
+
+    def to_coords(self) -> list[list[float]]:
+        """
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def from_coords(self, coords: list[list[float]]) -> None:
+        """
+        .. note::
+            Only available on ``CPU``
+        """
 
 
 @extending.overload_method(GeoMultiLineStringNumbaType, "from_coords")

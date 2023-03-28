@@ -17,15 +17,11 @@ from numba.core import cgutils, extending
 
 from rbc import typesystem
 
-from .column_flatbuffer import (
-    ColumnFlatBuffer,
-    ColumnFlatBufferPointer,
-    ColumnFlatBufferType,
-    HeavyDBColumnFlatBufferType,
-    HeavyDBOutputColumnFlatBufferType,
-)
+from .column_flatbuffer import (ColumnFlatBuffer, ColumnFlatBufferPointer,
+                                ColumnFlatBufferType,
+                                HeavyDBColumnFlatBufferType,
+                                HeavyDBOutputColumnFlatBufferType)
 from .metatype import HeavyDBMetaType
-
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -39,7 +35,8 @@ void = ir.VoidType()
 
 class ColumnGeoPoint(ColumnFlatBuffer, metaclass=HeavyDBMetaType):
     """
-    RBC ``Column<GeoPoint>`` type that corresponds to HeavyDB COLUMN<GeoPoint>
+    RBC ``Column<GeoPoint>`` type that corresponds to HeavyDB
+    ``COLUMN<POINT>``
 
     In HeavyDB, a Column of type ``GeoPoint`` is represented as follows:
 

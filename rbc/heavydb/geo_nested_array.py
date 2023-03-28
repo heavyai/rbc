@@ -11,7 +11,7 @@ __all__ = [
     "heavydb_geo_fromCoords_vec3",
     "heavydb_geo_toCoords_vec",
     "heavydb_geo_toCoords_vec2",
-    # "heavydb_geo_toCoords_vec3",
+    "heavydb_geo_toCoords_vec3",
 ]
 
 import operator
@@ -54,7 +54,18 @@ class GeoNestedArray(metaclass=HeavyDBMetaType):
         }
     """
 
-    pass
+    def __len__(self) -> int:
+        """
+        """
+
+    def size(self) -> int:
+        """
+        """
+
+    def is_null(self) -> bool:
+        """
+        Return wether the Geo type is ``NULL``
+        """
 
 
 class GeoNestedArrayNumbaType(nb_types.Type):
@@ -324,3 +335,7 @@ def heavydb_geo_toCoords_vec2(geo):
         return lst
 
     return impl
+
+
+def heavydb_geo_toCoords_vec3(geo):
+    raise NotImplementedError()

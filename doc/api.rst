@@ -45,14 +45,26 @@ one cannot create and use them inside the REPL, for instance.
     heavydb.ColumnArray
     heavydb.ColumnListArray
     heavydb.ColumnList
+    heavydb.ColumnGeoPoint
+    heavydb.ColumnGeoMultiPoint
+    heavydb.ColumnGeoLineString
+    heavydb.ColumnGeoMultiLineString
+    heavydb.ColumnGeoPolygon
+    heavydb.ColumnGeoMultiPolygon
+    heavydb.DayTimeInterval
+    heavydb.GeoLineString
+    heavydb.GeoMultiPoint
+    heavydb.GeoMultiLineString
+    heavydb.GeoMultiPolygon
+    heavydb.GeoPoint
+    heavydb.GeoPolygon
+    heavydb.RowFunctionManager
+    heavydb.StringDictionaryProxy
     heavydb.TextEncodingDict
     heavydb.TextEncodingNone
     heavydb.Timestamp
-    heavydb.DayTimeInterval
-    heavydb.YearMonthTimeInterval
     heavydb.TableFunctionManager
-    heavydb.RowFunctionManager
-    heavydb.StringDictionaryProxy
+    heavydb.YearMonthTimeInterval
 
 
 Array API

@@ -10,16 +10,14 @@ __all__ = [
     "ColumnGeoMultiLineString",
 ]
 
-from .column_flatbuffer import (
-    ColumnFlatBuffer,
-    HeavyDBColumnFlatBufferType,
-    HeavyDBOutputColumnFlatBufferType,
-)
+from .column_flatbuffer import (ColumnFlatBuffer, HeavyDBColumnFlatBufferType,
+                                HeavyDBOutputColumnFlatBufferType)
 
 
 class ColumnGeoMultiLineString(ColumnFlatBuffer):
     """
-    RBC ``Column<GeoMultiLineString>`` type that corresponds to HeavyDB COLUMN<GeoMultiLineString>
+    RBC ``Column<GeoMultiLineString>`` type that corresponds to HeavyDB
+    ``COLUMN<MULTILINESTRING>``
 
     In HeavyDB, a Column of type ``GeoMultiLineString`` is represented as follows:
 

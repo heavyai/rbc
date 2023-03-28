@@ -6,9 +6,11 @@ __all__ = ["HeavyDBGeoMultiPolygonType", "GeoMultiPolygon"]
 from numba.core import extending
 from numba.core import types as nb_types
 
+from . import geopolygon
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
                                HeavyDBGeoNestedArray,
-                               heavydb_geo_fromCoords_vec3)
+                               heavydb_geo_fromCoords_vec3,
+                               heavydb_geo_toCoords_vec3)
 
 
 class GeoMultiPolygonNumbaType(GeoNestedArrayNumbaType):
@@ -34,19 +36,47 @@ class HeavyDBGeoMultiPolygonType(HeavyDBGeoNestedArray):
 
 class GeoMultiPolygon(GeoNestedArray):
     """
-    RBC ``GeoMultiPolygon`` type that corresponds to HeavyDB type GeoMultiPolygon.
+    RBC ``GeoMultiPolygon`` type that corresponds to HeavyDB type
+    ``MULTIPOLYGON``.
 
     .. code-block:: c
 
-        {
+        struct MultiPolygon {
             int8_t* flatbuffer_;
             int64_t index_[4];
             int64_t n_;
         }
     """
 
+    def __getitem__(self, index: int) -> 'geopolygon.GeoPolygon':
+        """
+        Return the ``POLYGON`` at given index
+        """
+
+    def get_item(self, index: int) -> 'geopolygon.GeoPolygon':
+        """
+        Return the ``POLYGON`` at given index
+        """
+
+    def to_coords(self) -> list[list[list[float]]]:
+        """
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def from_coords(self, coords: list[list[list[float]]]) -> None:
+        """
+        .. note::
+            Only available on ``CPU``
+        """
+
 
 @extending.overload_method(GeoMultiPolygonNumbaType, "from_coords")
 def heavydb_geomultipolygon_fromCoords(geo, lst):
     if isinstance(geo, GeoMultiPolygonNumbaType) and isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec3(geo, lst)
+
+
+@extending.overload_method(GeoMultiPolygonNumbaType, "to_coords")
+def heavydb_geolinestring_toCoords(geo):
+    return heavydb_geo_toCoords_vec3(geo)

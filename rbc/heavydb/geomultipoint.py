@@ -6,6 +6,7 @@ __all__ = ["HeavyDBGeoMultiPointType", "GeoMultiPoint"]
 from numba.core import extending
 from numba.core import types as nb_types
 
+from . import geopoint
 from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
                                HeavyDBGeoNestedArray,
                                heavydb_geo_fromCoords_vec,
@@ -31,16 +32,39 @@ class HeavyDBGeoMultiPointType(HeavyDBGeoNestedArray):
 
 class GeoMultiPoint(GeoNestedArray):
     """
-    RBC ``GeoMultiPoint`` type that corresponds to HeavyDB type GeoMultiPoint.
+    RBC ``GeoMultiPoint`` type that corresponds to HeavyDB type
+    ``MULTIPOINT``.
 
     .. code-block:: c
 
-        {
+        Struct MultiPoint {
             int8_t* flatbuffer_;
             int64_t index_[4];
             int64_t n_;
         }
     """
+
+    def __getitem__(self, index: int) -> 'geopoint.GeoPoint':
+        """
+        Return the ``POINT`` at the given index
+        """
+
+    def get_item(self, index: int) -> 'geopoint.GeoPoint':
+        """
+        Return the ``POINT`` at the given index
+        """
+
+    def to_coords(self) -> list[float]:
+        """
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def from_coords(self, coords: list[float]) -> None:
+        """
+        .. note::
+            Only available on ``CPU``
+        """
 
 
 @extending.overload_method(GeoMultiPointNumbaType, "to_coords")

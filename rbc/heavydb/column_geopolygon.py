@@ -10,16 +10,14 @@ __all__ = [
     "ColumnGeoPolygon",
 ]
 
-from .column_flatbuffer import (
-    ColumnFlatBuffer,
-    HeavyDBColumnFlatBufferType,
-    HeavyDBOutputColumnFlatBufferType,
-)
+from .column_flatbuffer import (ColumnFlatBuffer, HeavyDBColumnFlatBufferType,
+                                HeavyDBOutputColumnFlatBufferType)
 
 
 class ColumnGeoPolygon(ColumnFlatBuffer):
     """
-    RBC ``Column<GeoPolygon>`` type that corresponds to HeavyDB COLUMN<GeoPolygon>
+    RBC ``Column<GeoPolygon>`` type that corresponds to HeavyDB
+    ``COLUMN<POLYGON>``
 
     In HeavyDB, a Column of type ``GeoPolygon`` is represented as follows:
 

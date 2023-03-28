@@ -10,15 +10,24 @@ __all__ = [
     "ColumnGeoMultiPoint",
 ]
 
-from .column_flatbuffer import (
-    ColumnFlatBuffer,
-    HeavyDBColumnFlatBufferType,
-    HeavyDBOutputColumnFlatBufferType,
-)
+from .column_flatbuffer import (ColumnFlatBuffer, HeavyDBColumnFlatBufferType,
+                                HeavyDBOutputColumnFlatBufferType)
 
 
 class ColumnGeoMultiPoint(ColumnFlatBuffer):
-    """ """
+    """
+    RBC ``Column<GeoMultiPoint>`` type that corresponds to HeavyDB
+    ``COLUMN<MULTIPOINT>``
+
+    In HeavyDB, a Column of type ``GeoMultiPoint`` is represented as follows:
+
+    .. code-block:: c
+
+        {
+            int8_t* flatbuffer;
+            int64_t size;
+        }
+    """
 
 
 class HeavyDBColumnGeoMultiPointType(HeavyDBColumnFlatBufferType):

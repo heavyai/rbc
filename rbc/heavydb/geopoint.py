@@ -22,5 +22,24 @@ class HeavyDBGeoPointType(HeavyDBGeoNestedArray):
 
 class GeoPoint(GeoNestedArray):
     """
-    RBC ``GeoPoint`` type that corresponds to HeavyDB type GEOPOINT.
+    RBC ``GeoPoint`` type that corresponds to HeavyDB type ``POINT``.
+
+    .. code-block:: c
+
+        struct Point2D {
+            double x;
+            double y;
+        }
     """
+
+    @property
+    def x(self) -> float:
+        """
+        Return ``x`` coordinate
+        """
+
+    @property
+    def y(self) -> float:
+        """
+        Return ``y`` coordinate
+        """
