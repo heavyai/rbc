@@ -10,6 +10,7 @@ __all__ = [
     "ColumnGeoMultiPolygon",
 ]
 
+from . import geomultipolygon
 from .column_flatbuffer import (ColumnFlatBuffer, HeavyDBColumnFlatBufferType,
                                 HeavyDBOutputColumnFlatBufferType)
 
@@ -29,6 +30,38 @@ class ColumnGeoMultiPolygon(ColumnFlatBuffer):
         }
 
     """
+
+    def __getitem__(self, index: int) -> 'geomultipolygon.GeoMultiPolygon':
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def get_item(self, index: int) -> 'geomultipolygon.GeoMultiPolygon':
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def set_item(self, index: int, buf: 'geomultipolygon.GeoMultiPolygon') -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def __setitem__(self, index: int, buf: 'geomultipolygon.GeoMultiPolygon') -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
 
 
 class HeavyDBColumnGeoMultiPolygonType(HeavyDBColumnFlatBufferType):

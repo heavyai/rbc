@@ -48,38 +48,6 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
     """
 
-    def __getitem__(self, index: int) -> T:
-        """
-        Return ``self[index]``
-
-        .. note::
-            Only available on ``CPU``
-        """
-
-    def get_item(self, index: int) -> T:
-        """
-        Return ``self[index]``
-
-        .. note::
-            Only available on ``CPU``
-        """
-
-    def set_item(self, index: int, buf: T) -> None:
-        """
-        Set line from a buffer of point coordindates
-
-        .. note::
-            Only available on ``CPU``
-        """
-
-    def __setitem__(self, index: int, buf: T) -> None:
-        """
-        Set line from a buffer of point coordindates
-
-        .. note::
-            Only available on ``CPU``
-        """
-
     def is_null(self, index: int) -> bool:
         """
         Check if element at ``index`` is null.

@@ -10,6 +10,7 @@ __all__ = [
     "ColumnGeoMultiLineString",
 ]
 
+from . import geomultilinestring
 from .column_flatbuffer import (ColumnFlatBuffer, HeavyDBColumnFlatBufferType,
                                 HeavyDBOutputColumnFlatBufferType)
 
@@ -29,6 +30,38 @@ class ColumnGeoMultiLineString(ColumnFlatBuffer):
         }
 
     """
+
+    def __getitem__(self, index: int) -> 'geomultilinestring.GeoMultiLineString':
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def get_item(self, index: int) -> 'geomultilinestring.GeoMultiLineString':
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def set_item(self, index: int, buf: 'geomultilinestring.GeoMultiLineString') -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def __setitem__(self, index: int, buf: 'geomultilinestring.GeoMultiLineString') -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
 
 
 class HeavyDBColumnGeoMultiLineStringType(HeavyDBColumnFlatBufferType):

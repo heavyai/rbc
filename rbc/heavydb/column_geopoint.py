@@ -17,6 +17,7 @@ from numba.core import cgutils, extending
 
 from rbc import typesystem
 
+from . import geopoint
 from .column_flatbuffer import (ColumnFlatBuffer, ColumnFlatBufferPointer,
                                 ColumnFlatBufferType,
                                 HeavyDBColumnFlatBufferType,
@@ -48,6 +49,38 @@ class ColumnGeoPoint(ColumnFlatBuffer, metaclass=HeavyDBMetaType):
         }
 
     """
+
+    def __getitem__(self, index: int) -> 'geopoint.GeoPoint':
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def get_item(self, index: int) -> 'geopoint.GeoPoint':
+        """
+        Return ``self[index]``
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def set_item(self, index: int, buf: 'geopoint.GeoPoint') -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
+
+    def __setitem__(self, index: int, buf: 'geopoint.GeoPoint') -> None:
+        """
+        Set line from a buffer of point coordindates
+
+        .. note::
+            Only available on ``CPU``
+        """
 
 
 class HeavyDBColumnGeoPointType(HeavyDBColumnFlatBufferType):
