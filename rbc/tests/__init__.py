@@ -41,7 +41,7 @@ class _TestTable:
     def suffix(cls):
         assert cls.__name__.startswith('_')
         assert cls.__name__.endswith('TestTable')
-        return cls.__name__[1:].removesuffix('TestTable').lower()
+        return cls.__name__[1:-len('TextTable')].lower()
 
     @abstractproperty
     def sqltypes(self):

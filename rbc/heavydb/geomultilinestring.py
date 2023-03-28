@@ -4,6 +4,8 @@
 __all__ = ["HeavyDBGeoMultiLineStringType", "GeoMultiLineString"]
 
 
+from typing import List
+
 from numba.core import extending
 from numba.core import types as nb_types
 
@@ -58,13 +60,13 @@ class GeoMultiLineString(GeoNestedArray):
         Return the ``LINESTRING`` at given index
         """
 
-    def to_coords(self) -> list[list[float]]:
+    def to_coords(self) -> List[List[float]]:
         """
         .. note::
             Only available on ``CPU``
         """
 
-    def from_coords(self, coords: list[list[float]]) -> None:
+    def from_coords(self, coords: List[List[float]]) -> None:
         """
         .. note::
             Only available on ``CPU``
