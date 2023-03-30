@@ -80,3 +80,11 @@ def heavydb_geopolygon_fromCoords(geo, lst):
 @extending.overload_method(GeoPolygonNumbaType, "to_coords")
 def heavydb_geopolygon_toCoords(geo):
     return heavydb_geo_toCoords_vec2(geo)
+
+
+@extending.overload_method(GeoPolygonNumbaType, "n_rings")
+def heavydb_geopolygon_nrings(geo):
+    # In GeoPolygon and GeoMultiLineString, len(geo) gives the number of rings
+    def impl(geo):
+        return len(geo)
+    return impl

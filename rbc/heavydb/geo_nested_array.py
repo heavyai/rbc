@@ -297,15 +297,14 @@ def heavydb_geo_fromCoords_vec3(geo, lst):
 
 def heavydb_geo_toCoords_vec(geo):
     base_type = geo.base_type
-    get_nrows = external(f"int64_t {base_type}_toCoords_get_nrows(int8_t*)|cpu")
     get_value = external(f"double {base_type}_toCoords_get_value(int8_t*, int64_t)|cpu")
 
     def impl(geo):
         geo_ptr = as_voidptr(get_alloca(geo))
 
         lst = []
-        nrows = get_nrows(geo_ptr)
-        for i in range(nrows):
+        n_coords = geo.n_coords()
+        for i in range(n_coords):
             lst.append(get_value(geo_ptr, i))
         return lst
 
@@ -314,10 +313,6 @@ def heavydb_geo_toCoords_vec(geo):
 
 def heavydb_geo_toCoords_vec2(geo):
     base_type = geo.base_type
-    get_nrows = external(f"int64_t {base_type}_toCoords_get_nrows(int8_t*)|cpu")
-    get_ncols = external(
-        f"int64_t {base_type}_toCoords_get_ncols(int8_t*, int64_t)|cpu"
-    )
     get_value = external(
         f"double {base_type}_toCoords_get_value(int8_t*, int64_t, int64_t)|cpu"
     )
@@ -325,11 +320,11 @@ def heavydb_geo_toCoords_vec2(geo):
     def impl(geo):
         lst = []
         geo_ptr = as_voidptr(get_alloca(geo))
-        nrows = get_nrows(geo_ptr)
-        for i in range(nrows):
-            ncols = get_ncols(geo_ptr, i)
+        n_rings = geo.n_rings()
+        for i in range(n_rings):
+            n_coords = geo[i].n_coords()
             inner = []
-            for j in range(ncols):
+            for j in range(n_coords):
                 inner.append(get_value(geo_ptr, i, j))
             lst.append(inner)
         return lst

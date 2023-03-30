@@ -81,3 +81,12 @@ def heavydb_geolinestring_toCoords(geo):
 def heavydb_geolinestring_fromCoords(geo, lst):
     if isinstance(geo, GeoLineStringNumbaType) and isinstance(lst, nb_types.List):
         return heavydb_geo_fromCoords_vec(geo, lst)
+
+
+@extending.overload_method(GeoLineStringNumbaType, "n_coords")
+def heavydb_geolinestring_ncoords(geo):
+    # For GeoLineString and GeoMultiPoint, the number of coordinates is
+    # 2 * number of points
+    def impl(geo):
+        return len(geo) * 2
+    return impl
