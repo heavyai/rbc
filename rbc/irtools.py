@@ -146,6 +146,8 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
         # See https://github.com/xnd-project/rbc/issues/45
         remove_features = {
             (12, 12): [], (11, 11): [], (10, 10): [], (9, 9): [], (8, 8): [],
+            (14, 11): ['crc32', 'uintr', 'widekl', 'avxvnni', 'avx512fp16', 'kl',
+                       'hreset'],
             (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'tsxldtrk', 'amx-tile', 'amx-bf16',
                       'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
