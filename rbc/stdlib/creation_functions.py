@@ -105,7 +105,7 @@ def _array_api_triu(x, k=0):
 
 
 @expose.implements('full')
-def _impl__full(shape, fill_value, dtype=None):
+def _impl_full(shape, fill_value, dtype=None):
     """
     Return a new array of given shape and type, filled with fill_value.
     """
