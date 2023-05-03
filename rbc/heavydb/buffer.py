@@ -24,7 +24,6 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 
 import operator
-from .allocator import allocate_varlen_buffer
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
@@ -212,10 +211,7 @@ def heavydb_buffer_constructor(context, builder, sig, args):
     ptr = memalloc(context, builder, ptr_type, element_count, element_size)
 
     llty = context.get_value_type(sig.return_type.dtype)
-    st_size = context.get_abi_sizeof(llty)
-    st_ptr = builder.bitcast(allocate_varlen_buffer(builder, int64_t(st_size),
-                                                    int64_t(1)),
-                             llty.as_pointer())
+    st_ptr = builder.alloca(llty)
 
     zero, one, two = int32_t(0), int32_t(1), int32_t(2)
     builder.store(ptr, builder.gep(st_ptr, [zero, zero]))
@@ -304,16 +300,12 @@ def heavydb_buffer_ptr_len_(typingctx, data):
     sig = types.int64(data)
 
     def codegen(context, builder, signature, args):
-        i32 = ir.IntType(32)
-        zero, one = i32(0), i32(1)
-        [data] = args
-        return builder.load(builder.gep(data, [zero, one]))
-        # data, = args
-        # rawptr = cgutils.alloca_once_value(builder, value=data)
-        # struct = builder.load(builder.gep(rawptr,
-        #                                   [int32_t(0)]))
-        # return builder.load(builder.gep(
-        #     struct, [int32_t(0), int32_t(1)]))
+        data, = args
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        struct = builder.load(builder.gep(rawptr,
+                                          [int32_t(0)]))
+        return builder.load(builder.gep(
+            struct, [int32_t(0), int32_t(1)]))
     return sig, codegen
 
 
@@ -383,11 +375,10 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
 
         data, index, value = args
 
-        # breakpoint()
-        # rawptr = cgutils.alloca_once_value(builder, value=data)
-        # ptr = builder.load(rawptr)
+        rawptr = cgutils.alloca_once_value(builder, value=data)
+        ptr = builder.load(rawptr)
 
-        buf = builder.load(builder.gep(data, [zero, zero]))
+        buf = builder.load(builder.gep(ptr, [zero, zero]))
         # [rbc issue-197] Numba promotes operations like
         # int32(a) + int32(b) to int64
         fromty = sig.args[2]

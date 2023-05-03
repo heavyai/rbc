@@ -155,7 +155,7 @@ def test_array_methods(heavydb, method, signature, args, expected):
 
     query = 'select np_{method}'.format(**locals()) + \
             '(' + ', '.join(map(str, args)) + ')' + \
-            ' from {heavydb.table_name} limit 1;'.format(**locals())
+            ' from {heavydb.table_name};'.format(**locals())
 
     _, result = heavydb.sql_execute(query)
     out = list(result)[0]
