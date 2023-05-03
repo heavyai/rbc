@@ -59,7 +59,8 @@ class ArrayPointer(BufferPointer):
                 # we can't just copy the pointer here because return buffers need
                 # to have their own memory, as input buffers are freed upon returning
                 ptr_8 = allocate_varlen_buffer(builder, element_count, element_size)
-                dst = builder.bitcast(ptr_8, ptr_type)
+                dst = builder.bitcast(ptr_8, context.get_value_type(ptr_type))
+
                 cgutils.raw_memcpy(builder, dst, src, element_count, element_size)
                 builder.store(dst, builder.gep(retptr, [zero, zero]))
         builder.store(element_count, builder.gep(retptr, [zero, one]))
