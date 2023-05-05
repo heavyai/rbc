@@ -161,6 +161,9 @@ class Signature:
             return self
         options, templates = extract_templates(options)
         devices = options.get('devices')
+        if devices is not None:
+            # normalize device strings
+            devices = [device.upper() for device in devices]
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
             self.signature_devices.update(obj.signature_devices)
@@ -245,17 +248,17 @@ class Signature:
         -------
         signature : Signature
         """
+
+        def _upper(s):
+            return type(s)([s_.upper() for s_ in s])
+        all_possible_devices = {'CPU', 'GPU'}
+
         signature = Signature(self.remotejit)
         fsig = Type.fromcallable(func) if func is not None else None
         nargs = fsig.arity if func is not None else None
         target_info = TargetInfo()
         for sig in self.signatures:
-            devices = self.signature_devices.get(sig)
-            if not target_info.check_enabled(devices):
-                if self.debug:
-                    print(f'{type(self).__name__}.normalized: skipping {sig} as'
-                          f' not supported by devices: {devices}')
-                continue
+            orig_sig = sig
             templates = self.signature_templates.get(sig, {})
             sig = Type.fromobject(sig)
             if not sig.is_complete:
@@ -265,6 +268,37 @@ class Signature:
                 raise ValueError(
                     'expected signature representing function type,'
                     f' got `{sig}`')
+
+            # signature devices are specified as `@heavydb(signature,devices=['CPU'])`
+            signature_devices = _upper(set(self.signature_devices.get(orig_sig, [])))
+            # sig devices are specifed as `@heavydb(signature+'|CPU')`
+            sig_devices = _upper(set([a for a in sig.annotation()
+                                      if a.upper() in all_possible_devices]))
+            if signature_devices and sig_devices:
+                # signature and sig devices must be consistent
+                if set(signature_devices) != set(sig_devices):
+                    raise ValueError(
+                        f'Inconsistent device specification: signature suggests `{sig_devices}`'
+                        f' but decorator devices argument specifies `{signature_devices}`')
+            specified_devices = signature_devices or sig_devices or {'CPU', 'GPU'}
+            # argument type supported devices are specifed as
+            #   `type.supported_devices or all_possible_devices`
+            atype_devices = _upper(getattr(sig[0], 'supported_devices', all_possible_devices))
+            for atype in sig[1]:
+                atype_devices = atype_devices.intersection(
+                    _upper(getattr(atype, 'supported_devices', all_possible_devices)))
+            if not atype_devices:
+                raise ValueError(f'{sig} uses types with non-intersecting device support')
+            devices = specified_devices.intersection(atype_devices)
+            if not devices:
+                raise ValueError(f'{sig} device support `{atype_devices}` does not match'
+                                 ' with the specified device support `{specified_devices}`')
+            if not target_info.check_enabled(devices):
+                if self.debug:
+                    print(f'{type(self).__name__}.normalized: skipping {orig_sig} as'
+                          f' not supported by devices: {devices}')
+                continue
+
             if nargs is None:
                 nargs = sig.arity
             elif sig.arity != nargs:

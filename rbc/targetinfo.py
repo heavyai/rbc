@@ -99,6 +99,7 @@ class TargetInfo(object):
         self.type_sizeof = {}
         self._supported_libraries = set()  # libfuncs.Library instances
         self._userdefined_externals = set()
+        self._compile_target = None
 
     def __repr__(self):
         return f'{self.__class__.__name__}(name={self.name!r})'
@@ -114,6 +115,19 @@ class TargetInfo(object):
         else:
             raise TypeError(
                 f'Expected libfuncs.Library instance or library name but got {type(lib)}')
+
+    def set_compile_target(self, target_name):
+        """Set target function name being compiled.
+        """
+        assert target_name is None or self._compile_target is None,\
+            (target_name, self._compile_target)
+        self._compile_target = target_name
+
+    def get_compile_target(self):
+        """Return target function name being compiled.
+        """
+        assert self._compile_target is not None
+        return self._compile_target
 
     def supports(self, name):
         """Return True if the target system defines symbol name.

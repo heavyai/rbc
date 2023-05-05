@@ -29,6 +29,10 @@ class HeavyDBRowFunctionManagerType(HeavyDBOpaquePtr):
     def type_name(self):
         return "RowFunctionManager"
 
+    @property
+    def supported_devices(self):
+        return {'CPU'}
+
 
 class RowFunctionManagerNumbaType(OpaquePtrNumbaType):
     pass
@@ -68,7 +72,7 @@ def heavydb_udf_manager_get_dict_id(mgr, func_name, arg_idx):
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    defn = 'int32 RowFunctionManager_getDictId(int8*, int8*, int32)'
+    defn = 'int32 RowFunctionManager_getDictId(int8*, int8*, int32)|CPU'
     get_dict_id_ = external(defn)
 
     def impl(mgr, func_name, arg_idx):

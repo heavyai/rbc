@@ -32,6 +32,10 @@ class HeavyDBTableFunctionManagerType(HeavyDBOpaquePtr):
     def type_name(self):
         return 'TableFunctionManager'
 
+    @property
+    def supported_devices(self):
+        return {'CPU'}
+
 
 class TableFunctionManagerNumbaType(OpaquePtrNumbaType):
     pass

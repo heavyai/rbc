@@ -70,10 +70,10 @@ def test_udtf_string_repr(heavydb):
 
     assert_equal(repr(arange),
                  ("RemoteDispatcher('arange', ['UDTF(int32 size, T x0, OutputColumn<T> x),"
-                  " T=int64|float64|int32, device=cpu'])"))
+                  " T=int64|float64|int32, device=CPU'])"))
     assert_equal(str(arange),
                  ("arange['UDTF(int32 size, T x0, OutputColumn<T> x),"
-                  " T=int64|float64|int32, device=cpu']"))
+                  " T=int64|float64|int32, device=CPU']"))
 
     assert_equal(repr(arange(5, 0)),
                  ("HeavyDBQueryCapsule('SELECT x FROM"

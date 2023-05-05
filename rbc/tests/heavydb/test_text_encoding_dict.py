@@ -75,28 +75,28 @@ def define(heavydb):
             y[0] = x.string_dict_proxy.getStringId(text)
             return 1
 
-        @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)',  # noqa: E501
-                 devices=['cpu'])
+        # Using TableFunctionManager argument implies devices=['cpu']
+        @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)')  # noqa: E501
         def test_empty_input_id(mgr, out):
             mgr.set_output_row_size(2)
             out[0] = out.string_dict_proxy.getStringId("onedal")
             out[1] = out.string_dict_proxy.getStringId("mlpack")
             return len(out)
 
-        @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<int32_t>)',
-                 devices=['cpu'], T=['TextEncodingDict'])
+        @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<int32_t>)|CPU',
+                 T=['TextEncodingDict'])
         def test_getstringid_from_unicode(x, m, y):
             text = "foo"  # this creates a unicode string
             y[0] = x.string_dict_proxy.getStringId(text)
             return 1
 
-        @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>)')  # noqa: E501
+        @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>) | CPU')  # noqa: E501
         def test_getstring(x, unique, y):
             for i in range(unique):
                 y[i] = len(x.string_dict_proxy.getString(i))
             return unique
 
-        @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>)')  # noqa: E501
+        @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>) | CPU')  # noqa: E501
         def test_getstring_lst(lst, unique, m, y):
             for i in range(lst.nrows):
                 y[i] = 0
@@ -108,21 +108,22 @@ def define(heavydb):
             return unique
 
     if heavydb.version[:2] >= (6, 3):
-        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        # Using RowFunctionManager argument implies devices=['cpu']
+        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
         def fn_copy(mgr, t):
             db_id = mgr.getDictDbId('fn_copy', 0)
             dict_id = mgr.getDictId('fn_copy', 0)
             str = mgr.getString(db_id, dict_id, t)
             return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_DB_ID, mgr.TRANSIENT_DICT_ID, str)
 
-        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)')
         def to_text_encoding_none_1(mgr, t):
             db_id = mgr.getDictDbId('to_text_encoding_none_1', 0)
             dict_id = mgr.getDictId('to_text_encoding_none_1', 0)
             str = mgr.getString(db_id, dict_id, t)
             return str
 
-        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)')
         def to_text_encoding_none_2(mgr, t):
             db_id = mgr.getDictDbId('to_text_encoding_none_2', 0)
             dict_id = mgr.getDictId('to_text_encoding_none_2', 0)

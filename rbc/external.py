@@ -18,6 +18,7 @@ class External:
         signature : object (str, ctypes function, python callable, numba function)
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
         """
+        all_possible_devices = {'CPU', 'GPU'}
         ts = defaultdict(list)
         key = None
         for signature in args:
@@ -37,16 +38,13 @@ class External:
                 raise ValueError(
                     f"external function name not specified for signature {signature}"
                 )
-
-            for device in [
-                a.upper() for a in t.annotation() or [] if a.upper() in ["CPU", "GPU"]
-            ] or [
-                "CPU",
-                "GPU",
-            ]:
+            signature_devices = [a.upper() for a in (t.annotation() or [])
+                                 if a.upper() in all_possible_devices]
+            devices = signature_devices or all_possible_devices
+            for device in devices:
                 ts[device].append(signature)
 
-        obj = cls(key, ts)
+        obj = cls(key, dict(ts))
         obj.register()
         return obj
 
@@ -60,8 +58,8 @@ class External:
         ----------
         key : str
             The key of the external function for typing
-        signatures : List of function signatures
-            A list of function type signature. i.e. 'int64 fn(int64, float64)'
+        signatures : Dictionary of devices and function signatures
+            A device mapping of a list of function type signature
         """
         self._signatures = signatures
         self.key = key
@@ -79,7 +77,16 @@ class External:
 
     def match_signature(self, atypes):
         # Code here is the same found in remotejit.py::Signature::best_match
-        device = "CPU" if TargetInfo().is_cpu else "GPU"
+        target_info = TargetInfo()
+        device = "CPU" if target_info.is_cpu else "GPU"
+        if device not in self._signatures:
+            satypes = ", ".join(map(str, atypes))
+            compile_target = target_info.get_compile_target()
+            raise TypeError(
+                f"{compile_target=}: no signatures with argument types `{satypes}` and"
+                f" device `{device}` while processing `{self.name}`"
+                " (perhaps the compile target cannot support the device?)"
+            )
         available_types = tuple(map(Type.fromobject, self._signatures[device]))
         ftype = None
         match_penalty = None
@@ -93,8 +100,9 @@ class External:
             satypes = ", ".join(map(str, atypes))
             available = "; ".join(map(str, available_types))
             raise TypeError(
-                f"found no matching function type to given argument types"
-                f" `{satypes}` and device `{device}`. Available function types: {available}"
+                f"{compile_target=}: found no matching function type to the given argument types"
+                f" `{satypes}` and device `{device}` while processing `{self.name}`."
+                f" Available function types: {available}"
             )
         return ftype
 

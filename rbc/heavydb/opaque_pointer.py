@@ -44,3 +44,7 @@ class HeavyDBOpaquePtr(typesystem.Type):
 
     def tonumba(self, bool_is_int8=None):
         return self.numba_type()
+
+    @property
+    def supported_devices(self):
+        return {'CPU', 'GPU'}
