@@ -111,7 +111,13 @@ jobs:
         python-version: ['3.11', '3.10', '3.9']
         numba-version: ['0.57', '0.56']
         heavydb-version: ['6.2', '6.1', '6.0']
+        llvm-version: ['11.1', '14']
         heavydb-from: [conda]
+        exclude:
+          - numba-version: '0.56'
+            llvm-version: '14'
+          - numba-version: '0.57'
+            llvm-version: '11.1'
         # include:
         #   - os: ubuntu-latest
         #     python-version: '3.10'
@@ -197,6 +203,9 @@ jobs:
           cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
+          echo "  - clang=${{ matrix.llvm-version }}" >> rbc_test.yaml
+          echo "  - clangxx=${{ matrix.llvm-version }}" >> rbc_test.yaml
+
           mamba env create --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
