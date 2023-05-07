@@ -769,7 +769,6 @@ class RemoteJIT:
 
         or any other object that can be converted to function type,
         see `Type.fromobject` for more information.
-
         """
         if local:
             s = Signature(self.local)
@@ -908,7 +907,7 @@ class RemoteJIT:
         ----------
         ftype: Type
           typesystem type of a function
-        device: {"CPU", "CPU"}
+        device: {"CPU", "GPU"}
           specified device
         """
         return True

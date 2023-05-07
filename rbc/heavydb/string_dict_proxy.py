@@ -50,10 +50,6 @@ class HeavyDBStringDictProxyType(HeavyDBOpaquePtr):
     def type_name(self):
         return "StringDictionaryProxy"
 
-    @property
-    def supported_devices(self):
-        return {'cpu'}
-
 
 class StringDictionaryProxyNumbaType(OpaquePtrNumbaType):
     pass
