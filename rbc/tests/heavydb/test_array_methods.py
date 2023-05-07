@@ -57,7 +57,7 @@ def define(heavydb):
         a.fill(v)
         return a
 
-    @heavydb('double(int64, double)')
+    @heavydb('double(int64, double)', devices=['CPU'])
     def ndarray_max(size, v):
         a = Array(size, 'double')
         a.fill(v)
@@ -72,29 +72,29 @@ def define(heavydb):
             exec(fn)
             fn = locals()[fn_name]
             if op == 'mean':
-                heavydb('float64(int32)')(fn)
+                heavydb('float64(int32)', devices=['CPU'])(fn)
             else:
-                heavydb(f'{retty}(int32)')(fn)
+                heavydb(f'{retty}(int32)', devices=['CPU'])(fn)
 
-    @heavydb('double(int64, double)')
+    @heavydb('double(int64, double)', devices=['CPU'])
     def ndarray_mean(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.mean()
 
-    @heavydb('double(int64, double)')
+    @heavydb('double(int64, double)', devices=['CPU'])
     def ndarray_min(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.min()
 
-    @heavydb('double(int64, double)')
+    @heavydb('double(int64, double)', devices=['CPU'])
     def ndarray_sum(size, v):
         a = Array(size, 'double')
         a.fill(v)
         return a.sum()
 
-    @heavydb('double(int64, double)')
+    @heavydb('double(int64, double)', devices=['CPU'])
     def ndarray_prod(size, v):
         a = Array(size, 'double')
         a.fill(v)

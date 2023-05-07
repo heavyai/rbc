@@ -174,7 +174,8 @@ def ol_day_time_interval_operator_add(a, b):
     i64_null_val = target_info.null_values["int64"]
     if target_info.is_cpu:
         DateAddHighPrecisionNullable = external(
-            "int64 DateAddHighPrecisionNullable(int64, int64, int64, int32, int64)|cpu"
+            "int64 DateAddHighPrecisionNullable(int64, int64, int64, int32, int64)",
+            devices=['CPU']
         )
     else:
         raise UnsupportedError('DateAddHighPrecisionNullable is not supported on GPU')

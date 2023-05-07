@@ -237,5 +237,28 @@ def check_returns_none(func):
     return True
 
 
+def validate_devices(devices):
+    """Return valid devices list from a user-specified devices container.
+
+    A valid device is "CPU" or "GPU" but users can specify, say, lower
+    case variants of these.
+    """
+    if devices is None:
+        return devices
+    if not isinstance(devices, (list, set, tuple)):
+        raise TypeError(f'expected devices to be a list, got {type(devices)}')
+    valid_devices = []
+    for d_ in devices:
+        if not isinstance(d_, str):
+            raise TypeError(f'expected a device to be a string, got {type(d_)}')
+        # normalize
+        d = d_.upper()
+        if d not in {'CPU', 'GPU'}:
+            raise ValueError(f'expected a device to be CPU or GPU, got `{d_}`')
+        if d not in valid_devices:
+            valid_devices.append(d)
+    return valid_devices
+
+
 DEFAULT = object()
 UNSPECIFIED = object()

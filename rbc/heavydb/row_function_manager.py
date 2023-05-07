@@ -29,10 +29,6 @@ class HeavyDBRowFunctionManagerType(HeavyDBOpaquePtr):
     def type_name(self):
         return "RowFunctionManager"
 
-    @property
-    def supported_devices(self):
-        return {'CPU'}
-
 
 class RowFunctionManagerNumbaType(OpaquePtrNumbaType):
     pass
@@ -72,8 +68,8 @@ def heavydb_udf_manager_get_dict_id(mgr, func_name, arg_idx):
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    defn = 'int32 RowFunctionManager_getDictId(int8*, int8*, int32)|CPU'
-    get_dict_id_ = external(defn)
+    defn = 'int32 RowFunctionManager_getDictId(int8*, int8*, int32)'
+    get_dict_id_ = external(defn, devices=['CPU'])
 
     def impl(mgr, func_name, arg_idx):
         func_name_ = global_str_constant("row_mgr_func_name", func_name)
@@ -87,8 +83,8 @@ def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)|CPU'
-    get_dict_db_id_ = external(defn)
+    defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)'
+    get_dict_db_id_ = external(defn, devices=['CPU'])
 
     def impl(mgr, func_name, arg_idx):
         func_name_ = global_str_constant("row_mgr_func_name", func_name)
@@ -108,6 +104,7 @@ def heavydb_udf_manager_get_string_dict_proxy(mgr, db_id, dict_id):
     sig = typing.signature(proxy, i8p, i32, i32)
 
     symbol = 'RowFunctionManager_getStringDictionaryProxy'
+    # TODO: define get_string_dict_proxy_ via external signature
     get_string_dict_proxy_ = nb_types.ExternalFunction(symbol, sig)
 
     def impl(mgr, db_id, dict_id):

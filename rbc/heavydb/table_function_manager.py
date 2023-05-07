@@ -32,10 +32,6 @@ class HeavyDBTableFunctionManagerType(HeavyDBOpaquePtr):
     def type_name(self):
         return 'TableFunctionManager'
 
-    @property
-    def supported_devices(self):
-        return {'CPU'}
-
 
 class TableFunctionManagerNumbaType(OpaquePtrNumbaType):
     pass
@@ -82,8 +78,8 @@ def heavydb_udtfmanager_error_message(mgr, msg):
     if not isinstance(msg, types.StringLiteral):
         raise RequireLiteralValue(f"expected StringLiteral but got {type(msg).__name__}")
 
-    defn = 'int32_t TableFunctionManager_error_message(int8_t*, int8_t*)|CPU'
-    mgr_error_message_ = external(defn)
+    defn = 'int32_t TableFunctionManager_error_message(int8_t*, int8_t*)'
+    mgr_error_message_ = external(defn, devices=['CPU'])
 
     identifier = "table_function_manager_error_message"
 
@@ -100,8 +96,8 @@ def heavydb_udtfmanager_set_output_row_size(mgr, num_rows):
     if target_info.software[1][:3] < (5, 9, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    defn = 'void TableFunctionManager_set_output_row_size(int8_t*, int64_t)|CPU'
-    mgr_set_output_row_size_ = external(defn)
+    defn = 'void TableFunctionManager_set_output_row_size(int8_t*, int64_t)'
+    mgr_set_output_row_size_ = external(defn, devices=['CPU'])
 
     def impl(mgr, num_rows):
         return mgr_set_output_row_size_(as_voidptr(mgr), num_rows)
@@ -120,8 +116,8 @@ def mgr_set_output_array(mgr, col_idx, value):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     defn = ('void TableFunctionManager_set_output_array_values_total_number'
-            '(int8_t*, int32_t, int64_t)|CPU')
-    mgr_set_output_array_ = external(defn)
+            '(int8_t*, int32_t, int64_t)')
+    mgr_set_output_array_ = external(defn, devices=['CPU'])
 
     def impl(mgr, col_idx, value):
         mgr_set_output_array_(as_voidptr(mgr), col_idx, value)

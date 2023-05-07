@@ -121,7 +121,7 @@ def test_TextEncodingNone_eq(heavydb):
     def eq1(a, b):
         return a == b
 
-    @heavydb('int32(TextEncodingNone)')
+    @heavydb('int32(TextEncodingNone)', devices=['CPU'])
     def eq2(a):
         return a == 'world'
 
@@ -142,7 +142,7 @@ def test_TextEncodingNone_ne(heavydb):
     def ne1(a, b):
         return a != b
 
-    @heavydb('int32(TextEncodingNone)')
+    @heavydb('int32(TextEncodingNone)', devices=['CPU'])
     def ne2(a):
         return a != 'world'
 

@@ -65,7 +65,8 @@ HeavyDBStringDictProxyType().register_datamodel()
 @extending.overload_method(StringDictionaryProxyNumbaType, 'getStringId')
 @extending.overload_method(StringDictionaryProxyNumbaType, 'getOrAddTransient')
 def ov_getStringId(proxy, str_arg):
-    getStringId_ = external("int32 StringDictionaryProxy_getStringId(int8*, int8*)|CPU")
+    getStringId_ = external("int32 StringDictionaryProxy_getStringId(int8*, int8*)",
+                            devices=['CPU'])
 
     if isinstance(str_arg, nb_types.UnicodeType):
         def impl(proxy, str_arg):
@@ -81,8 +82,10 @@ def ov_getStringId(proxy, str_arg):
 
 @extending.overload_method(StringDictionaryProxyNumbaType, 'getString')
 def heavydb_column_getString(proxy, string_id):
-    getBytes = external('int8* StringDictionaryProxy_getStringBytes(int8*, int32)|CPU')
-    getBytesLength = external('int64 StringDictionaryProxy_getStringLength(int8*, int32)|CPU')
+    getBytes = external('int8* StringDictionaryProxy_getStringBytes(int8*, int32)',
+                        devices=['CPU'])
+    getBytesLength = external('int64 StringDictionaryProxy_getStringLength(int8*, int32)',
+                              devices=['CPU'])
 
     def impl(proxy, string_id):
         ptr = getBytes(as_voidptr(proxy), string_id)
