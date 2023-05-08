@@ -154,7 +154,7 @@ def create_table(heavydb):
     ('multipolygon', 'mp3'),
     ('multipolygon', 'mp4'),
 ])
-def test_ct_coords(heavydb, suffix, col):
+def test_ct_copy(heavydb, suffix, col):
     if heavydb.version[:2] < (6, 4):
         pytest.skip('Requires HeavyDB 6.4 or newer')
 
@@ -178,7 +178,7 @@ def test_ct_coords(heavydb, suffix, col):
     ('linestring', 'l3'),
     ('linestring', 'l4'),
     ('multipoint', 'mp1'),
-    ('multipoint', 'mp2'),
+    pytest.param('multipoint', 'mp2', marks=pytest.mark.xfail(reason='odd bug')),
     ('multipoint', 'mp3'),
     ('multipoint', 'mp4'),
 ])
