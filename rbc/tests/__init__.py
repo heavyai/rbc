@@ -224,7 +224,7 @@ class _TextTestTable(_TestTable):
         }
 
 
-class _GeoPointTestTable(_TestTable):
+class _PointTestTable(_TestTable):
 
     @property
     def sqltypes(self):
@@ -384,7 +384,7 @@ class _MultiPolygonTestTable(_TestTable):
 
 test_classes = (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
                 _arraynullTestTable, _TextTestTable, _TimestampTestTable,
-                _GeoPointTestTable, _MultiPointTestTable,
+                _PointTestTable, _MultiPointTestTable,
                 _LineStringTestTable, _MultiLineStringTestTable,
                 _PolygonTestTable, _MultiPolygonTestTable)
 
@@ -434,13 +434,17 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}timestamp' - contains timestamp t9, t6
                                   where 't' prefix is for timestamp.
 
-    f'{heavydb.table_name}geopoint' - contains columns with GeoPoint
+    f'{heavydb.table_name}point' - contains columns with GeoPoint
+
+    f'{heavydb.table_name}multipoint' - contains columns with GeoMultiPoint
 
     f'{heavydb.table_name}linestring' - contains columns with LineString
 
-    f'{heavydb.table_name}multipoint' - contains columns with MultiPoint
+    f'{heavydb.table_name}multilinestring' - contains columns with MultiLineString
 
     f'{heavydb.table_name}polygon' - contains columns with Polygon
+
+    f'{heavydb.table_name}multipolygon' - contains columns with MultiPolygon
     """
     rbc_heavydb = pytest.importorskip('rbc.heavydb')
     available_version, reason = rbc_heavydb.is_available()

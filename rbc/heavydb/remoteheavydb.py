@@ -1482,6 +1482,7 @@ class RemoteHeavyDB(RemoteJIT):
             # convert `T foo` to `T | name=foo`
             if 'name' not in atype.annotation() and atype.name is not None:
                 atype.annotation(name=atype.name)
+                atype._params.pop('name')
 
             # generate fields
             if isinstance(atype, HeavyDBCursorType):

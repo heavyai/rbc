@@ -104,11 +104,10 @@ class HeavyDBGeoNestedArray(typesystem.Type):
 
     def tonumba(self, bool_is_int8=None):
         flatbuffer_t = typesystem.Type.fromstring("int8_t* flatbuffer_")
-        index_t = typesystem.Type.fromstring("int64_t index_t")
+        index_t = typesystem.Type.fromstring("int64_t index_")
         n_t = typesystem.Type.fromstring("int64_t n_")
         typ = typesystem.Type(
             flatbuffer_t,
-            # int64_t index[4]
             index_t,
             index_t,
             index_t,
@@ -122,12 +121,12 @@ class HeavyDBGeoNestedArray(typesystem.Type):
 @extending.intrinsic
 def get_c_ptr(typingctx, sz, typ):
     t = typ.dtype
+    assert isinstance(typ, nb_types.DTypeSpec)
     sig = nb_types.CPointer(t)(sz, typ)
 
     def codegen(context, builder, sig, args):
         [sz, _] = args
-        # TODO: replace i64(8) by i64(sizeof(double))
-        # TODO: The allocated memory will be automatically freed?
+        # TODO: replace i64(8) by i64(sizeof(typ))
         ptr = allocate_varlen_buffer(builder, sz, i64(8))
         typ = sig.args[1].dtype
         llty = context.get_value_type(typ)
@@ -229,24 +228,24 @@ def heavydb_geo_fromCoords_vec2(geo, lst):
     )
 
     def impl(geo, lst):
-        nrows = len(lst)
+        dim0 = len(lst)
         geo_ptr = as_voidptr(get_alloca(geo))
 
-        indices = get_c_ptr(nrows, nb_types.int64)
+        indices = get_c_ptr(dim0, nb_types.int64)
         n_elems = 0
-        for i in range(nrows):
+        for i in range(dim0):
             n_elems += len(lst[i])
             indices[i] = len(lst[i])
 
         data = get_c_ptr(n_elems, nb_types.double)
         idx = 0
-        for i in range(nrows):
-            ncols = len(lst[i])
-            for j in range(ncols):
+        for i in range(dim0):
+            dim1 = len(lst[i])
+            for j in range(dim1):
                 data[idx] = lst[i][j]
                 idx += 1
 
-        return fromCoords(geo_ptr, data, indices, nrows)
+        return fromCoords(geo_ptr, data, indices, dim0)
 
     return impl
 
@@ -264,15 +263,15 @@ def heavydb_geo_fromCoords_vec3(geo, lst):
         indices_j = []
         flatten = []
 
-        n_matrices = len(lst)
-        for i in range(n_matrices):
+        dim0 = len(lst)
+        for i in range(dim0):
             cnt = 0
-            nrows = len(lst[i])
-            for j in range(nrows):
-                ncols = len(lst[i][j])
-                cnt += ncols
-                indices_j.append(ncols)
-                for k in range(ncols):
+            dim1 = len(lst[i])
+            for j in range(dim1):
+                dim2 = len(lst[i][j])
+                cnt += dim2
+                indices_j.append(dim2)
+                for k in range(dim2):
                     flatten.append(lst[i][j][k])
             indices_i.append(cnt)
 

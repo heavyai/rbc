@@ -70,7 +70,7 @@ class TableFunctionManager(metaclass=HeavyDBMetaType):
                                             output_item_values_total_number: int) -> None:
         """
         set_output_item_values_total_number sets the total number of items
-        values in the index-th output Column of non-scalars.
+        values in the index-th output Column of varlen types.
 
 
         .. note::

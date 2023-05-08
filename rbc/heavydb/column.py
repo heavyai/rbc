@@ -27,23 +27,29 @@ class HeavyDBColumnType(HeavyDBBufferType):
     """
 
     def postprocess_type(self):
-        # re-wire the implementation of Column<T> to a subtype of Column
-        if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
-            from .column_array import HeavyDBColumnArrayType
-            return self.copy(cls=HeavyDBColumnArrayType)
-        elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
-            from .column_array import HeavyDBOutputColumnArrayType
-            return self.copy(cls=HeavyDBOutputColumnArrayType)
+        # if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
+        #     from .column_array import HeavyDBColumnArrayType
+        #     return self.copy(cls=HeavyDBColumnArrayType)
+        # elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
+        #     from .column_array import HeavyDBOutputColumnArrayType
+        #     return self.copy(cls=HeavyDBOutputColumnArrayType)
 
-        # re-wire for Column<Geo>
+        # re-wire the implementation of Column<T> to a subtype of Column
         from rbc import heavydb  # is there a better way to do this?
-        geo_columns = [t for t in dir(heavydb) if t.startswith('Geo')]
+        geo_columns = ['GeoPoint', 'GeoMultiPoint',
+                       'GeoLineString', 'GeoMultiLineString',
+                       'GeoPolygon', 'GeoMultiPolygon']
+        redirect_column_types = geo_columns + ['HeavyDBArray']
         kind = ['', 'Output']
         for p in kind:
-            for s in geo_columns:
-                column_name = f'HeavyDB{p}ColumnType<{s}>'
+            for s in redirect_column_types:
+                column_name = f'HeavyDB{p}ColumnType<{s}'
                 if self.tostring().startswith(column_name):
                     typename = f'HeavyDB{p}Column{s}Type'
+                    # if self is a Column<Array<T>>, then, typename will be
+                    # replaced to:
+                    #  HeavyDB*ColumnHeavyDBArrayType -> HeavyDBColumnArrayType
+                    typename = typename.replace('HeavyDBArray', 'Array')
                     cls = getattr(heavydb, typename)
                     return self.copy(cls=cls)
 

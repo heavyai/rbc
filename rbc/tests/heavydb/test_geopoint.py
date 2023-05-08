@@ -7,7 +7,7 @@ from rbc.tests import heavydb_fixture
 @pytest.fixture(scope='module')
 def heavydb():
     for o in heavydb_fixture(globals(), minimal_version=(6, 4),
-                             suffices=['geopoint']):
+                             suffices=['point']):
         define(o)
         yield o
 
@@ -56,7 +56,7 @@ def define(heavydb):
         return size
 
 
-@pytest.mark.parametrize('suffix', ('geopoint',))
+@pytest.mark.parametrize('suffix', ('point',))
 @pytest.mark.parametrize('col', ('p1', 'p2', 'p3', 'p4'))
 def test_ct_coords(heavydb, suffix, col):
     if heavydb.version[:2] < (6, 4):
@@ -75,7 +75,7 @@ def test_ct_coords(heavydb, suffix, col):
     np.testing.assert_equal(result, expected)
 
 
-@pytest.mark.parametrize('suffix', ('geopoint',))
+@pytest.mark.parametrize('suffix', ('point',))
 @pytest.mark.parametrize('col', ('p1', 'p2', 'p3', 'p4'))
 def test_ct_shift(heavydb, suffix, col):
     if heavydb.version[:2] < (6, 4):
@@ -100,7 +100,7 @@ def test_ct_make_linestring2(heavydb, col, dx, dy):
     if heavydb.version[:2] < (6, 4):
         pytest.skip('Requires HeavyDB 6.4 or newer')
 
-    suffix = 'geopoint'
+    suffix = 'point'
     table = heavydb.table_name + suffix
 
     query = ("SELECT * FROM TABLE(rbc_ct_make_linestring2(CURSOR(SELECT "

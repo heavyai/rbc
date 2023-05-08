@@ -11,15 +11,14 @@ __all__ = [
 ]
 
 import operator
+from typing import TypeVar
 
 from llvmlite import ir
-from numba.core import extending, cgutils
+from numba.core import cgutils, extending
 from numba.core import types as nb_types
 
 from rbc import typesystem
 from rbc.external import external
-
-from typing import TypeVar
 
 from .column import HeavyDBColumnType, HeavyDBOutputColumnType
 from .metatype import HeavyDBMetaType
@@ -66,7 +65,7 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
     def get_n_of_values(self) -> int:
         """
-        Return the total number of points in a Column[T]
+        Return the total number of points in a Column<T>
 
         .. note::
             Only available on ``CPU``
@@ -74,7 +73,7 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
     def size(self) -> int:
         """
-        Return the length of the Column[T]
+        Return the length of the Column<T>
 
         ..  note::
              Only available on ``CPU``
@@ -82,7 +81,7 @@ class ColumnFlatBuffer(metaclass=HeavyDBMetaType):
 
     def __len__(self) -> int:
         """
-        Return the length of the Column[T]
+        Return the length of the Column<T>
 
         ..  note::
              Only available on ``CPU``
@@ -125,7 +124,7 @@ class HeavyDBOutputColumnFlatBufferType(
 
 class ColumnFlatBufferType(nb_types.Type):
     def __init__(self, name):
-        self.dtype = name[7:-1]
+        self.dtype = name.split('<', 1)[1][:-1]
         super().__init__(name)
 
     @property
@@ -202,7 +201,9 @@ def heavydb_column_getnofvalues(col):
 @extending.overload(operator.getitem)
 @extending.overload_method(ColumnFlatBufferPointer, "get_item")
 def heavydb_column_getitem(col, index):
-    if isinstance(col, ColumnFlatBufferPointer) and col.eltype != "GeoPoint":
+    supported_geotypes = {"GeoLineString", "GeoMultiLineString", "GeoPolygon",
+                          "GeoMultiPolygon", "GeoMultiPoint"}
+    if isinstance(col, ColumnFlatBufferPointer) and col.eltype in supported_geotypes:
 
         def impl(col, index):
             return heavydb_column_getitem_(col, index)
