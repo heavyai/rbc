@@ -3,8 +3,7 @@
 
 # This code has heavily inspired in the numba.extending.intrisic code
 import warnings
-from typing import Dict, List, Union
-from collections import defaultdict
+from typing import List, Union
 from numba.core import extending, funcdesc, types, typing
 from rbc.typesystem import Type
 from rbc.targetinfo import TargetInfo
@@ -15,7 +14,7 @@ from rbc.utils import validate_devices
 class External:
 
     @classmethod
-    def external(cls, *args, **kwargs):
+    def external(cls, signature, *, devices=['CPU']):
         """Parameters
         ----------
         signature : object (str, ctypes function, python callable, numba function)
@@ -27,49 +26,36 @@ class External:
           Device names ('CPU' or/and 'GPU') for the given set of
           signatures. Default is ['CPU'].
         """
-        if not args:
-            raise ValueError('specifying at least one signature is required')
+        with TargetInfo.dummy():
+            t = Type.fromobject(signature)
+        if not t.is_function:
+            raise ValueError("signature must represent a function type")
+        name = t.name
+        if not name:
+            raise ValueError(
+                f"external function name not specified for signature {signature}"
+            )
 
         # Default devices contains `CPU` only because in most cases
         # the externals are defined for the CPU target.
-        devices = validate_devices(kwargs.get('devices', ['CPU']))
-
-        ts = defaultdict(list)
-        name = None
-        for signature in args:
-            with TargetInfo.dummy():
-                t = Type.fromobject(signature)
-            if not t.is_function:
-                raise ValueError("signature must represent a function type")
-            if not t.name:
-                raise ValueError(
-                    f"external function name not specified for signature {signature}"
-                )
-            if name is None:
-                name = t.name
-            elif name != t.name:
-                raise ValueError('expected external function name `{name}`, got `{t.name}`')
-
-            # Using annotation devices (specified via `| CPU` or `| GPU`) is deprecated.
-            # TODO: turn the warning to an exception for rbc version 0.12 or higher
-            annotation_devices = validate_devices([d for d in t.annotation()
-                                                   if d.upper() in {'CPU', 'GPU'}])
-            for d in annotation_devices:
-                warnings.warn(
-                    f'Signature {signature} uses deprecated device annotation (`|{d}`).'
-                    ' Use `devices` kw argument to specify the supported devices of the'
-                    f' external function `{name}`')
-            signature_devices = annotation_devices or devices
-
-            for device in signature_devices:
-                ts[device].append(signature)
+        devices = validate_devices(devices)
+        # Using annotation devices (specified via `| CPU` or `| GPU`) is deprecated.
+        # TODO: turn the warning to an exception for rbc version 0.12 or higher
+        annotation_devices = validate_devices([d for d in t.annotation()
+                                               if d.upper() in {'CPU', 'GPU'}])
+        for d in annotation_devices:
+            warnings.warn(
+                f'Signature {signature} uses deprecated device annotation (`|{d}`).'
+                ' Use `devices` kw argument to specify the supported devices of the'
+                f' external function `{name}`')
+        devices = annotation_devices or devices
 
         # The key must contain devices bit to avoid spurious errors
         # when externals with the same name but variable device
         # targets are defined (as exemplified in
         # tests/heavydb/test_array.py:test_ptr):
         key = f'{name}-{"-".join(sorted(devices))}'
-        obj = cls(key, name, dict(ts))
+        obj = cls(key, name, signature, devices)
         obj.register()
         return obj
 
@@ -77,7 +63,8 @@ class External:
         self,
         key: str,
         name: str,
-        signatures: Dict[str, List[Union[str, types.FunctionType, Type]]],
+        signature: List[Union[str, types.FunctionType, Type]],
+        devices: List[str]
     ):
         """
         Parameters
@@ -89,22 +76,19 @@ class External:
         signatures : Dictionary of devices and function signatures
             A device mapping of a list of function type signature
         """
-        self._signatures = signatures
         self.key = key
         self.name = name
+        self.signature = signature
+        self.devices = devices
 
     def __str__(self):
-        a = []
-        for device in self._signatures:
-            for t in self._signatures[device]:
-                a.append(str(t))
-        return ", ".join(a)
+        return f'{self.signature} | {" | ".join(self.devices)}'
 
     def match_signature(self, atypes):
         # Code here is the same found in remotejit.py::Signature::best_match
         target_info = TargetInfo()
         device = "CPU" if target_info.is_cpu else "GPU"
-        if device not in self._signatures:
+        if device not in self.devices:
             compile_target = target_info.get_compile_target()
             # Raising UnsupportedError will skip compiling the compile
             # target for the given device. This could also be skipped
@@ -120,24 +104,17 @@ class External:
                     f'no {device} specific signatures found for the external function'
                     f' `{self.name}` that is referenced by `{compile_target}`.')
 
-        available_types = tuple(map(Type.fromobject, self._signatures[device]))
-        ftype = None
-        match_penalty = None
-        for typ in available_types:
-            penalty = typ.match(atypes)
-            if penalty is not None:
-                if ftype is None or penalty < match_penalty:
-                    ftype = typ
-                    match_penalty = penalty
-        if ftype is None:
-            satypes = ", ".join(map(str, atypes))
-            available = "; ".join(map(str, available_types))
-            raise TypeError(
-                f"{compile_target=}: found no matching function type to the given argument types"
-                f" `{satypes}` and device `{device}` while processing `{self.name}`."
-                f" Available function types: {available}"
-            )
-        return ftype
+        this_type = Type.fromobject(self.signature)
+
+        if this_type.match(atypes) is not None:
+            return this_type
+
+        satypes = ", ".join(map(str, atypes))
+        raise TypeError(
+            f"{compile_target=}: found no matching function type to the given argument types"
+            f" `{satypes}` and device `{device}` while processing `{self.name}`."
+            f" Available function type is `{this_type}`."
+        )
 
     def get_codegen(self):
         # lowering

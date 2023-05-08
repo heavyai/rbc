@@ -69,7 +69,7 @@ def heavydb_udf_manager_get_dict_id(mgr, func_name, arg_idx):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     defn = 'int32 RowFunctionManager_getDictId(int8*, int8*, int32)'
-    get_dict_id_ = external(defn, devices=['CPU'])
+    get_dict_id_ = external(defn)
 
     def impl(mgr, func_name, arg_idx):
         func_name_ = global_str_constant("row_mgr_func_name", func_name)
@@ -84,7 +84,7 @@ def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)'
-    get_dict_db_id_ = external(defn, devices=['CPU'])
+    get_dict_db_id_ = external(defn)
 
     def impl(mgr, func_name, arg_idx):
         func_name_ = global_str_constant("row_mgr_func_name", func_name)
