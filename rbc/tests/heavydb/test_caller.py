@@ -37,7 +37,7 @@ def define(heavydb):
             y[i] = x[i] + dx
         return size
 
-    @heavydb('TextEncodingNone(TextEncodingNone)')
+    @heavydb('TextEncodingNone(TextEncodingNone)', devices=['CPU'])
     def myupper(s):
         r = TextEncodingNone(len(s))
         for i in range(len(s)):
@@ -70,10 +70,10 @@ def test_udtf_string_repr(heavydb):
 
     assert_equal(repr(arange),
                  ("RemoteDispatcher('arange', ['UDTF(int32 size, T x0, OutputColumn<T> x),"
-                  " T=int64|float64|int32, device=cpu'])"))
+                  " T=int64|float64|int32, device=CPU'])"))
     assert_equal(str(arange),
                  ("arange['UDTF(int32 size, T x0, OutputColumn<T> x),"
-                  " T=int64|float64|int32, device=cpu']"))
+                  " T=int64|float64|int32, device=CPU']"))
 
     assert_equal(repr(arange(5, 0)),
                  ("HeavyDBQueryCapsule('SELECT x FROM"
@@ -114,7 +114,7 @@ def test_remote_float64_evaluation(heavydb):
 
 def test_remote_TextEncodingNone_evaluation(heavydb):
     myupper = heavydb.get_caller('myupper')
-    assert str(myupper) == "myupper['TextEncodingNone(TextEncodingNone)']"
+    assert str(myupper) == "myupper['TextEncodingNone(TextEncodingNone), device=CPU']"
     assert str(myupper("abc")) == "SELECT myupper('abc')"
     assert str(myupper("abc").execute()) == 'ABC'
     assert str(myupper(b"abc")) == "SELECT myupper('abc')"

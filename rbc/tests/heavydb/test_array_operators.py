@@ -100,7 +100,7 @@ def define(heavydb):
             b[i] = nb_types.int32(size-i-1)
         return operator.and_(a, b)
 
-    @heavydb('int64(int64, int64, int64)')
+    @heavydb('int64(int64, int64, int64)', devices=['CPU'])
     def operator_countOf(size, fill_value, b):
         a = Array(size, 'int64')
         for i in range(size):
@@ -114,7 +114,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return a == v
 
-    @heavydb('bool(int64, int32)')
+    @heavydb('bool(int64, int32)', devices=['CPU'])
     def operator_eq_array(size, v):
         a = Array(size, 'int32')
         for i in range(size):
@@ -146,7 +146,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return a >= v
 
-    @heavydb('bool(int64, int32)')
+    @heavydb('bool(int64, int32)', devices=['CPU'])
     def operator_ge_array(size, v):
         a = Array(size, 'int32')
         for i in range(size):
@@ -160,7 +160,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return a > v
 
-    @heavydb('bool(int64, int32)')
+    @heavydb('bool(int64, int32)', devices=['CPU'])
     def operator_gt_array(size, v):
         a = Array(size, 'int32')
         for i in range(size):
@@ -307,26 +307,26 @@ def define(heavydb):
         operator.ixor(a, b)
         return a
 
-    @heavydb('int8(int64, int32)')
+    @heavydb('int8(int64, int32)', devices=['CPU'])
     def operator_in(size, v):
         a = Array(size, 'int32')
         for i in range(size):
             a[i] = nb_types.int32(i)
         return v in a
 
-    @heavydb('int8(int64, int32)')
+    @heavydb('int8(int64, int32)', devices=['CPU'])
     def operator_is(size, v):
         a = Array(size, 'int32')
         a.fill(v)
         return a is a
 
-    @heavydb('int8(int64, int32)')
+    @heavydb('int8(int64, int32)', devices=['CPU'])
     def operator_is_not(size, v):
         a = Array(size, 'int32')
         a.fill(v)
         return a is not a
 
-    @heavydb('int8(int64, int32)')
+    @heavydb('int8(int64, int32)', devices=['CPU'])
     def operator_is_not2(size, v):
         a = Array(size, 'int32')
         a.fill(v)
@@ -341,7 +341,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return a <= v
 
-    @heavydb('bool(int64, int32)')
+    @heavydb('bool(int64, int32)', devices=['CPU'])
     def operator_le_array(size, v):
         a = Array(size, 'int32')
         for i in range(size):
@@ -364,7 +364,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return a < v
 
-    @heavydb('bool(int64, int32)')
+    @heavydb('bool(int64, int32)', devices=['CPU'])
     def operator_lt_array(size, v):
         a = Array(size, 'int32')
         for i in range(size):
@@ -396,7 +396,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return a != v
 
-    @heavydb('bool(int64, int32)')
+    @heavydb('bool(int64, int32)', devices=['CPU'])
     def operator_ne_array(size, v):
         a = Array(size, 'int32')
         for i in range(size):
@@ -410,7 +410,7 @@ def define(heavydb):
             a[i] = nb_types.int32(i)
         return operator.neg(a)
 
-    @heavydb('int8(int64, int32)')
+    @heavydb('int8(int64, int32)', devices=['CPU'])
     def operator_not_in(size, v):
         a = Array(size, 'int32')
         for i in range(size):

@@ -90,8 +90,8 @@ extern "C" {{
 #endif
     '''
     heavydb.user_defined_llvm_ir[device] = heavydb.compiler(c_code)
-    mysum_impl = external(f'{ctype} mysum_impl({ctype}*, int32_t)')
-    myval_impl = external(f'{ctype} myval_impl({ctype}*)')
+    mysum_impl = external(f'{ctype} mysum_impl({ctype}*, int32_t)', devices=[device])
+    myval_impl = external(f'{ctype} myval_impl({ctype}*)', devices=[device])
 
     @heavydb(f'{ctype}({ctype}[])', devices=[device])
     def mysum_ptr(x):
@@ -281,7 +281,7 @@ def test_array_setitem(heavydb):
 def test_array_constructor_noreturn(heavydb):
     heavydb.reset()
 
-    @heavydb('float64(int32)')
+    @heavydb('float64(int32)', devices=['CPU'])
     def array_noreturn(size):
         a = Array(size, nb_types.float64)
         b = Array(size, nb_types.float64)
@@ -328,7 +328,7 @@ def test_array_constructor_return(heavydb):
 def test_array_constructor_len(heavydb):
     heavydb.reset()
 
-    @heavydb('int64(int32)')
+    @heavydb('int64(int32)', devices=['CPU'])
     def array_len(size):
         a = Array(size, nb_types.float64)
         return len(a)
@@ -342,7 +342,7 @@ def test_array_constructor_len(heavydb):
 def test_array_constructor_getitem(heavydb):
     heavydb.reset()
 
-    @heavydb('double(int32, int32)')
+    @heavydb('double(int32, int32)', devices=['CPU'])
     def array_ptr(size, pos):
         a = Array(size, np.double)
         for i in range(size):
@@ -358,7 +358,7 @@ def test_array_constructor_getitem(heavydb):
 def test_array_constructor_is_null(heavydb):
     heavydb.reset()
 
-    @heavydb('int8(int64)')
+    @heavydb('int8(int64)', devices=['CPU'])
     def array_is_null(size):
         a = Array(size, 'double')
         return a.is_null()

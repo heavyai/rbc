@@ -12,7 +12,7 @@ from . import irtools
 from .errors import UnsupportedError
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
-from .utils import get_local_ip, UNSPECIFIED
+from .utils import get_local_ip, UNSPECIFIED, validate_devices
 from .targetinfo import TargetInfo
 
 
@@ -160,7 +160,7 @@ class Signature:
         if obj is None:
             return self
         options, templates = extract_templates(options)
-        devices = options.get('devices')
+        devices = validate_devices(options.get('devices'))
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
             self.signature_devices.update(obj.signature_devices)
@@ -249,14 +249,39 @@ class Signature:
         fsig = Type.fromcallable(func) if func is not None else None
         nargs = fsig.arity if func is not None else None
         target_info = TargetInfo()
-        for sig in self.signatures:
-            devices = self.signature_devices.get(sig)
-            if not target_info.check_enabled(devices):
+        target_device = 'GPU' if target_info.is_gpu else 'CPU'
+
+        # Signature devices are specified by the `devices` kw
+        # argument, as in `@heavydb(signature, devices=['CPU'])`, for
+        # instance. When no signature device is specified (the
+        # `signature_devices is None` case), we'll try to deduce if
+        # the signature is valid for the given device from argument
+        # types as certain argument types are device-specific.
+        def _check_signature_device_support(sig, signature_devices):
+            if signature_devices is None:
+                if not self.remotejit.check_function_type_supports_device(sig, target_device):
+                    if self.debug:
+                        print(f'{type(self).__name__}.normalized: skipping {sig} as'
+                              f' it does not support device `{target_device}`')
+                    return False
+            elif not target_info.check_enabled(signature_devices):
                 if self.debug:
                     print(f'{type(self).__name__}.normalized: skipping {sig} as'
-                          f' not supported by devices: {devices}')
-                continue
+                          f' its devices `{signature_devices}` does not include the target'
+                          f' device `{target_device}`')
+                return False
+            elif not self.remotejit.check_function_type_supports_device(sig, target_device):
+                func_name = func.__name__ if func is not None else None
+                raise ValueError(
+                    f'signature {sig} devices `{signature_devices}` contradict with'
+                    f' the device {target_device} support test. Correct the signature'
+                    f' devices in `{func_name}` definition.')
+            return True
+
+        for sig in self.signatures:
             templates = self.signature_templates.get(sig, {})
+            signature_devices = self.signature_devices.get(sig)
+
             sig = Type.fromobject(sig)
             if not sig.is_complete:
                 warnings.warn(f'Incomplete signature {sig} will be ignored')
@@ -265,6 +290,7 @@ class Signature:
                 raise ValueError(
                     'expected signature representing function type,'
                     f' got `{sig}`')
+
             if nargs is None:
                 nargs = sig.arity
             elif sig.arity != nargs:
@@ -277,13 +303,17 @@ class Signature:
                 for csig in sig.apply_templates(templates):
                     assert isinstance(csig, Type), (sig, csig, type(csig))
                     csig = self.remotejit.normalize_function_type(csig)
-                    signature.add(csig)
+                    if _check_signature_device_support(csig, signature_devices):
+                        signature.add(csig)
             else:
                 sig = self.remotejit.normalize_function_type(sig)
-                signature.add(sig)
+                if _check_signature_device_support(sig, signature_devices):
+                    signature.add(sig)
+
         if fsig is not None and fsig.is_complete:
             fsig = self.remotejit.normalize_function_type(fsig)
-            signature.add(fsig)
+            if _check_signature_device_support(fsig, None):
+                signature.add(fsig)
         return signature
 
 
@@ -719,8 +749,10 @@ class RemoteJIT:
         ------------------
         local : bool
         devices : list
-          Specify device names for the given set of signatures. Possible
-          values are 'cpu', 'gpu'.
+          Specify device names for the given set of
+          signatures. Possible values are 'cpu', 'gpu' (case may
+          vary). When unspecified, the default device list is ['CPU',
+          'GPU'] but certain argument types may restrict this list.
         templates : dict(str, list(str))
           Specify template types mapping.
 
@@ -742,15 +774,12 @@ class RemoteJIT:
             s = Signature(self.local)
         else:
             s = Signature(self)
+        devices = validate_devices(devices)
         options = dict(
             local=local,
             devices=devices,
             templates=templates.get('templates') or templates
         )
-        if devices is not None and not {'cpu', 'gpu'}.issuperset(devices):
-            raise ValueError("'devices' can only be a list with possible "
-                             f"values 'cpu', 'gpu' but got {devices}")
-
         _, templates = extract_templates(options)
         for sig in signatures:
             s = s(sig, devices=devices, templates=templates)
@@ -866,10 +895,22 @@ class RemoteJIT:
         Returns
         -------
         ftype: Type
-          typesystem type of a function with normalization hools applied
+          typesystem type of a function with normalization hooks applied
         """
         assert ftype.is_function, ftype
         return ftype
+
+    def check_function_type_supports_device(self, ftype: Type, device: str):
+        """Check if function type can be supported by the specified device.
+
+        Parameters
+        ----------
+        ftype: Type
+          typesystem type of a function
+        device: {"CPU", "GPU"}
+          specified device
+        """
+        return True
 
     def preprocess_callable(self, func):
         """Preprocess func to be used as a remotejit function definition.

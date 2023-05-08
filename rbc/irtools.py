@@ -330,6 +330,7 @@ def compile_instance(func, sig,
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(
         sig.tonumba(bool_is_int8=True))
+    target.set_compile_target(fname)
     try:
         cres = compiler.compile_extra(typingctx=typing_context,
                                       targetctx=target_context,
@@ -340,10 +341,13 @@ def compile_instance(func, sig,
                                       library=main_library,
                                       locals={},
                                       pipeline_class=pipeline_class)
+        target.set_compile_target(None)
     except UnsupportedError as msg:
+        target.set_compile_target(None)
         warnings.warn(f'Skipping {fname}: {msg.args[1]}')
         return
     except (nb_errors.TypingError, nb_errors.LoweringError) as msg:
+        target.set_compile_target(None)
         for m in re.finditer(r'UnsupportedError(.*?)\n', str(msg), re.S):
             warnings.warn(f'Skipping {fname}:{m.group(0)[18:]}')
             break
@@ -351,6 +355,7 @@ def compile_instance(func, sig,
             raise
         return
     except Exception:
+        target.set_compile_target(None)
         raise
 
     result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
