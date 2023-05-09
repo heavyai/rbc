@@ -108,19 +108,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.11', '3.10', '3.9']
-        numba-version: ['0.57', '0.56']
+        python-version: ['3.10', '3.9']
+        numba-version: ['0.56']
         heavydb-version: ['6.2', '6.1', '6.0']
-        llvm-version: ['11.1', '14']
+        llvm-version: ['11.1']
         heavydb-from: [conda]
-        exclude:
-          - numba-version: '0.56'
+        include:
+          - python-version: '3.11'
+            numba-version: '0.57'
             llvm-version: '14'
-          - numba-version: '0.56'
-            python-version: '3.11'
-          - numba-version: '0.57'
-            llvm-version: '11.1'
-        # include:
         #   - os: ubuntu-latest
         #     python-version: '3.10'
         #     numba-version: '0.56'
