@@ -7,3 +7,4 @@ clang==11.1.0
 pydata-sphinx-theme>=0.9.0
 packaging
 setuptools
+urllib3<2
