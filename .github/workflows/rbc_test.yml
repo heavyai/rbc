@@ -117,7 +117,14 @@ jobs:
           - os: ubuntu-latest
             python-version: '3.11'
             numba-version: '0.57'
-            heavydb-version: '6.2'
+            heavydb-version: '6.2'  # if changing this value, update the condition
+                                    # on "Run rbc tests [LLVM mismatch]"
+            heavydb-from: conda
+            llvm-version: '14'
+          - os: ubuntu-latest
+            python-version: '3.11'
+            numba-version: '0.57'
+            heavydb-version: '7.0'  # to be released
             heavydb-from: conda
             llvm-version: '14'
         #   - os: ubuntu-latest
@@ -239,9 +246,9 @@ jobs:
           pkill -f heavydb
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
-      - name: Run rbc tests
+      - name: Run rbc tests [conda]
         shell: bash -l {0}
-        if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker' ) }}
+        if: matrix.heavydb-from == 'conda' && ! (matrix.numba-version == '0.57' && matrix.heavydb-version == '6.2')
         env:
           HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -252,6 +259,19 @@ jobs:
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
           pkill -f heavydb
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
+
+      - name: Run rbc tests [LLVM mismatch]
+        shell: bash -l {0}
+        if: matrix.numba-version == '0.57' && matrix.heavydb-version == '6.2'
+        env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
+          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
+          EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
+          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
+          RBC_TESTS_FULL: TRUE
+        run: |
+          mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/test_heavydb.py -k test_numba_heavydb_llvm_mismatch
+
 
       - name: Show Heavydb conda logs on failure [conda]
         shell: bash -l {0}
