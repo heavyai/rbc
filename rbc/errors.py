@@ -3,8 +3,17 @@ rbc-specific errors and warnings.
 """
 
 
-from rbc.utils import get_version
 from numba.core.errors import TypingError
+
+from rbc.utils import get_version
+
+
+class LLVMVersionMismatchError(Exception):
+    """
+    Raised when Numba and HeavyDB uses different LLVM version which is known to
+    be incompatible/problematic.
+    """
+    pass
 
 
 class HeavyDBServerError(Exception):
@@ -55,5 +64,5 @@ if get_version('numba') < (0, 55):
     class RequireLiteralValue(TypingError):
         pass
 else:
-    from numba.core.errors import NumbaTypeError, NumbaNotImplementedError, \
-                                  RequireLiteralValue  # noqa: F401
+    from numba.core.errors import RequireLiteralValue  # noqa: F401
+    from numba.core.errors import NumbaNotImplementedError, NumbaTypeError

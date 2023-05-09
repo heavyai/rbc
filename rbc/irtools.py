@@ -18,7 +18,7 @@ from numba.core import extending, imputils, registry, sigutils, typing
 from rbc.externals import stdio
 from rbc.nrt import create_nrt_functions
 
-from .errors import UnsupportedError
+from .errors import UnsupportedError, LLVMVersionMismatchError
 from .libfuncs import Library
 from .targetinfo import TargetInfo
 
@@ -226,11 +226,6 @@ class JITRemoteTargetContext(cpu.CPUContext):
 
 # ---------------------------------------------------------------------------
 # Code generation methods
-
-
-class LLVMVersionMismatchError(Exception):
-    pass
-
 
 @contextmanager
 def replace_numba_internals_hack():
