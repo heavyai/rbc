@@ -37,7 +37,7 @@ def define(heavydb):
         return m * sz
 
     @heavydb("int32(ColumnList<TextEncodingDict>, RowMultiplier, OutputColumn<int32_t>)",
-             devices=['cpu'])
+             devices=['CPU'])
     def test_copy_column_list(lst, m, y):
         for j in range(len(y)):
             y[j] = 0
@@ -52,7 +52,7 @@ def define(heavydb):
              "OutputColumn<T> | input_id=args<0, 2>, "
              "OutputColumn<T> | input_id=args<2, 0>, "
              "OutputColumn<T> | input_id=args<2, 1>)",
-             devices=['cpu'], T=["TextEncodingDict"])
+             devices=['CPU'], T=["TextEncodingDict"])
     def test_copy_column_list2(lst1, col, lst2, m, a, b, c):
         for j in range(lst1.nrows):
             a[j] = lst1[2][j]
@@ -61,7 +61,7 @@ def define(heavydb):
         return lst1.nrows
 
     @heavydb("int32(ColumnList<T>, Column<U>, RowMultiplier, OutputColumn<U> | input_id=args<1>)",
-             devices=['cpu'], T=["int32_t"], U=["TextEncodingDict"])
+             devices=['CPU'], T=["int32_t"], U=["TextEncodingDict"])
     def test_copy_column_list3(lst, col, m, y):
         sz = len(col)
         for j in range(sz):
@@ -69,14 +69,14 @@ def define(heavydb):
         return m * sz
 
     if heavydb.version[:2] >= (6, 2):
-        @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, TextEncodingNone, OutputColumn<int32_t>)',  # noqa: E501
-                 devices=['cpu'])
+        @heavydb('int32(Column<TextEncodingDict>, RowMultiplier, TextEncodingNone, OutputColumn<int32_t>)', devices=['CPU'])  # noqa: E501
         def test_getstringid_from_arg(x, m, text, y):
             y[0] = x.string_dict_proxy.getStringId(text)
             return 1
 
-        @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)',  # noqa: E501
-                 devices=['cpu'])
+        # No need to specify devices=['CPU'] when a UDTF uses
+        # TableFunctionManager argument.
+        @heavydb('int32(TableFunctionManager, OutputColumn<TextEncodingDict> | input_id=args<>)')  # noqa: E501
         def test_empty_input_id(mgr, out):
             mgr.set_output_row_size(2)
             out[0] = out.string_dict_proxy.getStringId("onedal")
@@ -84,19 +84,20 @@ def define(heavydb):
             return len(out)
 
         @heavydb('int32(Column<T>, RowMultiplier, OutputColumn<int32_t>)',
-                 devices=['cpu'], T=['TextEncodingDict'])
+                 T=['TextEncodingDict'],
+                 devices=['CPU'])
         def test_getstringid_from_unicode(x, m, y):
             text = "foo"  # this creates a unicode string
             y[0] = x.string_dict_proxy.getStringId(text)
             return 1
 
-        @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>)')  # noqa: E501
+        @heavydb('int32(Column<TextEncodingDict>, ConstantParameter, OutputColumn<int32_t>)', devices=['CPU'])  # noqa: E501
         def test_getstring(x, unique, y):
             for i in range(unique):
                 y[i] = len(x.string_dict_proxy.getString(i))
             return unique
 
-        @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>)')  # noqa: E501
+        @heavydb('int32(ColumnList<TextEncodingDict>, int32_t, RowMultiplier, OutputColumn<int32_t>)', devices=['CPU'])  # noqa: E501
         def test_getstring_lst(lst, unique, m, y):
             for i in range(lst.nrows):
                 y[i] = 0
@@ -108,21 +109,23 @@ def define(heavydb):
             return unique
 
     if heavydb.version[:2] >= (6, 3):
-        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        # No need to specify devices=['CPU'] when a UDF uses
+        # RowFunctionManager argument.
+        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
         def fn_copy(mgr, t):
             db_id = mgr.getDictDbId('fn_copy', 0)
             dict_id = mgr.getDictId('fn_copy', 0)
             str = mgr.getString(db_id, dict_id, t)
             return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_DB_ID, mgr.TRANSIENT_DICT_ID, str)
 
-        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)')
         def to_text_encoding_none_1(mgr, t):
             db_id = mgr.getDictDbId('to_text_encoding_none_1', 0)
             dict_id = mgr.getDictId('to_text_encoding_none_1', 0)
             str = mgr.getString(db_id, dict_id, t)
             return str
 
-        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)', devices=['cpu'])
+        @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)')
         def to_text_encoding_none_2(mgr, t):
             db_id = mgr.getDictDbId('to_text_encoding_none_2', 0)
             dict_id = mgr.getDictId('to_text_encoding_none_2', 0)

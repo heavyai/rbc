@@ -50,7 +50,7 @@ def define(heavydb):
             r = ''
         return TextEncodingNone(r)
 
-    @heavydb('bool(TextEncodingNone, TextEncodingNone, TextEncodingNone)')
+    @heavydb('bool(TextEncodingNone, TextEncodingNone, TextEncodingNone)', devices=['CPU'])
     def test_endswith(method, t, value):
         s = t.to_string()
         w = value.to_string()
@@ -102,7 +102,7 @@ def define(heavydb):
             r = s.zfill(width)
         return TextEncodingNone(r)
 
-    @heavydb('i32(TextEncodingNone, TextEncodingNone, TextEncodingNone)')
+    @heavydb('i32(TextEncodingNone, TextEncodingNone, TextEncodingNone)', devices=['CPU'])
     def test_string2(method, t, word):
         s = t.to_string()
         w = word.to_string()
@@ -118,7 +118,7 @@ def define(heavydb):
             return s.rindex(w)
         return -1
 
-    @heavydb('bool(TextEncodingNone, TextEncodingNone)')
+    @heavydb('bool(TextEncodingNone, TextEncodingNone)', devices=['CPU'])
     def test_is(method, t):
         s = t.to_string()
         if method == 'isalnum':

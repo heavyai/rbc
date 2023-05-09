@@ -36,8 +36,8 @@ def test_unnamed_external(heavydb):
 
 def test_replace_declaration(heavydb):
 
-    _ = external("f64 fma(f64)|CPU")
-    fma = external("f64 fma(f64, f64, f64)|CPU")
+    _ = external("f64 fma(f64)")
+    fma = external("f64 fma(f64, f64, f64)")
 
     @heavydb("double(double, double, double)", devices=["cpu"])
     def test_fma(a, b, c):
@@ -50,7 +50,7 @@ def test_replace_declaration(heavydb):
 
 def test_require_target_info(heavydb):
 
-    log2 = external("double log2(double)|CPU")
+    log2 = external("double log2(double)")
 
     @heavydb("double(double)", devices=["cpu"])
     def test_log2(a):

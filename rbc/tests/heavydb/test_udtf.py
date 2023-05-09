@@ -234,7 +234,7 @@ def test_table_function_error(heavydb):
     heavydb.require_version((5, 8), 'Requires heavydb-internal PR 5879')
     heavydb.reset()
 
-    @heavydb('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)')
+    @heavydb('int32(Column<double>, double, RowMultiplier, OutputColumn<double>)', devices=['CPU'])
     def my_divide(column, k, row_multiplier, out):
         if k == 0:
             return table_function_error('division by zero')

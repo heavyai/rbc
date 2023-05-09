@@ -856,7 +856,7 @@ def test_column_dtype(heavydb):
 def test_column_enumerate(heavydb):
     from rbc.externals.heavydb import set_output_row_size
 
-    @heavydb('int32(Column<int32>, OutputColumn<int32>)')
+    @heavydb('int32(Column<int32>, OutputColumn<int32>)', devices=['CPU'])
     def col_enumerate(x, y):
         sz = len(x)
         set_output_row_size(sz)

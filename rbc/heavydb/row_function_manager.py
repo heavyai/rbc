@@ -83,7 +83,7 @@ def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
-    defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)|CPU'
+    defn = 'int32 RowFunctionManager_getDictDbId(int8*, int8*, int32)'
     get_dict_db_id_ = external(defn)
 
     def impl(mgr, func_name, arg_idx):
@@ -104,6 +104,7 @@ def heavydb_udf_manager_get_string_dict_proxy(mgr, db_id, dict_id):
     sig = typing.signature(proxy, i8p, i32, i32)
 
     symbol = 'RowFunctionManager_getStringDictionaryProxy'
+    # TODO: define get_string_dict_proxy_ via external signature
     get_string_dict_proxy_ = nb_types.ExternalFunction(symbol, sig)
 
     def impl(mgr, db_id, dict_id):

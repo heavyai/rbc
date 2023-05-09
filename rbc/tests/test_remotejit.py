@@ -49,10 +49,10 @@ def test_devices_validation(ljit):
 
     # failing cases
 
-    with pytest.raises(ValueError, match="'devices' can only be a list"):
+    with pytest.raises(ValueError, match="expected a device to be CPU or GPU, got `both`"):
         _ = ljit('double(double, double)', devices=['both'])
 
-    with pytest.raises(ValueError, match="'devices' can only be a list"):
+    with pytest.raises(ValueError, match="expected a device to be CPU or GPU, got `bob`"):
         _ = ljit('double(double, double)', devices=['cpu', 'gpu', 'bob'])
 
 

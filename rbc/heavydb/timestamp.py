@@ -314,7 +314,7 @@ def cast_int_to_timestamp(context, builder, fromty, toty, val):
 def heavydb_timestamp_getYear(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_year = external('int64 extract_year(int64)|cpu')
+        extract_year = external('int64 extract_year(int64)')
 
         def impl(timestamp):
             return extract_year(timestamp.time // kNanoSecsPerSec)
@@ -325,7 +325,7 @@ def heavydb_timestamp_getYear(timestamp):
 def heavydb_timestamp_getMonth(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_month = external('int64 extract_month(int64)|cpu')
+        extract_month = external('int64 extract_month(int64)')
 
         def impl(timestamp):
             return extract_month(timestamp.time // kNanoSecsPerSec)
@@ -336,7 +336,7 @@ def heavydb_timestamp_getMonth(timestamp):
 def heavydb_timestamp_getDay(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_day = external('int64 extract_day(int64)|cpu')
+        extract_day = external('int64 extract_day(int64)')
 
         def impl(timestamp):
             return extract_day(timestamp.time // kNanoSecsPerSec)
@@ -347,7 +347,7 @@ def heavydb_timestamp_getDay(timestamp):
 def heavydb_timestamp_getHours(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_hour = external('int64 extract_hour(int64)|cpu')
+        extract_hour = external('int64 extract_hour(int64)')
 
         def impl(timestamp):
             return extract_hour(timestamp.time // kNanoSecsPerSec)
@@ -358,7 +358,7 @@ def heavydb_timestamp_getHours(timestamp):
 def heavydb_timestamp_getMinutes(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_minute = external('int64 extract_minute(int64)|cpu')
+        extract_minute = external('int64 extract_minute(int64)')
 
         def impl(timestamp):
             return extract_minute(timestamp.time // kNanoSecsPerSec)
@@ -369,7 +369,7 @@ def heavydb_timestamp_getMinutes(timestamp):
 def heavydb_timestamp_getSeconds(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_second = external('int64 extract_second(int64)|cpu')
+        extract_second = external('int64 extract_second(int64)')
 
         def impl(timestamp):
             return extract_second(timestamp.time // kNanoSecsPerSec)
@@ -380,7 +380,7 @@ def heavydb_timestamp_getSeconds(timestamp):
 def heavydb_timestamp_getMilliseconds(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_millisecond = external('int64 extract_millisecond(int64)|cpu')
+        extract_millisecond = external('int64 extract_millisecond(int64)')
 
         def impl(timestamp):
             return extract_millisecond(
@@ -392,7 +392,7 @@ def heavydb_timestamp_getMilliseconds(timestamp):
 def heavydb_timestamp_getMicroseconds(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_microsecond = external('int64 extract_microsecond(int64)|cpu')
+        extract_microsecond = external('int64 extract_microsecond(int64)')
 
         def impl(timestamp):
             return extract_microsecond(
@@ -404,7 +404,7 @@ def heavydb_timestamp_getMicroseconds(timestamp):
 def heavydb_timestamp_getNanoseconds(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        extract_nanosecond = external('int64 extract_nanosecond(int64)|cpu')
+        extract_nanosecond = external('int64 extract_nanosecond(int64)')
 
         def impl(timestamp):
             return extract_nanosecond(timestamp.time)
@@ -415,7 +415,7 @@ def heavydb_timestamp_getNanoseconds(timestamp):
 def heavydb_timestamp_truncateToYear(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        datetrunc_year = external('int64 datetrunc_year(int64)|cpu')
+        datetrunc_year = external('int64 datetrunc_year(int64)')
 
         def impl(timestamp):
             timeval = datetrunc_year(timestamp.time // kNanoSecsPerSec) * kNanoSecsPerSec
@@ -427,7 +427,7 @@ def heavydb_timestamp_truncateToYear(timestamp):
 def heavydb_timestamp_truncateToMonth(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        datetrunc_month = external('int64 datetrunc_month(int64)|cpu')
+        datetrunc_month = external('int64 datetrunc_month(int64)')
 
         def impl(timestamp):
             timeval = datetrunc_month(timestamp.time // kNanoSecsPerSec) * kNanoSecsPerSec
@@ -439,7 +439,7 @@ def heavydb_timestamp_truncateToMonth(timestamp):
 def heavydb_timestamp_truncateToDay(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        datetrunc_day = external('int64 datetrunc_day(int64)|cpu')
+        datetrunc_day = external('int64 datetrunc_day(int64)')
 
         def impl(timestamp):
             timeval = datetrunc_day(timestamp.time // kNanoSecsPerSec) * kNanoSecsPerSec
@@ -451,7 +451,7 @@ def heavydb_timestamp_truncateToDay(timestamp):
 def heavydb_timestamp_truncateToHour(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        datetrunc_hour = external('int64 datetrunc_hour(int64)|cpu')
+        datetrunc_hour = external('int64 datetrunc_hour(int64)')
 
         def impl(timestamp):
             timeval = datetrunc_hour(timestamp.time // kNanoSecsPerSec) * kNanoSecsPerSec
@@ -463,7 +463,7 @@ def heavydb_timestamp_truncateToHour(timestamp):
 def heavydb_timestamp_truncateToMinutes(timestamp):
     target_info = TargetInfo()
     if target_info.is_cpu:
-        datetrunc_minute = external('int64 datetrunc_minute(int64)|cpu')
+        datetrunc_minute = external('int64 datetrunc_minute(int64)')
 
         def impl(timestamp):
             timeval = datetrunc_minute(timestamp.time // kNanoSecsPerSec) * kNanoSecsPerSec

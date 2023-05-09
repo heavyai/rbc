@@ -1499,6 +1499,20 @@ class RemoteHeavyDB(RemoteJIT):
 
         return ftype
 
+    def check_function_type_supports_device(self, ftype: typesystem.Type, device: str):
+        """Check if function type can be supported by the specified device.
+
+        See RemoteJIT.check_function_type_supports_device.__doc__.
+        """
+        if device == 'GPU':
+            for atype in ftype[1]:
+                if isinstance(atype,
+                              (HeavyDBTableFunctionManagerType, HeavyDBRowFunctionManagerType)):
+                    return False
+            if isinstance(ftype[0], (HeavyDBArrayType, HeavyDBTextEncodingNoneType)):
+                return False
+        return True
+
     def format_type(self, typ: typesystem.Type):
         """Convert typesystem type to formatted string.
 

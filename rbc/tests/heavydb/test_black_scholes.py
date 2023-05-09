@@ -78,7 +78,7 @@ def test_black_scholes_udf(heavydb):
     # queries:
     heavydb.register()
 
-    @heavydb('double(double, double, double, double, double)')
+    @heavydb('double(double, double, double, double, double)', devices=['CPU'])
     def black_scholes_UDF(S, X, T, r, sigma):
         d1 = (np.log(S/X) + (r + 0.5 * sigma**2)*T) / (sigma * np.sqrt(T))
         d2 = d1 - sigma * np.sqrt(T)
@@ -111,7 +111,7 @@ def test_black_scholes_udtf(heavydb):
     heavydb.register()
 
     @heavydb('int32(Column<double>, Column<double>, Column<double>, Column<double>, Column<double>,'  # noqa: E501
-             ' RowMultiplier, OutputColumn<double>)')
+             ' RowMultiplier, OutputColumn<double>)', devices=['CPU'])
     def black_scholes_udtf(S, X, T, r, sigma, m, out):
         input_row_count = len(X)
 
