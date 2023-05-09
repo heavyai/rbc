@@ -148,7 +148,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           channel-priority: strict
-          channels: conda-forge
+          channels: conda-forge,numba
 
       - name: Install mamba
         shell: bash -l {0}
@@ -207,7 +207,7 @@ jobs:
           echo "  - clang=${{ matrix.llvm-version }}" >> rbc_test.yaml
           echo "  - clangxx=${{ matrix.llvm-version }}" >> rbc_test.yaml
 
-          mamba env create --file=rbc_test.yaml -c conda-forge -c numba -n rbc
+          mamba env create --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
         shell: bash -l {0}
