@@ -7,7 +7,6 @@ import pytest
 
 from rbc.errors import (HeavyDBServerError, LLVMVersionMismatchError,
                         UnsupportedError)
-from rbc.targetinfo import TargetInfo
 from rbc.tests import assert_equal, heavydb_fixture
 from rbc.typesystem import Type
 
@@ -883,7 +882,7 @@ def test_numba_heavydb_llvm_mismatch(heavydb, kind):
     heavydb.reset()
 
     # only run this test on a specific environment
-    target_info = TargetInfo()
+    target_info = heavydb.targets['cpu']
     server_llvm_version = target_info.llvm_version
     client_llvm_version = llvm.llvm_version_info
 
