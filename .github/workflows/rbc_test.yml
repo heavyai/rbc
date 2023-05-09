@@ -116,6 +116,8 @@ jobs:
         exclude:
           - numba-version: '0.56'
             llvm-version: '14'
+          - numba-version: '0.56'
+            python-version: '3.11'
           - numba-version: '0.57'
             llvm-version: '11.1'
         # include:
