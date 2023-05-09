@@ -147,7 +147,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          channel-priority: strict
+          channel-priority: flexible
           channels: conda-forge,numba
 
       - name: Install mamba
