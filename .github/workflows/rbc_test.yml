@@ -114,8 +114,11 @@ jobs:
         llvm-version: ['11.1']
         heavydb-from: [conda]
         include:
-          - python-version: '3.11'
+          - os: ubuntu-latest
+            python-version: '3.11'
             numba-version: '0.57'
+            heavydb-version: '6.2'
+            heavydb-from: conda
             llvm-version: '14'
         #   - os: ubuntu-latest
         #     python-version: '3.10'
