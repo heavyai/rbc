@@ -64,5 +64,5 @@ if get_version('numba') < (0, 55):
     class RequireLiteralValue(TypingError):
         pass
 else:
-    from numba.core.errors import RequireLiteralValue  # noqa: F401
-    from numba.core.errors import NumbaNotImplementedError, NumbaTypeError  # noqa: F401
+    from numba.core.errors import NumbaTypeError, NumbaNotImplementedError, \
+                                  RequireLiteralValue  # noqa: F401
