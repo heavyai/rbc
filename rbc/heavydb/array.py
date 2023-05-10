@@ -4,6 +4,7 @@
 __all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType']
 
 from rbc import typesystem, errors
+from .allocator import allocate_varlen_buffer
 from .buffer import (BufferPointer, Buffer,
                      HeavyDBBufferType,
                      heavydb_buffer_constructor)
@@ -41,7 +42,6 @@ class HeavyDBArrayType(HeavyDBBufferType):
 
 class ArrayPointer(BufferPointer):
     def deepcopy(self, context, builder, val, retptr):
-        from .buffer import memalloc
         ptr_type = self.dtype.members[0]
         element_size = int64_t(ptr_type.dtype.bitwidth // 8)
 
@@ -58,7 +58,9 @@ class ArrayPointer(BufferPointer):
             with otherwise:
                 # we can't just copy the pointer here because return buffers need
                 # to have their own memory, as input buffers are freed upon returning
-                dst = memalloc(context, builder, ptr_type, element_count, element_size)
+                ptr_8 = allocate_varlen_buffer(builder, element_count, element_size)
+                dst = builder.bitcast(ptr_8, context.get_value_type(ptr_type))
+
                 cgutils.raw_memcpy(builder, dst, src, element_count, element_size)
                 builder.store(dst, builder.gep(retptr, [zero, zero]))
         builder.store(element_count, builder.gep(retptr, [zero, one]))

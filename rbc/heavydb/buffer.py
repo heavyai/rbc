@@ -25,6 +25,7 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 import operator
 from .metatype import HeavyDBMetaType
+from .allocator import allocate_varlen_buffer
 from .abstract_type import HeavyDBAbstractType
 from llvmlite import ir
 import numpy as np
@@ -170,17 +171,6 @@ class BufferPointerModel(datamodel.models.PointerModel):
     """
 
 
-def memalloc(context, builder, ptr_type, element_count, element_size):
-    alloc_fn_name = 'allocate_varlen_buffer'
-    alloc_fnty = ir.FunctionType(int8_t.as_pointer(), [int64_t, int64_t])
-    alloc_fn = cgutils.get_or_insert_function(builder.module,
-                                              alloc_fnty,
-                                              alloc_fn_name)
-    ptr8 = builder.call(alloc_fn, [element_count, element_size])
-    ptr = builder.bitcast(ptr8, context.get_value_type(ptr_type))
-    return ptr
-
-
 def heavydb_buffer_constructor(context, builder, sig, args):
     """
 
@@ -204,7 +194,8 @@ def heavydb_buffer_constructor(context, builder, sig, args):
     element_count = builder.zext(args[0], int64_t)
     element_size = int64_t(ptr_type.dtype.bitwidth // 8)
 
-    ptr = memalloc(context, builder, ptr_type, element_count, element_size)
+    ptr_8 = allocate_varlen_buffer(builder, element_count, element_size)
+    ptr = builder.bitcast(ptr_8, context.get_value_type(ptr_type))
 
     llty = context.get_value_type(sig.return_type.dtype)
     st_ptr = builder.alloca(llty)
@@ -232,11 +223,9 @@ def heavydb_buffer_ptr_get_ptr_(typingctx, data):
     sig = ptrtype(data)
 
     def codegen(context, builder, signature, args):
-        data,  = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        struct = builder.load(builder.gep(rawptr,
-                                          [int32_t(0)]))
-        return builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+        [data] = args
+        zero, one = int32_t(0), int32_t(1)
+        return builder.load(builder.gep(data, [zero, one]))
 
     return sig, codegen
 
@@ -263,10 +252,9 @@ def heavydb_buffer_ptr_item_get_ptr_(typingctx, data, index):
     sig = ptrtype(data, index)
 
     def codegen(context, builder, signature, args):
-        data, index = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        struct = builder.load(builder.gep(rawptr, [int32_t(0)]))
-        ptr = builder.load(builder.gep(struct, [int32_t(0), int32_t(0)]))
+        [data, index] = args
+        zero = int32_t(0)
+        ptr = builder.load(builder.gep(data, [zero, zero]))
         return builder.gep(ptr, [index])
 
     return sig, codegen
@@ -296,12 +284,9 @@ def heavydb_buffer_ptr_len_(typingctx, data):
     sig = types.int64(data)
 
     def codegen(context, builder, signature, args):
-        data, = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        struct = builder.load(builder.gep(rawptr,
-                                          [int32_t(0)]))
-        return builder.load(builder.gep(
-            struct, [int32_t(0), int32_t(1)]))
+        [data] = args
+        zero, one = int32_t(0), int32_t(1)
+        return builder.load(builder.gep(data, [zero, one]))
     return sig, codegen
 
 
@@ -329,14 +314,10 @@ def heavydb_buffer_ptr_getitem_(typingctx, data, index):
     sig = data.eltype(data, index)
 
     def codegen(context, builder, signature, args):
-        data, index = args
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        buf = builder.load(builder.gep(rawptr, [int32_t(0)]))
-        ptr = builder.load(builder.gep(
-            buf, [int32_t(0), int32_t(0)]))
-        res = builder.load(builder.gep(ptr, [index]))
-
-        return res
+        [data, index] = args
+        zero = int32_t(0)
+        ptr = builder.load(builder.gep(data, [zero, zero]))
+        return builder.load(builder.gep(ptr, [index]))
     return sig, codegen
 
 
@@ -369,18 +350,14 @@ def heavydb_buffer_ptr_setitem_(typingctx, data, index, value):
     def codegen(context, builder, sig, args):
         zero = int32_t(0)
 
-        data, index, value = args
-
-        rawptr = cgutils.alloca_once_value(builder, value=data)
-        ptr = builder.load(rawptr)
-
-        buf = builder.load(builder.gep(ptr, [zero, zero]))
+        [data, index, value] = args
+        ptr = builder.load(builder.gep(data, [zero, zero]))
         # [rbc issue-197] Numba promotes operations like
         # int32(a) + int32(b) to int64
         fromty = sig.args[2]
         toty = sig.args[0].eltype
         value = context.cast(builder, value, fromty, toty)
-        builder.store(value, builder.gep(buf, [index]))
+        builder.store(value, builder.gep(ptr, [index]))
 
     return sig, codegen
 
@@ -390,8 +367,9 @@ def heavydb_buffer_setitem_(typingctx, data, index, value):
     sig = types.none(data, index, value)
 
     def codegen(context, builder, sig, args):
-        data, index, value = args
-        ptr = builder.extract_value(data, [0])
+        [data, index, value] = args
+        zero = int32_t(0)
+        ptr = builder.load(builder.gep(data, [zero, zero]))
 
         fromty = sig.args[2]
         toty = sig.args[0].eltype
@@ -415,9 +393,9 @@ def heavydb_buffer_is_null_(typingctx, data):
     sig = types.int8(data)
 
     def codegen(context, builder, sig, args):
-        rawptr = cgutils.alloca_once_value(builder, value=args[0])
-        ptr = builder.load(rawptr)
-        return builder.load(builder.gep(ptr, [int32_t(0), int32_t(2)]))
+        [data] = args
+        zero, two = int32_t(0), int32_t(2)
+        return builder.load(builder.gep(data, [zero, two]))
 
     return sig, codegen
 
