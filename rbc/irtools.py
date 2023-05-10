@@ -18,7 +18,7 @@ from numba.core import extending, imputils, registry, sigutils, typing
 from rbc.externals import stdio
 from rbc.nrt import create_nrt_functions
 
-from .errors import UnsupportedError, LLVMVersionMismatchError
+from .errors import UnsupportedError
 from .libfuncs import Library
 from .targetinfo import TargetInfo
 
@@ -146,6 +146,22 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
         # See https://github.com/xnd-project/rbc/issues/45
         remove_features = {
             (12, 12): [], (11, 11): [], (10, 10): [], (9, 9): [], (8, 8): [],
+            (14, 14): ['avx512pf', 'tsxldtrk', 'cx16', 'sahf', 'tbm',
+                       'avx512ifma', 'sha', 'crc32', 'fma4', 'vpclmulqdq',
+                       'prfchw', 'bmi2', 'cldemote', 'fsgsbase', 'ptwrite',
+                       'amxtile', 'uintr', 'gfni', 'popcnt', 'widekl', 'aes',
+                       'avx512bitalg', 'movdiri', 'xsaves', 'avx512er', 'avxvnni',
+                       'avx512fp16', 'avx512vnni', 'amxbf16', 'avx512vpopcntdq',
+                       'pconfig', 'clwb', 'avx512f', 'xsavec', 'clzero', 'pku',
+                       'mmx', 'lwp', 'rdpid', 'xop', 'rdseed', 'waitpkg', 'kl',
+                       'movdir64b', 'sse4a', 'avx512bw', 'clflushopt', 'xsave',
+                       'avx512vbmi2', '64bit', 'avx512vl', 'serialize', 'hreset',
+                       'invpcid', 'avx512cd', 'avx', 'vaes', 'avx512bf16', 'cx8',
+                       'fma', 'rtm', 'bmi', 'enqcmd', 'rdrnd', 'mwaitx', 'sse4.1',
+                       'sse4.2', 'avx2', 'fxsr', 'wbnoinvd', 'sse', 'lzcnt', 'pclmul',
+                       'prefetchwt1', 'f16c', 'ssse3', 'sgx', 'shstk', 'cmov',
+                       'avx512vbmi', 'amxint8', 'movbe', 'avx512vp2intersect',
+                       'xsaveopt', 'avx512dq', 'sse2', 'adx', 'sse3'],
             (14, 11): ['crc32', 'uintr', 'widekl', 'avxvnni', 'avx512fp16', 'kl',
                        'hreset'],
             (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
@@ -440,27 +456,6 @@ def compile_to_LLVM(functions_and_signatures,
       LLVM module instance. To get the IR string, use `str(module)`.
 
     """
-    # check LLVM version before compiling to LLVM
-    server_llvm_version = target_info.llvm_version
-    client_llvm_version = llvm.llvm_version_info
-
-    if (server_llvm_version[0], client_llvm_version[0]) == (11, 14):
-        c_llvm = '.'.join(map(str, client_llvm_version))
-        s_llvm = '.'.join(map(str, server_llvm_version))
-        flag = 'RBC_DISABLE_LLVM_MISMATCH_ERROR'
-        msg = (f'The client LLVM version ({c_llvm}) is greater than the server '
-               f'LLVM version ({s_llvm}). This is known to be unsupported. '
-               'Please, downgrade to a previous release of Numba that uses the '
-               'same LLVM version as the HeavyDB server. For more information, '
-               'see the table below:\n\n'
-               'https://github.com/numba/llvmlite#compatibility\n'
-               'https://github.com/heavyai/heavydb#dependencies\n\n'
-               f'To disable this error, run RBC with {flag}=1 flag enabled.')
-
-        DISABLE_LLVM_MISMATCH_ERROR = int(os.environ.get(flag, False))
-        if not DISABLE_LLVM_MISMATCH_ERROR:
-            raise LLVMVersionMismatchError(msg)
-
     target_desc = registry.cpu_target
 
     typing_context = JITRemoteTypingContext()

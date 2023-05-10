@@ -24,6 +24,7 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 
 import operator
+from .allocator import allocate_varlen_buffer
 from .metatype import HeavyDBMetaType
 from llvmlite import ir
 import numpy as np
@@ -211,7 +212,10 @@ def heavydb_buffer_constructor(context, builder, sig, args):
     ptr = memalloc(context, builder, ptr_type, element_count, element_size)
 
     llty = context.get_value_type(sig.return_type.dtype)
-    st_ptr = builder.alloca(llty)
+    st_size = context.get_abi_sizeof(llty)
+    st_ptr = builder.bitcast(allocate_varlen_buffer(builder, int64_t(st_size),
+                                                    int64_t(1)),
+                             llty.as_pointer())
 
     zero, one, two = int32_t(0), int32_t(1), int32_t(2)
     builder.store(ptr, builder.gep(st_ptr, [zero, zero]))

@@ -8,14 +8,6 @@ from numba.core.errors import TypingError
 from rbc.utils import get_version
 
 
-class LLVMVersionMismatchError(Exception):
-    """
-    Raised when Numba and HeavyDB uses different LLVM version which is known to
-    be incompatible/problematic.
-    """
-    pass
-
-
 class HeavyDBServerError(Exception):
     """
     Raised when HeavyDB server raises a runtime error that RBC knows
