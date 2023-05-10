@@ -14,8 +14,8 @@ dependencies:
   - setuptools
   - numba>=0.56
   - llvmlite
-  - clang==11
-  - clangxx==11
+  - clang
+  - clangxx
   - pytest
   - packaging
   - tblib

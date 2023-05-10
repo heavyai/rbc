@@ -5,8 +5,8 @@ import llvmlite.binding as llvm
 import numpy as np
 import pytest
 
-from rbc.errors import (HeavyDBServerError, LLVMVersionMismatchError,
-                        UnsupportedError)
+from rbc.warnings import LLVMVersionMismatchWarning
+from rbc.errors import HeavyDBServerError, UnsupportedError
 from rbc.tests import assert_equal, heavydb_fixture
 from rbc.typesystem import Type
 
@@ -906,5 +906,5 @@ def test_numba_heavydb_llvm_mismatch(heavydb, kind):
                 out[i] = inp[i]
             return size
 
-    with pytest.raises(LLVMVersionMismatchError):
+    with pytest.warns(LLVMVersionMismatchWarning):
         heavydb.register()
