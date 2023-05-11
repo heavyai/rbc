@@ -249,7 +249,7 @@ for _k, _m, _lst in [
 
 # numpy mapping
 _numpy_imap = {}
-for v in set(np.typeDict.values()):
+for v in set(np.sctypeDict.values()):
     name = np.dtype(v).name
     _numpy_imap[v] = name
 
