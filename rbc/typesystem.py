@@ -1073,9 +1073,12 @@ class Type(tuple, metaclass=MetaType):
         # atomic
         if s in cls.custom_types:
             return cls.custom_types[s](())
-        elif cls.aliases.get(s, None) in cls.custom_types:
-            custom = cls.aliases.get(s)
+
+        # custom
+        custom = cls.aliases.get(s)
+        if custom in cls.custom_types:
             return cls.custom_types[custom](())
+
         return cls(s)
 
     @classmethod
