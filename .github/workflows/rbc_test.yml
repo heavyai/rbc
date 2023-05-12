@@ -117,16 +117,17 @@ jobs:
           - os: ubuntu-latest
             python-version: '3.11'
             numba-version: '0.57'
+            llvm-version: '14'
             heavydb-version: '6.2'  # if changing this value, update the condition
                                     # on "Run rbc tests [LLVM mismatch]"
             heavydb-from: conda
-            llvm-version: '14'
           - os: ubuntu-latest
             python-version: '3.11'
             numba-version: '0.57'
-            heavydb-version: '7.0'  # to be released
-            heavydb-from: conda
             llvm-version: '14'
+            heavydb-version: '7.0'
+            docker-image: heavyai/heavyai-ee-cpu:7.0.0
+            heavydb-from: docker
         #   - os: ubuntu-latest
         #     python-version: '3.10'
         #     numba-version: '0.56'
