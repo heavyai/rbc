@@ -24,9 +24,7 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 
 import operator
-from .allocator import allocate_varlen_buffer
-from .metatype import HeavyDBMetaType
-from llvmlite import ir
+
 import numpy as np
 from llvmlite import ir
 from numba.core import cgutils, datamodel, extending, imputils, types
