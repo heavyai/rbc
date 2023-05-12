@@ -24,13 +24,15 @@ HeavyDB buffer objects from UDF/UDTFs.
 
 
 import operator
-from .metatype import HeavyDBMetaType
-from .abstract_type import HeavyDBAbstractType
-from llvmlite import ir
+
 import numpy as np
+from llvmlite import ir
+from numba.core import cgutils, datamodel, extending, imputils, types
+
 from rbc import typesystem
 from rbc.targetinfo import TargetInfo
-from numba.core import datamodel, cgutils, extending, types, imputils
+
+from .metatype import HeavyDBMetaType
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -40,7 +42,7 @@ fp32 = ir.FloatType()
 fp64 = ir.DoubleType()
 
 
-class HeavyDBBufferType(HeavyDBAbstractType):
+class HeavyDBBufferType(typesystem.Type):
     """Typesystem type class for HeavyDB buffer structures.
     """
     @property

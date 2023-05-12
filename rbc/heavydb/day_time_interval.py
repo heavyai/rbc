@@ -103,15 +103,8 @@ class HeavyDBDayTimeIntervalType(typesystem.Type):
     def tonumba(self, bool_is_int8=None):
         return DayTimeIntervalNumbaType()
 
-    def tostring(
-        self,
-        use_typename=False,
-        use_annotation=True,
-        use_name=True,
-        use_annotation_name=False,
-        _skip_annotation=False,
-    ):
-        return "DayTimeInterval"
+    def postprocess_type(self):
+        return self.params(shorttypename='DayTimeInterval')
 
 
 @extending.type_callable(DayTimeInterval)

@@ -5,14 +5,13 @@ import operator
 from numba.core import extending, cgutils, datamodel, imputils
 
 from .buffer import Buffer
-from .abstract_type import HeavyDBAbstractType
 from numba.core import types as nb_types
 from rbc.typesystem import Type
 from rbc import structure_type
 from rbc.targetinfo import TargetInfo
 
 
-class HeavyDBColumnListType(HeavyDBAbstractType):
+class HeavyDBColumnListType(Type):
 
     def postprocess_type(self):
         if self.tostring().startswith('HeavyDBColumnListType<HeavyDBArrayType'):

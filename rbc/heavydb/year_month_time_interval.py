@@ -102,15 +102,8 @@ class HeavyDBYearMonthTimeIntervalType(typesystem.Type):
     def tonumba(self, bool_is_int8=None):
         return YearMonthTimeIntervalNumbaType()
 
-    def tostring(
-        self,
-        use_typename=False,
-        use_annotation=True,
-        use_name=True,
-        use_annotation_name=False,
-        _skip_annotation=False,
-    ):
-        return "YearMonthTimeInterval"
+    def postprocess_type(self):
+        return self.params(shorttypename='YearMonthTimeInterval')
 
 
 @extending.type_callable(YearMonthTimeInterval)

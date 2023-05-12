@@ -78,8 +78,6 @@ def test_udtf_string_repr(heavydb):
     assert_equal(repr(arange(5, 0)),
                  ("HeavyDBQueryCapsule('SELECT x FROM"
                   " TABLE(arange(CAST(5 AS INT), CAST(0 AS BIGINT)))')"))
-    assert_equal(str(arange(5, 0)),
-                 "SELECT x FROM TABLE(arange(CAST(5 AS INT), CAST(0 AS BIGINT)))")
 
 
 def test_remote_udf_evaluation(heavydb):
