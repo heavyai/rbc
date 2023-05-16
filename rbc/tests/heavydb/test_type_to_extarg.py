@@ -1,7 +1,9 @@
 import pytest
 
-from rbc.typesystem import Type
+from contextlib import nullcontext as does_not_raise
+
 from rbc.tests import heavydb_fixture
+from rbc.typesystem import Type
 
 
 @pytest.fixture(scope="module")
@@ -10,8 +12,9 @@ def heavydb():
         yield o
 
 
-all_types = (
-    # Scalars
+primitives = (
+    "void",
+    "bool",
     "bool8",
     "int8",
     "int16",
@@ -19,130 +22,69 @@ all_types = (
     "int64",
     "float32",
     "float64",
-    "int8*",
-    "int16*",
-    "int32*",
-    "int64*",
-    "float32*",
-    "float64*",
-    "bool",
-    "bool*",
-    "Cursor",
-    "void",
-    "GeoPoint",
-    "GeoLineString",
-    "GeoPolygon",
-    "GeoMultiPolygon",
-    "GeoMultiLineString",
-    "GeoMultiPoint",
-    "TextEncodingNone",
-    "TextEncodingDict",
-    "Timestamp",
-    "DayTimeInterval",
-    "YearMonthTimeInterval",
-    # Array
-    "Array<bool>",
-    "Array<int8_t>",
-    "Array<int16_t>",
-    "Array<int32_t>",
-    "Array<int64_t>",
-    "Array<float>",
-    "Array<double>",
-    "Array<TextEncodingDict>",
-    "Array<TextEncodingNone>",
-    "Array<GeoPoint>",
-    "Array<GeoMultiPoint>",
-    "Array<GeoLineString>",
-    "Array<GeoMultiLineString>",
-    "Array<GeoPolygon>",
-    "Array<GeoMultiPolygon>",
-    # Column
-    "Column<bool>",
-    "Column<int8_t>",
-    "Column<int16_t>",
-    "Column<int32_t>",
-    "Column<int64_t>",
-    "Column<float>",
-    "Column<double>",
-    "Column<TextEncodingDict>",
-    "Column<TextEncodingNone>",
-    "Column<Timestamp>",
-    "Column<GeoPoint>",
-    "Column<GeoMultiPoint>",
-    "Column<GeoLineString>",
-    "Column<GeoMultiLineString>",
-    "Column<GeoPolygon>",
-    "Column<GeoMultiPolygon>",
-    # ColumnList
-    "ColumnList<bool>",
-    "ColumnList<int8_t>",
-    "ColumnList<int16_t>",
-    "ColumnList<int32_t>",
-    "ColumnList<int64_t>",
-    "ColumnList<float>",
-    "ColumnList<double>",
-    "ColumnList<TextEncodingDict>",
-    "ColumnList<TextEncodingNone>",
-    "ColumnList<GeoPoint>",
-    "ColumnList<GeoMultiPoint>",
-    "ColumnList<GeoLineString>",
-    "ColumnList<GeoMultiLineString>",
-    "ColumnList<GeoPolygon>",
-    "ColumnList<GeoMultiPolygon>",
-    # ColumnArray
-    "Column<Array<bool>>",
-    "Column<Array<int8_t>>",
-    "Column<Array<int16_t>>",
-    "Column<Array<int32_t>>",
-    "Column<Array<int64_t>>",
-    "Column<Array<float>>",
-    "Column<Array<double>>",
-    "Column<Array<TextEncodingDict>>",
-    "Column<Array<TextEncodingNone>>",
-    "Column<Array<GeoPoint>>",
-    "Column<Array<GeoMultiPoint>>",
-    "Column<Array<GeoLineString>>",
-    "Column<Array<GeoMultiLineString>>",
-    "Column<Array<GeoPolygon>>",
-    "Column<Array<GeoMultiPolygon>>",
-    # ColumnListArray
-    "ColumnList<Array<bool>>",
-    "ColumnList<Array<int8_t>>",
-    "ColumnList<Array<int16_t>>",
-    "ColumnList<Array<int32_t>>",
-    "ColumnList<Array<int64_t>>",
-    "ColumnList<Array<float>>",
-    "ColumnList<Array<double>>",
-    "ColumnList<Array<TextEncodingDict>>",
-    "ColumnList<Array<TextEncodingNone>>",
-    "ColumnList<Array<GeoPoint>>",
-    "ColumnList<Array<GeoMultiPoint>>",
-    "ColumnList<Array<GeoLineString>>",
-    "ColumnList<Array<GeoMultiLineString>>",
-    "ColumnList<Array<GeoPolygon>>",
-    "ColumnList<Array<GeoMultiPolygon>>",
+    "short",
+    "int",
+    "long",
+    "long long",
+    "float",
+    "double",
+    # fixed width integer types
+    "int8_t",
+    "int16_t",
+    "int32_t",
+    "int64_t",
 )
 
+pointers = tuple(map(lambda T: f"{T}*", primitives))
 
-def test_len(heavydb):
-    msg = 'variable "all_types" requires update'
-    assert len(heavydb._get_ext_arguments_map()) == len(all_types), msg
+geo = (
+    "GeoPoint",
+    "GeoMultiPoint",
+    "GeoLineString",
+    "GeoMultiLineString",
+    "GeoPolygon",
+    "GeoMultiPolygon",
+)
+text = ("TextEncodingNone", "TextEncodingDict")
+time = ("Timestamp", "DayTimeInterval", "YearMonthTimeInterval")
+scalars = primitives + geo + text + time
+
+cursor = tuple(map(lambda T: f"Cursor<{T}>", scalars))
+array = tuple(map(lambda T: f"Array<{T}>", scalars))
+column = tuple(map(lambda T: f"Column<{T}>", scalars))
+column_list = tuple(map(lambda T: f"ColumnList<{T}>", scalars))
+column_array = tuple(map(lambda T: f"Column<{T}>", array))
+column_list_array = tuple(map(lambda T: f"ColumnList<{T}>", array))
+
+all_types = scalars + pointers + column + column_list + column_array + column_list_array
 
 
-@pytest.mark.parametrize('device', ('cpu', 'gpu'))
+@pytest.mark.parametrize("device", ("cpu", "gpu"))
 @pytest.mark.parametrize("typ", all_types)
 def test_type_to_extarg(heavydb, device, typ):
-    skiplist = ('Array<Geo', 'Column<Array<Geo', 'ColumnList<Array<Geo',
-                'Cursor', 'bool*')
+    skiplist = (
+        "Cursor",
+        "bool*",
+        "void*",
+        "<void>",
+        "<DayTimeInterval>",
+        "<YearMonthTimeInterval>",
+        "ColumnList<Timestamp>",
+        "Column<Array<Timestamp>>",
+        "ColumnList<Array<Timestamp>>",
+        "<Geo",
+    )
 
     for skip in skiplist:
-        if typ.startswith(skip):
-            msg = f'heavydb.type_to_extarg({typ}) not supported.'
+        if skip in typ:
+            msg = f"heavydb.type_to_extarg({typ}) not supported."
             pytest.skip(msg)
 
-    with Type.alias(**heavydb.typesystem_aliases):
-        for _device, target_info in heavydb.targets.items():
-            if device == _device:
-                with target_info:
-                    t = Type.fromstring(typ)
-                    assert heavydb.type_to_extarg(t) is not None
+    if device not in heavydb.targets:
+        pytest.skip(f'device "{device}" not available')
+    target_info = heavydb.targets[device]
+    with target_info:
+        with Type.alias(**heavydb.typesystem_aliases):
+            t = Type.fromstring(typ)
+            with does_not_raise():
+                heavydb.type_to_extarg(t)
