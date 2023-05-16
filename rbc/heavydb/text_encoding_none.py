@@ -15,9 +15,9 @@ from numba.cpython.unicode import _empty_string, _set_code_point
 
 from rbc import typesystem
 
+from .allocator import allocate_varlen_buffer
 from .array import ArrayPointer
 from .buffer import Buffer, HeavyDBBufferType, heavydb_buffer_constructor
-from .allocator import allocate_varlen_buffer
 
 i8 = ir.IntType(8)
 i8p = i8.as_pointer()
@@ -176,7 +176,10 @@ def text_encoding_none_unicode_ctor(context, builder, sig, args):
     uni_str = context.make_helper(builder, sig.args[0], value=args[0])
 
     llty = context.get_value_type(sig.return_type.dtype)
-    st_ptr = builder.alloca(llty)
+    st_size = context.get_abi_sizeof(llty)
+    st_ptr = builder.bitcast(allocate_varlen_buffer(builder, int64_t(st_size),
+                                                    int64_t(1)),
+                             llty.as_pointer())
     zero, one, two = i32(0), i32(1), i32(2)
 
     eq = builder.icmp_signed('==', uni_str.length, uni_str.length.type(0))
