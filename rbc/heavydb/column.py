@@ -7,16 +7,18 @@ UDTFs.
 __all__ = ['OutputColumn', 'Column', 'HeavyDBOutputColumnType', 'HeavyDBColumnType',
            'HeavyDBCursorType']
 
-from llvmlite import ir
-from rbc import typesystem
-from .buffer import Buffer, HeavyDBBufferType, BufferType, BufferPointer
-from .column_list import HeavyDBColumnListType
-from . import text_encoding_none
-from rbc.targetinfo import TargetInfo
-from numba.core import extending
-from numba.core import types as nb_types
 from typing import Union
 
+from llvmlite import ir
+from numba.core import extending
+from numba.core import types as nb_types
+
+from rbc import typesystem
+from rbc.targetinfo import TargetInfo
+
+from . import text_encoding_none
+from .buffer import Buffer, BufferPointer, BufferType, HeavyDBBufferType
+from .column_list import HeavyDBColumnListType
 
 int8_t = ir.IntType(8)
 int32_t = ir.IntType(32)
@@ -26,7 +28,7 @@ class HeavyDBColumnType(HeavyDBBufferType):
     """Heavydb Column type for RBC typesystem.
     """
 
-    def postprocess_type(self):
+    def _rewire(self):
         # re-wire the implementation of Column<T> to a subtype of Column
         from rbc import heavydb  # is there a better way to do this?
         geo_columns = ('GeoPoint', 'GeoMultiPoint',
@@ -47,7 +49,10 @@ class HeavyDBColumnType(HeavyDBBufferType):
             col_arr_cls = getattr(heavydb, f'HeavyDB{p}ColumnArrayType')
             return self.copy(cls=col_arr_cls)
 
-        return self.params(shorttypename='Column')
+        return self
+
+    def postprocess_type(self):
+        return self._rewire().params(shorttypename='Column')
 
     @property
     def is_output_column(self):
@@ -71,6 +76,9 @@ class HeavyDBOutputColumnType(HeavyDBColumnType):
     OutputColumn is the same as Column but introduced to distinguish
     the input and output arguments of UDTFs.
     """
+
+    def postprocess_type(self):
+        return super()._rewire().params(shorttypename='OutputColumn')
 
     @property
     def is_output_column(self):
