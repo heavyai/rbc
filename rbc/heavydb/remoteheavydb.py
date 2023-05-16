@@ -961,6 +961,7 @@ class RemoteHeavyDB(RemoteJIT):
         ext_arguments_map['bool8'] = ext_arguments_map['bool']
         ext_arguments_map['Array<bool8>'] = ext_arguments_map['Array<bool>']
         ext_arguments_map['Column<bool8>'] = ext_arguments_map['Column<bool>']
+        ext_arguments_map['OutputColumn<bool8>'] = ext_arguments_map['Column<bool>']
         ext_arguments_map['ColumnList<bool8>'] = ext_arguments_map['ColumnList<bool>']
         ext_arguments_map['Column<Array<bool8>>'] = ext_arguments_map['Column<Array<bool>>']
         ext_arguments_map['ColumnList<Array<bool8>>'] = \
