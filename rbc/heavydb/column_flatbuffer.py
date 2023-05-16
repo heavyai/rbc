@@ -188,7 +188,7 @@ def heavydb_column_getitem_(typingctx, col, index):
 
 @extending.overload_method(ColumnFlatBufferPointer, "get_n_of_values")
 def heavydb_column_getnofvalues(col):
-    getNofValues = external(f"int64_t Column{col.eltype}_getNofValues(int8_t*)", devices=['CPU'])
+    getNofValues = external(f"int64_t Column{col.eltype}_getNofValues(int8_t*)")
 
     if isinstance(col, ColumnFlatBufferPointer):
 
@@ -213,7 +213,7 @@ def heavydb_column_getitem(col, index):
 
 @extending.overload_method(ColumnFlatBufferPointer, "is_null")
 def heavydb_column_ptr_is_null(col, index):
-    isNull = external(f"bool Column{col.eltype}_isNull(int8_t*, int64_t)", devices=['CPU'])
+    isNull = external(f"bool Column{col.eltype}_isNull(int8_t*, int64_t)")
 
     if isinstance(col, ColumnFlatBufferPointer):
 
@@ -225,7 +225,7 @@ def heavydb_column_ptr_is_null(col, index):
 
 @extending.overload_method(ColumnFlatBufferPointer, "set_null")
 def heavydb_column_set_null(col, index):
-    setNull = external(f"bool Column{col.eltype}_setNull(int8_t*, int64_t)", devices=['CPU'])
+    setNull = external(f"bool Column{col.eltype}_setNull(int8_t*, int64_t)")
     if isinstance(col, ColumnFlatBufferPointer):
 
         def impl(col, index):
@@ -239,7 +239,7 @@ def heavydb_column_set_null(col, index):
 def heavydb_column_set_item(col, index, rhs):
     if isinstance(col, ColumnFlatBufferPointer):
         sig = f"void Column{col.eltype}_setItem(int8_t*, int64_t, int8_t* rhs)"
-        setItem = external(sig, devices=['CPU'])
+        setItem = external(sig)
 
         def impl(col, index, rhs):
             setItem(as_voidptr(col), index, as_voidptr(get_alloca(rhs)))
