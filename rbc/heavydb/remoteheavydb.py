@@ -392,7 +392,7 @@ class RemoteHeavyDB(RemoteJIT):
 
     typesystem_aliases = dict(
         bool='bool8',
-        bool8='int8',
+        # bool8='int8',
         Array='HeavyDBArrayType',
         Cursor='HeavyDBCursorType',
         Column='HeavyDBColumnType',
@@ -954,6 +954,14 @@ class RemoteHeavyDB(RemoteJIT):
             ext_arguments_map[f'ColumnList<Array<{T}>>'] = typemap['TExtArgumentType'].get(
                 f'ColumnListArray{Tname}')
             ext_arguments_map[f'Array<{T}>'] = typemap['TExtArgumentType'].get(f'Array{Tname}')
+
+        # aliases
+        ext_arguments_map['bool8'] = ext_arguments_map['bool']
+        ext_arguments_map['Array<bool8>'] = ext_arguments_map['Array<bool>']
+        ext_arguments_map['Column<bool8>'] = ext_arguments_map['Column<bool>']
+        ext_arguments_map['ColumnList<bool8>'] = ext_arguments_map['ColumnList<bool>']
+        ext_arguments_map['Column<Array<bool8>>'] = ext_arguments_map['Column<Array<bool>>']
+        ext_arguments_map['ColumnList<Array<bool8>>'] = ext_arguments_map['ColumnList<Array<bool>>']
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
