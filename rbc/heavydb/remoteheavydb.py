@@ -945,6 +945,8 @@ class RemoteHeavyDB(RemoteJIT):
                 ('GeoMultiPolygon', 'GeoMultiPolygon'),
                 ]:
             ext_arguments_map[f'Column<{T}>'] = typemap['TExtArgumentType'].get(f'Column{Tname}')
+            ext_arguments_map[f'OutputColumn<{T}>'] = typemap['TExtArgumentType'].get(
+                f'Column{Tname}')
             if T == 'Timestamp':
                 continue
             ext_arguments_map[f'ColumnList<{T}>'] = typemap['TExtArgumentType'].get(
