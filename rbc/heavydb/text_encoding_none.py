@@ -47,10 +47,6 @@ class HeavyDBTextEncodingNoneType(HeavyDBBufferType):
     def postprocess_type(self):
         return self.params(shorttypename='TextEncodingNone')
 
-    def tostring(self, use_typename=False, use_annotation=True, use_name=True,
-                 use_annotation_name=False, _skip_annotation=False):
-        return "TextEncodingNone"
-
     def match(self, other):
         if type(self) is type(other):
             return self[0] == other[0]
