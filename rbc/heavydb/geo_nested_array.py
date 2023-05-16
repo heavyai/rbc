@@ -172,7 +172,7 @@ def heavydb_geo_getitem_(typingctx, geo, index):
 def heavydb_geo_len(geo):
     if isinstance(geo, GeoNestedArrayNumbaType):
         base_type = geo.base_type
-        size_ = external(f"int64_t {base_type}_size(int8_t*)|cpu")
+        size_ = external(f"int64_t {base_type}_size(int8_t*)", devices=['CPU'])
 
         def impl(geo):
             return size_(as_voidptr(get_alloca(geo)))
@@ -184,7 +184,7 @@ def heavydb_geo_len(geo):
 def heavydb_geo_isNull(geo):
     if isinstance(geo, GeoNestedArrayNumbaType):
         base_type = geo.base_type
-        isNull = external(f"bool {base_type}_isNull(int8_t*)|cpu")
+        isNull = external(f"bool {base_type}_isNull(int8_t*)", devices=['CPU'])
 
         def impl(geo):
             return isNull(as_voidptr(get_alloca(geo)))
@@ -206,7 +206,8 @@ def heavydb_geo_getitem(geo, index):
 def heavydb_geo_fromCoords_vec(geo, lst):
     base_type = geo.base_type
     fromCoords = external(
-        f"void {base_type}_fromCoords(int8_t*, double*, int64_t size)|cpu"
+        f"void {base_type}_fromCoords(int8_t*, double*, int64_t size)",
+        devices=['CPU']
     )
 
     def impl(geo, lst):
@@ -224,7 +225,8 @@ def heavydb_geo_fromCoords_vec(geo, lst):
 def heavydb_geo_fromCoords_vec2(geo, lst):
     base_type = geo.base_type
     fromCoords = external(
-        f"void {base_type}_fromCoords(int8_t*, double*, int64_t*, int64_t)|cpu"
+        f"void {base_type}_fromCoords(int8_t*, double*, int64_t*, int64_t)",
+        devices=['CPU']
     )
 
     def impl(geo, lst):
@@ -253,7 +255,8 @@ def heavydb_geo_fromCoords_vec2(geo, lst):
 def heavydb_geo_fromCoords_vec3(geo, lst):
     base_type = geo.base_type
     fromCoords = external(
-        f"void {base_type}_fromCoords(int8_t*, double*, int64_t*, int64_t*, int64_t, int64_t)|cpu"
+        f"void {base_type}_fromCoords(int8_t*, double*, int64_t*, int64_t*, int64_t, int64_t)",
+        devices=['CPU']
     )
 
     def impl(geo, lst):
@@ -296,7 +299,8 @@ def heavydb_geo_fromCoords_vec3(geo, lst):
 
 def heavydb_geo_toCoords_vec(geo):
     base_type = geo.base_type
-    get_value = external(f"double {base_type}_toCoords_get_value(int8_t*, int64_t)|cpu")
+    get_value = external(f"double {base_type}_toCoords_get_value(int8_t*, int64_t)",
+                         devices=['CPU'])
 
     def impl(geo):
         geo_ptr = as_voidptr(get_alloca(geo))
@@ -313,7 +317,8 @@ def heavydb_geo_toCoords_vec(geo):
 def heavydb_geo_toCoords_vec2(geo):
     base_type = geo.base_type
     get_value = external(
-        f"double {base_type}_toCoords_get_value(int8_t*, int64_t, int64_t)|cpu"
+        f"double {base_type}_toCoords_get_value(int8_t*, int64_t, int64_t)",
+        devices=['CPU']
     )
 
     def impl(geo):
