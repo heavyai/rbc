@@ -961,7 +961,8 @@ class RemoteHeavyDB(RemoteJIT):
         ext_arguments_map['Column<bool8>'] = ext_arguments_map['Column<bool>']
         ext_arguments_map['ColumnList<bool8>'] = ext_arguments_map['ColumnList<bool>']
         ext_arguments_map['Column<Array<bool8>>'] = ext_arguments_map['Column<Array<bool>>']
-        ext_arguments_map['ColumnList<Array<bool8>>'] = ext_arguments_map['ColumnList<Array<bool>>']
+        ext_arguments_map['ColumnList<Array<bool8>>'] = \
+            ext_arguments_map['ColumnList<Array<bool>>']
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():
