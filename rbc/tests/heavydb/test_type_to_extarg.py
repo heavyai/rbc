@@ -64,9 +64,8 @@ all_types = scalars + pointers + column + column_list + column_array + column_li
 def test_type_to_extarg(heavydb, device, typ):
     skiplist = (
         "Cursor",
-        "bool*",
         "void*",
-        "<void>",
+        "<void>",  # this will cover all containers
         "<DayTimeInterval>",
         "<YearMonthTimeInterval>",
         "ColumnList<Timestamp>",
