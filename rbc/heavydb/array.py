@@ -39,6 +39,9 @@ class HeavyDBArrayType(HeavyDBBufferType):
     def buffer_extra_members(self):
         return ('bool is_null',)
 
+    def postprocess_type(self):
+        return self.params(shorttypename='Array')
+
 
 class ArrayPointer(BufferPointer):
     def deepcopy(self, context, builder, val, retptr):

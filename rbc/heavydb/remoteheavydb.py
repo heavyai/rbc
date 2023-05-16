@@ -929,20 +929,20 @@ class RemoteHeavyDB(RemoteJIT):
 
         for T, Tname in [
                 ('bool', 'Bool'),
-                ('int8_t', 'Int8'),
-                ('int16_t', 'Int16'),
-                ('int32_t', 'Int32'),
-                ('int64_t', 'Int64'),
-                ('float', 'Float'),
-                ('double', 'Double'),
+                ('int8', 'Int8'),
+                ('int16', 'Int16'),
+                ('int32', 'Int32'),
+                ('int64', 'Int64'),
+                ('float32', 'Float'),
+                ('float64', 'Double'),
                 ('TextEncodingDict', 'TextEncodingDict'),
                 ('TextEncodingNone', 'TextEncodingNone'),
                 ('Timestamp', 'Timestamp'),
-                ('GeoLineString', 'GeoLineString'),
-                ('GeoPolygon', 'GeoPolygon'),
-                ('GeoMultiPoint', 'GeoMultiPoint'),
-                ('GeoMultiLineString', 'GeoMultiLineString'),
                 ('GeoPoint', 'GeoPoint'),
+                ('GeoMultiPoint', 'GeoMultiPoint'),
+                ('GeoLineString', 'GeoLineString'),
+                ('GeoMultiLineString', 'GeoMultiLineString'),
+                ('GeoPolygon', 'GeoPolygon'),
                 ('GeoMultiPolygon', 'GeoMultiPolygon'),
                 ]:
             ext_arguments_map[f'Column<{T}>'] = typemap['TExtArgumentType'].get(f'Column{Tname}')
@@ -950,63 +950,11 @@ class RemoteHeavyDB(RemoteJIT):
                 continue
             ext_arguments_map[f'ColumnList<{T}>'] = typemap['TExtArgumentType'].get(
                 f'ColumnList{Tname}')
-            ext_arguments_map[f'ColumnArray<{T}>'] = typemap['TExtArgumentType'].get(
+            ext_arguments_map[f'Column<Array<{T}>>'] = typemap['TExtArgumentType'].get(
                 f'ColumnArray{Tname}')
-            ext_arguments_map[f'ColumnListArray<{T}>'] = typemap['TExtArgumentType'].get(
+            ext_arguments_map[f'ColumnList<Array<{T}>>'] = typemap['TExtArgumentType'].get(
                 f'ColumnListArray{Tname}')
             ext_arguments_map[f'Array<{T}>'] = typemap['TExtArgumentType'].get(f'Array{Tname}')
-
-        for ptr_type, T in [
-                ('bool', 'bool'),
-                ('bool8', 'bool'),
-                ('int8', 'int8_t'),
-                ('int16', 'int16_t'),
-                ('int32', 'int32_t'),
-                ('int64', 'int64_t'),
-                ('float32', 'float'),
-                ('float64', 'double'),
-                ('TextEncodingDict', 'TextEncodingDict'),
-                ('GeoPoint', 'GeoPoint'),
-                ('GeoMultiPoint', 'GeoMultiPoint'),
-                ('GeoLineString', 'GeoLineString'),
-                ('GeoMultiLineString', 'GeoMultiLineString'),
-                ('GeoPolygon', 'GeoPolygon'),
-                ('GeoMultiPolygon', 'GeoMultiPolygon'),
-                ('Timestamp', 'Timestamp'),
-        ]:
-            # Column<T>
-            ext_arguments_map['HeavyDBColumnType<%s>' % ptr_type] \
-                = ext_arguments_map.get('Column<%s>' % T)
-            ext_arguments_map['HeavyDBOutputColumnType<%s>' % ptr_type] \
-                = ext_arguments_map.get('Column<%s>' % T)
-            if T == 'Timestamp':
-                # timestamp is only defined for Columns
-                continue
-
-            # Array<T>
-            ext_arguments_map['HeavyDBArrayType<%s>' % ptr_type] \
-                = ext_arguments_map.get('Array<%s>' % T)
-            # ColumnList<T>
-            ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
-                = ext_arguments_map.get('ColumnList<%s>' % T)
-            ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
-                = ext_arguments_map.get('ColumnList<%s>' % T)
-            # Column<Array<T>>
-            ext_arguments_map[f'HeavyDBColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
-                = ext_arguments_map.get(f'ColumnArray<{T}>')
-            ext_arguments_map[f'HeavyDBOutputColumnArrayType<HeavyDBArrayType<{ptr_type}>>'] \
-                = ext_arguments_map.get(f'ColumnArray<{T}>')
-            # ColumnList<T>
-            ext_arguments_map['HeavyDBColumnListType<%s>' % ptr_type] \
-                = ext_arguments_map.get('ColumnList<%s>' % T)
-            ext_arguments_map['HeavyDBOutputColumnListType<%s>' % ptr_type] \
-                = ext_arguments_map.get('ColumnList<%s>' % T)
-            # ColumnList<Array<T>>
-            ext_arguments_map[f'HeavyDBColumnListArrayType<HeavyDBArrayType<{ptr_type}>>'] \
-                = ext_arguments_map.get(f'ColumnListArray<{T}>')
-
-        ext_arguments_map['HeavyDBTextEncodingNoneType<char8>'] = \
-            ext_arguments_map.get('TextEncodingNone')
 
         values = list(ext_arguments_map.values())
         for v, n in thrift.TExtArgumentType._VALUES_TO_NAMES.items():

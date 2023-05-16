@@ -101,7 +101,7 @@ class ColumnArray(metaclass=HeavyDBMetaType):
 class HeavyDBColumnArrayType(HeavyDBColumnType):
 
     def postprocess_type(self):
-        return self
+        return self.params(shorttypename='Column')
 
     @property
     def numba_type(self):

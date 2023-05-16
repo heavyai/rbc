@@ -1,9 +1,11 @@
 
 import os
 from collections import defaultdict
-import pytest
-import numpy as np
 
+import numpy as np
+import pytest
+
+from rbc.typesystem import Type
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
@@ -870,3 +872,41 @@ def test_column_enumerate(heavydb):
         f'select rowid, i4 from {heavydb.table_name} order by rowid;')
     for (r,), (_, e) in zip(list(result), list(expected_result)):
         assert r == e
+
+
+@pytest.mark.parametrize('kind', ('', 'Output'))
+@pytest.mark.parametrize('typ', ('GeoPoint', 'GeoMultiPoint', 'GeoLineString',
+                                 'GeoMultiLineString', 'GeoPolygon',
+                                 'GeoMultiPolygon'))
+def test_column_geo_rewire(heavydb, kind, typ):
+    target_info = heavydb.targets['cpu']
+    with Type.alias(**heavydb.typesystem_aliases):
+        with target_info:
+            col = Type.fromstring(f'{kind}Column<{typ}>')
+            expected = getattr(rbc_heavydb, f'HeavyDB{kind}Column{typ}Type')
+            assert type(col) is expected
+
+
+@pytest.mark.parametrize('typ', ('Column', 'ColumnList'))
+@pytest.mark.parametrize('kind', ('', 'Output'))
+@pytest.mark.parametrize('inner', ('int8', 'int16', 'int32', 'int64', 'float32',
+                                   'float64', 'TextEncodingNone', 'TextEncodingDict'))
+def test_column_array_rewire(heavydb, typ, kind, inner):
+    if typ == 'ColumnList' and kind == 'Output':
+        pytest.skip(f'ColumnList<Array<{typ}>> is not supported')
+    target_info = heavydb.targets['cpu']
+    with Type.alias(**heavydb.typesystem_aliases):
+        with target_info:
+            col = Type.fromstring(f'{kind}{typ}<Array<{inner}>>')
+            expected = getattr(rbc_heavydb, f'HeavyDB{kind}{typ}ArrayType')
+            assert type(col) is expected
+
+
+def test_ensure_geo_columns_are_covered():
+    # ensure column rewiring works
+    column_geo = set([t for t in dir(heavydb) if t.startswith('Geo')])
+    expected_set = set(['GeoPoint', 'GeoMultiPoint',
+                        'GeoLineString', 'GeoMultiLineString',
+                        'GeoPolygon', 'GeoMultiPolygon'])
+    assert len(column_geo) == len(expected_set)
+    assert column_geo == expected_set

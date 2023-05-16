@@ -14,10 +14,11 @@ from rbc.targetinfo import TargetInfo
 class HeavyDBColumnListType(Type):
 
     def postprocess_type(self):
-        if self.tostring().startswith('HeavyDBColumnListType<HeavyDBArrayType'):
-            from .column_list_array import HeavyDBColumnListArrayType
-            return self.copy(cls=HeavyDBColumnListArrayType)
-        return self
+        from rbc import heavydb
+        # ColumnList<Array<T>>
+        if isinstance(self[0][0], heavydb.HeavyDBArrayType):
+            return self.copy(cls=heavydb.HeavyDBColumnListArrayType)
+        return self.params(shorttypename='ColumnList')
 
     @property
     def element_type(self):
