@@ -27,33 +27,31 @@ class HeavyDBColumnType(HeavyDBBufferType):
     """
 
     def postprocess_type(self):
-        # if self.tostring().startswith('HeavyDBColumnType<HeavyDBArrayType'):
-        #     from .column_array import HeavyDBColumnArrayType
-        #     return self.copy(cls=HeavyDBColumnArrayType)
-        # elif self.tostring().startswith('HeavyDBOutputColumnType<HeavyDBArrayType'):
-        #     from .column_array import HeavyDBOutputColumnArrayType
-        #     return self.copy(cls=HeavyDBOutputColumnArrayType)
-
         # re-wire the implementation of Column<T> to a subtype of Column
         from rbc import heavydb  # is there a better way to do this?
-        geo_columns = ['GeoPoint', 'GeoMultiPoint',
+        geo_columns = ('GeoPoint', 'GeoMultiPoint',
                        'GeoLineString', 'GeoMultiLineString',
-                       'GeoPolygon', 'GeoMultiPolygon']
-        redirect_column_types = geo_columns + ['HeavyDBArray']
-        kind = ['', 'Output']
-        for p in kind:
-            for s in redirect_column_types:
-                column_name = f'HeavyDB{p}ColumnType<{s}'
-                if self.tostring().startswith(column_name):
-                    typename = f'HeavyDB{p}Column{s}Type'
-                    # if self is a Column<Array<T>>, then, typename will be
-                    # replaced to:
-                    #  HeavyDB*ColumnHeavyDBArrayType -> HeavyDBColumnArrayType
-                    typename = typename.replace('HeavyDBArray', 'Array')
-                    cls = getattr(heavydb, typename)
-                    return self.copy(cls=cls)
+                       'GeoPolygon', 'GeoMultiPolygon')
 
-        return self
+        for s in geo_columns:
+            # Column<Geo*>
+            geo_cls = getattr(heavydb, f'HeavyDB{s}Type')
+            if isinstance(self[0][0], geo_cls):
+                p = 'Output' if self.is_output_column else ''
+                col_geo_cls = getattr(heavydb, f'HeavyDB{p}Column{s}Type')
+                return self.copy(cls=col_geo_cls)
+
+        # Column<Array<T>>
+        if isinstance(self[0][0], heavydb.HeavyDBArrayType):
+            p = 'Output' if self.is_output_column else ''
+            col_arr_cls = getattr(heavydb, f'HeavyDB{p}ColumnArrayType')
+            return self.copy(cls=col_arr_cls)
+
+        return self.params(shorttypename='Column')
+
+    @property
+    def is_output_column(self):
+        return False
 
     def match(self, other):
         if type(self) is type(other):
@@ -73,6 +71,10 @@ class HeavyDBOutputColumnType(HeavyDBColumnType):
     OutputColumn is the same as Column but introduced to distinguish
     the input and output arguments of UDTFs.
     """
+
+    @property
+    def is_output_column(self):
+        return True
 
 
 class Column(Buffer):
