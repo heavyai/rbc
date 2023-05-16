@@ -392,6 +392,7 @@ class RemoteHeavyDB(RemoteJIT):
 
     typesystem_aliases = dict(
         bool='bool8',
+        bool8='int8',
         Array='HeavyDBArrayType',
         Cursor='HeavyDBCursorType',
         Column='HeavyDBColumnType',
@@ -924,8 +925,6 @@ class RemoteHeavyDB(RemoteJIT):
         if self.version[:2] < (5, 4):
             ext_arguments_map['Array<bool>'] = typemap[
                 'TExtArgumentType']['ArrayInt8']
-
-        ext_arguments_map['bool8'] = ext_arguments_map['bool']
 
         for T, Tname in [
                 ('bool', 'Bool'),
