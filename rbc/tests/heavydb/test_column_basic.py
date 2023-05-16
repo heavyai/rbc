@@ -904,7 +904,7 @@ def test_column_array_rewire(heavydb, typ, kind, inner):
 
 def test_ensure_geo_columns_are_covered():
     # ensure column rewiring works
-    column_geo = set([t for t in dir(heavydb) if t.startswith('Geo')])
+    column_geo = set([t for t in dir(rbc_heavydb) if t.startswith('Geo')])
     expected_set = set(['GeoPoint', 'GeoMultiPoint',
                         'GeoLineString', 'GeoMultiLineString',
                         'GeoPolygon', 'GeoMultiPolygon'])
