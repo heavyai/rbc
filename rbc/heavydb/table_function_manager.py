@@ -143,7 +143,7 @@ set_output_item = 'set_output_item_values_total_number'
 @extending.overload_method(TableFunctionManagerNumbaType, set_output_item)
 def mgr_set_output_item(mgr, col_idx, value):
     fn_name = 'TableFunctionManager_set_output_item_values_total_number'
-    fn = external(f'void {fn_name}(int8_t*, int32_t, int64_t)|cpu')
+    fn = external(f'void {fn_name}(int8_t*, int32_t, int64_t)', devices=['CPU'])
 
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 3, 0):
