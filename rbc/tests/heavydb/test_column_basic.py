@@ -788,6 +788,16 @@ def test_column_array_rewire(heavydb, typ, kind, inner):
             assert type(col) is expected
 
 
+@pytest.mark.parametrize('kind', ('', 'Output'))
+def test_column_text_encoding_none_rewire(heavydb, kind):
+    target_info = heavydb.targets['cpu']
+    with Type.alias(**heavydb.typesystem_aliases):
+        with target_info:
+            col = Type.fromstring(f'{kind}Column<TextEncodingNone>')
+            expected = getattr(rbc_heavydb, f'HeavyDB{kind}ColumnArrayType')
+            assert type(col) is expected
+
+
 def test_ensure_geo_columns_are_covered():
     # ensure column rewiring works
     column_geo = set([t for t in dir(rbc_heavydb) if t.startswith('Geo')])

@@ -43,8 +43,9 @@ class HeavyDBColumnType(HeavyDBBufferType):
                 col_geo_cls = getattr(heavydb, f'HeavyDB{p}Column{s}Type')
                 return self.copy(cls=col_geo_cls)
 
-        # Column<Array<T>>
-        if isinstance(self[0][0], heavydb.HeavyDBArrayType):
+        # Column<Array<T>> | Column<TextEncodingNone>
+        if isinstance(self[0][0], heavydb.HeavyDBArrayType) or \
+                isinstance(self[0][0], heavydb.HeavyDBTextEncodingNoneType):
             p = 'Output' if self.is_output_column else ''
             col_arr_cls = getattr(heavydb, f'HeavyDB{p}ColumnArrayType')
             return self.copy(cls=col_arr_cls)
