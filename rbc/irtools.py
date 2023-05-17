@@ -167,6 +167,7 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
                       'avx512bf16', 'movbe', 'xsaveopt', 'avx512dq', 'adx',
                       'avx512pf', 'sse3'],
             (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
+            (14, 11): ['crc32', 'uintr', 'widekl', 'avxvnni', 'avx512fp16', 'kl', 'hreset'],
         }.get((server_llvm_version[0], client_llvm_version[0]), None)
         if remove_features is None:
             warnings.warn(

@@ -21,6 +21,8 @@ def heavydb():
     # TODO: use heavydb_fixture from rbc/tests/__init__.py
     config = rbc_heavydb.get_client_config(debug=not True)
     m = rbc_heavydb.RemoteHeavyDB(**config)
+    m.retrieve_targets()  # initializes has_cuda
+
     table_name = 'rbc_test_heavydb_math'
 
     m.sql_execute(f'DROP TABLE IF EXISTS {table_name}')
