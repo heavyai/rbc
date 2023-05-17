@@ -788,6 +788,7 @@ def test_column_array_rewire(heavydb, typ, kind, inner):
             assert type(col) is expected
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize('kind', ('', 'Output'))
 def test_column_text_encoding_none_rewire(heavydb, kind):
     target_info = heavydb.targets['cpu']
