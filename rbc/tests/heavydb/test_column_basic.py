@@ -902,14 +902,13 @@ def test_column_array_rewire(heavydb, typ, kind, inner):
             assert type(col) is expected
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize('kind', ('', 'Output'))
 def test_column_text_encoding_none_rewire(heavydb, kind):
     target_info = heavydb.targets['cpu']
     with Type.alias(**heavydb.typesystem_aliases):
         with target_info:
             col = Type.fromstring(f'{kind}Column<TextEncodingNone>')
-            expected = getattr(rbc_heavydb, f'HeavyDB{kind}ColumnArrayType')
+            expected = rbc_heavydb.HeavyDBColumnTextEncodingNoneType
             assert type(col) is expected
 
 

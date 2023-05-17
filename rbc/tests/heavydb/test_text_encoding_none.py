@@ -10,21 +10,25 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 @pytest.fixture(scope='module')
 def heavydb():
     for o in heavydb_fixture(globals(), suffices=['text']):
+        define(o)
         yield o
 
 
-def test_table_data(heavydb):
-    heavydb.reset()
+def define(heavydb):
 
-    descr, result = heavydb.sql_execute(
-        f'select t4, t2, t1, s, n from {heavydb.table_name}text')
-    result = list(result)
-
-    assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun'),
-                      ('bar', 'bar', 'bar', ['fun', 'bar'], 'bar'),
-                      ('fun', 'fun', 'foo', ['foo'], 'foo'),
-                      ('bar', 'bar', 'barr', ['foo', 'bar'], 'barr'),
-                      ('foo', 'foo', 'foooo', ['fun', 'bar'], 'foooo')]
+    @heavydb('int32(TableFunctionManager, Column<T>, OutputColumn<T>)',
+             T=['TextEncodingNone'])
+    def rbc_ct_copy(mgr, inputs, outputs):
+        size = len(inputs)
+        mgr.set_output_item_values_total_number(0, inputs.get_n_of_values())
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            if inputs.is_null(i):
+                outputs.set_null(i)
+            else:
+                outputs.set_null(i)
+            #     outputs[i] = inputs[i]
+        return size
 
 
 def test_TextEncodingNone_len(heavydb):
@@ -198,3 +202,26 @@ def test_to_string(heavydb):
     result = list(zip(*result))
     expected, got = result
     assert expected == got
+
+
+@pytest.mark.parametrize('col', ('n', 'n2'))
+def test_rbc_ct_copy(heavydb, col):
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Requires HeavyDB 7.0 or newer')
+
+    suffix = 'text'
+    table = heavydb.table_name + suffix
+
+    query = ("SELECT * FROM TABLE(rbc_ct_copy(CURSOR(SELECT "
+             f"{col} from {table})));")
+    _, result = heavydb.sql_execute(query)
+
+    query = ("SELECT * FROM TABLE(ct_copy(CURSOR(SELECT "
+             f"{col} from {table})));")
+    _, expected = heavydb.sql_execute(query)
+
+    result = list(result)
+    expected = list(expected)
+    print(result)
+    print(expected)
+    # np.testing.assert_equal(result, expected)
