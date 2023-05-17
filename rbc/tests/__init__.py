@@ -1,14 +1,32 @@
 __all__ = ['heavydb_fixture', 'sql_execute']
 
 
-from abc import abstractproperty
-import numpy as np
+import contextlib
 import os
-import pytest
 import warnings
-import numpy
+from abc import abstractproperty
 
+import numpy
+import numpy as np
+import pytest
 from packaging.version import Version
+
+from rbc import config
+
+
+@contextlib.contextmanager
+def override_config(name, value):
+    """
+    Return a context manager that temporarily sets RBC config variable
+    *name* to *value*.  *name* must be the name of an existing variable
+    in rbc.config.
+    """
+    old_value = getattr(config, name)
+    setattr(config, name, value)
+    try:
+        yield
+    finally:
+        setattr(config, name, old_value)
 
 
 def assert_equal(actual, desired):

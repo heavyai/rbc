@@ -8,7 +8,7 @@ import inspect
 import warnings
 import ctypes
 from collections import defaultdict
-from . import irtools
+from . import irtools, config
 from .errors import UnsupportedError
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
@@ -587,7 +587,7 @@ class RemoteJIT:
         if host == 'localhost':
             host = get_local_ip()
 
-        if int(os.environ.get('RBC_DEBUG', False)):
+        if config.DEBUG:
             self.debug = True
         else:
             self.debug = debug
