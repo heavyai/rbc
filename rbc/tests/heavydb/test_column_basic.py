@@ -893,7 +893,7 @@ def test_column_geo_rewire(heavydb, kind, typ):
                                    'float64', 'TextEncodingNone', 'TextEncodingDict'))
 def test_column_array_rewire(heavydb, typ, kind, inner):
     if typ == 'ColumnList' and kind == 'Output':
-        pytest.skip(f'ColumnList<Array<{typ}>> is not supported')
+        pytest.skip(f'{kind}{typ}<Array<{inner}>> is not supported')
     target_info = heavydb.targets['cpu']
     with Type.alias(**heavydb.typesystem_aliases):
         with target_info:
