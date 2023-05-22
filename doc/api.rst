@@ -51,6 +51,7 @@ one cannot create and use them inside the REPL, for instance.
     heavydb.ColumnGeoMultiLineString
     heavydb.ColumnGeoPolygon
     heavydb.ColumnGeoMultiPolygon
+    heavydb.ColumnTextEncodingNone
     heavydb.DayTimeInterval
     heavydb.GeoLineString
     heavydb.GeoMultiPoint
