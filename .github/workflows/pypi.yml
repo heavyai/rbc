@@ -4,8 +4,7 @@ on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*.*.*' # Push events to matching v*.*.*, i.e. v1.0.0, v20.15.10
-
+      - 'v\d+.\d+.\d+' # Push events to matching v*.*.*, i.e. v1.0.0, v20.15.10
 
 jobs:
   build_wheels:
@@ -62,3 +61,24 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           # repository_url: https://test.pypi.org/legacy/
+
+  build_changelog:
+    needs: [upload_pypi]
+    name: Build ChangeLog
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: "Build Changelog"
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@main
+        with:
+          configuration: "changelog_config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
