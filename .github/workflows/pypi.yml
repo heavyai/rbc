@@ -54,7 +54,7 @@ jobs:
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@master
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verify_metadata: true
           verbose: true
@@ -80,5 +80,15 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@main
         with:
           configuration: "changelog_config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: ${{steps.github_release.outputs.changelog}}
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-b') || contains(github.ref, '-a') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
