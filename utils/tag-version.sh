@@ -5,7 +5,12 @@ if [[ $# -eq 0 ]]; then
 fi
 
 TAG=$1
-TAG_STR="v${TAG}"
+
+if [[ "${TAG}" == v* ]]; then
+  TAG_STR="${TAG}"
+else
+  TAG_STR="v${TAG}"
+fi
 
 # checkout to main
 echo "Checking out main"
