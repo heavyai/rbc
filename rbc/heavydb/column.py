@@ -50,7 +50,6 @@ class HeavyDBColumnType(HeavyDBBufferType):
             col_arr_cls = getattr(heavydb, f'HeavyDB{p}ColumnArrayType')
             return self.copy(cls=col_arr_cls)
 
-
         return self
 
     def postprocess_type(self):

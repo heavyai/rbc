@@ -16,6 +16,7 @@ from .column_geomultipolygon import *  # noqa: F401, F403
 from .column_text_encoding_none import *  # noqa: F401, F403
 from .table_function_manager import *  # noqa: F401, F403
 from .row_function_manager import *  # noqa: F401, F403
+from .flatbuffer_text_encoding_none import *  # noqa: F401, F403
 from .text_encoding_dict import *  # noqa: F401, F403
 from .string_dict_proxy import *  # noqa: F401, F403
 from .text_encoding_none import *  # noqa: F401, F403

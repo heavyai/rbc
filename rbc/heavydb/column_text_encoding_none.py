@@ -13,15 +13,18 @@ __all__ = [
 import operator
 
 from llvmlite import ir
-from numba.core import extending, cgutils
+from numba.core import cgutils, extending
 
 from rbc import typesystem
+from rbc.external import external
 
+from .buffer import BufferPointer
 from .column_flatbuffer import (ColumnFlatBuffer, ColumnFlatBufferPointer,
                                 ColumnFlatBufferType,
                                 HeavyDBColumnFlatBufferType,
                                 HeavyDBOutputColumnFlatBufferType)
 from .text_encoding_none import TextEncodingNone
+from .utils import as_voidptr, get_alloca
 
 i1 = ir.IntType(1)
 i8 = ir.IntType(8)
@@ -93,7 +96,6 @@ class HeavyDBColumnTextEncodingNoneType(HeavyDBColumnFlatBufferType):
     def numba_pointer_type(self):
         return ColumnTextEncodingNonePointer
 
-
     @property
     def type_name(self):
         return "TextEncodingNone"
@@ -119,31 +121,30 @@ class ColumnTextEncodingNonePointer(ColumnFlatBufferPointer):
 
 @extending.intrinsic
 def heavydb_column_getitem_(typingctx, col, index):
-    text = typesystem.Type.fromstring("TextEncodingNone").tonumba()
-    # oddly enough, a Column<GeoPoint> returns a Point2D
+    text = typesystem.Type.fromstring("flatbuffer_TextEncodingNone").tonumba()
     sig = text(col, index)
 
     def codegen(context, builder, sig, args):
         col, index = args
-        fnty = ir.FunctionType(void, [i8p, i64, i32, i8p])
+        fnty = ir.FunctionType(void, [i8p, i64, i8p])
         getItem = cgutils.get_or_insert_function(
             builder.module, fnty, "ColumnTextEncodingNone_getItem"
         )
-        output_srid = i32(0)
         col_ptr = builder.bitcast(col, i8p)
 
         # Alloca TextEncodingNone
-        fa = context.make_helper(builder, sig.return_type.dtype)
+        fa = context.make_helper(builder, sig.return_type)
+        fa.n_ = fa.n_.type(1)
 
-        # Point2D -> void*
+        # TextEncodingNone -> void*
         result_ptr = builder.bitcast(fa._getpointer(), i8p)
 
         # call func
-        builder.call(getItem, [col_ptr, index, output_srid, result_ptr])
+        builder.call(getItem, [col_ptr, index, result_ptr])
 
-        # convert void* -> Point2D
+        # convert void* -> TextEncodingNone
         point_type = fa._get_be_type(fa._datamodel)
-        return builder.bitcast(result_ptr, point_type.as_pointer())
+        return builder.load(builder.bitcast(result_ptr, point_type.as_pointer()))
 
     return sig, codegen
 
@@ -156,4 +157,41 @@ def heavydb_column_getitem(col, index):
         def impl(col, index):
             return heavydb_column_getitem_(col, index)
 
+        return impl
+
+
+@extending.overload(operator.setitem)
+@extending.overload_method(ColumnTextEncodingNonePointer, "set_item")
+def heavydb_column_set_item(col, index, rhs):
+    if isinstance(col, ColumnFlatBufferPointer):
+        sig = "void ColumnTextEncodingNone_setItem(int8_t*, int64_t, int8_t* rhs, int32_t is_flatbuffer)"  # noqa: E501
+        setItem = external(sig)
+
+        if isinstance(rhs, BufferPointer):
+            def impl(col, index, rhs):
+                setItem(as_voidptr(col), index, as_voidptr(rhs), 0)
+        else:
+            def impl(col, index, rhs):
+                setItem(as_voidptr(col), index, as_voidptr(get_alloca(rhs)), 1)
+
+        return impl
+
+
+@extending.overload_method(ColumnTextEncodingNonePointer, "concat_item")
+def heavydb_column_concat_item(col, index, rhs):
+    sig = "void ColumnTextEncodingNone_concatItem(int8_t*, int64_t, int8_t*, int32)"
+    concatItem = external(sig)
+
+    if isinstance(col, ColumnFlatBufferPointer):
+        if isinstance(rhs, BufferPointer):
+            # TextEncodingNone
+            def impl(col, index, rhs):
+                concatItem(as_voidptr(col), index, as_voidptr(rhs), 0)
+        else:
+            # flatbuffer::TextEncodingNone
+            def impl(col, index, rhs):
+                concatItem(as_voidptr(col),
+                           index,
+                           as_voidptr(get_alloca(rhs)),
+                           1)
         return impl

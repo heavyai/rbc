@@ -287,10 +287,10 @@ def ol_attr_sz(text):
     return impl
 
 
-@extending.overload_attribute(TextEncodingNonePointer, 'is_null')
+@extending.overload_method(TextEncodingNonePointer, 'is_null')
 def ol_attr_is_null(text):
     def impl(text):
-        return ol_attr_is_null_(text)
+        return text.sz == 0
     return impl
 
 
