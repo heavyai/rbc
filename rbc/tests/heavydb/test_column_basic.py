@@ -908,7 +908,8 @@ def test_column_text_encoding_none_rewire(heavydb, kind):
     with Type.alias(**heavydb.typesystem_aliases):
         with target_info:
             col = Type.fromstring(f'{kind}Column<TextEncodingNone>')
-            expected = rbc_heavydb.HeavyDBColumnTextEncodingNoneType
+            expected = getattr(rbc_heavydb,
+                               f'HeavyDB{kind}ColumnTextEncodingNoneType')
             assert type(col) is expected
 
 
