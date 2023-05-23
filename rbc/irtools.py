@@ -68,6 +68,11 @@ def get_called_functions(library,
     else:
         q.append(funcname)
 
+    linked_functions: Dict[str, JITRemoteCodeLibrary] = dict()
+    for lib in library._linking_libraries:
+        for df in lib.get_defined_functions():
+            linked_functions[df.name] = lib
+
     while len(q) > 0:
         funcname = q.pop()
 
@@ -103,18 +108,26 @@ def get_called_functions(library,
                         result['intrinsics'].add(name)
                     elif f.is_declaration:
                         found = False
-                        for lib in library._linking_libraries:
-                            for df in lib.get_defined_functions():
-                                if name == df.name:
-                                    result['defined'].add(name)
-                                    result['libraries'].add(lib)
-                                    found = True
-                                    q.append(name)
-                                    break
-                            if found:
-                                break
-                        if not found:
+                        if name in linked_functions:
+                            lib = linked_functions.get(name)
+                            result['defined'].add(name)
+                            result['libraries'].add(lib)
+                            q.append(name)
+                            break
+                        else:
                             result['declarations'].add(name)
+                        # for lib in library._linking_libraries:
+                        #     for df in lib.get_defined_functions():
+                        #         if name == df.name:
+                        #             result['defined'].add(name)
+                        #             result['libraries'].add(lib)
+                        #             found = True
+                        #             q.append(name)
+                        #             break
+                        #     if found:
+                        #         break
+                        # if not found:
+                        #     result['declarations'].add(name)
                     else:
                         result['defined'].add(name)
                         q.append(name)
