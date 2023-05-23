@@ -107,7 +107,6 @@ def get_called_functions(library,
                     if name.startswith('llvm.'):
                         result['intrinsics'].add(name)
                     elif f.is_declaration:
-                        found = False
                         if name in linked_functions:
                             lib = linked_functions.get(name)
                             result['defined'].add(name)
