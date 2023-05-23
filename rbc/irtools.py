@@ -3,7 +3,7 @@
 
 import re
 import warnings
-from collections import defaultdict
+from collections import defaultdict, deque
 from contextlib import contextmanager
 from typing import Optional, Dict, Set
 
@@ -55,61 +55,70 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions(result: Dict[str, Set[str]],
-                         library,
+def get_called_functions(library,
                          funcname: Optional[str] = None,
-                         debug: bool = False) -> None:
-    if funcname in result['defined']:
-        return
+                         debug: bool = False) -> Dict[str, Set[str]]:
+    result = defaultdict(set)
+    q: deque[str] = deque()
+
     module = library._final_module
     if funcname is None:
         for df in library.get_defined_functions():
-            get_called_functions(result, library, df.name, debug)
-        return
+            q.append(df.name)
+    else:
+        q.append(funcname)
 
-    func = module.get_function(funcname)
-    assert func.name == funcname, (func.name, funcname)
-    result['defined'].add(funcname)
-    for block in func.blocks:
-        for instruction in block.instructions:
-            if instruction.opcode == 'call':
-                instr = list(instruction.operands)[-1]
-                name = instr.name
-                try:
-                    f = module.get_function(name)
-                except NameError:
-                    if 'bitcast' not in str(instr):
-                        raise  # re-raise
+    while len(q) > 0:
+        funcname = q.pop()
 
-                    # attempt to find caller symbol in instr
-                    name = find_at_word(str(instr))
-                    if name is None:
-                        # ignore call to function pointer
-                        msg = f'Ignoring call to bitcast instruction:\n{instr}'
-                        if debug:
-                            warnings.warn(msg)
-                        continue
-                    f = module.get_function(name)
+        if funcname in result['defined']:
+            continue
 
-                if name.startswith('llvm.'):
-                    result['intrinsics'].add(name)
-                elif f.is_declaration:
-                    found = False
-                    for lib in library._linking_libraries:
-                        for df in lib.get_defined_functions():
-                            if name == df.name:
-                                result['defined'].add(name)
-                                result['libraries'].add(lib)
-                                found = True
-                                get_called_functions(result, lib, name, debug)
+        func = module.get_function(funcname)
+        assert func.name == funcname, (func.name, funcname)
+        result['defined'].add(funcname)
+
+        for block in func.blocks:
+            for instruction in block.instructions:
+                if instruction.opcode == 'call':
+                    instr = list(instruction.operands)[-1]
+                    name = instr.name
+                    try:
+                        f = module.get_function(name)
+                    except NameError:
+                        if 'bitcast' not in str(instr):
+                            raise  # re-raise
+
+                        # attempt to find caller symbol in instr
+                        name = find_at_word(str(instr))
+                        if name is None:
+                            # ignore call to function pointer
+                            msg = f'Ignoring call to bitcast instruction:\n{instr}'
+                            if debug:
+                                warnings.warn(msg)
+                            continue
+                        f = module.get_function(name)
+
+                    if name.startswith('llvm.'):
+                        result['intrinsics'].add(name)
+                    elif f.is_declaration:
+                        found = False
+                        for lib in library._linking_libraries:
+                            for df in lib.get_defined_functions():
+                                if name == df.name:
+                                    result['defined'].add(name)
+                                    result['libraries'].add(lib)
+                                    found = True
+                                    q.append(name)
+                                    break
+                            if found:
                                 break
-                        if found:
-                            break
-                    if not found:
-                        result['declarations'].add(name)
-                else:
-                    result['defined'].add(name)
-                    get_called_functions(result, library, name, debug)
+                        if not found:
+                            result['declarations'].add(name)
+                    else:
+                        result['defined'].add(name)
+                        q.append(name)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -365,8 +374,7 @@ def compile_instance(func, sig,
         target.set_compile_target(None)
         raise
 
-    result = defaultdict(set)
-    get_called_functions(result, cres.library, cres.fndesc.llvm_func_name, debug)
+    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
 
     for f in result['declarations']:
         if target.supports(f):
@@ -486,11 +494,11 @@ def compile_to_LLVM(functions_and_signatures,
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            get_called_functions(used_symbols, main_library, fname, debug)
+            symbols = get_called_functions(main_library, fname, debug)
+            for k, v in symbols.items():
+                used_symbols[k].update(v)
 
-        # start with known symbols
-        all_symbols = defaultdict(set, used_symbols)
-        get_called_functions(all_symbols, main_library, debug=debug)
+        all_symbols = get_called_functions(main_library, debug=debug)
 
         unused_symbols = defaultdict(set)
         for k, lst in all_symbols.items():
