@@ -55,14 +55,17 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions(library, funcname=None, debug=False):
-    result = defaultdict(set)
+def get_called_functions(result: dict[str, set[str]],
+                         library,
+                         funcname: Optional[str] = None,
+                         debug: bool = False) -> None:
+    if funcname in result['defined']:
+        return
     module = library._final_module
     if funcname is None:
         for df in library.get_defined_functions():
-            for k, v in get_called_functions(library, df.name, debug).items():
-                result[k].update(v)
-        return result
+            get_called_functions(result, library, df.name, debug)
+        return
 
     func = module.get_function(funcname)
     assert func.name == funcname, (func.name, funcname)
@@ -98,8 +101,7 @@ def get_called_functions(library, funcname=None, debug=False):
                                 result['defined'].add(name)
                                 result['libraries'].add(lib)
                                 found = True
-                                for k, v in get_called_functions(lib, name, debug).items():
-                                    result[k].update(v)
+                                get_called_functions(result, lib, name, debug)
                                 break
                         if found:
                             break
@@ -107,9 +109,7 @@ def get_called_functions(library, funcname=None, debug=False):
                         result['declarations'].add(name)
                 else:
                     result['defined'].add(name)
-                    for k, v in get_called_functions(library, name, debug).items():
-                        result[k].update(v)
-    return result
+                    get_called_functions(result, library, name, debug)
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +365,8 @@ def compile_instance(func, sig,
         target.set_compile_target(None)
         raise
 
-    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
+    result = defaultdict(set)
+    get_called_functions(result, cres.library, cres.fndesc.llvm_func_name, debug)
 
     for f in result['declarations']:
         if target.supports(f):
@@ -485,10 +486,11 @@ def compile_to_LLVM(functions_and_signatures,
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            for k, v in get_called_functions(main_library, fname, debug).items():
-                used_symbols[k].update(v)
+            get_called_functions(used_symbols, main_library, fname, debug)
 
-        all_symbols = get_called_functions(main_library, debug=debug)
+        # start with known symbols
+        all_symbols = defaultdict(set, used_symbols)
+        get_called_functions(all_symbols, main_library, debug=debug)
 
         unused_symbols = defaultdict(set)
         for k, lst in all_symbols.items():
