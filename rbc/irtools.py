@@ -115,18 +115,6 @@ def get_called_functions(library,
                             break
                         else:
                             result['declarations'].add(name)
-                        # for lib in library._linking_libraries:
-                        #     for df in lib.get_defined_functions():
-                        #         if name == df.name:
-                        #             result['defined'].add(name)
-                        #             result['libraries'].add(lib)
-                        #             found = True
-                        #             q.append(name)
-                        #             break
-                        #     if found:
-                        #         break
-                        # if not found:
-                        #     result['declarations'].add(name)
                     else:
                         result['defined'].add(name)
                         q.append(name)
