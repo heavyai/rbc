@@ -5,7 +5,7 @@ import re
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, Dict, Set
 
 import llvmlite.binding as llvm
 from llvmlite import ir
@@ -55,7 +55,7 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions(result: dict[str, set[str]],
+def get_called_functions(result: Dict[str, Set[str]],
                          library,
                          funcname: Optional[str] = None,
                          debug: bool = False) -> None:
