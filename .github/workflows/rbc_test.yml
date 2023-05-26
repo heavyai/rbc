@@ -298,7 +298,6 @@ jobs:
             channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml
-          run: |
 
         - name: Install additional packages
           shell: bash -l {0}
