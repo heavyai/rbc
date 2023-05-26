@@ -298,12 +298,13 @@ jobs:
             channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml
+          run: |
 
         - name: Install additional packages
           shell: bash -l {0}
           run: |
             conda install mamba -c conda-forge -y
-            mamba install -c conda-forge heavydb=6.2*=*_cpu nbval ibis-heavyai matplotlib pandas
+            mamba install -c conda-forge heavydb=6.2*=*_cpu numba=0.56 nbval ibis-heavyai matplotlib pandas
 
         - name: Start heavydb server
           shell: bash -l {0}
