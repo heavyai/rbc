@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import llvmlite.binding as llvm
 
-from . import irtools
+from . import irtools, config
 from .errors import UnsupportedError
 from .targetinfo import TargetInfo
 from .thrift import Client, Data, Dispatcher, Server, dispatchermethod
@@ -590,7 +590,7 @@ class RemoteJIT:
         if host == 'localhost':
             host = get_local_ip()
 
-        if int(os.environ.get('RBC_DEBUG', False)):
+        if config.DEBUG:
             self.debug = True
         else:
             self.debug = debug
