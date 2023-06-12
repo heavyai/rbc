@@ -1,7 +1,6 @@
 import itertools
 import os
 
-import llvmlite.binding as llvm
 import numpy as np
 import pytest
 

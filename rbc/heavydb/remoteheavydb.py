@@ -10,7 +10,6 @@ import pathlib
 import configparser
 import numpy
 import textwrap
-import llvmlite.binding as llvm
 from collections import defaultdict, namedtuple
 from rbc.remotejit import RemoteJIT, RemoteCallCapsule
 from rbc.thrift.utils import resolve_includes
