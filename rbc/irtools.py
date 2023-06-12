@@ -472,8 +472,8 @@ def compile_to_LLVM(functions_and_signatures,
                 main_module.link_in(unicodetype_db)
                 main_library.add_ir_module(nrt_module)
             else:
-                msg = ("NRT required but not enabled. Set 'RBC_ENABLE_NRT=1' "
-                       "to fix this warning.")
+                msg = ("NRT is disabled but required. Undefine the environment "
+                       "variable 'RBC_ENABLE_NRT' or set its value to '1'")
                 warnings.warn(msg)
 
         add_metadata_flag(main_library,

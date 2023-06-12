@@ -18,5 +18,5 @@ def test_nrt_warning(heavydb):
         return len(lst)
 
     with override_config('ENABLE_NRT', 0):
-        with pytest.warns(UserWarning, match='NRT required but not enabled'):
+        with pytest.warns(UserWarning, match='NRT is disabled but required'):
             heavydb.register()
