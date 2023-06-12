@@ -26,7 +26,6 @@ from . import (
 from rbc.targetinfo import TargetInfo
 from rbc.irtools import compile_to_LLVM
 from rbc.errors import ForbiddenNameError, HeavyDBServerError
-from rbc.warnings import LLVMVersionMismatchWarning
 from rbc.utils import parse_version, version_date
 from rbc import ctools, typesystem
 
@@ -1268,35 +1267,8 @@ class RemoteHeavyDB(RemoteJIT):
             name + sig.mangling(),
             atypes, rtype, annotations)
 
-    def _check_llvm_version(self):
-        # check LLVM version before compiling to LLVM
-        flag_name = 'RBC_DISABLE_LLVM_MISMATCH_WARN'
-        flag = int(os.environ.get(flag_name, False))
-
-        if not flag:
-            target = self.targets['cpu']
-            server_llvm_version = target.llvm_version
-            client_llvm_version = llvm.llvm_version_info
-
-            if (server_llvm_version[0], client_llvm_version[0]) == (11, 14):
-                c_llvm = '.'.join(map(str, client_llvm_version))
-                s_llvm = '.'.join(map(str, server_llvm_version))
-                msg = (
-                    f'The client LLVM version ({c_llvm}) is greater than the server '
-                    f'LLVM version ({s_llvm}). This is known to be unsupported. '
-                    'Please, downgrade to a previous release of Numba that uses the '
-                    'same LLVM version as the HeavyDB server. For more information, '
-                    'see the table below:\n\n'
-                    'https://github.com/numba/llvmlite#compatibility\n'
-                    'https://github.com/heavyai/heavydb#dependencies\n\n'
-                    f'To suppress this warning, run RBC with {flag_name}=1 '
-                    'flag enabled.')
-                warnings.warn(msg, LLVMVersionMismatchWarning)
-
     def register(self):
         """Register caller cache to the server."""
-        self._check_llvm_version()
-
         with typesystem.Type.alias(**self.typesystem_aliases):
             return self._register()
 

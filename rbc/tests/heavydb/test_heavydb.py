@@ -5,7 +5,6 @@ import llvmlite.binding as llvm
 import numpy as np
 import pytest
 
-from rbc.warnings import LLVMVersionMismatchWarning
 from rbc.errors import HeavyDBServerError, UnsupportedError
 from rbc.tests import assert_equal, heavydb_fixture
 from rbc.typesystem import Type
@@ -875,36 +874,3 @@ def test_non_admin_user(heavydb):
     # clean up:
     heavydb.sql_execute(f'DROP DATABASE IF EXISTS {dbname};')
     heavydb.sql_execute(f'DROP USER IF EXISTS "{user}";')
-
-
-@pytest.mark.parametrize('kind', ('udf', 'udtf'))
-def test_numba_heavydb_llvm_mismatch(heavydb, kind):
-    heavydb.reset()
-
-    # only run this test on a specific environment
-    target_info = heavydb.targets['cpu']
-    server_llvm_version = target_info.llvm_version
-    client_llvm_version = llvm.llvm_version_info
-
-    if (server_llvm_version[0], client_llvm_version[0]) != (11, 14):
-        c_llvm = '.'.join(map(str, client_llvm_version))
-        s_llvm = '.'.join(map(str, server_llvm_version))
-        msg = (f'Test requires server LLVM 14, got {s_llvm}. And client LLVM '
-               f'11, got {c_llvm}')
-        pytest.skip(msg)
-
-    if kind == 'udf':
-        @heavydb('int32(int32)')
-        def add(a):
-            return a + 1
-    else:
-        @heavydb('int32(TableFunctionManager, Column<int>, OutputColumn<int>)')
-        def column_copy(mgr, inp, out):
-            size = len(inp)
-            mgr.set_output_row_size(size)
-            for i in range(size):
-                out[i] = inp[i]
-            return size
-
-    with pytest.warns(LLVMVersionMismatchWarning):
-        heavydb.register()

@@ -162,8 +162,6 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
                        'prefetchwt1', 'f16c', 'ssse3', 'sgx', 'shstk', 'cmov',
                        'avx512vbmi', 'amxint8', 'movbe', 'avx512vp2intersect',
                        'xsaveopt', 'avx512dq', 'sse2', 'adx', 'sse3'],
-            (14, 11): ['crc32', 'uintr', 'widekl', 'avxvnni', 'avx512fp16', 'kl',
-                       'hreset'],
             (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'tsxldtrk', 'amx-tile', 'amx-bf16',
                       'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
