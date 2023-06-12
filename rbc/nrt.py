@@ -1,8 +1,13 @@
+import functools
 import os
+from contextlib import contextmanager
+
+import llvmlite.binding as llvm
+from llvmlite import ir
 from numba.core import cgutils
 from numba.cpython.hashing import _hashsecret as hashsecret
-from llvmlite import ir
-from contextlib import contextmanager
+
+from rbc import config
 from rbc.targetinfo import TargetInfo
 
 void = ir.VoidType()
@@ -75,7 +80,7 @@ class RBC_NRT:
         self.module = ir.Module(name="RBC_nrt")
         self.target_context = target_context
         self.verbose = verbose
-        self.debug_nrt = int(os.environ.get("RBC_DEBUG_NRT", False))
+        self.debug_nrt = config.DEBUG_NRT
 
         gv = ir.GlobalVariable(self.module, i64, nrt_global_var)
         gv.initializer = i64(0)
@@ -685,6 +690,24 @@ class RBC_NRT:
         builder.ret_void()
 
 
+_nrt = None
+
+
 def create_nrt_functions(target_context, debug):
-    nrt = RBC_NRT(target_context, verbose=debug)
-    return nrt.module
+    global _nrt
+    if _nrt is None:
+        _nrt = RBC_NRT(target_context, verbose=debug)
+    return _nrt.module
+
+
+def read_unicodetype_db():
+
+    @functools.lru_cache()
+    def _read_file():
+        unicode_file = os.path.join(os.path.dirname(__file__),
+                                    'unicodetype_db.ll')
+        with open(unicode_file, 'r') as f:
+            s = f.read()
+        return s
+
+    return llvm.parse_assembly(_read_file())
