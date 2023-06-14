@@ -107,11 +107,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [ubuntu-latest]
-        # python-version: ['3.10', '3.9', '3.8']
-        # numba-version: ['0.56', '0.55']
-        # heavydb-version: ['6.2', '6.1', '6.0']
-        # heavydb-from: [conda]
+        os: [ubuntu-latest]
+        python-version: ['3.10', '3.9', '3.8']
+        numba-version: ['0.56', '0.55']
+        heavydb-version: ['6.2', '6.1', '6.0']
+        heavydb-from: [conda]
         include:
           - os: ubuntu-latest
             python-version: '3.10'
@@ -126,7 +126,7 @@ jobs:
             docker-image: heavyai/heavyai-ee-cpu:v7.0.1
             heavydb-from: docker
 
-    # needs: lint
+    needs: lint
 
     steps:
 
