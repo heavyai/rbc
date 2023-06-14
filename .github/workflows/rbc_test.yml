@@ -133,7 +133,7 @@ jobs:
       - name: test echo
         shell: bash -l {0}
         env:
-          TEST: ${{ secrets.TEST }}
+          TEST: ${{ secrets.HEAVYDB }}
         run: |
           echo "Test::"
           echo "${TEST}--"
