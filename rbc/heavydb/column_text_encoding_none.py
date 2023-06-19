@@ -164,34 +164,41 @@ def heavydb_column_getitem(col, index):
 @extending.overload_method(ColumnTextEncodingNonePointer, "set_item")
 def heavydb_column_set_item(col, index, rhs):
     if isinstance(col, ColumnFlatBufferPointer):
-        sig = "void ColumnTextEncodingNone_setItem(int8_t*, int64_t, int8_t* rhs, int32_t is_flatbuffer)"  # noqa: E501
+        fn_name = 'ColumnTextEncodingNone_setItem'
+        if isinstance(rhs, BufferPointer):
+            fn_name += '_fromBuffer'
+
+        sig = f"void {fn_name}(int8_t*, int64_t, int8_t*)"
         setItem = external(sig)
 
         if isinstance(rhs, BufferPointer):
             def impl(col, index, rhs):
-                setItem(as_voidptr(col), index, as_voidptr(rhs), 0)
+                setItem(as_voidptr(col), index, as_voidptr(rhs))
         else:
             def impl(col, index, rhs):
-                setItem(as_voidptr(col), index, as_voidptr(get_alloca(rhs)), 1)
+                setItem(as_voidptr(col), index, as_voidptr(get_alloca(rhs)))
 
         return impl
 
 
 @extending.overload_method(ColumnTextEncodingNonePointer, "concat_item")
 def heavydb_column_concat_item(col, index, rhs):
-    sig = "void ColumnTextEncodingNone_concatItem(int8_t*, int64_t, int8_t*, int32)"
+    fn_name = 'ColumnTextEncodingNone_concatItem'
+    if isinstance(rhs, BufferPointer):
+        fn_name += '_fromBuffer'
+
+    sig = f"void {fn_name}(int8_t*, int64_t, int8_t*)"
     concatItem = external(sig)
 
     if isinstance(col, ColumnFlatBufferPointer):
         if isinstance(rhs, BufferPointer):
             # TextEncodingNone
             def impl(col, index, rhs):
-                concatItem(as_voidptr(col), index, as_voidptr(rhs), 0)
+                concatItem(as_voidptr(col), index, as_voidptr(rhs))
         else:
             # flatbuffer::TextEncodingNone
             def impl(col, index, rhs):
                 concatItem(as_voidptr(col),
                            index,
-                           as_voidptr(get_alloca(rhs)),
-                           1)
+                           as_voidptr(get_alloca(rhs)))
         return impl

@@ -31,23 +31,13 @@ class HeavyDBFlatBufferTextEncodingNoneType(HeavyDBGeoNestedArray):
 
 class FlatBuffer_TextEncodingNone(GeoNestedArray):
     """
-    RBC type that corresponds to HeavyDB type ``flatbufffer::TextEncodingNone``
+    RBC type that corresponds to HeavyDB type ``TextEncodingNone``
 
     .. code-block:: c
 
-        struct MultiPolygon {
+        struct TextEncodingNone {
             int8_t* flatbuffer_;
             int64_t index_[4];
             int64_t n_;
         }
     """
-
-    # def __getitem__(self, index: int) -> 'geopolygon.GeoPolygon':
-    #     """
-    #     Return the ``POLYGON`` at given index
-    #     """
-
-    # def get_item(self, index: int) -> 'geopolygon.GeoPolygon':
-    #     """
-    #     Return the ``POLYGON`` at given index
-    #     """
