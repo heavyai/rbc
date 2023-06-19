@@ -111,13 +111,11 @@ def get_called_functions(library,
                             lib = linked_functions.get(name)
                             result['defined'].add(name)
                             result['libraries'].add(lib)
-                            q.append(name)
                             break
                         else:
                             result['declarations'].add(name)
                     else:
                         result['defined'].add(name)
-                        q.append(name)
     return result
 
 

@@ -473,10 +473,6 @@ def test_redefine(heavydb):
 def test_overload_nonuniform(heavydb, step):
     pytest.xfail('Test failing due to the introduction of default sizer. See PR 313')
 
-    # commented to avoid reseting existing tests
-    # heavydb.reset()
-    # heavydb.register()
-
     if step > 0:
         @heavydb('int32(Column<double>, RowMultiplier, OutputColumn<int64>)')  # noqa: E501, F811
         def overloaded_udtf(x, m, y):  # noqa: E501, F811
