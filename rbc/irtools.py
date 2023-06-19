@@ -55,7 +55,7 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions(library,
+def get_called_functions_bkp(library,
                          funcname: Optional[str] = None,
                          debug: bool = False) -> Dict[str, Set[str]]:
     result = defaultdict(set)
@@ -70,7 +70,9 @@ def get_called_functions(library,
 
     linked_functions: Dict[str, JITRemoteCodeLibrary] = dict()
     for lib in library._linking_libraries:
+        result['libraries'].add(lib)
         for df in lib.get_defined_functions():
+            # q.append(df.name)
             linked_functions[df.name] = lib
 
     while len(q) > 0:
@@ -111,12 +113,70 @@ def get_called_functions(library,
                             lib = linked_functions.get(name)
                             result['defined'].add(name)
                             result['libraries'].add(lib)
+                            # q.append(name)
                             break
                         else:
                             result['declarations'].add(name)
                     else:
-                        result['defined'].add(name)
+                        q.append(name)
     return result
+
+
+# def get_called_functions(library, funcname=None, debug=False):
+#     result = defaultdict(set)
+#     module = library._final_module
+#     if funcname is None:
+#         for df in library.get_defined_functions():
+#             for k, v in get_called_functions(library, df.name, debug).items():
+#                 result[k].update(v)
+#         return result
+
+#     func = module.get_function(funcname)
+#     assert func.name == funcname, (func.name, funcname)
+#     result['defined'].add(funcname)
+#     for block in func.blocks:
+#         for instruction in block.instructions:
+#             if instruction.opcode == 'call':
+#                 instr = list(instruction.operands)[-1]
+#                 name = instr.name
+#                 try:
+#                     f = module.get_function(name)
+#                 except NameError:
+#                     if 'bitcast' not in str(instr):
+#                         raise  # re-raise
+
+#                     # attempt to find caller symbol in instr
+#                     name = find_at_word(str(instr))
+#                     if name is None:
+#                         # ignore call to function pointer
+#                         msg = f'Ignoring call to bitcast instruction:\n{instr}'
+#                         if debug:
+#                             warnings.warn(msg)
+#                         continue
+#                     f = module.get_function(name)
+
+#                 if name.startswith('llvm.'):
+#                     result['intrinsics'].add(name)
+#                 elif f.is_declaration:
+#                     found = False
+#                     for lib in library._linking_libraries:
+#                         for df in lib.get_defined_functions():
+#                             if name == df.name:
+#                                 result['defined'].add(name)
+#                                 result['libraries'].add(lib)
+#                                 found = True
+#                                 for k, v in get_called_functions(lib, name, debug).items():
+#                                     result[k].update(v)
+#                                 break
+#                         if found:
+#                             break
+#                     if not found:
+#                         result['declarations'].add(name)
+#                 else:
+#                     result['defined'].add(name)
+#                     for k, v in get_called_functions(library, name, debug).items():
+#                         result[k].update(v)
+#     return result
 
 
 # ---------------------------------------------------------------------------
@@ -372,7 +432,7 @@ def compile_instance(func, sig,
         target.set_compile_target(None)
         raise
 
-    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
+    result = get_called_functions_bkp(cres.library, cres.fndesc.llvm_func_name, debug)
 
     for f in result['declarations']:
         if target.supports(f):
@@ -492,11 +552,11 @@ def compile_to_LLVM(functions_and_signatures,
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            symbols = get_called_functions(main_library, fname, debug)
+            symbols = get_called_functions_bkp(main_library, fname, debug)
             for k, v in symbols.items():
                 used_symbols[k].update(v)
 
-        all_symbols = get_called_functions(main_library, debug=debug)
+        all_symbols = get_called_functions_bkp(main_library, debug=debug)
 
         unused_symbols = defaultdict(set)
         for k, lst in all_symbols.items():
