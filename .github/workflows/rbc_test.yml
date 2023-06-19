@@ -285,7 +285,7 @@ jobs:
         timeout-minutes: 2
         if: ${{ failure() && matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker' }}
         run: |
-          mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t \> heavydb-docker.log
+          mamba run -n docker docker-compose logs --no-color --tail=10000 -f -t > heavydb-docker.log
           cat heavydb-docker.log
 
   eval-notebooks:
