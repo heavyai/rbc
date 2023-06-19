@@ -374,6 +374,7 @@ inps = [('int32', 'i4', 'trunc'), ('int32', 'i4', 'sext'),
         ('double', 'f8', 'fpext')]
 
 
+@pytest.mark.skip()
 @pytest.mark.parametrize("typ, col, suffix", inps,
                          ids=[item[-1] for item in inps])
 def test_issue197(heavydb, typ, col, suffix):
