@@ -72,7 +72,6 @@ def get_called_functions(library,
     for lib in library._linking_libraries:
         result['libraries'].add(lib)
         for df in lib.get_defined_functions():
-            # q.append(df.name)
             linked_functions[df.name] = lib
 
     while len(q) > 0:
@@ -113,70 +112,13 @@ def get_called_functions(library,
                             lib = linked_functions.get(name)
                             result['defined'].add(name)
                             result['libraries'].add(lib)
-                            # q.append(name)
+                            q.append(name)
                             break
                         else:
                             result['declarations'].add(name)
                     else:
                         q.append(name)
     return result
-
-
-# def get_called_functions(library, funcname=None, debug=False):
-#     result = defaultdict(set)
-#     module = library._final_module
-#     if funcname is None:
-#         for df in library.get_defined_functions():
-#             for k, v in get_called_functions(library, df.name, debug).items():
-#                 result[k].update(v)
-#         return result
-
-#     func = module.get_function(funcname)
-#     assert func.name == funcname, (func.name, funcname)
-#     result['defined'].add(funcname)
-#     for block in func.blocks:
-#         for instruction in block.instructions:
-#             if instruction.opcode == 'call':
-#                 instr = list(instruction.operands)[-1]
-#                 name = instr.name
-#                 try:
-#                     f = module.get_function(name)
-#                 except NameError:
-#                     if 'bitcast' not in str(instr):
-#                         raise  # re-raise
-
-#                     # attempt to find caller symbol in instr
-#                     name = find_at_word(str(instr))
-#                     if name is None:
-#                         # ignore call to function pointer
-#                         msg = f'Ignoring call to bitcast instruction:\n{instr}'
-#                         if debug:
-#                             warnings.warn(msg)
-#                         continue
-#                     f = module.get_function(name)
-
-#                 if name.startswith('llvm.'):
-#                     result['intrinsics'].add(name)
-#                 elif f.is_declaration:
-#                     found = False
-#                     for lib in library._linking_libraries:
-#                         for df in lib.get_defined_functions():
-#                             if name == df.name:
-#                                 result['defined'].add(name)
-#                                 result['libraries'].add(lib)
-#                                 found = True
-#                                 for k, v in get_called_functions(lib, name, debug).items():
-#                                     result[k].update(v)
-#                                 break
-#                         if found:
-#                             break
-#                     if not found:
-#                         result['declarations'].add(name)
-#                 else:
-#                     result['defined'].add(name)
-#                     for k, v in get_called_functions(library, name, debug).items():
-#                         result[k].update(v)
-#     return result
 
 
 # ---------------------------------------------------------------------------
