@@ -55,7 +55,7 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions_bkp(library,
+def get_called_functions(library,
                          funcname: Optional[str] = None,
                          debug: bool = False) -> Dict[str, Set[str]]:
     result = defaultdict(set)
@@ -432,7 +432,7 @@ def compile_instance(func, sig,
         target.set_compile_target(None)
         raise
 
-    result = get_called_functions_bkp(cres.library, cres.fndesc.llvm_func_name, debug)
+    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
 
     for f in result['declarations']:
         if target.supports(f):
@@ -552,11 +552,11 @@ def compile_to_LLVM(functions_and_signatures,
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            symbols = get_called_functions_bkp(main_library, fname, debug)
+            symbols = get_called_functions(main_library, fname, debug)
             for k, v in symbols.items():
                 used_symbols[k].update(v)
 
-        all_symbols = get_called_functions_bkp(main_library, debug=debug)
+        all_symbols = get_called_functions(main_library, debug=debug)
 
         unused_symbols = defaultdict(set)
         for k, lst in all_symbols.items():
