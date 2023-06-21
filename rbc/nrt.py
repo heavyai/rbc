@@ -443,18 +443,16 @@ class RBC_NRT:
             [ptr, size] = args
             new_ptr = builder.call(self.NRT_Allocate_External, [size, NULL])
             self.NRT_Debug("ptr=%p size=%zu -> new_ptr=%p", ptr, size, new_ptr)
-            msg = (
-                'The "NRT_Reallocate" function is a custom implementation '
-                'of the "realloc" function from the C standard library. '
-                'Unlike the original "realloc" function, this '
-                "implementation does not copy memory from the old buffer to "
-                "the new one. Instead, it simply allocates a new buffer "
-                "with the given size and returns a pointer to it. The old "
-                "buffer remains unchanged, and it is the responsibility of "
-                "the caller to copy data from the old buffer to the new one "
-                "if necessary.\n"
-                "See RBC issue #536"
-            )
+            msg = ('The "NRT_Reallocate" function is a custom implementation '
+                   'of the "realloc" function from the C standard library. '
+                   'Unlike the original "realloc" function, this '
+                   'implementation does not copy memory from the old buffer to '
+                   'the new one. Instead, it simply allocates a new buffer '
+                   'with the given size and returns a pointer to it. The old '
+                   'buffer remains unchanged, and it is the responsibility of '
+                   'the caller to copy data from the old buffer to the new one '
+                   'if necessary.\n'
+                   'See RBC issue #536')
             self.NRT_Debug(msg)
         builder.ret(new_ptr)
 
@@ -491,9 +489,8 @@ class RBC_NRT:
             data = self._get_from_meminfo(mi, "data")
 
             # Is this the only function that calls NRT_Reallocate?
-            new_data = builder.call(
-                self.NRT_Reallocate_NoCopy, [data, size], name="new_data"
-            )
+            new_data = builder.call(self.NRT_Reallocate_NoCopy, [data, size],
+                                    name="new_data")
 
             # RBC/NRT cannot use realloc as the old memory gets freed in the
             # process. Instead, memory is copied from the old buffer to the new
