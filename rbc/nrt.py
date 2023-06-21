@@ -31,6 +31,8 @@ NRT_MemInfo_init = "NRT_MemInfo_init"
 NRT_MemInfo_alloc = "NRT_MemInfo_alloc"
 NRT_MemInfo_alloc_safe = "NRT_MemInfo_alloc_safe"
 
+NRT_MemInfo_alloc_aligned = "NRT_MemInfo_alloc_aligned"
+
 NRT_MemInfo_alloc_dtor = "NRT_MemInfo_alloc_dtor"
 NRT_MemInfo_alloc_dtor_safe = "NRT_MemInfo_alloc_dtor_safe"
 
@@ -58,10 +60,12 @@ NRT_MemInfo_destroy = "NRT_MemInfo_destroy"
 
 nrt_internal_custom_dtor = "nrt_internal_custom_dtor"
 nrt_allocate_meminfo_and_data = "nrt_allocate_meminfo_and_data"
+nrt_allocate_meminfo_and_data_align = "nrt_allocate_meminfo_and_data_align"
 allocate_varlen_buffer = "allocate_varlen_buffer"
 malloc = "malloc"
 free = "free"
 realloc = "realloc"
+ctpop = "ctpop"
 
 nrt_debug_incr = "nrt_debug_incr"
 nrt_debug_decr = "nrt_debug_decr"
@@ -96,6 +100,7 @@ class RBC_NRT:
 
         # type_sizeof stores each size in bytes
         size_t = ir.IntType(ti.type_sizeof["size_t"] * 8)
+        unsigned = ir.IntType(ti.type_sizeof["uint"] * 8)
 
         # As a reference, here's a copy of the MemInfo struct defined in
         # numba/core/context/nrt.cpp
@@ -121,12 +126,14 @@ class RBC_NRT:
         MemInfo_ptr_t = MemInfo_t.as_pointer()
 
         self.size_t = size_t
+        self.unsigned = unsigned
         self.MemInfo_t = MemInfo_t
         self.MemInfo_ptr_t = MemInfo_ptr_t
         self.sizeof_MemInfo_t = i64(self.target_context.get_abi_sizeof(MemInfo_t))
 
     def _define_functions(self):
         size_t = self.size_t
+        unsigned = self.unsigned
         MemInfo_ptr_t = self.MemInfo_ptr_t
 
         self.NRT_DTOR_FUNCTION = ir.FunctionType(void, [i8p, size_t, i8p])
@@ -138,6 +145,10 @@ class RBC_NRT:
                 ("mi", "data", "size", "dtor", "dtor_info", "external_allocator"),
             ),
             NRT_MemInfo_alloc: (ir.FunctionType(MemInfo_ptr_t, [size_t]), ("size",)),
+            NRT_MemInfo_alloc_aligned: (
+                ir.FunctionType(MemInfo_ptr_t, [size_t, unsigned]),
+                ("size", "aligned"),
+            ),
             NRT_MemInfo_alloc_safe: (
                 ir.FunctionType(MemInfo_ptr_t, [size_t]),
                 ("size",),
@@ -190,7 +201,8 @@ class RBC_NRT:
             NRT_Reallocate: (ir.FunctionType(i8p, [i8p, size_t]), ("ptr", "size")),
             NRT_Reallocate_NoCopy: (
                 ir.FunctionType(i8p, [i8p, size_t]),
-                ("ptr", "size")),
+                ("ptr", "size"),
+            ),
             NRT_dealloc: (ir.FunctionType(void, [MemInfo_ptr_t]), ("mi",)),
             NRT_Free: (ir.FunctionType(void, [i8p]), ("ptr",)),
             NRT_MemInfo_destroy: (ir.FunctionType(void, [MemInfo_ptr_t]), ("mi",)),
@@ -202,10 +214,15 @@ class RBC_NRT:
                 ir.FunctionType(i8p, [size_t, i8pp, i8p]),
                 ("size", "mi_out", "allocator"),
             ),
+            nrt_allocate_meminfo_and_data_align: (
+                ir.FunctionType(i8p, [size_t, unsigned, i8pp, i8p]),
+                ("size", "align", "mi", "allocator"),
+            ),
             allocate_varlen_buffer: (ir.FunctionType(i8p, [i64, i64]), ()),
             malloc: (ir.FunctionType(i8p, [size_t]), ("size",)),
             free: (ir.FunctionType(void, [i8p]), ("ptr",)),
             realloc: (ir.FunctionType(i8p, [i8p, size_t]), ()),
+            ctpop: (ir.FunctionType(i32, [i32]), ("src",)),
             # debug functions
             nrt_debug_incr: (ir.FunctionType(void, []), ()),
             nrt_debug_decr: (ir.FunctionType(void, []), ()),
@@ -371,6 +388,12 @@ class RBC_NRT:
         # with self.nrt_debug_ctx():
         #     pass
         builder.ret_void()
+
+    def define_ctpop(self, builder, args):
+        mod = builder.module
+        intr = mod.declare_intrinsic("llvm.ctpop", [a.type for a in args])
+        ret = builder.call(intr, args)
+        builder.ret(ret)
 
     def define_NRT_MemInfo_alloc_safe_aligned(self, builder, args):
         # Just call the non-aligned version for now
@@ -564,6 +587,77 @@ class RBC_NRT:
             )
             # self.NRT_Debug("malloc: bytes=%zu -> ptr=%p", size, ptr)
         builder.ret(ptr)
+
+    def define_nrt_allocate_meminfo_and_data_align(self, builder, args):
+        # This is a 1:1 translation of the C++ code compiled to LLVM IR
+        # For the full reference, check
+        # https://godbolt.org/z/1G4jjhPYG
+
+        bb_entry = builder.basic_block
+        bb_10 = builder.append_basic_block("bb_10")
+        bb_14 = builder.append_basic_block("bb_14")
+        bb_18 = builder.append_basic_block("bb_18")
+        bb_21 = builder.append_basic_block("bb_21")
+        bb_28 = builder.append_basic_block("bb_28")
+
+        with self.nrt_debug_ctx():
+            [p0, p1, p2, p3] = args
+            p5 = builder.shl(p1, i32(1))
+            p6 = builder.zext(p5, i64)
+            p7 = builder.add(p6, p0)
+            p8 = builder.call(self.nrt_allocate_meminfo_and_data,
+                              [p7, p2, p3])
+            p9 = builder.icmp_signed('==', p8, NULL)
+            builder.cbranch(p9, bb_28, bb_10)
+
+            with builder.goto_block(bb_10):
+                p11 = builder.ptrtoint(p8, i64)
+                p12 = builder.call(self.ctpop, [p1])
+                p13 = builder.icmp_unsigned('<', p12, i32(2))
+                builder.cbranch(p13, bb_14, bb_18)
+
+            with builder.goto_block(bb_14):
+                p15 = builder.add(p1, i32(1))
+                p16 = builder.zext(p15, i64)
+                p17 = builder.and_(p11, p16)
+                builder.branch(bb_21)
+
+            with builder.goto_block(bb_18):
+                p19 = builder.zext(p1, i64)
+                p20 = builder.urem(p11, p19)
+                builder.branch(bb_21)
+
+            with builder.goto_block(bb_21):
+                p22 = builder.phi(i64)
+                p22.add_incoming(p17, bb_14)
+                p22.add_incoming(p20, bb_18)
+                p23 = builder.icmp_signed('==', p22, i64(0))
+                p24 = builder.zext(p1, i64)
+                p25 = builder.sub(p24, p22)
+                p26 = builder.select(p23, i64(0), p25)
+                p27 = builder.gep(p8, [p26], inbounds=True)
+                builder.branch(bb_28)
+
+            with builder.goto_block(bb_28):
+                p29 = builder.phi(i8p)
+                p29.add_incoming(p27, bb_21)
+                p29.add_incoming(NULL, bb_entry)
+                builder.ret(p29)
+
+    def define_NRT_MemInfo_alloc_aligned(self, builder, args):
+        with self.nrt_debug_ctx():
+            mi = builder.alloca(self.MemInfo_ptr_t, name="mi")
+            [size, align] = args
+            data = builder.call(
+                self.nrt_allocate_meminfo_and_data_align,
+                [size, align, builder.bitcast(mi, i8pp), NULL],
+                name="data",
+            )
+            self.NRT_Debug("%p\n", data)
+            builder.call(
+                self.NRT_MemInfo_init, [builder.load(mi), data, size, NULL, NULL, NULL]
+            )
+        builder.ret(builder.load(mi))
 
     def define_NRT_MemInfo_alloc_dtor(self, builder, args):
         with self.nrt_debug_ctx():
