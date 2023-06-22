@@ -1,14 +1,12 @@
 
 import os
 from collections import defaultdict
-import pytest
+
 import numpy as np
+import pytest
 from numba import types
+
 from rbc.externals.heavydb import set_output_row_size
-
-import numpy as np
-import pytest
-
 from rbc.typesystem import Type
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
