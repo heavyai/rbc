@@ -48,7 +48,7 @@ class ColumnListArray(ColumnList):
 class HeavyDBColumnListArrayType(HeavyDBColumnListType):
 
     def postprocess_type(self):
-        return self
+        return self.params(shorttypename='ColumnList')
 
     @property
     def numba_type(self):
