@@ -1,13 +1,11 @@
 # Author: Pearu Peterson
 # Created: February 2019
 
-import functools
-import os
 import re
 import warnings
-from collections import defaultdict
+from collections import defaultdict, deque
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, Dict, Set
 
 import llvmlite.binding as llvm
 from llvmlite import ir
@@ -16,7 +14,8 @@ from numba.core import errors as nb_errors
 from numba.core import extending, imputils, registry, sigutils, typing
 
 from rbc.externals import stdio
-from rbc.nrt import create_nrt_functions
+from rbc.nrt import create_nrt_functions, read_unicodetype_db
+from rbc import config
 
 from .errors import UnsupportedError
 from .libfuncs import Library
@@ -24,6 +23,13 @@ from .targetinfo import TargetInfo
 
 int32_t = ir.IntType(32)
 int1_t = ir.IntType(1)
+
+
+def nrt_required(main_module: llvm.module.ModuleRef):
+    for f in main_module.functions:
+        if f.is_declaration and f.name.startswith('NRT'):
+            return True
+    return False
 
 
 def find_at_word(text: str) -> Optional[str]:
@@ -49,60 +55,69 @@ def find_at_word(text: str) -> Optional[str]:
     return word[1:]
 
 
-def get_called_functions(library, funcname=None, debug=False):
+def get_called_functions(library,
+                         funcname: Optional[str] = None,
+                         debug: bool = False) -> Dict[str, Set[str]]:
     result = defaultdict(set)
+    q: deque[str] = deque()
+
     module = library._final_module
     if funcname is None:
         for df in library.get_defined_functions():
-            for k, v in get_called_functions(library, df.name, debug).items():
-                result[k].update(v)
-        return result
+            q.append(df.name)
+    else:
+        q.append(funcname)
 
-    func = module.get_function(funcname)
-    assert func.name == funcname, (func.name, funcname)
-    result['defined'].add(funcname)
-    for block in func.blocks:
-        for instruction in block.instructions:
-            if instruction.opcode == 'call':
-                instr = list(instruction.operands)[-1]
-                name = instr.name
-                try:
-                    f = module.get_function(name)
-                except NameError:
-                    if 'bitcast' not in str(instr):
-                        raise  # re-raise
+    linked_functions: Dict[str, JITRemoteCodeLibrary] = dict()
+    for lib in library._linking_libraries:
+        result['libraries'].add(lib)
+        for df in lib.get_defined_functions():
+            linked_functions[df.name] = lib
 
-                    # attempt to find caller symbol in instr
-                    name = find_at_word(str(instr))
-                    if name is None:
-                        # ignore call to function pointer
-                        msg = f'Ignoring call to bitcast instruction:\n{instr}'
-                        if debug:
-                            warnings.warn(msg)
-                        continue
-                    f = module.get_function(name)
+    while len(q) > 0:
+        funcname = q.pop()
 
-                if name.startswith('llvm.'):
-                    result['intrinsics'].add(name)
-                elif f.is_declaration:
-                    found = False
-                    for lib in library._linking_libraries:
-                        for df in lib.get_defined_functions():
-                            if name == df.name:
-                                result['defined'].add(name)
-                                result['libraries'].add(lib)
-                                found = True
-                                for k, v in get_called_functions(lib, name, debug).items():
-                                    result[k].update(v)
-                                break
-                        if found:
+        if funcname in result['defined']:
+            continue
+
+        func = module.get_function(funcname)
+        assert func.name == funcname, (func.name, funcname)
+        result['defined'].add(funcname)
+
+        for block in func.blocks:
+            for instruction in block.instructions:
+                if instruction.opcode == 'call':
+                    instr = list(instruction.operands)[-1]
+                    name = instr.name
+                    try:
+                        f = module.get_function(name)
+                    except NameError:
+                        if 'bitcast' not in str(instr):
+                            raise  # re-raise
+
+                        # attempt to find caller symbol in instr
+                        name = find_at_word(str(instr))
+                        if name is None:
+                            # ignore call to function pointer
+                            msg = f'Ignoring call to bitcast instruction:\n{instr}'
+                            if debug:
+                                warnings.warn(msg)
+                            continue
+                        f = module.get_function(name)
+
+                    if name.startswith('llvm.'):
+                        result['intrinsics'].add(name)
+                    elif f.is_declaration:
+                        if name in linked_functions:
+                            lib = linked_functions.get(name)
+                            result['defined'].add(name)
+                            result['libraries'].add(lib)
+                            q.append(name)
                             break
-                    if not found:
-                        result['declarations'].add(name)
-                else:
-                    result['defined'].add(name)
-                    for k, v in get_called_functions(library, name, debug).items():
-                        result[k].update(v)
+                        else:
+                            result['declarations'].add(name)
+                    else:
+                        q.append(name)
     return result
 
 
@@ -402,19 +417,6 @@ def add_metadata_flag(main_library, **kwargs):
     main_library.add_ir_module(module)
 
 
-def read_unicodetype_db():
-
-    @functools.lru_cache()
-    def _read_file():
-        unicode_file = os.path.join(os.path.dirname(__file__),
-                                    'unicodetype_db.ll')
-        with open(unicode_file, 'r') as f:
-            s = f.read()
-        return s
-
-    return llvm.parse_assembly(_read_file())
-
-
 def compile_to_LLVM(functions_and_signatures,
                     target_info: TargetInfo,
                     pipeline_class=compiler.Compiler,
@@ -444,8 +446,10 @@ def compile_to_LLVM(functions_and_signatures,
     typing_context = JITRemoteTypingContext()
     target_context = JITRemoteTargetContext(typing_context)
 
-    nrt_module = create_nrt_functions(target_context, debug=debug)
-    unicodetype_db = read_unicodetype_db()
+    if config.ENABLE_NRT:
+        # both the nrt_module and unicodetype_db are cached
+        nrt_module = create_nrt_functions(target_context, debug=debug)
+        unicodetype_db = read_unicodetype_db()
 
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
@@ -461,9 +465,6 @@ def compile_to_LLVM(functions_and_signatures,
             assert isinstance(user_defined_llvm_ir, llvm.ModuleRef)
             main_module.link_in(user_defined_llvm_ir, preserve=True)
 
-        main_module.link_in(unicodetype_db)
-        main_library.add_ir_module(nrt_module)
-
         succesful_fids = []
         function_names = []
         for func, signatures in functions_and_signatures:
@@ -476,6 +477,15 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
+        if nrt_required(main_module):
+            if config.ENABLE_NRT:
+                main_module.link_in(unicodetype_db)
+                main_library.add_ir_module(nrt_module)
+            else:
+                msg = ("NRT is disabled but required. Undefine the environment "
+                       "variable 'RBC_ENABLE_NRT' or set its value to '1'")
+                warnings.warn(msg)
+
         add_metadata_flag(main_library,
                           pass_column_arguments_by_value=0,
                           manage_memory_buffer=1)
@@ -484,7 +494,8 @@ def compile_to_LLVM(functions_and_signatures,
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            for k, v in get_called_functions(main_library, fname, debug).items():
+            symbols = get_called_functions(main_library, fname, debug)
+            for k, v in symbols.items():
                 used_symbols[k].update(v)
 
         all_symbols = get_called_functions(main_library, debug=debug)

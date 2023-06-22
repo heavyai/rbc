@@ -124,6 +124,7 @@ class NRT(Library):
     NRT_MemInfo_varsize_alloc
     NRT_MemInfo_varsize_free
     NRT_MemInfo_alloc_safe_aligned
+    NRT_MemInfo_alloc_aligned
     numba_gettyperecord
     numba_get_PyUnicode_ExtendedCase
     '''.strip().split())
