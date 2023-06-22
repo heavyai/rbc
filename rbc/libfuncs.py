@@ -99,6 +99,10 @@ class HeavyDB(Library):
     GeoMultiPolygon_size GeoMultiPolygon_isNull GeoMultiPolygon_getItem
     GeoLineString_size GeoLineString_isNull GeoLineString_getItem
     GeoMultiLineString_size GeoMultiLineString_isNull GeoMultiLineString_getItem
+
+    ColumnTextEncodingNone_isNull ColumnTextEncodingNone_setNull
+    ColumnTextEncodingNone_setItem ColumnTextEncodingNone_getNofValues
+    ColumnTextEncodingNone_getItem ColumnTextEncodingNone_concatItem
     '''.strip().split())
 
 

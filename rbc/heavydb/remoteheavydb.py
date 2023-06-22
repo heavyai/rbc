@@ -403,6 +403,7 @@ class RemoteHeavyDB(RemoteJIT):
         Constant='int32|sizer=Constant',
         PreFlight='int32|sizer=PreFlight',
         ColumnList='HeavyDBColumnListType',
+        flatbuffer_TextEncodingNone='HeavyDBFlatBufferTextEncodingNoneType',
         TextEncodingNone='HeavyDBTextEncodingNoneType',
         TextEncodingDict='HeavyDBTextEncodingDictType',
         TableFunctionManager='HeavyDBTableFunctionManagerType',

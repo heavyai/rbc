@@ -31,12 +31,13 @@ class HeavyDBColumnType(HeavyDBBufferType):
     def _rewire(self):
         # re-wire the implementation of Column<T> to a subtype of Column
         from rbc import heavydb  # is there a better way to do this?
-        geo_columns = ('GeoPoint', 'GeoMultiPoint',
-                       'GeoLineString', 'GeoMultiLineString',
-                       'GeoPolygon', 'GeoMultiPolygon')
+        flatbuffer_columns = ('GeoPoint', 'GeoMultiPoint',
+                              'GeoLineString', 'GeoMultiLineString',
+                              'GeoPolygon', 'GeoMultiPolygon',
+                              'TextEncodingNone')
 
-        for s in geo_columns:
-            # Column<Geo*>
+        for s in flatbuffer_columns:
+            # Column<Geo*> | Column<TextEncodingNone>
             geo_cls = getattr(heavydb, f'HeavyDB{s}Type')
             if isinstance(self[0][0], geo_cls):
                 p = 'Output' if self.is_output_column else ''

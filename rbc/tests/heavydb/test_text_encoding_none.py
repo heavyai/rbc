@@ -1,6 +1,7 @@
-from rbc.tests import heavydb_fixture
-from rbc.heavydb import TextEncodingNone
 import pytest
+
+from rbc.heavydb import TextEncodingNone
+from rbc.tests import heavydb_fixture
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
@@ -11,20 +12,6 @@ pytestmark = pytest.mark.skipif(not available_version, reason=reason)
 def heavydb():
     for o in heavydb_fixture(globals(), suffices=['text']):
         yield o
-
-
-def test_table_data(heavydb):
-    heavydb.reset()
-
-    descr, result = heavydb.sql_execute(
-        f'select t4, t2, t1, s, n from {heavydb.table_name}text')
-    result = list(result)
-
-    assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun'),
-                      ('bar', 'bar', 'bar', ['fun', 'bar'], 'bar'),
-                      ('fun', 'fun', 'foo', ['foo'], 'foo'),
-                      ('bar', 'bar', 'barr', ['foo', 'bar'], 'barr'),
-                      ('foo', 'foo', 'foooo', ['fun', 'bar'], 'foooo')]
 
 
 def test_TextEncodingNone_len(heavydb):

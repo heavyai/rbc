@@ -237,7 +237,9 @@ def heavydb_column_set_null(col, index):
 @extending.overload(operator.setitem)
 @extending.overload_method(ColumnFlatBufferPointer, "set_item")
 def heavydb_column_set_item(col, index, rhs):
-    if isinstance(col, ColumnFlatBufferPointer):
+    supported_geotypes = {"GeoLineString", "GeoMultiLineString", "GeoPolygon",
+                          "GeoMultiPolygon", "GeoMultiPoint", "GeoPoint"}
+    if isinstance(col, ColumnFlatBufferPointer) and col.eltype in supported_geotypes:
         sig = f"void Column{col.eltype}_setItem(int8_t*, int64_t, int8_t* rhs)"
         setItem = external(sig)
 
