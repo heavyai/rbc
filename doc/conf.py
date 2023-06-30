@@ -53,6 +53,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'numbadoc',
+    'myst_parser',
 ]
 
 # autosummary configuration
