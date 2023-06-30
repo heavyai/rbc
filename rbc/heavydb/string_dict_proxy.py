@@ -7,9 +7,11 @@ __all__ = ['StringDictionaryProxyNumbaType', 'StringDictionaryProxy']
 from llvmlite import ir
 from numba.core import extending
 from numba.core import types as nb_types
+from numba.core.pythonapi import PY_UNICODE_1BYTE_KIND
+from numba.cpython.unicode import _empty_string, _set_code_point
 
-from rbc.external import external
 from rbc.errors import NumbaTypeError
+from rbc.external import external
 
 from . import text_encoding_none
 from .metatype import HeavyDBMetaType
@@ -22,15 +24,15 @@ int32_t = ir.IntType(32)
 
 class StringDictionaryProxy(metaclass=HeavyDBMetaType):
 
-    def getStringId(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
+    def getStringId(self, str_arg: str) -> int:
         """
         """
 
-    def getOrAddTransient(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
+    def getOrAddTransient(self, str_arg: str) -> int:
         """
         """
 
-    def getString(self, index: int) -> 'text_encoding_none.TextEncodingNone':
+    def getString(self, index: int) -> str:
         """
         """
 
@@ -82,6 +84,13 @@ def heavydb_column_getString(proxy, string_id):
 
     def impl(proxy, string_id):
         ptr = getBytes(as_voidptr(proxy), string_id)
-        len = getBytesLength(as_voidptr(proxy), string_id)
-        return text_encoding_none.TextEncodingNone(ptr, len)
+        length = getBytesLength(as_voidptr(proxy), string_id)
+        text = text_encoding_none.TextEncodingNone(ptr, length)
+        kind = PY_UNICODE_1BYTE_KIND  # ASCII characters only
+        is_ascii = True
+        s = _empty_string(kind, length, is_ascii)
+        for i in range(length):
+            ch = text[i]
+            _set_code_point(s, i, ch)
+        return s
     return impl
