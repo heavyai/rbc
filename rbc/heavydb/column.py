@@ -106,7 +106,7 @@ class Column(Buffer):
         Data type of the array elements.
         """
 
-    def getStringId(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: E501
+    def get_string_id(self, s: Union[str, 'text_encoding_none.TextEncodingNone']) -> int:  # noqa: E501
         """
         Return the string ID for the given string ``s``.
 
@@ -114,7 +114,7 @@ class Column(Buffer):
             Only available on ``CPU`` and ``Column<TextEncodingDict>``
         """
 
-    def getString(self, id: int) -> int:
+    def get_string(self, id: int) -> int:
         """
         Return the string for the given ``id``.
 
