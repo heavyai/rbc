@@ -103,3 +103,123 @@ def test_templates(heavydb):
     assert heavydb.function_names(runtime_only=True) == ['add']
     assert len(heavydb.function_details('add')) == 4
     # magictoken.templates.end
+
+
+def test_udf(heavydb):
+    # magictoken.udf.begin
+    @heavydb('int64(int64)')
+    def incr(a):
+        return a + 1
+    # magictoken.udf.end
+
+    _, result = heavydb.sql_execute('SELECT incr(3)')
+    assert list(result) == [(4,)]
+
+    heavydb.unregister()
+
+    # magictoken.udf.multiple_signatures.begin
+    @heavydb('int64(int64, int64)', 'float64(float64, float64)')
+    def multiply(a, b):
+        return a * b
+    # magictoken.udf.multiple_signatures.end
+    _, result = heavydb.sql_execute('SELECT multiply(3.0, 2.0)')
+    assert list(result) == [(6.0,)]
+
+
+def test_udtf(heavydb):
+    col = 'f4'
+    table_name = heavydb.table_name
+
+    # magictoken.udtf.begin
+    @heavydb('int32(TableFunctionManager, Column<float>, OutputColumn<float>)')
+    def my_copy(mgr, inp, out):
+        size = len(inp)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            out[i] = inp[i]
+        return size
+    # magictoken.udtf.end
+
+    query = f'''
+        SELECT
+            *
+        FROM
+            TABLE(my_copy(
+                cursor(SELECT {col} FROM {table_name})
+            ))
+    '''
+    _, result = heavydb.sql_execute(query)
+    assert list(result) == [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
+
+
+def test_udf_text(heavydb):
+    table_name = heavydb.table_name + 'text'
+
+    if heavydb.version[:2] >= (6, 3):
+        # magictoken.udf.text.dict.begin
+        # Requires HeavyDB server v6.3 or newer
+        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
+        def text_copy(mgr, t):
+            db_id: int = mgr.getDictDbId('text_copy', 0)
+            dict_id: int = mgr.getDictId('text_copy', 0)
+            s: str = mgr.getString(db_id, dict_id, t)
+            return mgr.getOrAddTransient(
+                mgr.TRANSIENT_DICT_DB_ID,
+                mgr.TRANSIENT_DICT_ID,
+                s)
+        # magictoken.udf.text.dict.end
+        query = f"select text_copy(t1) from {table_name}"
+        _, r = heavydb.sql_execute(query)
+        assert list(r) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
+
+        # magictoken.udf.text.none.begin
+        from rbc.heavydb import TextEncodingNone
+
+        @heavydb('TextEncodingNone(TextEncodingNone)')
+        def text_duplicate(t):
+            s: str = t.to_string()
+            return TextEncodingNone(s + s)
+        # magictoken.udf.text.none.end
+
+        query = f"select text_duplicate(n) from {table_name}"
+        _, r = heavydb.sql_execute(query)
+        assert list(r) == [('funfun',), ('barbar',), ('foofoo',), ('barrbarr',),
+                           ('foooofoooo',)]
+
+
+def test_array(heavydb):
+    table_name = heavydb.table_name + 'array'
+
+    # magictoken.udf.array.new.begin
+    from rbc.heavydb import Array
+
+    @heavydb('Array<int64>(int32)')
+    def arr_new(size):
+        arr = Array(size, dtype='int64')
+        for i in range(size):
+            arr[i] = 1
+        return arr
+    # magictoken.udf.array.new.end
+
+    _, r = heavydb.sql_execute('SELECT arr_new(5);')
+    assert list(r) == [([1, 1, 1, 1, 1],)]
+
+    # magictoken.udf.array.length.begin
+    @heavydb('int64(Array<int32>)')
+    def my_length(arr):
+        return len(arr)
+    # magictoken.udf.array.length.end
+
+    _, r = heavydb.sql_execute(f'SELECT my_length(i4) from {table_name}')
+    assert list(r) == [(0,), (1,), (2,), (3,), (4,)]
+
+    # magictoken.udf.array.array_api.begin
+    from rbc.stdlib import array_api
+
+    @heavydb('Array<int64>(int32)')
+    def arr_new_ones(sz):
+        return array_api.ones(sz, dtype='int64')
+    # magictoken.udf.array.array_api.end
+
+    _, r = heavydb.sql_execute('SELECT arr_new_ones(5);')
+    assert list(r) == [([1, 1, 1, 1, 1],)]
