@@ -4,7 +4,7 @@ tblib
 thriftpy2
 netifaces
 clang==11.1.0
-pydata-sphinx-theme>=0.9.0
+furo
 packaging
 setuptools
 urllib3<2

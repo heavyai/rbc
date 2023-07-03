@@ -89,7 +89,7 @@ On a terminal, after creating the RBC conda environment, type the following:
     $ conda activate rbc
     $ export PYTHONPATH=`pwd`
     $ cd doc
-    $ mamba -c conda-forge install sphinx pydata-sphinx-theme
+    $ mamba -c conda-forge install sphinx furo
     $ make html -j4  # Increase this number if needed
 
 If it all goes well, this will generate ``build/html`` subdirectory, containing
