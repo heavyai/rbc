@@ -21,6 +21,7 @@ def test_connect(heavydb):
 
 
 def test_external_functions(heavydb):
+    heavydb.unregister()
     # magictoken.external_functions.abs.begin
     from rbc.external import external
     cmath_abs = external('int64 abs(int64)')
@@ -48,6 +49,7 @@ def test_external_functions(heavydb):
 
 
 def test_raise_exception(heavydb):
+    heavydb.unregister()
     # magictoken.raise_exception.begin
     @heavydb('int32(TableFunctionManager, Column<int>, OutputColumn<int>)')
     def udtf_copy(mgr, inp, out):
@@ -82,6 +84,7 @@ def test_raise_exception(heavydb):
 
 
 def test_devices(heavydb):
+    heavydb.unregister()
     # magictoken.devices.begin
     @heavydb('int32(int32, int32)', devices=['CPU', 'GPU'])
     def add(a, b):
@@ -106,6 +109,7 @@ def test_templates(heavydb):
 
 
 def test_udf(heavydb):
+    heavydb.unregister()
     # magictoken.udf.begin
     @heavydb('int64(int64)')
     def incr(a):
@@ -127,6 +131,7 @@ def test_udf(heavydb):
 
 
 def test_udtf(heavydb):
+    heavydb.unregister()
     col = 'f4'
     table_name = heavydb.table_name
 
@@ -152,9 +157,8 @@ def test_udtf(heavydb):
     assert list(result) == [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
 
 
-def test_udf_text(heavydb):
-    table_name = heavydb.table_name + 'text'
-
+def test_udf_text_copy(heavydb):
+    heavydb.unregister()
     if heavydb.version[:2] >= (6, 3):
         # magictoken.udf.text.dict.begin
         # Requires HeavyDB server v6.3 or newer
@@ -168,26 +172,104 @@ def test_udf_text(heavydb):
                 mgr.TRANSIENT_DICT_ID,
                 s)
         # magictoken.udf.text.dict.end
+
+        table_name = heavydb.table_name + 'text'
         query = f"select text_copy(t1) from {table_name}"
         _, r = heavydb.sql_execute(query)
         assert list(r) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
 
-        # magictoken.udf.text.none.begin
-        from rbc.heavydb import TextEncodingNone
 
-        @heavydb('TextEncodingNone(TextEncodingNone)')
-        def text_duplicate(t):
-            s: str = t.to_string()
-            return TextEncodingNone(s + s)
-        # magictoken.udf.text.none.end
+def test_udf_dict_proxy(heavydb):
+    heavydb.unregister()
+    if heavydb.version[:2] >= (6, 3):
+        # magictoken.udf.proxy.begin
+        # Requires HeavyDB server v6.3 or newer
+        from rbc.heavydb import StringDictionaryProxy
 
-        query = f"select text_duplicate(n) from {table_name}"
+        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
+        def test_string_proxy(mgr, t):
+            db_id: int = mgr.getDictDbId('test_string_proxy', 0)
+            dict_id: int = mgr.getDictId('test_string_proxy', 0)
+            proxy: StringDictionaryProxy = mgr.getStringDictionaryProxy(db_id, dict_id)
+            s: str = proxy.getString(t)
+            return mgr.getOrAddTransient(
+                mgr.TRANSIENT_DICT_DB_ID,
+                mgr.TRANSIENT_DICT_ID,
+                s)
+        # magictoken.udf.proxy.end
+
+        table_name = heavydb.table_name + 'text'
+        query = f"select test_string_proxy(t1) from {table_name}"
         _, r = heavydb.sql_execute(query)
-        assert list(r) == [('funfun',), ('barbar',), ('foofoo',), ('barrbarr',),
-                           ('foooofoooo',)]
+        assert list(r) == [('fun',), ('bar',), ('foo',), ('barr',), ('foooo',)]
+
+
+def test_udtf_string_proxy(heavydb):
+    heavydb.unregister()
+    # magictoken.udtf.proxy.begin
+    from rbc.heavydb import StringDictionaryProxy, TextEncodingNone
+
+    @heavydb('int32(TableFunctionManager, Column<T>, OutputColumn<T> | input_id=args<0>)',
+             T=['TextEncodingDict'])
+    def test_string_proxy(mgr, inp, out):
+        size = len(inp)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            t = inp.string_dict_proxy.getString(inp[i])
+            s = t.to_string()
+            id = out.string_dict_proxy.getOrAddTransient(s.title())
+            out[i] = id
+        return size
+    # magictoken.udtf.proxy.end
+
+    table_name = heavydb.table_name + 'text'
+    query = f'''
+        SELECT * FROM TABLE(test_string_proxy(
+            cursor(SELECT t1 from {table_name})
+        ))
+    '''
+    _, r = heavydb.sql_execute(query)
+    assert list(r) == [('Fun',), ('Bar',), ('Foo',), ('Barr',), ('Foooo',)]
+
+
+def test_udf_text_duplicate(heavydb):
+    heavydb.unregister()
+    # magictoken.udf.text.none.begin
+    from rbc.heavydb import TextEncodingNone
+
+    @heavydb('TextEncodingNone(TextEncodingNone)')
+    def text_duplicate(t):
+        s: str = t.to_string()
+        return TextEncodingNone(s + s)
+    # magictoken.udf.text.none.end
+
+    table_name = heavydb.table_name + 'text'
+    query = f"select text_duplicate(n) from {table_name}"
+    _, r = heavydb.sql_execute(query)
+    assert list(r) == [('funfun',), ('barbar',), ('foofoo',), ('barrbarr',),
+                       ('foooofoooo',)]
+
+
+def test_udf_text_capitalize(heavydb):
+    heavydb.unregister()
+    # magictoken.udf.text.capitalize.begin
+    from rbc.heavydb import TextEncodingNone
+
+    @heavydb('TextEncodingNone(TextEncodingNone)')
+    def text_capitalize(t):
+        s: str = t.to_string()
+        return TextEncodingNone(s.capitalize())
+    # magictoken.udf.text.capitalize.end
+
+    table_name = heavydb.table_name + 'text'
+    query = f"select text_capitalize(n) from {table_name}"
+    _, r = heavydb.sql_execute(query)
+    assert list(r) == [('Fun',), ('Bar',), ('Foo',), ('Barr',),
+                       ('Foooo',)]
 
 
 def test_array(heavydb):
+    heavydb.unregister()
     table_name = heavydb.table_name + 'array'
 
     # magictoken.udf.array.new.begin
@@ -223,3 +305,60 @@ def test_array(heavydb):
 
     _, r = heavydb.sql_execute('SELECT arr_new_ones(5);')
     assert list(r) == [([1, 1, 1, 1, 1],)]
+
+
+def test_tablefunctionmanager(heavydb):
+    heavydb.unregister()
+    table = heavydb.table_name
+
+    # magictoken.udtf.mgr.basic.begin
+    @heavydb('int32(TableFunctionManager, Column<int>, OutputColumn<int>)')
+    def table_copy(mgr, inp, out):
+        size = len(inp)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            out[i] = inp[i]
+        return size
+    # magictoken.udtf.mgr.basic.end
+
+    query = f'''
+        SELECT
+            *
+        FROM
+            TABLE(table_copy(
+                cursor(SELECT i4 FROM {table})
+            ))
+    '''
+    _, r = heavydb.sql_execute(query)
+    assert list(r) == [(0,), (1,), (2,), (3,), (4,)]
+
+
+def test_rowfunctionmanager(heavydb):
+    heavydb.unregister()
+    table = heavydb.table_name + 'text'
+
+    if heavydb.version[:2] >= (6, 4):
+        # magictoken.udf.mgr.basic.begin
+        from rbc.heavydb import TextEncodingNone
+
+        @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
+        def concat(mgr, text):
+            db_id: int = mgr.getDictDbId('concat', 0)
+            dict_id: int = mgr.getDictId('concat', 0)
+            str_enc_none: TextEncodingNone = mgr.getString(db_id, dict_id, text)
+            s: str = str_enc_none.to_string()
+            s_concat = 'test: ' + s
+            return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_DB_ID,
+                                         mgr.TRANSIENT_DICT_ID,
+                                         s_concat)
+        # magictoken.udf.mgr.basic.end
+
+        query = f'''
+            SELECT
+                concat(t1)
+            FROM
+                {table}
+        '''
+        _, r = heavydb.sql_execute(query)
+        assert list(r) == [('test: fun',), ('test: bar',), ('test: foo',),
+                           ('test: barr',), ('test: foooo',)]

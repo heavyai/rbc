@@ -34,6 +34,8 @@ howtos/array
 howtos/column
 howtos/text
 howtos/geo
+howtos/manager
+howtos/string_dict_proxy
 ```
 
 -----
@@ -46,5 +48,4 @@ caption: Advanced
 
 howtos/devices
 howtos/external_functions
-howtos/text
 ```

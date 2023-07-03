@@ -11,6 +11,7 @@ space and encoding/decoding overhead.
 
 ## Defining an UDF with Text types:
 
+(example-1)=
 ### Encoding dict
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python
@@ -21,13 +22,33 @@ space and encoding/decoding overhead.
 :linenos:
 ```
 
-
 ### Encoding none
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python
 :caption: from ``test_udf_text`` of ``rbc/tests/heavydb/test_howtos.py``
 :start-after: magictoken.udf.text.none.begin
 :end-before: magictoken.udf.text.none.end
-:dedent: 8
+:dedent: 4
 :linenos:
 ```
+
+### Converting a Text Encoding None to a string
+
+Text encoding none objects feature a handy `to_string()` method for converting
+the object into a *Python Unicode* type.
+
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_udf_text`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udf.text.capitalize.begin
+:end-before: magictoken.udf.text.capitalize.end
+:dedent: 4
+:linenos:
+```
+
+Check the Numba [readthedocs page](https://numba.readthedocs.io/en/stable/reference/pysupported.html#str)
+for a list of supported string methods.
+
+### Converting a Text Encoding Dict to a string
+
+See the [first example](example-1) in this page.
