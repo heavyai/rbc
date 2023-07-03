@@ -16,14 +16,9 @@ Top-level functions
 
     ctools
     external
-    errors
-    libfuncs
     heavydb
     remotejit
-    structure_type
     targetinfo
-    typesystem
-    utils
 
 
 HeavyDB Backend
@@ -36,11 +31,21 @@ It should be noticed that the following types are not regular Python types but
 The set of types below are only materialize inside the HeavyDB SQL Engine. Thus,
 one cannot create and use them inside the REPL, for instance.
 
+Array Types
+^^^^^^^^^^^
 
 .. autosummary::
     :toctree: generated/
 
     heavydb.Array
+
+
+Column Types
+^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated/
+
     heavydb.Column
     heavydb.ColumnArray
     heavydb.ColumnListArray
@@ -52,19 +57,51 @@ one cannot create and use them inside the REPL, for instance.
     heavydb.ColumnGeoPolygon
     heavydb.ColumnGeoMultiPolygon
     heavydb.ColumnTextEncodingNone
-    heavydb.DayTimeInterval
+
+
+Geo Types
+^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated/
+
     heavydb.GeoLineString
     heavydb.GeoMultiPoint
     heavydb.GeoMultiLineString
     heavydb.GeoMultiPolygon
     heavydb.GeoPoint
     heavydb.GeoPolygon
-    heavydb.RowFunctionManager
-    heavydb.StringDictionaryProxy
+
+
+Text-related Types
+^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated/
+
     heavydb.TextEncodingDict
+    heavydb.StringDictionaryProxy
     heavydb.TextEncodingNone
-    heavydb.Timestamp
+
+
+Row/Table Function Manager
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated/
+
+    heavydb.RowFunctionManager
     heavydb.TableFunctionManager
+
+
+Time-related Types
+^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated/
+
+    heavydb.DayTimeInterval
+    heavydb.Timestamp
     heavydb.YearMonthTimeInterval
 
 
