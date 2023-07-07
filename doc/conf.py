@@ -79,21 +79,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'pydata_sphinx_theme'
+html_theme = 'furo'
 
 # The Xnd logo
 html_logo = "images/xndlogo.png"
-
-html_theme_options = {
-    "github_url": "https://github.com/xnd-project/rbc",
-    "use_edit_page_button": True,
-    "logo": {
-        "image_light": html_logo,
-        "image_dark": html_logo,
-    },
-    # https://github.com/pydata/pydata-sphinx-theme/issues/1220
-    "icon_links": [],
-}
 
 html_context = {
     "github_user": "xnd-project",

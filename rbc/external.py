@@ -15,13 +15,13 @@ class External:
 
     @classmethod
     def external(cls, signature, *, devices=['CPU']):
-        """Parameters
+        """
+        Parameters
         ----------
+
         signature : object (str, ctypes function, python callable, numba function)
             Any object convertible to a Numba function via Type.fromobject(...).tonumba()
 
-        Keyword parameters
-        ------------------
         devices : list
           Device names ('CPU' or/and 'GPU') for the given set of
           signatures. Default is ['CPU'].
