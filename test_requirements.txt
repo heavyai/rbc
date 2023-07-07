@@ -6,6 +6,7 @@ netifaces
 clang==11.1.0
 furo
 myst-parser
+sphinx-design
 packaging
 setuptools
 urllib3<2
