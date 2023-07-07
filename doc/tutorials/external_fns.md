@@ -1,5 +1,5 @@
 
-# Using RBC with Ibis framework
+# Defining and calling external functions
 
 <div class="container" style="">
     <div style="position:relative">
