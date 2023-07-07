@@ -3,6 +3,7 @@
 import pytest
 from rbc.errors import HeavyDBServerError
 from rbc.tests import heavydb_fixture
+from rbc.heavydb import RemoteHeavyDB
 
 
 @pytest.fixture(scope='module')
@@ -389,3 +390,34 @@ def test_column_power(heavydb):
     '''
     _, r = heavydb.sql_execute(query)
     assert list(r) == [(0,), (1,), (8,), (27,), (64,)]
+
+
+def test_geopoint(heavydb: RemoteHeavyDB):
+    if heavydb.version[:2] < (6, 4):
+        pytest.skip('Requires HeavyDB 6.4 or newer')
+
+    heavydb.unregister()
+
+    # magictoken.udtf.geopoint.basic.begin
+    from rbc.heavydb import Point2D
+
+    @heavydb('int32(TableFunctionManager, int64 size, OutputColumn<Z>)',
+             Z=['GeoPoint'])
+    def generate_geo(mgr, size, out):
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            out[i] = Point2D(i, i)
+        return size
+    # magictoken.udtf.geopoint.basic.end
+
+    # magictoken.udtf.geopoint.basic.sql.begin
+    query = f'''
+        SELECT * FROM TABLE(
+            generate_geo(5)
+        );
+    '''
+    _, r = heavydb.sql_execute(query)
+    r = list(r)
+    assert r == [('POINT (0 0)',), ('POINT (1 1)',), ('POINT (2 2)',),
+                 ('POINT (3 3)',), ('POINT (4 4)',)]
+    # magictoken.udtf.geopoint.basic.sql.end
