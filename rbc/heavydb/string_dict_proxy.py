@@ -22,15 +22,15 @@ int32_t = ir.IntType(32)
 
 class StringDictionaryProxy(metaclass=HeavyDBMetaType):
 
-    def getStringId(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
+    def get_string_id(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
         """
         """
 
-    def getOrAddTransient(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
+    def get_or_add_transient(self, str_arg: 'text_encoding_none.TextEncodingNone') -> int:
         """
         """
 
-    def getString(self, index: int) -> 'text_encoding_none.TextEncodingNone':
+    def get_string(self, index: int) -> 'text_encoding_none.TextEncodingNone':
         """
         """
 
@@ -58,8 +58,8 @@ class StringDictionaryProxyNumbaType(OpaquePtrNumbaType):
 HeavyDBStringDictProxyType().register_datamodel()
 
 
-@extending.overload_method(StringDictionaryProxyNumbaType, 'getStringId')
-@extending.overload_method(StringDictionaryProxyNumbaType, 'getOrAddTransient')
+@extending.overload_method(StringDictionaryProxyNumbaType, 'get_string_id')
+@extending.overload_method(StringDictionaryProxyNumbaType, 'get_or_add_transient')
 def ov_getStringId(proxy, str_arg):
     getStringId_ = external("int32 StringDictionaryProxy_getStringId(int8*, int8*)")
 
@@ -75,7 +75,7 @@ def ov_getStringId(proxy, str_arg):
         raise NumbaTypeError(f'Cannot handle string argument type {str_arg}')
 
 
-@extending.overload_method(StringDictionaryProxyNumbaType, 'getString')
+@extending.overload_method(StringDictionaryProxyNumbaType, 'get_string')
 def heavydb_column_getString(proxy, string_id):
     getBytes = external('int8* StringDictionaryProxy_getStringBytes(int8*, int32)')
     getBytesLength = external('int64 StringDictionaryProxy_getStringLength(int8*, int32)')

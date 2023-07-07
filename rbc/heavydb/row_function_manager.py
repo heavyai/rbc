@@ -42,19 +42,23 @@ class RowFunctionManager(metaclass=HeavyDBMetaType):
     TRANSIENT_DICT_DB_ID = 0
     TRANSIENT_DICT_ID = 0
 
-    def getString(self, db_id: int, dict_id: int, str_arg: int) -> 'text_encoding_none.TextEncodingNone':  # noqa: E501
+    def get_string(self, db_id: int, dict_id: int, str_arg: int) -> 'text_encoding_none.TextEncodingNone':  # noqa: E501
         """
         """
 
-    def getStringDictionaryProxy(self, db_id: int, dict_id: int) -> 'string_dict_proxy.StringDictionaryProxy':  # noqa: E501
+    def get_string_dictionary_proxy(self, db_id: int, dict_id: int) -> 'string_dict_proxy.StringDictionaryProxy':  # noqa: E501
         """
         """
 
-    def getDictDbId(self, func_name: str, arg_idx: int) -> int:
+    def get_or_add_transient(self, db_id: int, dict_id: int, str_arg: str) -> int:
         """
         """
 
-    def getDictId(self, func_name: str, arg_idx: int) -> int:
+    def get_dict_db_id(self, func_name: str, arg_idx: int) -> int:
+        """
+        """
+
+    def get_dict_id(self, func_name: str, arg_idx: int) -> int:
         """
         """
 
@@ -62,7 +66,7 @@ class RowFunctionManager(metaclass=HeavyDBMetaType):
 error_msg = 'RowFunctionManager is only available in HeavyDB 6.2 or newer (got %s)'
 
 
-@extending.overload_method(RowFunctionManagerNumbaType, 'getDictId')
+@extending.overload_method(RowFunctionManagerNumbaType, 'get_dict_id')
 def heavydb_udf_manager_get_dict_id(mgr, func_name, arg_idx):
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
@@ -77,7 +81,7 @@ def heavydb_udf_manager_get_dict_id(mgr, func_name, arg_idx):
     return impl
 
 
-@extending.overload_method(RowFunctionManagerNumbaType, 'getDictDbId')
+@extending.overload_method(RowFunctionManagerNumbaType, 'get_dict_db_id')
 def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
@@ -92,7 +96,7 @@ def heavydb_udf_manager_get_db_id(mgr, func_name, arg_idx):
     return impl
 
 
-@extending.overload_method(RowFunctionManagerNumbaType, 'getStringDictionaryProxy')
+@extending.overload_method(RowFunctionManagerNumbaType, 'get_string_dictionary_proxy')
 def heavydb_udf_manager_get_string_dict_proxy(mgr, db_id, dict_id):
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
@@ -112,27 +116,27 @@ def heavydb_udf_manager_get_string_dict_proxy(mgr, db_id, dict_id):
     return impl
 
 
-@extending.overload_method(RowFunctionManagerNumbaType, 'getOrAddTransient')
+@extending.overload_method(RowFunctionManagerNumbaType, 'get_or_add_transient')
 def heavydb_udf_manager_get_or_add_transient(mgr, db_id, dict_id, str_arg):
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     def impl(mgr, db_id, dict_id, str_arg):
-        proxy = mgr.getStringDictionaryProxy(db_id, dict_id)
-        return proxy.getOrAddTransient(str_arg)
+        proxy = mgr.get_string_dictionary_proxy(db_id, dict_id)
+        return proxy.get_or_add_transient(str_arg)
     return impl
 
 
-@extending.overload_method(RowFunctionManagerNumbaType, 'getString')
+@extending.overload_method(RowFunctionManagerNumbaType, 'get_string')
 def heavydb_udf_manager_get_string(mgr, db_id, dict_id, string_id):
     target_info = TargetInfo()
     if target_info.software[1][:3] < (6, 2, 0):
         raise UnsupportedError(error_msg % (".".join(map(str, target_info.software[1]))))
 
     def impl(mgr, db_id, dict_id, string_id):
-        proxy = mgr.getStringDictionaryProxy(db_id, dict_id)
-        return proxy.getString(string_id)
+        proxy = mgr.get_string_dictionary_proxy(db_id, dict_id)
+        return proxy.get_string(string_id)
     return impl
 
 
