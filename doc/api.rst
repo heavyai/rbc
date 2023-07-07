@@ -126,14 +126,3 @@ Array API
     stdlib.utility_functions
 
 
-Externals
----------
-
-.. autosummary::
-    :toctree: generated/
-
-    externals.cmath
-    externals.libdevice
-    externals.macros
-    externals.heavydb
-    externals.stdio

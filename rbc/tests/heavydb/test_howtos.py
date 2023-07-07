@@ -362,3 +362,30 @@ def test_rowfunctionmanager(heavydb):
         _, r = heavydb.sql_execute(query)
         assert list(r) == [('test: fun',), ('test: bar',), ('test: foo',),
                            ('test: barr',), ('test: foooo',)]
+
+
+def test_column_power(heavydb):
+    heavydb.unregister()
+
+    # magictoken.udtf.column.basic.begin
+    import numpy as np
+
+    @heavydb('int32(TableFunctionManager, Column<T>, T, OutputColumn<T>)',
+             T=['int64'])
+    def udtf_power(mgr, inp, exp, out):
+        size = len(inp)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            out[i] = np.power(inp[i], exp)
+        return size
+    # magictoken.udtf.column.basic.end
+
+    table_name = heavydb.table_name
+    query = f'''
+        SELECT * FROM TABLE(udtf_power(
+            cursor(SELECT i8 from {table_name}),
+            3
+        ))
+    '''
+    _, r = heavydb.sql_execute(query)
+    assert list(r) == [(0,), (1,), (8,), (27,), (64,)]
