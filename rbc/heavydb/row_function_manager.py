@@ -1,14 +1,15 @@
 __all__ = ['HeavyDBRowFunctionManagerType', 'RowFunctionManager']
 
 
-from numba.core import extending, typing
+from numba.core import extending
 from numba.core import types as nb_types
+from numba.core import typing
 
 from rbc.errors import UnsupportedError
 from rbc.external import external
 from rbc.targetinfo import TargetInfo
 
-from . import string_dict_proxy, text_encoding_none
+from . import string_dict_proxy
 from .metatype import HeavyDBMetaType
 from .opaque_pointer import HeavyDBOpaquePtr, OpaquePtrNumbaType
 from .utils import as_voidptr, global_str_constant
@@ -42,7 +43,7 @@ class RowFunctionManager(metaclass=HeavyDBMetaType):
     TRANSIENT_DICT_DB_ID = 0
     TRANSIENT_DICT_ID = 0
 
-    def get_string(self, db_id: int, dict_id: int, str_arg: int) -> 'text_encoding_none.TextEncodingNone':  # noqa: E501
+    def getString(self, db_id: int, dict_id: int, str_arg: int) -> str:
         """
         """
 

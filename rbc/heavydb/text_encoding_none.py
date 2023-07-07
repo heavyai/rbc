@@ -273,6 +273,16 @@ def ol_attr_is_null_(typingctx, text):
     return sig, codegen
 
 
+@extending.overload(operator.setitem)
+def ol_setitem(t, i, v):
+    from .buffer import heavydb_buffer_ptr_setitem_
+    if isinstance(t, TextEncodingNonePointer) and isinstance(v, nb_types.UnicodeType):
+        def impl(t, i, v):
+            code = ord(v)
+            heavydb_buffer_ptr_setitem_(t, i, code)
+        return impl
+
+
 @extending.overload_attribute(TextEncodingNonePointer, 'ptr')
 def ol_attr_ptr(text):
     def impl(text):
