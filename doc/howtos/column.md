@@ -3,7 +3,7 @@
 The Column type provide the structure and organization for storing and
 retrieving data within HeavyDB.
 
-### Basic usage
+## Basic usage
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python
@@ -14,14 +14,15 @@ retrieving data within HeavyDB.
 :linenos:
 ```
 
-<details>
-<summary>Example SQL query</summary>
+:::{dropdown} Example SQL Query
 
-```sql
-SELECT * FROM TABLE(udtf_power(
-    cursor(SELECT * FROM TABLE(generate_series(1, 5)),
-    3
-));
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_column`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udtf.column.basic.sql.begin
+:end-before: magictoken.udtf.column.basic.sql.end
+:dedent: 4
+:linenos:
 ```
 
-</details>
+:::
