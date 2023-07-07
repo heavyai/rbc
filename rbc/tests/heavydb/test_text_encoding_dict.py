@@ -120,9 +120,9 @@ def define(heavydb):
 
         @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)')
         def to_text_encoding_none_1(mgr, t):
-            db_id = mgr.getDictDbId('to_text_encoding_none_1', 0)
-            dict_id = mgr.getDictId('to_text_encoding_none_1', 0)
-            str = mgr.getString(db_id, dict_id, t)
+            db_id = mgr.get_dict_db_id('to_text_encoding_none_1', 0)
+            dict_id = mgr.get_dict_id('to_text_encoding_none_1', 0)
+            str = mgr.get_string(db_id, dict_id, t)
             return TextEncodingNone(str)
 
         @heavydb('TextEncodingNone(RowFunctionManager, TextEncodingDict)')
