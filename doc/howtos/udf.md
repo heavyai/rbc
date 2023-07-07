@@ -1,5 +1,7 @@
 # User Defined Functions (UDFs)
 
+## Basics
+
 UDFs are function that operate at row-level. That is, they receive as input a
 single row at a time.
 
@@ -11,6 +13,20 @@ single row at a time.
 :dedent: 4
 :linenos:
 ```
+
+:::{dropdown} Example SQL Query
+
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_column`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udf.sql.begin
+:end-before: magictoken.udf.sql.end
+:dedent: 4
+:linenos:
+```
+
+:::
+
 
 ## Multiple signatures
 
@@ -24,3 +40,16 @@ Defining UDFs with multiple signatures
 :dedent: 4
 :linenos:
 ```
+
+:::{dropdown} Example SQL Query
+
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_column`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udf.multiple_signatures.sql.begin
+:end-before: magictoken.udf.multiple_signatures.sql.end
+:dedent: 4
+:linenos:
+```
+
+:::

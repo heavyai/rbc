@@ -117,8 +117,10 @@ def test_udf(heavydb):
         return a + 1
     # magictoken.udf.end
 
+    # magictoken.udf.sql.begin
     _, result = heavydb.sql_execute('SELECT incr(3)')
     assert list(result) == [(4,)]
+    # magictoken.udf.sql.end
 
     heavydb.unregister()
 
@@ -127,8 +129,11 @@ def test_udf(heavydb):
     def multiply(a, b):
         return a * b
     # magictoken.udf.multiple_signatures.end
+
+    # magictoken.udf.multiple_signatures.sql.begin
     _, result = heavydb.sql_execute('SELECT multiply(3.0, 2.0)')
     assert list(result) == [(6.0,)]
+    # magictoken.udf.multiple_signatures.sql.end
 
 
 def test_udtf(heavydb):
@@ -284,8 +289,10 @@ def test_array(heavydb):
         return arr
     # magictoken.udf.array.new.end
 
+    # magictoken.udf.array.new.sql.begin
     _, r = heavydb.sql_execute('SELECT arr_new(5);')
     assert list(r) == [([1, 1, 1, 1, 1],)]
+    # magictoken.udf.array.new.sql.end
 
     # magictoken.udf.array.length.begin
     @heavydb('int64(Array<int32>)')
@@ -293,8 +300,10 @@ def test_array(heavydb):
         return len(arr)
     # magictoken.udf.array.length.end
 
+    # magictoken.udf.array.length.sql.begin
     _, r = heavydb.sql_execute(f'SELECT my_length(i4) from {table_name}')
     assert list(r) == [(0,), (1,), (2,), (3,), (4,)]
+    # magictoken.udf.array.length.sql.end
 
     # magictoken.udf.array.array_api.begin
     from rbc.stdlib import array_api
@@ -304,9 +313,10 @@ def test_array(heavydb):
         return array_api.ones(sz, dtype='int64')
     # magictoken.udf.array.array_api.end
 
+    # magictoken.udf.array.array_api.sql.begin
     _, r = heavydb.sql_execute('SELECT arr_new_ones(5);')
     assert list(r) == [([1, 1, 1, 1, 1],)]
-
+    # magictoken.udf.array.array_api.sql.end
 
 def test_tablefunctionmanager(heavydb):
     heavydb.unregister()
