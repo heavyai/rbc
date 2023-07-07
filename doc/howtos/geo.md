@@ -16,8 +16,7 @@ HeavyDB offers an expanded range of geometry types, encompassing `(Multi)Point`,
 :linenos:
 ```
 
-<details>
-<summary>Example SQL query</summary>
+:::{dropdown} Example SQL Query
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python
@@ -28,4 +27,32 @@ HeavyDB offers an expanded range of geometry types, encompassing `(Multi)Point`,
 :linenos:
 ```
 
-</details>
+:::
+
+
+### `GeoMultiPoint`
+
+`MultiPoint` works a bit different than `Point`. They are created by calling
+`.from_coords` method.
+
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_geomultipoint`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udtf.mp.basic.begin
+:end-before: magictoken.udtf.mp.basic.end
+:dedent: 4
+:linenos:
+```
+
+:::{dropdown} Example SQL Query
+
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_geopoint`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udtf.mp.basic.sql.begin
+:end-before: magictoken.udtf.mp.basic.sql.end
+:dedent: 4
+:linenos:
+```
+
+:::

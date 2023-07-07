@@ -381,15 +381,16 @@ def test_column_power(heavydb):
         return size
     # magictoken.udtf.column.basic.end
 
-    table_name = heavydb.table_name
+    # magictoken.udtf.column.basic.sql.begin
     query = f'''
         SELECT * FROM TABLE(udtf_power(
-            cursor(SELECT i8 from {table_name}),
+            cursor(SELECT * FROM TABLE(generate_series(1, 5, 1))),
             3
         ))
     '''
     _, r = heavydb.sql_execute(query)
-    assert list(r) == [(0,), (1,), (8,), (27,), (64,)]
+    assert list(r) == [(1,), (8,), (27,), (64,), (125,)]
+    # magictoken.udtf.column.basic.sql.end
 
 
 def test_geopoint(heavydb: RemoteHeavyDB):
@@ -421,3 +422,34 @@ def test_geopoint(heavydb: RemoteHeavyDB):
     assert r == [('POINT (0 0)',), ('POINT (1 1)',), ('POINT (2 2)',),
                  ('POINT (3 3)',), ('POINT (4 4)',)]
     # magictoken.udtf.geopoint.basic.sql.end
+
+
+def test_geomultipoint(heavydb: RemoteHeavyDB):
+    if heavydb.version[:2] < (6, 4):
+        pytest.skip('Requires HeavyDB 6.4 or newer')
+
+    heavydb.unregister()
+
+    # magictoken.udtf.mp.basic.begin
+    @heavydb('int32(TableFunctionManager, int64 size, OutputColumn<Z>)',
+             Z=['GeoMultiPoint'])
+    def generate_geo(mgr, size, out):
+        mgr.set_output_item_values_total_number(0, size * 4)
+        mgr.set_output_row_size(size)
+        for i in range(size):
+            coords = [i + 1.0, i + 2.0, i + 3.0, i + 4.0]
+            out[i].from_coords(coords)
+        return size
+    # magictoken.udtf.mp.basic.end
+
+    # magictoken.udtf.mp.basic.sql.begin
+    query = f'''
+        SELECT * FROM TABLE(
+            generate_geo(3)
+        );
+    '''
+    _, r = heavydb.sql_execute(query)
+    r = list(r)
+    assert r == [('MULTIPOINT (1 2,3 4)',), ('MULTIPOINT (2 3,4 5)',),
+                 ('MULTIPOINT (3 4,5 6)',)]
+    # magictoken.udtf.mp.basic.sql.end
