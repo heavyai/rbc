@@ -355,8 +355,6 @@ def test_rowfunctionmanager(heavydb):
 
     if heavydb.version[:2] >= (6, 4):
         # magictoken.udf.mgr.basic.begin
-        from rbc.heavydb import TextEncodingNone
-
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
         def concat(mgr, text):
             db_id: int = mgr.get_dict_db_id('concat', 0)
