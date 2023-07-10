@@ -1,7 +1,7 @@
 
 # RBC tutorials
 
-Different from how to guides, tutorials are longer and cover a broader set of
+Unlike how-to guides, tutorials are longer and cover a broader set of
 features available in the RBC project. These tutorials are usually jupyter
 notebooks available in the `notebooks` repo and rendered here.
 

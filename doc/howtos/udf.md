@@ -2,7 +2,7 @@
 
 ## Basics
 
-UDFs are function that operate at row-level. That is, they receive as input a
+UDFs are functions that operate at row-level. That is, they receive as input a
 single row at a time.
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py

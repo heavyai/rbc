@@ -3,8 +3,8 @@
 
 ## cmath `abs`
 
-The `external` keyword provide a way of calling C functions defined in other
-libraries within python code.
+The `external` keyword provides a way of calling C functions defined in other
+libraries within Python code.
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python

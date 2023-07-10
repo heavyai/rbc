@@ -1,7 +1,7 @@
 # Geometry Types
 
-HeavyDB offers an expanded range of geometry types, encompassing `(Multi)Point`,
-`(Multi)LineString`, and `(Multi)Polygon`.
+HeavyDB offers an extensive range of geometry types, encompassing
+`(Multi)Point`, `(Multi)LineString`, and `(Multi)Polygon`.
 
 ## Basics
 
@@ -33,7 +33,7 @@ HeavyDB offers an expanded range of geometry types, encompassing `(Multi)Point`,
 ### `GeoMultiPoint`
 
 `MultiPoint` works a bit different than `Point`. They are created by calling
-`.from_coords` method.
+the `.from_coords` method.
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python

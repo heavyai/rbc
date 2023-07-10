@@ -1,5 +1,4 @@
-
-# Stricting a function to run in a specific device (CPU/GPU)
+# Restricting a function to run only in a specific device (CPU/GPU)
 
 Assuming you already have a [connection](heavydb-connect) to the HeavyDB server:
 

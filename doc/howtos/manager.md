@@ -1,8 +1,8 @@
 # Table/Row Function Manager
 
-The function manager in HeavyDB provides a convenient mechanism of handling the
-state of user-defined functions. It can perform various tasks such as
-allocating memory for output buffers, retrieve dictionary encoded strings in
+The function managers in HeavyDB provide a convenient mechanism of handling the
+state of user-defined functions. They can perform various tasks such as
+allocate memory for output buffers, retrieve dictionary encoded strings in
 the [dictionary proxy](string-dict-proxy), and raise exceptions.
 
 ## Table Function Manager

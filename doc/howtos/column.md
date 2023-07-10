@@ -1,7 +1,7 @@
 # Column Type
 
-The Column type provide the structure and organization for storing and
-retrieving data within HeavyDB.
+The Column type provides the structure and organization for storing and
+retrieving columnar data within HeavyDB.
 
 ## Basic usage
 
