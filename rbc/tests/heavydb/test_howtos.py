@@ -109,8 +109,9 @@ def test_templates(heavydb):
     heavydb.register()
 
     # magictoken.templates.sql.begin
-    assert heavydb.function_names(runtime_only=True) == ['add']
-    assert len(heavydb.function_details('add')) == 4
+    if heavydb.version[:2] >= (6, 2):
+        assert heavydb.function_names(runtime_only=True) == ['add']
+        assert len(heavydb.function_details('add')) == 4
     assert add(2, 3).execute() == 5
     # magictoken.templates.sql.end
 
@@ -174,10 +175,10 @@ def test_udf_text_copy(heavydb):
         # Requires HeavyDB server v6.3 or newer
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
         def text_copy(mgr, t):
-            db_id: int = mgr.getDictDbId('text_copy', 0)
-            dict_id: int = mgr.getDictId('text_copy', 0)
-            s: str = mgr.getString(db_id, dict_id, t)
-            return mgr.getOrAddTransient(
+            db_id: int = mgr.get_dict_db_id('text_copy', 0)
+            dict_id: int = mgr.get_dict_id('text_copy', 0)
+            s: str = mgr.get_string(db_id, dict_id, t)
+            return mgr.get_or_add_transient(
                 mgr.TRANSIENT_DICT_DB_ID,
                 mgr.TRANSIENT_DICT_ID,
                 s)
@@ -198,11 +199,11 @@ def test_udf_dict_proxy(heavydb):
 
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
         def test_string_proxy(mgr, t):
-            db_id: int = mgr.getDictDbId('test_string_proxy', 0)
-            dict_id: int = mgr.getDictId('test_string_proxy', 0)
-            proxy: StringDictionaryProxy = mgr.getStringDictionaryProxy(db_id, dict_id)
-            s: str = proxy.getString(t)
-            return mgr.getOrAddTransient(
+            db_id: int = mgr.get_dict_db_id('test_string_proxy', 0)
+            dict_id: int = mgr.get_dict_id('test_string_proxy', 0)
+            proxy: StringDictionaryProxy = mgr.get_string_dictionary_proxy(db_id, dict_id)
+            s: str = proxy.get_string(t)
+            return mgr.get_or_add_transient(
                 mgr.TRANSIENT_DICT_DB_ID,
                 mgr.TRANSIENT_DICT_ID,
                 s)
@@ -217,6 +218,9 @@ def test_udf_dict_proxy(heavydb):
 def test_udtf_string_proxy(heavydb):
     heavydb.unregister()
 
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Test requires HeavyDB 6.1 or newer')
+
     # magictoken.udtf.proxy.begin
     @heavydb('int32(TableFunctionManager, Column<T>, OutputColumn<T> | input_id=args<0>)',
              T=['TextEncodingDict'])
@@ -224,9 +228,8 @@ def test_udtf_string_proxy(heavydb):
         size = len(inp)
         mgr.set_output_row_size(size)
         for i in range(size):
-            t = inp.string_dict_proxy.getString(inp[i])
-            s = t.to_string()
-            id = out.string_dict_proxy.getOrAddTransient(s.title())
+            s = inp.string_dict_proxy.get_string(inp[i])
+            id = out.string_dict_proxy.get_or_add_transient(s.title())
             out[i] = id
         return size
     # magictoken.udtf.proxy.end
@@ -356,14 +359,13 @@ def test_rowfunctionmanager(heavydb):
 
         @heavydb('TextEncodingDict(RowFunctionManager, TextEncodingDict)')
         def concat(mgr, text):
-            db_id: int = mgr.getDictDbId('concat', 0)
-            dict_id: int = mgr.getDictId('concat', 0)
-            str_enc_none: TextEncodingNone = mgr.getString(db_id, dict_id, text)
-            s: str = str_enc_none.to_string()
+            db_id: int = mgr.get_dict_db_id('concat', 0)
+            dict_id: int = mgr.get_dict_id('concat', 0)
+            s: str = mgr.get_string(db_id, dict_id, text)
             s_concat = 'test: ' + s
-            return mgr.getOrAddTransient(mgr.TRANSIENT_DICT_DB_ID,
-                                         mgr.TRANSIENT_DICT_ID,
-                                         s_concat)
+            return mgr.get_or_add_transient(mgr.TRANSIENT_DICT_DB_ID,
+                                            mgr.TRANSIENT_DICT_ID,
+                                            s_concat)
         # magictoken.udf.mgr.basic.end
 
         # magictoken.udf.mgr.basic.sql.begin
@@ -405,8 +407,8 @@ def test_column_power(heavydb):
 
 
 def test_geopoint(heavydb: RemoteHeavyDB):
-    if heavydb.version[:2] < (6, 4):
-        pytest.skip('Requires HeavyDB 6.4 or newer')
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Requires HeavyDB 7.0 or newer')
 
     heavydb.unregister()
 
@@ -436,8 +438,8 @@ def test_geopoint(heavydb: RemoteHeavyDB):
 
 
 def test_geomultipoint(heavydb: RemoteHeavyDB):
-    if heavydb.version[:2] < (6, 4):
-        pytest.skip('Requires HeavyDB 6.4 or newer')
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Requires HeavyDB 7.0 or newer')
 
     heavydb.unregister()
 
