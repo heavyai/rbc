@@ -11,3 +11,15 @@ UDTFs take a set of columns as input and return a set of columns as output.
 :dedent: 4
 :linenos:
 ```
+
+
+:::{dropdown} Example SQL Query
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_udtf`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udtf.sql.begin
+:end-before: magictoken.udtf.sql.end
+:dedent: 4
+:linenos:
+```
+:::

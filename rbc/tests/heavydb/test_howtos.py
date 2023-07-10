@@ -30,10 +30,11 @@ def test_external_functions(heavydb):
     @heavydb('int64(int64)')
     def apply_abs(x):
         return cmath_abs(x)
-
-    _, result = heavydb.sql_execute('SELECT apply_abs(-3);')
     # magictoken.external_functions.abs.end
-    assert list(result) == [(3,)]
+
+    # magictoken.external_functions.abs.sql.begin
+    assert apply_abs(-3).execute() == 3
+    # magictoken.external_functions.abs.sql.end
 
     # magictoken.external_functions.printf.begin
     from rbc.externals.stdio import printf
@@ -43,16 +44,17 @@ def test_external_functions(heavydb):
         # This message will show in the heavydb logs
         printf("input number: %d\n", x)
         return x * x
-
-    _, result = heavydb.sql_execute('SELECT power_2(3);')
     # magictoken.external_functions.printf.end
-    assert list(result) == [(9,)]
+
+    # magictoken.external_functions.printf.sql.begin
+    assert power_2(3).execute() == 9
+    # magictoken.external_functions.printf.sql.end
 
 
 def test_raise_exception(heavydb):
     heavydb.unregister()
     # magictoken.raise_exception.begin
-    @heavydb('int32(TableFunctionManager, Column<int>, OutputColumn<int>)')
+    @heavydb('int32(TableFunctionManager, Column<int64>, OutputColumn<int64>)')
     def udtf_copy(mgr, inp, out):
         size = len(inp)
         if size > 4:
@@ -65,16 +67,11 @@ def test_raise_exception(heavydb):
         return size
     # magictoken.raise_exception.end
 
-    col = 'i4'
-    table_name = heavydb.table_name
-
+    # magictoken.raise_exception.sql.begin
     query = f'''
-        SELECT
-          *
-        FROM
-            TABLE(udtf_copy(
-                cursor(SELECT {col} FROM {table_name})
-            ))
+        SELECT * FROM TABLE(udtf_copy(
+            cursor(SELECT * FROM TABLE(generate_series(1, 5, 1)))
+        ));
     '''
 
     with pytest.raises(HeavyDBServerError) as exc:
@@ -82,6 +79,7 @@ def test_raise_exception(heavydb):
     exc_msg = ('Error executing table function: TableFunctionManager '
                'error_message!')
     assert exc.match(exc_msg)
+    # magictoken.raise_exception.sql.end
 
 
 def test_devices(heavydb):
@@ -91,8 +89,11 @@ def test_devices(heavydb):
     def add(a, b):
         return a + b
     # magictoken.devices.end
+
+    # magictoken.devices.sql.begin
     _, result = heavydb.sql_execute('SELECT add(-3, 3);')
     assert list(result) == [(0,)]
+    # magictoken.devices.sql.end
 
 
 def test_templates(heavydb):
@@ -102,11 +103,14 @@ def test_templates(heavydb):
     @heavydb('Z(T, Z)', T=['int32', 'float'], Z=['int64', 'double'])
     def add(a, b):
         return a + b
-
+    # magictoken.templates.end
     heavydb.register()
+
+    # magictoken.templates.sql.begin
     assert heavydb.function_names(runtime_only=True) == ['add']
     assert len(heavydb.function_details('add')) == 4
-    # magictoken.templates.end
+    assert add(2, 3).execute() == 5
+    # magictoken.templates.sql.end
 
 
 def test_udf(heavydb):
@@ -138,11 +142,9 @@ def test_udf(heavydb):
 
 def test_udtf(heavydb):
     heavydb.unregister()
-    col = 'f4'
-    table_name = heavydb.table_name
 
     # magictoken.udtf.begin
-    @heavydb('int32(TableFunctionManager, Column<float>, OutputColumn<float>)')
+    @heavydb('int32(TableFunctionManager, Column<int64>, OutputColumn<int64>)')
     def my_copy(mgr, inp, out):
         size = len(inp)
         mgr.set_output_row_size(size)
@@ -151,16 +153,15 @@ def test_udtf(heavydb):
         return size
     # magictoken.udtf.end
 
+    # magictoken.udtf.sql.begin
     query = f'''
-        SELECT
-            *
-        FROM
-            TABLE(my_copy(
-                cursor(SELECT {col} FROM {table_name})
-            ))
+        SELECT * FROM TABLE(my_copy(
+            cursor(SELECT * FROM TABLE(generate_series(1, 5, 1)))
+        ));
     '''
     _, result = heavydb.sql_execute(query)
-    assert list(result) == [(0.0,), (1.0,), (2.0,), (3.0,), (4.0,)]
+    assert list(result) == [(1,), (2,), (3,), (4,), (5,)]
+    # magictoken.udtf.sql.end
 
 
 def test_udf_text_copy(heavydb):
@@ -323,7 +324,7 @@ def test_tablefunctionmanager(heavydb):
     table = heavydb.table_name
 
     # magictoken.udtf.mgr.basic.begin
-    @heavydb('int32(TableFunctionManager, Column<int>, OutputColumn<int>)')
+    @heavydb('int32(TableFunctionManager, Column<int64>, OutputColumn<int64>)')
     def table_copy(mgr, inp, out):
         size = len(inp)
         mgr.set_output_row_size(size)
@@ -332,16 +333,15 @@ def test_tablefunctionmanager(heavydb):
         return size
     # magictoken.udtf.mgr.basic.end
 
+    # magictoken.udtf.mgr.basic.sql.begin
     query = f'''
-        SELECT
-            *
-        FROM
-            TABLE(table_copy(
-                cursor(SELECT i4 FROM {table})
-            ))
+        SELECT * FROM TABLE(table_copy(
+            cursor(SELECT * FROM TABLE(generate_series(0, 4, 1)))
+        ))
     '''
     _, r = heavydb.sql_execute(query)
     assert list(r) == [(0,), (1,), (2,), (3,), (4,)]
+    # magictoken.udtf.mgr.basic.sql.end
 
 
 def test_rowfunctionmanager(heavydb):
@@ -364,15 +364,14 @@ def test_rowfunctionmanager(heavydb):
                                          s_concat)
         # magictoken.udf.mgr.basic.end
 
+        # magictoken.udf.mgr.basic.sql.begin
         query = f'''
-            SELECT
-                concat(t1)
-            FROM
-                {table}
+            SELECT concat(t1) FROM {table}
         '''
         _, r = heavydb.sql_execute(query)
         assert list(r) == [('test: fun',), ('test: bar',), ('test: foo',),
                            ('test: barr',), ('test: foooo',)]
+        # magictoken.udf.mgr.basic.sql.end
 
 
 def test_column_power(heavydb):

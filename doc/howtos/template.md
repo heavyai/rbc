@@ -18,3 +18,15 @@ Assuming you already have a [connection](heavydb-connect) to the HeavyDB server:
 In the case above, the template arguments `T` and `Z`, are specified within the
 decorator, indicating the valid data types that can be used for the `add`
 function.
+
+
+:::{dropdown} Example SQL Query
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_templates`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.templates.sql.begin
+:end-before: magictoken.templates.sql.end
+:dedent: 4
+:linenos:
+```
+:::

@@ -11,12 +11,23 @@ the [dictionary proxy](string-dict-proxy), and raise exceptions.
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python
-:caption: from ``test_mgr`` of ``rbc/tests/heavydb/test_howtos.py``
+:caption: from ``test_tablefunctionmanager`` of ``rbc/tests/heavydb/test_howtos.py``
 :start-after: magictoken.udtf.mgr.basic.begin
 :end-before: magictoken.udtf.mgr.basic.end
 :dedent: 4
 :linenos:
 ```
+
+:::{dropdown} Example SQL Query
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_tablefunctionmanager`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udtf.mgr.basic.sql.begin
+:end-before: magictoken.udtf.mgr.basic.sql.end
+:dedent: 4
+:linenos:
+```
+:::
 
 ### Retrieving the dictionary string proxy
 
@@ -40,9 +51,20 @@ proxy in HeavyDB.
 
 ```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
 :language: python
-:caption: from ``test_mgr`` of ``rbc/tests/heavydb/test_howtos.py``
+:caption: from ``test_rowfunctionmanager`` of ``rbc/tests/heavydb/test_howtos.py``
 :start-after: magictoken.udf.mgr.basic.begin
 :end-before: magictoken.udf.mgr.basic.end
 :dedent: 8
 :linenos:
 ```
+
+:::{dropdown} Example SQL Query
+```{literalinclude} ../../rbc/tests/heavydb/test_howtos.py
+:language: python
+:caption: from ``test_rowfunctionmanager`` of ``rbc/tests/heavydb/test_howtos.py``
+:start-after: magictoken.udf.mgr.basic.sql.begin
+:end-before: magictoken.udf.mgr.basic.sql.end
+:dedent: 8
+:linenos:
+```
+:::
