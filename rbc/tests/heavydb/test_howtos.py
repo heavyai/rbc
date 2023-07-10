@@ -53,6 +53,7 @@ def test_external_functions(heavydb):
 
 def test_raise_exception(heavydb):
     heavydb.unregister()
+
     # magictoken.raise_exception.begin
     @heavydb('int32(TableFunctionManager, Column<int64>, OutputColumn<int64>)')
     def udtf_copy(mgr, inp, out):
@@ -68,7 +69,7 @@ def test_raise_exception(heavydb):
     # magictoken.raise_exception.end
 
     # magictoken.raise_exception.sql.begin
-    query = f'''
+    query = '''
         SELECT * FROM TABLE(udtf_copy(
             cursor(SELECT * FROM TABLE(generate_series(1, 5, 1)))
         ));
@@ -84,6 +85,7 @@ def test_raise_exception(heavydb):
 
 def test_devices(heavydb):
     heavydb.unregister()
+
     # magictoken.devices.begin
     @heavydb('int32(int32, int32)', devices=['CPU', 'GPU'])
     def add(a, b):
@@ -115,6 +117,7 @@ def test_templates(heavydb):
 
 def test_udf(heavydb):
     heavydb.unregister()
+
     # magictoken.udf.begin
     @heavydb('int64(int64)')
     def incr(a):
@@ -154,7 +157,7 @@ def test_udtf(heavydb):
     # magictoken.udtf.end
 
     # magictoken.udtf.sql.begin
-    query = f'''
+    query = '''
         SELECT * FROM TABLE(my_copy(
             cursor(SELECT * FROM TABLE(generate_series(1, 5, 1)))
         ));
@@ -213,9 +216,8 @@ def test_udf_dict_proxy(heavydb):
 
 def test_udtf_string_proxy(heavydb):
     heavydb.unregister()
-    # magictoken.udtf.proxy.begin
-    from rbc.heavydb import StringDictionaryProxy, TextEncodingNone
 
+    # magictoken.udtf.proxy.begin
     @heavydb('int32(TableFunctionManager, Column<T>, OutputColumn<T> | input_id=args<0>)',
              T=['TextEncodingDict'])
     def test_string_proxy(mgr, inp, out):
@@ -319,9 +321,9 @@ def test_array(heavydb):
     assert list(r) == [([1, 1, 1, 1, 1],)]
     # magictoken.udf.array.array_api.sql.end
 
+
 def test_tablefunctionmanager(heavydb):
     heavydb.unregister()
-    table = heavydb.table_name
 
     # magictoken.udtf.mgr.basic.begin
     @heavydb('int32(TableFunctionManager, Column<int64>, OutputColumn<int64>)')
@@ -334,7 +336,7 @@ def test_tablefunctionmanager(heavydb):
     # magictoken.udtf.mgr.basic.end
 
     # magictoken.udtf.mgr.basic.sql.begin
-    query = f'''
+    query = '''
         SELECT * FROM TABLE(table_copy(
             cursor(SELECT * FROM TABLE(generate_series(0, 4, 1)))
         ))
@@ -391,7 +393,7 @@ def test_column_power(heavydb):
     # magictoken.udtf.column.basic.end
 
     # magictoken.udtf.column.basic.sql.begin
-    query = f'''
+    query = '''
         SELECT * FROM TABLE(udtf_power(
             cursor(SELECT * FROM TABLE(generate_series(1, 5, 1))),
             3
@@ -421,7 +423,7 @@ def test_geopoint(heavydb: RemoteHeavyDB):
     # magictoken.udtf.geopoint.basic.end
 
     # magictoken.udtf.geopoint.basic.sql.begin
-    query = f'''
+    query = '''
         SELECT * FROM TABLE(
             generate_geo(5)
         );
@@ -452,7 +454,7 @@ def test_geomultipoint(heavydb: RemoteHeavyDB):
     # magictoken.udtf.mp.basic.end
 
     # magictoken.udtf.mp.basic.sql.begin
-    query = f'''
+    query = '''
         SELECT * FROM TABLE(
             generate_geo(3)
         );
