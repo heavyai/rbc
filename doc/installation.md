@@ -1,5 +1,5 @@
 
-## Installation
+# Installation
 
 RBC is available on both conda-forge and PyPI.
 
