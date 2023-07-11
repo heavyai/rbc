@@ -16,12 +16,16 @@ from .geo_nested_array import (GeoNestedArray, GeoNestedArrayNumbaType,
 
 
 class GeoMultiPointNumbaType(GeoNestedArrayNumbaType):
-    def __init__(self):
-        super().__init__(name="GeoMultiPointNumbaType")
+    def __init__(self, name):
+        super().__init__(name)
 
 
 class HeavyDBGeoMultiPointType(HeavyDBGeoNestedArray):
     """Typesystem type class for HeavyDB buffer structures."""
+
+    @property
+    def numba_type(self):
+        return GeoMultiPointNumbaType
 
     @property
     def type_name(self):

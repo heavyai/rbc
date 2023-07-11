@@ -41,7 +41,7 @@ Then, to create an environment with a few of the most common dependencies:
 
 To activate the environment for the current shell session:
 
-.. code-block:: console
+.. code-block:: bash
 
     $ conda activate rbc
 
@@ -52,7 +52,7 @@ To activate the environment for the current shell session:
 Once the environment is activated, you have a dedicated Python with the
 required dependencies:
 
-.. code-block:: python
+.. code-block:: bash
 
     $ python
     >>> import llvmlite

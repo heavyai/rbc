@@ -64,18 +64,18 @@ class HeavyDBPoint2D(typesystem.Type):
 @extending.type_callable(Point2D)
 def type_heavydb_point2d(context):
     def typer(x, y):
-        if isinstance(x, nb_types.Float) and isinstance(y, nb_types.Float):
+        if isinstance(x, nb_types.Number) and isinstance(y, nb_types.Number):
             return typesystem.Type.fromobject('Point2D').tonumba()
     return typer
 
 
-@extending.lower_builtin(Point2D, nb_types.Float, nb_types.Float)
+@extending.lower_builtin(Point2D, nb_types.Number, nb_types.Number)
 def heavydb_point2d_ctor(context, builder, sig, args):
     [x, y] = args
     typ = sig.return_type
     point = cgutils.create_struct_proxy(typ)(context, builder)
-    point.x = x
-    point.y = y
+    point.x = context.cast(builder, x, sig.args[0], nb_types.double)
+    point.y = context.cast(builder, y, sig.args[1], nb_types.double)
     return point._getvalue()
 
 

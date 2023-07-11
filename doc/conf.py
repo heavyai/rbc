@@ -53,7 +53,11 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'numbadoc',
+    'sphinx_design',
+    'myst_parser',
 ]
+
+myst_enable_extensions = ["colon_fence"]
 
 # autosummary configuration
 autosummary_generate = True
