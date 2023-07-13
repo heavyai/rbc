@@ -1428,7 +1428,7 @@ class RemoteHeavyDB(RemoteJIT):
             if isinstance(value, (list, numpy.ndarray)):
                 items_types = set(map(typesystem.Type.fromvalue, value))
                 com_type = typesystem.Type.reducetypes(items_types)
-                array_type = OmnisciArrayType((com_type,))
+                array_type = HeavyDBArrayType((com_type,))
                 types.append(array_type)
             elif isinstance(value, RemoteCallCapsule):
                 typ = value.__typesystem_type__
