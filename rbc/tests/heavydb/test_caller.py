@@ -124,6 +124,9 @@ def test_remote_TextEncodingNone_evaluation(heavydb):
 
 
 def test_remote_list_evaluation(heavydb):
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
+
     mylength = heavydb.get_caller('mylength')
     assert str(mylength) == "mylength['int64(T[]), T=int64|double, device=CPU']"
     assert str(mylength([1, 2])) == \
