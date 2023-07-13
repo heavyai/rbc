@@ -299,7 +299,7 @@ def test_normalize(target_info):
         assert tostr('size_t') == 'uint64'
         assert tostr('c_size_t') == 'uint64'
         assert tostr('std::size_t') == 'uint64'
-        assert tostr('long double') == 'float128'
+        assert tostr('long double') in ['float64', 'float128']
         assert tostr('byte') == 'int8'
         assert tostr('unsigned byte') == 'uint8'
         assert tostr('signed char') == 'int8'
@@ -627,6 +627,8 @@ def test_annotation(target_info):
     assert tostr('Column<T> | input_id=args<0>') == 'Column<T> | input_id=args<0>'
     assert tostr('Column<T> | input_id=args<0> | name = foo ') == \
         'Column<T> | input_id=args<0> | name=foo'
+    assert tostr('Column<T> | input_id=args<> | name = foo ') == \
+        'Column<T> | input_id=args<> | name=foo'
 
     t = Type.fromstring('int')
     assert (t | 'a').tostring() == 'int32 | a'

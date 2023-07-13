@@ -87,30 +87,30 @@ assert add(1, 2) == 3
 assert add(1.2, 2.3) == 3.5
 ```
 
-### Case 3: Define User Defined Function \(UDF\) in Python and register it in OmnisciDB server
+### Case 3: Define User Defined Function \(UDF\) in Python and register it in HeavyDB server
 
-Assume that OmnisciDB server is running in localhost, for instance.
+Assume that HeavyDB server is running in localhost, for instance.
 
-In a client computer, register a UDF in OmnisciDB server:
+In a client computer, register a UDF in HeavyDB server:
 
 ```text
-from rbc.omniscidb import RemoteOmnisci
-omni = RemoteOmnisci()
+from rbc.heavydb import RemoteHeavyDB
+omni = RemoteHeavyDB()
 @omni('i32(i32)')
 def incr(x):
     return x + 1
 omni.register()
 ```
 
-In a client computer, use the UDF in a query to OmnisciDB server:
+In a client computer, use the UDF in a query to HeavyDB server:
 
 ```text
 import ibis
-con = ibis.omniscidb.connect(...)
+con = ibis.heavydb.connect(...)
 q = con.sql('select i, incr(i) from mytable').execute()
 ```
 
 ### More examples and usage cases
 
-See [notebooks](https://github.com/xnd-project/rbc/tree/master/notebooks).
+See [notebooks](https://github.com/xnd-project/rbc/tree/main/notebooks).
 

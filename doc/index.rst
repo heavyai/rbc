@@ -15,9 +15,25 @@ A Python package implementing a remote backend compiler using numba
 and llvmlite tools.
 
 .. toctree::
+   :caption: Getting started
    :maxdepth: 1
-   :caption: Contents:
 
    design
+   installation
+
+.. toctree::
+   :caption: Fundamentals and usage
+   :maxdepth: 1
+
+   howto
+   tutorials
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Reference Manual:
+
    api
+   envvars
+   developer
+   nrt
    releases

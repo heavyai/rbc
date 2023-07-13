@@ -7,19 +7,13 @@ import os
 import inspect
 import warnings
 import ctypes
-from contextlib import nullcontext
 from collections import defaultdict
-from . import irtools
+from . import irtools, config
 from .errors import UnsupportedError
 from .typesystem import Type, get_signature
 from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
-from .utils import get_local_ip, UNSPECIFIED
+from .utils import get_local_ip, UNSPECIFIED, validate_devices
 from .targetinfo import TargetInfo
-from .rbclib import tracing_allocator
-# XXX WIP: the OmnisciCompilerPipeline is no longer omnisci-specific because
-# we support Arrays even without omnisci, so it must be renamed and moved
-# somewhere elsef
-from .omnisci_backend import OmnisciCompilerPipeline
 
 
 def isfunctionlike(obj):
@@ -166,7 +160,7 @@ class Signature:
         if obj is None:
             return self
         options, templates = extract_templates(options)
-        devices = options.get('devices')
+        devices = validate_devices(options.get('devices'))
         if isinstance(obj, Signature):
             self.signatures.extend(obj.signatures)
             self.signature_devices.update(obj.signature_devices)
@@ -255,14 +249,39 @@ class Signature:
         fsig = Type.fromcallable(func) if func is not None else None
         nargs = fsig.arity if func is not None else None
         target_info = TargetInfo()
-        for sig in self.signatures:
-            devices = self.signature_devices.get(sig)
-            if not target_info.check_enabled(devices):
+        target_device = 'GPU' if target_info.is_gpu else 'CPU'
+
+        # Signature devices are specified by the `devices` kw
+        # argument, as in `@heavydb(signature, devices=['CPU'])`, for
+        # instance. When no signature device is specified (the
+        # `signature_devices is None` case), we'll try to deduce if
+        # the signature is valid for the given device from argument
+        # types as certain argument types are device-specific.
+        def _check_signature_device_support(sig, signature_devices):
+            if signature_devices is None:
+                if not self.remotejit.check_function_type_supports_device(sig, target_device):
+                    if self.debug:
+                        print(f'{type(self).__name__}.normalized: skipping {sig} as'
+                              f' it does not support device `{target_device}`')
+                    return False
+            elif not target_info.check_enabled(signature_devices):
                 if self.debug:
                     print(f'{type(self).__name__}.normalized: skipping {sig} as'
-                          f' not supported by devices: {devices}')
-                continue
+                          f' its devices `{signature_devices}` does not include the target'
+                          f' device `{target_device}`')
+                return False
+            elif not self.remotejit.check_function_type_supports_device(sig, target_device):
+                func_name = func.__name__ if func is not None else None
+                raise ValueError(
+                    f'signature {sig} devices `{signature_devices}` contradict with'
+                    f' the device {target_device} support test. Correct the signature'
+                    f' devices in `{func_name}` definition.')
+            return True
+
+        for sig in self.signatures:
             templates = self.signature_templates.get(sig, {})
+            signature_devices = self.signature_devices.get(sig)
+
             sig = Type.fromobject(sig)
             if not sig.is_complete:
                 warnings.warn(f'Incomplete signature {sig} will be ignored')
@@ -271,6 +290,7 @@ class Signature:
                 raise ValueError(
                     'expected signature representing function type,'
                     f' got `{sig}`')
+
             if nargs is None:
                 nargs = sig.arity
             elif sig.arity != nargs:
@@ -283,13 +303,17 @@ class Signature:
                 for csig in sig.apply_templates(templates):
                     assert isinstance(csig, Type), (sig, csig, type(csig))
                     csig = self.remotejit.normalize_function_type(csig)
-                    signature.add(csig)
+                    if _check_signature_device_support(csig, signature_devices):
+                        signature.add(csig)
             else:
                 sig = self.remotejit.normalize_function_type(sig)
-                signature.add(sig)
+                if _check_signature_device_support(sig, signature_devices):
+                    signature.add(sig)
+
         if fsig is not None and fsig.is_complete:
             fsig = self.remotejit.normalize_function_type(fsig)
-            signature.add(fsig)
+            if _check_signature_device_support(fsig, None):
+                signature.add(fsig)
         return signature
 
 
@@ -347,6 +371,9 @@ class Caller:
     def describe(self):
         """Return LLVM IRs of all target devices.
         """
+        # To-Do: Move the pipeline to outside heavydb_backend
+        from rbc.heavydb.pipeline import HeavyDBCompilerPipeline
+
         lst = ['']
         fid = 0
         for device, target_info in self.remotejit.targets.items():
@@ -361,7 +388,7 @@ class Caller:
                     llvm_module, succesful_fids = irtools.compile_to_LLVM(
                         [(self.func, signatures_map)],
                         target_info,
-                        pipeline_class=OmnisciCompilerPipeline,
+                        pipeline_class=HeavyDBCompilerPipeline,
                         debug=self.remotejit.debug)
                     lst.append(str(llvm_module))
         lst.append(f'{"":-^80}')
@@ -541,7 +568,7 @@ class RemoteJIT:
     default_remote_call_hold = False
 
     def __init__(self, host='localhost', port=11532,
-                 local=False, debug=False, use_tracing_allocator=False):
+                 local=False, debug=False):
         """Construct remote JIT function decorator.
 
         The decorator is re-usable for different functions.
@@ -556,17 +583,14 @@ class RemoteJIT:
           When True, use local client. Useful for debugging.
         debug : bool
           When True, output debug messages.
-        use_tracing_allocator : bool
-          When True, enable the automatic detection of memory leaks.
         """
         if host == 'localhost':
             host = get_local_ip()
 
-        if use_tracing_allocator and not local:
-            raise ValueError('use_tracing_allocator=True can be used only with local=True')
-
-        self.debug = debug
-        self.use_tracing_allocator = use_tracing_allocator
+        if config.DEBUG:
+            self.debug = True
+        else:
+            self.debug = debug
         self.host = host
         self.port = int(port)
         self.server_process = None
@@ -578,10 +602,12 @@ class RemoteJIT:
         self._targets = None
 
         if local:
-            self._client = LocalClient(debug=debug,
-                                       use_tracing_allocator=use_tracing_allocator)
+            self._client = LocalClient(debug=debug)
         else:
             self._client = None
+
+    def __repr__(self):
+        return f'{type(self).__name__}(host={self.host!r}, port={self.port})'
 
     @property
     def local(self):
@@ -723,8 +749,10 @@ class RemoteJIT:
         ------------------
         local : bool
         devices : list
-          Specify device names for the given set of signatures. Possible
-          values are 'cpu', 'gpu'.
+          Specify device names for the given set of
+          signatures. Possible values are 'cpu', 'gpu' (case may
+          vary). When unspecified, the default device list is ['CPU',
+          'GPU'] but certain argument types may restrict this list.
         templates : dict(str, list(str))
           Specify template types mapping.
 
@@ -746,15 +774,12 @@ class RemoteJIT:
             s = Signature(self.local)
         else:
             s = Signature(self)
+        devices = validate_devices(devices)
         options = dict(
             local=local,
             devices=devices,
             templates=templates.get('templates') or templates
         )
-        if devices is not None and not {'cpu', 'gpu'}.issuperset(devices):
-            raise ValueError("'devices' can only be a list with possible "
-                             f"values 'cpu', 'gpu' but got {devices}")
-
         _, templates = extract_templates(options)
         for sig in signatures:
             s = s(sig, devices=devices, templates=templates)
@@ -765,7 +790,7 @@ class RemoteJIT:
         """
         thrift_file = os.path.join(os.path.dirname(__file__),
                                    'remotejit.thrift')
-        print('staring rpc.thrift server: %s' % (thrift_file), end='',
+        print(f'starting rpc.thrift server ({self.host}:{self.port}): {thrift_file}', end='',
               flush=True)
         if self.debug:
             print(flush=True)
@@ -781,13 +806,13 @@ class RemoteJIT:
             Server.run(dispatcher, thrift_file,
                        dict(host=self.host, port=self.port,
                             debug=self.debug))
-            print('... rpc.thrift server stopped', flush=True)
+            print(f'... rpc.thrift server ({self.host}:{self.port}) stopped', flush=True)
 
     def stop_server(self):
         """Stop remotejit server from client.
         """
         if self.server_process is not None and self.server_process.is_alive():
-            print('... stopping rpc.thrift server')
+            print(f'... stopping rpc.thrift server {self.host}:{self.port}', flush=True)
             self.server_process.terminate()
             self.server_process = None
 
@@ -814,13 +839,16 @@ class RemoteJIT:
         Return the corresponding LLVM IR module instance which may be
         useful for debugging.
         """
+        # To-Do: Move the pipeline to outside heavydb_backend
+        from rbc.heavydb import HeavyDBCompilerPipeline
+
         if self.debug:
             print(f'remote_compile({func}, {ftype})')
         with target_info:
             llvm_module, succesful_fids = irtools.compile_to_LLVM(
                 [(func, {0: ftype})],
                 target_info,
-                pipeline_class=OmnisciCompilerPipeline,
+                pipeline_class=HeavyDBCompilerPipeline,
                 debug=self.debug)
         ir = str(llvm_module)
         mangled_signatures = ';'.join([s.mangle() for s in [ftype]])
@@ -867,10 +895,22 @@ class RemoteJIT:
         Returns
         -------
         ftype: Type
-          typesystem type of a function with normalization hools applied
+          typesystem type of a function with normalization hooks applied
         """
         assert ftype.is_function, ftype
         return ftype
+
+    def check_function_type_supports_device(self, ftype: Type, device: str):
+        """Check if function type can be supported by the specified device.
+
+        Parameters
+        ----------
+        ftype: Type
+          typesystem type of a function
+        device: {"CPU", "GPU"}
+          specified device
+        """
+        return True
 
     def preprocess_callable(self, func):
         """Preprocess func to be used as a remotejit function definition.
@@ -931,9 +971,8 @@ class DispatcherRJIT(Dispatcher):
     """Implements remotejit service methods.
     """
 
-    def __init__(self, server, debug=False, use_tracing_allocator=False):
+    def __init__(self, server, debug=False):
         super().__init__(server, debug=debug)
-        self.use_tracing_allocator = use_tracing_allocator
         self.compiled_functions = dict()
         self.engines = dict()
         self.python_globals = dict()
@@ -948,11 +987,7 @@ class DispatcherRJIT(Dispatcher):
         info : dict
           Map of target devices and their properties.
         """
-        if self.use_tracing_allocator:
-            target_info = TargetInfo.host(name='host_cpu_tracing_allocator',
-                                          use_tracing_allocator=True)
-        else:
-            target_info = TargetInfo.host()
+        target_info = TargetInfo.host()
         target_info.set('has_numba', True)
         target_info.set('has_cpython', True)
         return dict(cpu=target_info.tojson())
@@ -1002,16 +1037,6 @@ class DispatcherRJIT(Dispatcher):
         arguments : tuple
           Specify the arguments to the function.
         """
-        # if we are using a tracing allocator, automatically detect memory leaks
-        # at each call.
-        if self.use_tracing_allocator:
-            leak_detector = tracing_allocator.new_leak_detector()
-        else:
-            leak_detector = nullcontext()
-        with leak_detector:
-            return self._do_call(fullname, arguments)
-
-    def _do_call(self, fullname, arguments):
         if self.debug:
             print(f'call({fullname}, {arguments})')
         ef = self.compiled_functions.get(fullname)
@@ -1076,9 +1101,8 @@ class LocalClient:
     All calls will be made in a local process. Useful for debbuging.
     """
 
-    def __init__(self, debug=False, use_tracing_allocator=False):
-        self.dispatcher = DispatcherRJIT(None, debug=debug,
-                                         use_tracing_allocator=use_tracing_allocator)
+    def __init__(self, debug=False):
+        self.dispatcher = DispatcherRJIT(None, debug=debug)
 
     def __call__(self, **services):
         results = {}

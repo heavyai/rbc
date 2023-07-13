@@ -1,8 +1,13 @@
+import os
+os.environ["NUMBA_CAPTURED_ERRORS"] = "new_style"
+os.environ["NUMBA_LOOP_VECTORIZE"] = "0"
+os.environ["NUMBA_SLP_VECTORIZE"] = "0"
+
 # Expose a temporary prototype. It will be replaced by proper
 # implementation soon.
-from .remotejit import RemoteJIT  # noqa: F401
-from .omniscidb import RemoteOmnisci  # noqa: F401
+from .remotejit import RemoteJIT  # noqa: F401, E402
+from .heavydb import RemoteHeavyDB  # noqa: F401, E402
 
-from ._version import get_versions
+from ._version import get_versions  # noqa: E402
 __version__ = get_versions()['version']
 del get_versions

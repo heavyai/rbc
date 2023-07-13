@@ -1,8 +1,6 @@
 """Collections of library function names.
 """
 
-import rbc.rbclib
-
 
 class Library:
     """Base class for a collection of library function names.
@@ -24,10 +22,10 @@ class Library:
             r = NVVMIntrinsics()
         elif libname == 'llvm':
             r = LLVMIntrinsics()
-        elif libname == 'omniscidb':
-            r = OmnisciDB()
-        elif libname == 'rbclib':
-            r = RBCLib()
+        elif libname == 'heavydb':
+            r = HeavyDB()
+        elif libname == 'NRT':
+            r = NRT()
         else:
             raise ValueError(f'Unknown library {libname}')
         _cache[libname] = r
@@ -50,14 +48,85 @@ class Library:
         return False
 
 
-class OmnisciDB(Library):
+class HeavyDB(Library):
 
-    name = 'omniscidb'
+    name = 'heavydb'
 
     _function_names = list('''
     allocate_varlen_buffer set_output_row_size
     TableFunctionManager_error_message TableFunctionManager_set_output_row_size
+    TableFunctionManager_set_output_array_values_total_number
+    TableFunctionManager_set_output_item_values_total_number
     table_function_error
+    extract_epoch extract_dateepoch extract_quarterday extract_hour
+    extract_minute extract_second extract_millisecond extract_nanosecond
+    extract_dow extract_isodow extract_day extract_week_monday extract_week_sunday
+    extract_week_saturday extract_day_of_year extract_month extract_quarter
+    extract_year extract_microsecond
+    datetrunc_year datetrunc_month datetrunc_day datetrunc_hour datetrunc_minute
+    StringDictionaryProxy_getStringBytes StringDictionaryProxy_getStringLength
+    StringDictionaryProxy_getStringId
+    RowFunctionManager_getStringDictionaryProxy RowFunctionManager_getDictId
+    RowFunctionManager_getDictDbId
+    ColumnArray_isNull ColumnArray_setNull ColumnArray_getItem
+    ColumnArray_setItem ColumnArray_concatItem
+
+    ColumnGeoPoint_isNull ColumnGeoPoint_setNull ColumnGeoPoint_getItem
+    ColumnGeoPoint_setItem
+
+    ColumnGeoMultiPoint_isNull ColumnGeoMultiPoint_setNull
+    ColumnGeoMultiPoint_setItem ColumnGeoMultiPoint_getNofValues
+    ColumnGeoMultiPoint_getItem
+
+    ColumnGeoLineString_isNull ColumnGeoLineString_setNull
+    ColumnGeoLineString_setItem ColumnGeoLineString_getNofValues
+    ColumnGeoLineString_getItem
+
+    ColumnGeoMultiLineString_isNull ColumnGeoMultiLineString_setNull
+    ColumnGeoMultiLineString_setItem ColumnGeoMultiLineString_getNofValues
+    ColumnGeoMultiLineString_getItem
+
+    ColumnGeoPolygon_isNull ColumnGeoPolygon_setNull
+    ColumnGeoPolygon_setItem ColumnGeoPolygon_getNofValues
+    ColumnGeoPolygon_getItem
+
+    ColumnGeoMultiPolygon_isNull ColumnGeoMultiPolygon_setNull
+    ColumnGeoMultiPolygon_setItem ColumnGeoMultiPolygon_getNofValues
+    ColumnGeoMultiPolygon_getItem
+
+    GeoMultiPoint_size GeoMultiPoint_isNull GeoMultiPoint_getItem
+    GeoPolygon_size GeoPolygon_isNull GeoPolygon_getItem
+    GeoMultiPolygon_size GeoMultiPolygon_isNull GeoMultiPolygon_getItem
+    GeoLineString_size GeoLineString_isNull GeoLineString_getItem
+    GeoMultiLineString_size GeoMultiLineString_isNull GeoMultiLineString_getItem
+
+    ColumnTextEncodingNone_isNull ColumnTextEncodingNone_setNull
+    ColumnTextEncodingNone_setItem ColumnTextEncodingNone_getNofValues
+    ColumnTextEncodingNone_getItem ColumnTextEncodingNone_concatItem
+    '''.strip().split())
+
+
+class NRT(Library):
+
+    name = 'NRT'
+
+    _function_names = list('''
+    NRT_MemInfo_call_dtor
+    NRT_MemInfo_init
+    NRT_MemInfo_alloc NRT_MemInfo_alloc_safe
+    NRT_MemInfo_alloc_dtor NRT_MemInfo_alloc_dtor_safe
+    NRT_Allocate_External
+    NRT_MemInfo_data_fast
+    NRT_incref NRT_decref
+    NRT_MemInfo_varsize_realloc
+    NRT_MemInfo_new_varsize
+    NRT_MemInfo_new_varsize_dtor
+    NRT_MemInfo_varsize_alloc
+    NRT_MemInfo_varsize_free
+    NRT_MemInfo_alloc_safe_aligned
+    NRT_MemInfo_alloc_aligned
+    numba_gettyperecord
+    numba_get_PyUnicode_ExtendedCase
     '''.strip().split())
 
 
@@ -234,7 +303,7 @@ class LLVMIntrinsics(Library):
     objc.retainAutoreleasedReturnValue objc.retainBlock
     objc.storeStrong objc.storeWeak preserve.array.access.index
     preserve.union.access.index preserve.struct.access.index
-    masked.store.* '''.strip().split())
+    masked.store.* memset'''.strip().split())
 
 
 class NVVMIntrinsics(Library):
@@ -311,14 +380,3 @@ class Libdevice(Library):
     ull2double_ru ull2double_rz ull2float_rd ull2float_rn ull2float_ru
     ull2float_rz ullmax ullmin umax umin umul24 umul64hi umulhi urhadd
     usad y0 y0f y1 y1f yn ynf '''.strip().split())
-
-
-class RBCLib(Library):
-
-    name = 'rbclib'
-    # _function_names contains the list of functions which is exported by the
-    # library. See Library.check()
-    from rbc.rbclib import FUNCTION_NAMES as _function_names
-
-    def __init__(self):
-        rbc.rbclib.load_inside_llvm()

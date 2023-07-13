@@ -5,14 +5,19 @@ if [[ $# -eq 0 ]]; then
 fi
 
 TAG=$1
-TAG_STR="v${TAG}"
 
-# checkout to master
-echo "Checking out master"
-git checkout master
+if [[ "${TAG}" == v* ]]; then
+  TAG_STR="${TAG}"
+else
+  TAG_STR="v${TAG}"
+fi
+
+# checkout to main
+echo "Checking out main"
+git checkout main
 
 if [[ $? -ne 0 ]]; then
-	echo "`git checkout master` failed"
+	echo "`git checkout main` failed"
 	exit 1
 fi
 

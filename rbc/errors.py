@@ -7,9 +7,9 @@ from rbc.utils import get_version
 from numba.core.errors import TypingError
 
 
-class OmnisciServerError(Exception):
+class HeavyDBServerError(Exception):
     """
-    Raised when OmnisciDB server raises a runtime error that RBC knows
+    Raised when HeavyDB server raises a runtime error that RBC knows
     how to interpret.
     """
     pass
@@ -51,5 +51,9 @@ if get_version('numba') < (0, 55):
 
     class NumbaNotImplementedError(TypingError):
         pass
+
+    class RequireLiteralValue(TypingError):
+        pass
 else:
-    from numba.core.errors import NumbaTypeError, NumbaNotImplementedError  # noqa: F401
+    from numba.core.errors import NumbaTypeError, NumbaNotImplementedError, \
+                                  RequireLiteralValue  # noqa: F401

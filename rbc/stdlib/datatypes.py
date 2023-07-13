@@ -1,4 +1,6 @@
 """
+Array API specification for data types.
+
 https://data-apis.org/array-api/latest/API_specification/data_types.html
 """
 
@@ -17,10 +19,10 @@ __all__ = [
     'float64'
 ]
 
-# NOTE: currently the code lives in rbc.omnisci_backend, but eventually we
-# should move it here and leave rbc.omnisci_backend.Array only for backwards
+# NOTE: currently the code lives in rbc.heavydb, but eventually we
+# should move it here and leave rbc.heavydb.Array only for backwards
 # compatibility
-from rbc.omnisci_backend import Array
+from rbc.heavydb import Array
 
 # array API data types
 from numba.types import (

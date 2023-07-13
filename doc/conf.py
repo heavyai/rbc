@@ -52,9 +52,12 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
-    'sphinx_autodoc_typehints',
     'numbadoc',
+    'sphinx_design',
+    'myst_parser',
 ]
+
+myst_enable_extensions = ["colon_fence"]
 
 # autosummary configuration
 autosummary_generate = True
@@ -80,20 +83,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'pydata_sphinx_theme'
+html_theme = 'furo'
 
 # The Xnd logo
 html_logo = "images/xndlogo.png"
 
-html_theme_options = {
-    "logo_link": "index",
-    "github_url": "https://github.com/xnd-project/rbc",
-    "use_edit_page_button": True,
-}
-
 html_context = {
     "github_user": "xnd-project",
     "github_repo": "rbc",
-    "github_version": "master",
+    "github_version": "main",
     "doc_path": "doc",
 }

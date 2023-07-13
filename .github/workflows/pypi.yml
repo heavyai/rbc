@@ -4,16 +4,12 @@ on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-
+      - 'v\d+.\d+.\d+' # Push events to matching v*.*.*, i.e. v1.0.0, v20.15.10
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    name: Build wheels
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -23,17 +19,14 @@ jobs:
         with:
           python-version: 3.9
 
-      # https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
-      - name: Install buildwheels
-        uses: pypa/cibuildwheel@v2.3.1
-        env:  # minimum version is cpython 3.7
-          CIBW_BUILD: "cp37-*64 cp38-*64 cp39-* cp310-*"
-          CIBW_BEFORE_BUILD: python -m pip install cffi
-          CIBW_VERBOSITY: 3
+      - name: Build wheel
+        run: |
+          python -m pip install wheel
+          python setup.py bdist_wheel --universal
 
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          path: dist/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -61,10 +54,41 @@ jobs:
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@master
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verify_metadata: true
           verbose: true
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           # repository_url: https://test.pypi.org/legacy/
+
+  build_changelog:
+    needs: [upload_pypi]
+    name: Build ChangeLog
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: "Build Changelog"
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@main
+        with:
+          configuration: "changelog_config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: ${{steps.github_release.outputs.changelog}}
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-b') || contains(github.ref, '-a') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

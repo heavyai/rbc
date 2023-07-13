@@ -1,13 +1,13 @@
 import os
 import sys
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.utils import parse_version
 
 
 @pytest.fixture(scope='module')
-def omnisci():
-    for o in omnisci_fixture(globals()):
+def heavydb():
+    for o in heavydb_fixture(globals(), load_test_data=False):
         yield o
 
 
@@ -26,20 +26,20 @@ def test_python_version():
     assert expected == current_stripped
 
 
-def test_omniscidb_version(omnisci):
-    varname = 'EXPECTED_OMNISCIDB_VERSION'
-    current = omnisci.version
+def test_heavydb_version(heavydb):
+    varname = 'EXPECTED_HEAVYDB_VERSION'
+    current = heavydb.version
     expected = os.environ.get(varname)
     if 'CI' in os.environ and expected is None:
-        pytest.fail("OmniSciDB server is not running")
+        pytest.fail("HeavyDB server is not running")
     if expected is None:
         pytest.skip(
             f'Undefined environment variable {varname},'
-            f' cannot test omniscidb version (current={".".join(map(str, current))})')
+            f' cannot test heavydb version (current={".".join(map(str, current))})')
     if expected == 'dev':
         assert current[:2] >= (5, 8), current  # TODO: update dev version periodically
         pytest.skip(
-            f'omniscidb dev version is {".".join(map(str, current))}')
+            f'heavydb dev version is {".".join(map(str, current))}')
     expected = parse_version(expected)
     current_stripped = current[:len(expected)]
     assert expected == current_stripped

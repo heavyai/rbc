@@ -3,63 +3,121 @@
 
 import re
 import warnings
+from collections import defaultdict, deque
 from contextlib import contextmanager
-from collections import defaultdict
-from llvmlite import ir
-import llvmlite.binding as llvm
-from .targetinfo import TargetInfo
-from .errors import UnsupportedError
-from .utils import get_version
-from . import libfuncs
-from rbc import externals
-from numba.core import codegen, cpu, compiler_lock, \
-    registry, typing, compiler, sigutils, cgutils, \
-    extending, imputils
-from numba.core import errors as nb_errors
+from typing import Optional, Dict, Set
 
+import llvmlite.binding as llvm
+from llvmlite import ir
+from numba.core import cgutils, codegen, compiler, compiler_lock, cpu
+from numba.core import errors as nb_errors
+from numba.core import extending, imputils, registry, sigutils, typing
+
+from rbc.externals import stdio
+from rbc.nrt import create_nrt_functions, read_unicodetype_db
+from rbc import config
+
+from .errors import UnsupportedError
+from .libfuncs import Library
+from .targetinfo import TargetInfo
 
 int32_t = ir.IntType(32)
 int1_t = ir.IntType(1)
 
 
-def get_called_functions(library, funcname=None):
+def nrt_required(main_module: llvm.module.ModuleRef):
+    for f in main_module.functions:
+        if f.is_declaration and f.name.startswith('NRT'):
+            return True
+    return False
+
+
+def find_at_word(text: str) -> Optional[str]:
+    """
+    Find called function name from a CallInst to a bitcast.
+
+    Example usage
+
+        >>> text = "i8* (i64)* bitcast (%Struct.MemInfo.5* (i64)* @NRT_MemInfo_alloc_safe to i8* (i64)*)"  # noqa: E501
+        >>> find_at_word(text)
+        "NRT_MemInfo_alloc_safe
+        >>> text = "%.5 = bitcast i8* %info to void (i8*, i64, i8*)*"
+        >>> find_at_word(text)
+        None
+
+    """
+    pattern = r"@\w+"
+    words = re.findall(pattern, text)
+    if words == []:
+        return None
+    assert len(words) == 1
+    [word] = words
+    return word[1:]
+
+
+def get_called_functions(library,
+                         funcname: Optional[str] = None,
+                         debug: bool = False) -> Dict[str, Set[str]]:
     result = defaultdict(set)
+    q: deque[str] = deque()
+
     module = library._final_module
     if funcname is None:
         for df in library.get_defined_functions():
-            for k, v in get_called_functions(library, df.name).items():
-                result[k].update(v)
-        return result
+            q.append(df.name)
+    else:
+        q.append(funcname)
 
-    func = module.get_function(funcname)
-    assert func.name == funcname, (func.name, funcname)
-    result['defined'].add(funcname)
-    for block in func.blocks:
-        for instruction in block.instructions:
-            if instruction.opcode == 'call':
-                name = list(instruction.operands)[-1].name
-                f = module.get_function(name)
-                if name.startswith('llvm.'):
-                    result['intrinsics'].add(name)
-                elif f.is_declaration:
-                    found = False
-                    for lib in library._linking_libraries:
-                        for df in lib.get_defined_functions():
-                            if name == df.name:
-                                result['defined'].add(name)
-                                result['libraries'].add(lib)
-                                found = True
-                                for k, v in get_called_functions(lib, name).items():
-                                    result[k].update(v)
-                                break
-                        if found:
+    linked_functions: Dict[str, JITRemoteCodeLibrary] = dict()
+    for lib in library._linking_libraries:
+        result['libraries'].add(lib)
+        for df in lib.get_defined_functions():
+            linked_functions[df.name] = lib
+
+    while len(q) > 0:
+        funcname = q.pop()
+
+        if funcname in result['defined']:
+            continue
+
+        func = module.get_function(funcname)
+        assert func.name == funcname, (func.name, funcname)
+        result['defined'].add(funcname)
+
+        for block in func.blocks:
+            for instruction in block.instructions:
+                if instruction.opcode == 'call':
+                    instr = list(instruction.operands)[-1]
+                    name = instr.name
+                    try:
+                        f = module.get_function(name)
+                    except NameError:
+                        if 'bitcast' not in str(instr):
+                            raise  # re-raise
+
+                        # attempt to find caller symbol in instr
+                        name = find_at_word(str(instr))
+                        if name is None:
+                            # ignore call to function pointer
+                            msg = f'Ignoring call to bitcast instruction:\n{instr}'
+                            if debug:
+                                warnings.warn(msg)
+                            continue
+                        f = module.get_function(name)
+
+                    if name.startswith('llvm.'):
+                        result['intrinsics'].add(name)
+                    elif f.is_declaration:
+                        if name in linked_functions:
+                            lib = linked_functions.get(name)
+                            result['defined'].add(name)
+                            result['libraries'].add(lib)
+                            q.append(name)
                             break
-                    if not found:
-                        result['declarations'].add(name)
-                else:
-                    result['defined'].add(name)
-                    for k, v in get_called_functions(library, name).items():
-                        result[k].update(v)
+                        else:
+                            result['declarations'].add(name)
+                    else:
+                        q.append(name)
     return result
 
 
@@ -124,6 +182,7 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
                       'avx512bf16', 'movbe', 'xsaveopt', 'avx512dq', 'adx',
                       'avx512pf', 'sse3'],
             (9, 8): ['cx8', 'enqcmd', 'avx512bf16'],
+            (14, 11): ['crc32', 'uintr', 'widekl', 'avxvnni', 'avx512fp16', 'kl', 'hreset'],
         }.get((server_llvm_version[0], client_llvm_version[0]), None)
         if remove_features is None:
             warnings.warn(
@@ -244,9 +303,10 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                externals.stdio.cg_fflush(builder)
+                stdio._cg_fflush(builder)
             builder.ret_void()
-        builder.store(builder.load(out), wrapfn.args[0])
+        # does a "deepcopy"
+        rtype.deepcopy(context, builder, out, wrapfn.args[0])
         builder.ret_void()
     else:
         wrapty = ir.FunctionType(ll_return_type, ll_argtypes)
@@ -261,7 +321,7 @@ def make_wrapper(fname, atypes, rtype, cres, target: TargetInfo, verbose=False):
                 cgutils.printf(builder,
                                f"rbc: {fname} failed with status code %i\n",
                                status.code)
-                externals.stdio.cg_fflush(builder)
+                stdio._cg_fflush(builder)
         builder.ret(out)
 
     cres.library.add_ir_module(module)
@@ -278,18 +338,15 @@ def compile_instance(func, sig,
     succesful.
     """
     flags = compiler.Flags()
-    if get_version('numba') >= (0, 54):
-        flags.no_compile = True
-        flags.no_cpython_wrapper = True
-        flags.no_cfunc_wrapper = True
-    else:
-        flags.set('no_compile')
-        flags.set('no_cpython_wrapper')
-        flags.set('no_cfunc_wrapper')
+    flags.no_compile = True
+    flags.no_cpython_wrapper = True
+    flags.no_cfunc_wrapper = True
+    flags.nrt = True
 
     fname = func.__name__ + sig.mangling()
     args, return_type = sigutils.normalize_signature(
         sig.tonumba(bool_is_int8=True))
+    target.set_compile_target(fname)
     try:
         cres = compiler.compile_extra(typingctx=typing_context,
                                       targetctx=target_context,
@@ -300,7 +357,13 @@ def compile_instance(func, sig,
                                       library=main_library,
                                       locals={},
                                       pipeline_class=pipeline_class)
-    except (UnsupportedError, nb_errors.TypingError, nb_errors.LoweringError) as msg:
+        target.set_compile_target(None)
+    except UnsupportedError as msg:
+        target.set_compile_target(None)
+        warnings.warn(f'Skipping {fname}: {msg.args[1]}')
+        return
+    except (nb_errors.TypingError, nb_errors.LoweringError) as msg:
+        target.set_compile_target(None)
         for m in re.finditer(r'UnsupportedError(.*?)\n', str(msg), re.S):
             warnings.warn(f'Skipping {fname}:{m.group(0)[18:]}')
             break
@@ -308,9 +371,10 @@ def compile_instance(func, sig,
             raise
         return
     except Exception:
+        target.set_compile_target(None)
         raise
 
-    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name)
+    result = get_called_functions(cres.library, cres.fndesc.llvm_func_name, debug)
 
     for f in result['declarations']:
         if target.supports(f):
@@ -318,8 +382,8 @@ def compile_instance(func, sig,
         warnings.warn(f'Skipping {fname} that uses undefined function `{f}`')
         return
 
-    nvvmlib = libfuncs.Library.get('nvvm')
-    llvmlib = libfuncs.Library.get('llvm')
+    nvvmlib = Library.get('nvvm')
+    llvmlib = Library.get('llvm')
     for f in result['intrinsics']:
         if target.is_gpu:
             if f in nvvmlib:
@@ -343,13 +407,13 @@ def compile_instance(func, sig,
     return fname
 
 
-def add_byval_metadata(main_library):
+def add_metadata_flag(main_library, **kwargs):
     module = ir.Module()
-    flag_name = "pass_column_arguments_by_value"
     mflags = module.add_named_metadata('llvm.module.flags')
     override_flag = int32_t(4)
-    flag = module.add_metadata([override_flag, flag_name, int1_t(0)])
-    mflags.add(flag)
+    for flag_name, flag_value in kwargs.items():
+        flag = module.add_metadata([override_flag, flag_name, int1_t(flag_value)])
+        mflags.add(flag)
     main_library.add_ir_module(module)
 
 
@@ -382,6 +446,11 @@ def compile_to_LLVM(functions_and_signatures,
     typing_context = JITRemoteTypingContext()
     target_context = JITRemoteTargetContext(typing_context)
 
+    if config.ENABLE_NRT:
+        # both the nrt_module and unicodetype_db are cached
+        nrt_module = create_nrt_functions(target_context, debug=debug)
+        unicodetype_db = read_unicodetype_db()
+
     # Bring over Array overloads (a hack):
     target_context._defns = target_desc.target_context._defns
 
@@ -408,16 +477,28 @@ def compile_to_LLVM(functions_and_signatures,
                     succesful_fids.append(fid)
                     function_names.append(fname)
 
-        add_byval_metadata(main_library)
+        if nrt_required(main_module):
+            if config.ENABLE_NRT:
+                main_module.link_in(unicodetype_db)
+                main_library.add_ir_module(nrt_module)
+            else:
+                msg = ("NRT is disabled but required. Undefine the environment "
+                       "variable 'RBC_ENABLE_NRT' or set its value to '1'")
+                warnings.warn(msg)
+
+        add_metadata_flag(main_library,
+                          pass_column_arguments_by_value=0,
+                          manage_memory_buffer=1)
         main_library._optimize_final_module()
 
         # Remove unused defined functions and declarations
         used_symbols = defaultdict(set)
         for fname in function_names:
-            for k, v in get_called_functions(main_library, fname).items():
+            symbols = get_called_functions(main_library, fname, debug)
+            for k, v in symbols.items():
                 used_symbols[k].update(v)
 
-        all_symbols = get_called_functions(main_library)
+        all_symbols = get_called_functions(main_library, debug=debug)
 
         unused_symbols = defaultdict(set)
         for k, lst in all_symbols.items():

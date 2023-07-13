@@ -249,7 +249,7 @@ for _k, _m, _lst in [
 
 # numpy mapping
 _numpy_imap = {}
-for v in set(np.typeDict.values()):
+for v in set(np.sctypeDict.values()):
     name = np.dtype(v).name
     _numpy_imap[v] = name
 
@@ -726,6 +726,16 @@ class Type(tuple, metaclass=MetaType):
             return self.tostring()
         return tuple.__str__(self)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return super().__eq__(other)
+
+    def __hash__(self) -> int:
+        # Explictly add a hash for Type, otherwise code that depends on Type
+        # being hashable fails
+        return super().__hash__()
+
     def tostring(self, use_typename=False, use_annotation=True, use_name=True,
                  use_annotation_name=False, _skip_annotation=False):
         """Return string representation of a type.
@@ -802,6 +812,8 @@ class Type(tuple, metaclass=MetaType):
                 else:
                     s = str(a)
                 new_params.append(s)
+            if len(new_params) == 0:
+                return name + suffix
             return (name + '<' + ', '.join(new_params) + '>' + suffix)
         raise NotImplementedError(repr(self))
 
@@ -1061,6 +1073,12 @@ class Type(tuple, metaclass=MetaType):
         # atomic
         if s in cls.custom_types:
             return cls.custom_types[s](())
+
+        # custom
+        custom = cls.aliases.get(s)
+        if custom in cls.custom_types:
+            return cls.custom_types[custom](())
+
         return cls(s)
 
     @classmethod
@@ -1782,9 +1800,10 @@ class Boolean1Model(datamodel.models.BooleanModel):
         return self._bit_type
 
 
-class Boolean8(nb.types.Boolean):
+class Boolean8(nb.types.Integer):
 
-    bitwidth = 8
+    def __init__(self, name, bitwidth=None, signed=None):
+        super().__init__(name, bitwidth=8, signed=True)
 
     def can_convert_to(self, typingctx, other):
         return isinstance(other, nb.types.Boolean)
@@ -1806,13 +1825,15 @@ boolean8 = Boolean8('boolean8')
 
 @lower_cast(Boolean1, nb.types.Boolean)
 @lower_cast(Boolean8, nb.types.Boolean)
-def literal_booleanN_to_boolean(context, builder, fromty, toty, val):
+def booleanN_to_boolean(context, builder, fromty, toty, val):
     return builder.icmp_signed('!=', val, val.type(0))
 
 
+@lower_cast(nb.types.BooleanLiteral, Boolean1)
+@lower_cast(nb.types.BooleanLiteral, Boolean8)
 @lower_cast(nb.types.Boolean, Boolean1)
 @lower_cast(nb.types.Boolean, Boolean8)
-def literal_boolean_to_booleanN(context, builder, fromty, toty, val):
+def boolean_to_booleanN(context, builder, fromty, toty, val):
     llty = context.get_value_type(toty)
     return builder.zext(val, llty)
 

@@ -1,3 +1,4 @@
+import inspect
 from rbc.targetinfo import TargetInfo
 from numba.core import funcdesc
 
@@ -48,4 +49,10 @@ def {fname}(typingctx, {", ".join(argnames)}):
     exec(fn_str, module_globals)
     fn = module_globals[fname]
     fn.__doc__ = doc
+
+    # https://chriswarrick.com/blog/2018/09/20/python-hackery-merging-signatures-of-two-python-functions/
+    # this is to remove `typingctx` from showing up in the docs
+    sig = inspect.signature(fn)
+    assert list(sig.parameters.keys())[0] == 'typingctx'
+    fn.__signature__ = sig.replace(parameters=tuple(sig.parameters.values())[1:])
     return fn

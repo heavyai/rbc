@@ -1,0 +1,23 @@
+#
+# Usage:
+#   conda env create --file=.conda/environment.yml -n rbc
+#   python setup.py develop
+#   pytest -sv .
+
+name: rbc
+channels:
+  - conda-forge
+  - numba
+  - defaults
+dependencies:
+  - python>=3.7
+  - setuptools
+  - numba>=0.55
+  - llvmlite
+  - clang==11.1
+  - clangxx==11.1
+  - pytest
+  - packaging
+  - tblib
+  - thriftpy2
+  - netifaces

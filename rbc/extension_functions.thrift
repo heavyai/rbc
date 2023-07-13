@@ -3,7 +3,7 @@ namespace java com.mapd.thrift.calciteserver
 /* See QueryEngine/ExtensionFunctionsWhitelist.h for required
 values. It is ok if the following definition is out-of-date as
 get_device_parameters will contain up-to-date mapping of type names
-and enum values [OmnisciDB >= 5.2]. */
+and enum values [heavydb >= 5.2]. */
 
 enum TExtArgumentType {
   Int8,
@@ -51,6 +51,46 @@ enum TExtArgumentType {
   ColumnListBool,
   ColumnTextEncodingDict,
   ColumnListTextEncodingDict,
+  ColumnTimestamp,
+  Timestamp,
+  ColumnArrayInt8,
+  ColumnArrayInt16,
+  ColumnArrayInt32,
+  ColumnArrayInt64,
+  ColumnArrayFloat,
+  ColumnArrayDouble,
+  ColumnArrayBool,
+  ColumnListArrayInt8,
+  ColumnListArrayInt16,
+  ColumnListArrayInt32,
+  ColumnListArrayInt64,
+  ColumnListArrayFloat,
+  ColumnListArrayDouble,
+  ColumnListArrayBool,
+  GeoMultiLineString,
+  ArrayTextEncodingNone,
+  ColumnTextEncodingNone,
+  ColumnListTextEncodingNone,
+  ColumnArrayTextEncodingNone,
+  ColumnListArrayTextEncodingNone,
+  ArrayTextEncodingDict,
+  ColumnArrayTextEncodingDict,
+  ColumnListArrayTextEncodingDict,
+  GeoMultiPoint,
+  DayTimeInterval,
+  YearMonthTimeInterval,
+  ColumnGeoPoint,
+  ColumnGeoLineString,
+  ColumnGeoPolygon,
+  ColumnGeoMultiPoint,
+  ColumnGeoMultiLineString,
+  ColumnGeoMultiPolygon,
+  ColumnListGeoPoint,
+  ColumnListGeoLineString,
+  ColumnListGeoPolygon,
+  ColumnListGeoMultiPoint,
+  ColumnListGeoMultiLineString,
+  ColumnListGeoMultiPolygon,
 }
 
 /* See QueryEngine/TableFunctions/TableFunctionsFactory.h for required
@@ -66,8 +106,9 @@ enum TOutputBufferSizeType {
 
 struct TUserDefinedFunction {
   1: string name,
-  2: list<TExtArgumentType> argTypes
-  3: TExtArgumentType retType
+  2: list<TExtArgumentType> argTypes,
+  3: TExtArgumentType retType,
+  4: list<map<string, string>> annotations
 }
 
 struct TUserDefinedTableFunction {

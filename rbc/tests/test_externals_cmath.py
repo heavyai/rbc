@@ -1,7 +1,7 @@
 import sys
 import atexit
 import pytest
-from rbc.tests import omnisci_fixture
+from rbc.tests import heavydb_fixture
 from rbc.remotejit import RemoteJIT
 from rbc.externals import cmath
 from rbc.typesystem import Type
@@ -12,7 +12,7 @@ import math
 @pytest.fixture(scope="module")
 def rjit(request):
     local = False
-    rjit = RemoteJIT(debug=not True, local=local)
+    rjit = RemoteJIT(debug=not True, local=local, port=11542)
     if not local:
         rjit.start_server(background=True)
         request.addfinalizer(rjit.stop_server)
@@ -23,84 +23,84 @@ def rjit(request):
 
 @pytest.fixture(scope="module")
 def ljit(request):
-    ljit = RemoteJIT(debug=not True, local=True)
+    ljit = RemoteJIT(debug=not True, local=True, port=11543)
     define(ljit)
     return ljit
 
 
 @pytest.fixture(scope="module")
-def omnisci():
+def heavydb():
 
-    for o in omnisci_fixture(globals()):
+    for o in heavydb_fixture(globals()):
         define(o)
         yield o
 
 
 cmath_funcs = (
     # Trigonometric
-    ("cos", "float64 cos(float64)|CPU"),
-    ("sin", "float64 sin(float64)|CPU"),
-    ("tan", "float64 tan(float64)|CPU"),
-    ("acos", "float64 acos(float64)|CPU"),
-    ("asin", "float64 asin(float64)|CPU"),
-    ("atan", "float64 atan(float64)|CPU"),
-    ("atan2", "float64 atan2(float64, float64)|CPU"),
+    ("cos", "float64 cos(float64)"),
+    ("sin", "float64 sin(float64)"),
+    ("tan", "float64 tan(float64)"),
+    ("acos", "float64 acos(float64)"),
+    ("asin", "float64 asin(float64)"),
+    ("atan", "float64 atan(float64)"),
+    ("atan2", "float64 atan2(float64, float64)"),
     # Hyperbolic
-    ("cosh", "float64 cosh(float64)|CPU"),
-    ("sinh", "float64 sinh(float64)|CPU"),
-    ("tanh", "float64 tanh(float64)|CPU"),
-    ("acosh", "float64 acosh(float64)|CPU"),
-    ("asinh", "float64 asinh(float64)|CPU"),
-    ("atanh", "float64 atanh(float64)|CPU"),
+    ("cosh", "float64 cosh(float64)"),
+    ("sinh", "float64 sinh(float64)"),
+    ("tanh", "float64 tanh(float64)"),
+    ("acosh", "float64 acosh(float64)"),
+    ("asinh", "float64 asinh(float64)"),
+    ("atanh", "float64 atanh(float64)"),
     # Exponential and logarithmic functions
-    ("exp", "float64 exp(float64)|CPU"),
-    ("frexp", "float64 frexp(float64)|CPU"),
-    ("ldexp", "float64 ldexp(float64, int64)|CPU"),
-    ("log", "float64 log(float64)|CPU"),
-    ("log10", "float64 log10(float64)|CPU"),
-    ("modf", "float64 modf(float64, float64*)|CPU"),
-    ("exp2", "float64 exp2(float64)|CPU"),
-    ("expm1", "float64 expm1(float64)|CPU"),
-    ("ilogb", "float64 ilogb(float64)|CPU"),
-    ("log1p", "float64 log1p(float64)|CPU"),
-    ("log2", "float64 log2(float64)|CPU"),
-    ("logb", "float64 logb(float64)|CPU"),
+    ("exp", "float64 exp(float64)"),
+    ("frexp", "float64 frexp(float64)"),
+    ("ldexp", "float64 ldexp(float64, int64)"),
+    ("log", "float64 log(float64)"),
+    ("log10", "float64 log10(float64)"),
+    ("modf", "float64 modf(float64, float64*)"),
+    ("exp2", "float64 exp2(float64)"),
+    ("expm1", "float64 expm1(float64)"),
+    ("ilogb", "float64 ilogb(float64)"),
+    ("log1p", "float64 log1p(float64)"),
+    ("log2", "float64 log2(float64)"),
+    ("logb", "float64 logb(float64)"),
     # power functions
-    ("pow", "float64 pow(float64, float64)|CPU"),
-    ("sqrt", "float64 sqrt(float64)|CPU"),
-    ("cbrt", "float64 cbrt(float64)|CPU"),
-    ("hypot", "float64 hypot(float64, float64)|CPU"),
+    ("pow", "float64 pow(float64, float64)"),
+    ("sqrt", "float64 sqrt(float64)"),
+    ("cbrt", "float64 cbrt(float64)"),
+    ("hypot", "float64 hypot(float64, float64)"),
     # error and gamma functions
-    ("erf", "float64 erf(float64)|CPU"),
-    ("erfc", "float64 erfc(float64)|CPU"),
-    ("tgamma", "float64 tgamma(float64)|CPU"),
-    ("lgamma", "float64 lgamma(float64)|CPU"),
+    ("erf", "float64 erf(float64)"),
+    ("erfc", "float64 erfc(float64)"),
+    ("tgamma", "float64 tgamma(float64)"),
+    ("lgamma", "float64 lgamma(float64)"),
     # Rounding
-    ("ceil", "float64 ceil(float64)|CPU"),
-    ("floor", "float64 floor(float64)|CPU"),
-    ("fmod", "float64 fmod(float64, float64)|CPU"),
-    ("trunc", "float64 trunc(float64)|CPU"),
-    ("round", "float64 round(float64)|CPU"),
-    ("lround", "int64 lround(float64)|CPU"),
-    ("llround", "int64 llround(float64)|CPU"),
-    ("rint", "float64 rint(float64)|CPU"),
-    ("lrint", "int64 lrint(float64)|CPU"),
-    ("llrint", "int64 llrint(float64)|CPU"),
-    ("nearbyint", "float64 nearbyint(float64)|CPU"),
-    ("remainder", "float64 remainder(float64, float64)|CPU"),
+    ("ceil", "float64 ceil(float64)"),
+    ("floor", "float64 floor(float64)"),
+    ("fmod", "float64 fmod(float64, float64)"),
+    ("trunc", "float64 trunc(float64)"),
+    ("round", "float64 round(float64)"),
+    ("lround", "int64 lround(float64)"),
+    ("llround", "int64 llround(float64)"),
+    ("rint", "float64 rint(float64)"),
+    ("lrint", "int64 lrint(float64)"),
+    ("llrint", "int64 llrint(float64)"),
+    ("nearbyint", "float64 nearbyint(float64)"),
+    ("remainder", "float64 remainder(float64, float64)"),
     # Floating-point manipulation
-    ("copysign", "float64 copysign(float64, float64)|CPU"),
-    ("nan", "float64 nan(const char*)|CPU"),
-    ("nextafter", "float64 nextafter(float64, float64)|CPU"),
-    ("nexttoward", "float64 nexttoward(float64, float64)|CPU"),
+    ("copysign", "float64 copysign(float64, float64)"),
+    ("nan", "float64 nan(const char*)"),
+    ("nextafter", "float64 nextafter(float64, float64)"),
+    ("nexttoward", "float64 nexttoward(float64, float64)"),
     # Minimum, maximum, difference functions
-    ("fdim", "float64 fdim(float64, float64)|CPU"),
-    ("fmax", "float64 fmax(float64, float64)|CPU"),
-    ("fmin", "float64 fmin(float64, float64)|CPU"),
+    ("fdim", "float64 fdim(float64, float64)"),
+    ("fmax", "float64 fmax(float64, float64)"),
+    ("fmin", "float64 fmin(float64, float64)"),
     # Other functions
-    ("fabs", "float64 fabs(float64)|CPU"),
-    ("abs", "int64 abs(int64)|CPU"),
-    ("fma", "float64 fma(float64, float64, float64)|CPU"),
+    ("fabs", "float64 fabs(float64)"),
+    ("abs", "int64 abs(int64)"),
+    ("fma", "float64 fma(float64, float64, float64)"),
 )
 
 
@@ -181,18 +181,18 @@ def _get_pyfunc(fname):
 
 
 @pytest.mark.parametrize("fname,sig", cmath_funcs, ids=[item[0] for item in cmath_funcs])
-def test_external_cmath_omnisci(omnisci, fname, sig):
+def test_external_cmath_heavydb(heavydb, fname, sig):
 
     if fname in ["logb", "ilogb", "modf"]:
         pytest.skip(f"cmath function {fname} not supported")
 
     if fname in ["frexp", "nan"]:
-        pytest.xfail(f"cmath function {fname} crashes omniscidb server")
+        pytest.xfail(f"cmath function {fname} crashes heavydb server")
 
     if fname in ["remainder"]:
         pytest.xfail(f"cmath.{fname} wrong output!")
 
-    table = omnisci.table_name
+    table = heavydb.table_name
     query_func = _get_query_func(fname)
     pyfunc = _get_pyfunc(fname)
 
@@ -225,7 +225,7 @@ def test_external_cmath_omnisci(omnisci, fname, sig):
     else:
         query = f"SELECT f8+10.0, {query_func}(f8+10.0) from {table}"
 
-    _, result = omnisci.sql_execute(query)
+    _, result = heavydb.sql_execute(query)
 
     for values in result:
         if len(values) == 3:
