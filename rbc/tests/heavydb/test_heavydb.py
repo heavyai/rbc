@@ -80,6 +80,9 @@ def test_direct_call_scalar(heavydb):
 
 @pytest.mark.parametrize('dtype', ('float32', 'float64', 'int32', 'int64'))
 def test_direct_call_array(heavydb, dtype):
+    if heavydb.version[:2] < (7, 0):
+        continue
+
     heavydb.unregister()
 
     @heavydb('T(T[])', T=['float32', 'float64', 'int64', 'int32'], devices=['cpu'])
