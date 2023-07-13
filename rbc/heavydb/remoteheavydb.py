@@ -1565,7 +1565,7 @@ class RemoteHeavyDB(RemoteJIT):
                 elif isinstance(a, str):
                     a = repr(a)
                 args.append(f'{a}')
-            elif isinstance(atype, OmnisciArrayType):
+            elif isinstance(atype, HeavyDBArrayType):
                 element_type_name = type_to_type_name(atype.element_type)
                 astr = ", ".join([f'CAST({a_} AS {element_type_name})' for a_ in a])
                 args.append(f'ARRAY[{astr}]')
