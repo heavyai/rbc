@@ -51,6 +51,10 @@ def define(heavydb):
     def mylength(lst):
         return len(lst)
 
+    @heavydb('T(T[])', T=['TextEncodingNone'], devices=['CPU'])
+    def myfirst(lst):
+        return lst[0]
+
 
 def test_udf_string_repr(heavydb):
     myincr = heavydb.get_caller('myincr')
@@ -135,6 +139,35 @@ def test_remote_list_evaluation(heavydb):
     assert str(mylength([1.0, 2])) == \
         "SELECT mylength(ARRAY[CAST(1.0 AS DOUBLE), CAST(2 AS DOUBLE)])"
     assert mylength([1.0, 2]).execute() == 2
+
+
+def test_remote_ndarray_evaluation(heavydb):
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
+
+    arr = np.asarray([1, 2])
+    farr = np.asarray([1, 2], dtype=np.float64)
+
+    mylength = heavydb.get_caller('mylength')
+    assert str(mylength) == "mylength['int64(T[]), T=int64|double, device=CPU']"
+    assert str(mylength(arr)) == \
+        "SELECT mylength(ARRAY[CAST(1 AS BIGINT), CAST(2 AS BIGINT)])"
+    assert mylength(arr).execute() == 2
+    assert str(mylength(farr)) == \
+        "SELECT mylength(ARRAY[CAST(1.0 AS DOUBLE), CAST(2.0 AS DOUBLE)])"
+    assert mylength(farr).execute() == 2
+
+
+def test_remote_text_list_evaluation(heavydb):
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
+    pytest.xfail('Array<TextEncodingNone> is not supported')
+
+    myfirst = heavydb.get_caller('myfirst')
+    assert str(myfirst) == "myfirst['T(T[]), T=TextEncodingNone, device=CPU']"
+    assert str(myfirst(['one', 'two'])) == \
+        "SELECT myfirst(ARRAY['one', 'two'])"
+    assert myfirst(['one', 'two']).execute() == 'one'
 
 
 def test_remote_composite_udf_evaluation(heavydb):
