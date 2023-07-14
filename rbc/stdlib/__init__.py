@@ -36,6 +36,7 @@ def determine_input_type(argty):
 class Expose:
     def __init__(self, globals, module_name):
         self._globals = globals
+        # XXX: remove module_name as it is not used
         self.module_name = module_name
 
     def create_function(self, func_name):
@@ -94,12 +95,12 @@ class Expose:
 
 class BinaryUfuncExpose(Expose):
 
-    def implements(self, ufunc, ufunc_name=None, dtype=None, api=API.ARRAY_API):
+    def implements(self, ufunc, func_name=None, dtype=None, api=API.ARRAY_API):
         """
         Wrapper for binary ufuncs that returns an array
         """
-        if ufunc_name is None:
-            ufunc_name = ufunc.__name__
+        if func_name is None:
+            func_name = ufunc.__name__
 
         def binary_ufunc_impl(a, b):
             typA = determine_input_type(a)
@@ -153,10 +154,10 @@ class BinaryUfuncExpose(Expose):
                     return nb_dtype(ufunc(cast_a, cast_b))
                 return impl
 
-        fn = self.create_function(ufunc_name)
+        fn = self.create_function(func_name)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name, api)
+            overload_func.__doc__ = self.format_docstring(overload_func, func_name, api)
             functools.update_wrapper(fn, overload_func)
 
             decorate = extending.overload(fn)
@@ -167,12 +168,12 @@ class BinaryUfuncExpose(Expose):
 
 class UnaryUfuncExpose(BinaryUfuncExpose):
 
-    def implements(self, ufunc, ufunc_name=None, dtype=None, api=API.ARRAY_API):
+    def implements(self, ufunc, func_name=None, dtype=None, api=API.ARRAY_API):
         """
         Wrapper for unary ufuncs that returns an array
         """
-        if ufunc_name is None:
-            ufunc_name = ufunc.__name__
+        if func_name is None:
+            func_name = ufunc.__name__
 
         def unary_ufunc_impl(a):
             nb_dtype = determine_dtype(a, dtype)
@@ -195,10 +196,10 @@ class UnaryUfuncExpose(BinaryUfuncExpose):
                     return nb_dtype(ufunc(cast))
                 return impl
 
-        fn = self.create_function(ufunc_name)
+        fn = self.create_function(func_name)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name, api)
+            overload_func.__doc__ = self.format_docstring(overload_func, func_name, api)
             functools.update_wrapper(fn, overload_func)
 
             decorate = extending.overload(fn)
