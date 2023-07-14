@@ -231,6 +231,7 @@ jobs:
           RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
+          mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest_modules -x
           pkill -f heavydb
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
@@ -245,6 +246,7 @@ jobs:
           RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
+          mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest_modules -x
           pkill -f heavydb
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
