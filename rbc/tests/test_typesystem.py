@@ -18,7 +18,7 @@ except ImportError:
     np = None
 
 import pytest
-from rbc.typesystem import Type, get_signature
+from rbc.typesystem import Type, get_signature, TypeParseError
 from rbc.utils import get_datamodel
 from rbc.targetinfo import TargetInfo
 
@@ -80,6 +80,31 @@ def test_commasplit():
     assert '^'.join(commasplit('(a, b) , {d, e}')) == '(a, b)^{d, e}'
     assert '^'.join(commasplit('(a[:, :])')) == '(a[:, :])'
     assert '^'.join(commasplit('a[:, :], b[:, :, :]')) == 'a[:, :]^b[:, :, :]'
+
+
+def test_fromtypes():
+
+    def from_list(values):
+        return set(map(Type.fromvalue, values))
+
+    assert Type.reducetypes(from_list([1, 3., 6])) == Type('float64')
+    assert Type.reducetypes(from_list([1, 3, 6])) == Type('int64')
+
+    types = from_list([np.int8(1), np.int8(3), np.int8(6)])
+    assert Type.reducetypes(types) == Type('int8')
+
+    types = from_list([np.int8(1), np.int32(3), np.int16(6)])
+    assert Type.reducetypes(types) == Type('int32')
+
+    types = from_list([np.uint8(1), np.uint32(3), np.int8(6)])
+    assert Type.reducetypes(types) == Type('int32')
+
+    types = from_list([np.int16(1), np.float16(3), np.int8(6)])
+    assert Type.reducetypes(types) == Type('float32')
+
+    msg = "Failed to cast"
+    with pytest.raises(TypeParseError, match=msg):
+        Type.reducetypes(from_list([1, 'a', 6]))
 
 
 def test_fromstring(target_info):

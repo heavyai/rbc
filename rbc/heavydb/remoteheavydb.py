@@ -298,6 +298,7 @@ def type_to_type_name(typ: typesystem.Type):
     ).get(styp)
     if type_name is not None:
         return type_name
+
     raise NotImplementedError(f'converting `{styp}` to DatumType not supported')
 
 
@@ -1423,7 +1424,13 @@ class RemoteHeavyDB(RemoteJIT):
         """
         types = []
         for value in values:
-            if isinstance(value, RemoteCallCapsule):
+
+            if isinstance(value, (list, numpy.ndarray)):
+                items_types = set(map(typesystem.Type.fromvalue, value))
+                com_type = typesystem.Type.reducetypes(items_types)
+                array_type = HeavyDBArrayType((com_type,))
+                types.append(array_type)
+            elif isinstance(value, RemoteCallCapsule):
                 typ = value.__typesystem_type__
                 if typ.is_struct and typ._params.get('struct_is_tuple'):
                     types.extend(typ)
@@ -1558,6 +1565,10 @@ class RemoteHeavyDB(RemoteJIT):
                 elif isinstance(a, str):
                     a = repr(a)
                 args.append(f'{a}')
+            elif isinstance(atype, HeavyDBArrayType):
+                element_type_name = type_to_type_name(atype.element_type)
+                astr = ", ".join([f'CAST({a_} AS {element_type_name})' for a_ in a])
+                args.append(f'ARRAY[{astr}]')
             else:
                 args.append(f'CAST({a} AS {type_to_type_name(atype)})')
         args = ', '.join(args)

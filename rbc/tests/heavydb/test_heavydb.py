@@ -6,6 +6,7 @@ import numpy as np
 from rbc.errors import UnsupportedError, HeavyDBServerError
 from rbc.tests import heavydb_fixture, assert_equal
 from rbc.typesystem import Type
+from rbc.stdlib import array_api
 
 rbc_heavydb = pytest.importorskip('rbc.heavydb')
 available_version, reason = rbc_heavydb.is_available()
@@ -67,7 +68,7 @@ def heavydb():
         yield o
 
 
-def test_direct_call(heavydb):
+def test_direct_call_scalar(heavydb):
     heavydb.reset()
 
     @heavydb('double(double)')
@@ -75,6 +76,22 @@ def test_direct_call(heavydb):
         return (f - 32) * 5 / 9
 
     assert_equal(farhenheit2celcius(40).execute(), np.float32(40 / 9))
+
+
+@pytest.mark.parametrize('dtype', ('float32', 'float64', 'int32', 'int64'))
+def test_direct_call_array(heavydb, dtype):
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
+
+    heavydb.unregister()
+
+    @heavydb('T(T[])', T=['float32', 'float64', 'int64', 'int32'], devices=['cpu'])
+    def func(f):
+        return (array_api.mean(f)-32) * 5 / 9
+
+    ref_value = np.dtype(dtype).type(40 / 9)
+    inp_array = np.array([30, 50], dtype=dtype)
+    assert func(inp_array).execute() == pytest.approx(ref_value)
 
 
 def test_local_caller(heavydb):

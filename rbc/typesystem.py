@@ -1244,6 +1244,60 @@ class Type(tuple, metaclass=MetaType):
             return cls.fromcallable(obj)
         raise NotImplementedError(repr((type(obj))))
 
+    @classmethod
+    def reducetypes(cls, t, *, method='highest'):
+        """Reduce a list of types into a single type.
+
+        Parameters
+        ----------
+        t : list(Type)
+          List of types to reduce to a type.
+        method : {common}
+          Reduction method. Can be:
+
+          * 'common': reduce to the highest common denominator.
+
+        Returns
+        -------
+        t : Type
+          New Type instance.
+        """
+        has_uint, has_int, has_float, has_other = True, False, False, False
+        bit_int, bit_float = 8, 8
+
+        for item_type in t:
+            curr_type = item_type.tostring()
+
+            if 'int' in curr_type:
+                has_int = True
+                if 'uint' not in curr_type:
+                    has_uint = False
+                curr_bit = int(curr_type.split('int')[1])
+                bit_int = max(bit_int, curr_bit)
+            elif 'float' in curr_type:
+                has_float = True
+                curr_bit = int(curr_type.split('float')[1])
+                bit_float = max(bit_float, curr_bit)
+            else:
+                has_other = True
+
+        if (has_int or has_float) and (not has_other) and len(t) != 1:
+            if not has_float:
+                com_type = f'int{bit_int}'
+                if has_uint:
+                    com_type = 'u' + com_type
+            else:
+                if bit_float == 16 and bit_int >= 16:
+                    bit_float = 32
+                com_type = f'float{bit_float}'
+
+            t = [Type.fromstring(com_type)]
+
+        if len(t) == 1:
+            return t.pop()
+        else:
+            raise TypeParseError(f"Failed to cast {repr(t)!r} to a single type")
+
     def _normalize(self):
         """Return new Type instance with atomic types normalized.
         """

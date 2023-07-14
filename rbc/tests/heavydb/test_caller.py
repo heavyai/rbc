@@ -47,6 +47,10 @@ def define(heavydb):
             r[i] = c
         return r
 
+    @heavydb('int64(T[])', T=['int64', 'double'], devices=['CPU'])
+    def mylength(lst):
+        return len(lst)
+
 
 def test_udf_string_repr(heavydb):
     myincr = heavydb.get_caller('myincr')
@@ -117,6 +121,20 @@ def test_remote_TextEncodingNone_evaluation(heavydb):
     assert str(myupper("abc").execute()) == 'ABC'
     assert str(myupper(b"abc")) == "SELECT myupper('abc')"
     assert str(myupper(b"abc").execute()) == 'ABC'
+
+
+def test_remote_list_evaluation(heavydb):
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
+
+    mylength = heavydb.get_caller('mylength')
+    assert str(mylength) == "mylength['int64(T[]), T=int64|double, device=CPU']"
+    assert str(mylength([1, 2])) == \
+        "SELECT mylength(ARRAY[CAST(1 AS BIGINT), CAST(2 AS BIGINT)])"
+    assert mylength([1, 2]).execute() == 2
+    assert str(mylength([1.0, 2])) == \
+        "SELECT mylength(ARRAY[CAST(1.0 AS DOUBLE), CAST(2 AS DOUBLE)])"
+    assert mylength([1.0, 2]).execute() == 2
 
 
 def test_remote_composite_udf_evaluation(heavydb):
