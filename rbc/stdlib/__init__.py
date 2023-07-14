@@ -1,13 +1,12 @@
+import textwrap
 import functools
 from enum import Enum
 from numba.core import extending
 from rbc.heavydb import Array, ArrayPointer
 from rbc import typesystem, errors
 
-
-ARRAY_API_ADDRESS = ("https://data-apis.org/array-api/latest/API_specification"
-                     "/generated/signatures.{0}.{1}.html"
-                     "#signatures.{0}.{1}")
+ARRAY_API_ADDRESS = ("https://data-apis.org/array-api/latest/API_specification/"
+                     "generated/array_api.{0}.html#array_api.{0}")
 NUMPY_API_ADDRESS = ("https://numpy.org/doc/stable/reference/generated/numpy.{0}.html")
 ADDRESS = ARRAY_API_ADDRESS
 
@@ -56,10 +55,10 @@ class Expose:
             # Array API
             link = (
                 f"`Array-API '{func_name}' "
-                f"doc <{ARRAY_API_ADDRESS.format(self.module_name, func_name)}>`_")
+                f"doc <{ARRAY_API_ADDRESS.format(func_name)}>`_")
 
         if original_docstring is not None:
-            new_doctring = f"{original_docstring}\n\n{link}"
+            new_doctring = f"{textwrap.dedent(original_docstring)}\n\n{link}"
         else:
             new_doctring = link
         return new_doctring

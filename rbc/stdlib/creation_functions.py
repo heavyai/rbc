@@ -108,6 +108,28 @@ def _array_api_triu(x, k=0):
 def _impl__full(shape, fill_value, dtype=None):
     """
     Return a new array of given shape and type, filled with fill_value.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](int64, double)')
+    ... def rbc_full(size, fill_value):
+    ...     return array_api.full(size, fill_value)
+    >>> rbc_full(3, 3.14).execute()
+    array([3.14, 3.14, 3.14], dtype=float32)
+
+    >>> @heavydb('int64[](int64, int64)')
+    ... def rbc_full2(size, fill_value):
+    ...     return array_api.full(size, fill_value, 'int64')
+    >>> rbc_full2(2, 0).execute()
+    array([0, 0])
     """
     nb_dtype = _determine_dtype(dtype, fill_value)
 
@@ -122,6 +144,28 @@ def _impl__full(shape, fill_value, dtype=None):
 def _impl_full_like(a, fill_value, dtype=None):
     """
     Return a full array with the same shape and type as a given array.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[], double)')
+    ... def full_like(other, fill_value):
+    ...     return array_api.full_like(other, fill_value)
+    >>> full_like([1.0, 2.0, 3.0], 3.14).execute()
+    array([3.14, 3.14, 3.14], dtype=float32)
+
+    >>> @heavydb('int64[](int64[], int64)')
+    ... def full_like(other, fill_value):
+    ...     return array_api.full_like(other, fill_value, 'int64')
+    >>> full_like([1, 2, 3], 3).execute()
+    array([3, 3, 3])
     """
     if isinstance(a, ArrayPointer):
         if dtype is None:
@@ -175,6 +219,28 @@ def _impl_empty(shape, dtype=None):
 def _impl_zeros(shape, dtype=None):
     """
     Return a new array of given shape and type, filled with zeros.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](int64)')
+    ... def zeros(size):
+    ...     return array_api.zeros(size)
+    >>> zeros(3).execute()
+    array([0., 0., 0.], dtype=float32)
+
+    >>> @heavydb('int64[](int64)')
+    ... def zeros2(size):
+    ...     return array_api.zeros(size, 'int64')
+    >>> zeros2(2).execute()
+    array([0, 0])
     """
 
     nb_dtype = _determine_dtype(dtype, fill_value=None)
@@ -189,6 +255,28 @@ def _impl_zeros(shape, dtype=None):
 def _impl_zeros_like(a, dtype=None):
     """
     Return an array of zeros with the same shape and type as a given array.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int64[](int64[])')
+    ... def zeros_like(other):
+    ...     return array_api.zeros_like(other)
+    >>> zeros_like([1, 2, 3]).execute()
+    array([0, 0, 0])
+
+    >>> @heavydb('float[](int64[])')
+    ... def zeros_like2(other):
+    ...     return array_api.zeros_like(other, 'float32')
+    >>> zeros_like2([1, 2, 3]).execute()
+    array([0., 0., 0.], dtype=float32)
     """
     if isinstance(a, ArrayPointer):
         if dtype is None:
@@ -207,6 +295,28 @@ def _impl_zeros_like(a, dtype=None):
 def _impl_ones(shape, dtype=None):
     """
     Return a new array of given shape and type, filled with ones.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](int64)')
+    ... def ones(size):
+    ...     return array_api.ones(size)
+    >>> ones(3).execute()
+    array([1., 1., 1.], dtype=float32)
+
+    >>> @heavydb('int64[](int64)')
+    ... def ones2(size):
+    ...     return array_api.ones(size, 'int64')
+    >>> ones2(2).execute()
+    array([1, 1])
     """
 
     nb_dtype = _determine_dtype(dtype, fill_value=None)
@@ -221,6 +331,28 @@ def _impl_ones(shape, dtype=None):
 def _impl_ones_like(a, dtype=None):
     """
     Return an array of ones with the same shape and type as a given array.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int64[](int64[])')
+    ... def ones_like(other):
+    ...     return array_api.ones_like(other)
+    >>> ones_like([1, 2, 3]).execute()
+    array([1, 1, 1])
+
+    >>> @heavydb('float[](int64[])')
+    ... def ones_like2(other):
+    ...     return array_api.ones_like(other, 'float32')
+    >>> ones_like2([1, 2, 3]).execute()
+    array([1., 1., 1.], dtype=float32)
     """
     if isinstance(a, ArrayPointer):
         if dtype is None:
