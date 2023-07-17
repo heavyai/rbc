@@ -231,9 +231,6 @@ jobs:
           RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
-          mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest_modules -x
-          pkill -f heavydb
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
       - name: Run rbc tests
         shell: bash -l {0}
@@ -246,8 +243,15 @@ jobs:
           RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
+
+      - name: Run doctests
+        shell: bash -l {0}
+        run: |
           mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest_modules -x
-          pkill -f heavydb
+
+      - name: Run Non-HeavyDB tests
+        shell: bash -l {0}
+        run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
       - name: Show Heavydb conda logs on failure [conda]
