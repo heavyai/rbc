@@ -37,6 +37,23 @@ def _get_type_limits(eltype):
 def _impl_array_max(x):
     """
     Calculates the maximum value of the input array x
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double[])')
+    ... def array_api_max(arr):
+    ...     return array_api.max(arr)
+    >>> array_api_max([1.0, 3.0, 2.0]).execute()
+    3.0
+
     """
     if isinstance(x, ArrayPointer):
         # the array api standard says this is implementation specific
@@ -68,6 +85,23 @@ def _impl_array_max(x):
 def _impl_array_min(x):
     """
     Calculates the minimum value of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double[])')
+    ... def array_api_min(arr):
+    ...     return array_api.min(arr)
+    >>> array_api_min([1.0, 3.0, 2.0]).execute()
+    1.0
+
     """
     if isinstance(x, ArrayPointer):
         max_value = _get_type_limits(x.eltype).max
@@ -91,6 +125,23 @@ def _impl_array_min(x):
 def _impl_np_sum(a):
     """
     Calculates the sum of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double[])')
+    ... def array_api_sum(arr):
+    ...     return array_api.sum(arr)
+    >>> array_api_sum([1.0, 3.0, 2.0]).execute()
+    6.0
+
     """
     if isinstance(a, ArrayPointer):
         def impl(a):
@@ -107,6 +158,23 @@ def _impl_np_sum(a):
 def _impl_np_prod(a):
     """
     Calculates the product of input array x elements.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double[])')
+    ... def array_api_prod(arr):
+    ...     return array_api.prod(arr)
+    >>> array_api_prod([4.0, 3.0, 2.0]).execute()
+    24.0
+
     """
     if isinstance(a, ArrayPointer):
         def impl(a):
@@ -123,6 +191,23 @@ def _impl_np_prod(a):
 def _impl_array_mean(x):
     """
     Calculates the arithmetic mean of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double[])')
+    ... def array_api_mean(arr):
+    ...     return array_api.mean(arr)
+    >>> array_api_mean([1.0, 3.0, 2.0]).execute()
+    2.0
+
     """
     zero_value = np.nan
 
