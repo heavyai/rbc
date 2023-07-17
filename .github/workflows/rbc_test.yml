@@ -251,6 +251,12 @@ jobs:
 
       - name: Run Non-HeavyDB tests
         shell: bash -l {0}
+        env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
+          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
+          EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
+          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
+          RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
