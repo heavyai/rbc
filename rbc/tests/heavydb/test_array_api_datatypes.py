@@ -18,7 +18,7 @@ def test_datatypes(heavydb, dtype):
     def test_datatype(size):
         return array_api.ones(size, dtype=dtype)
 
-    if dtype.startswith('uint'):
+    if dtype.startswith('uint') or dtype.startswith('complex'):
         with pytest.raises(ValueError, match=".*cannot convert.*"):
             test_datatype(5).execute()
     else:
