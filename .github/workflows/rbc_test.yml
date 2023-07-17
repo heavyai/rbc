@@ -247,7 +247,7 @@ jobs:
       - name: Run doctests
         shell: bash -l {0}
         run: |
-          mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest_modules -x
+          mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest-modules -x
 
       - name: Run Non-HeavyDB tests
         shell: bash -l {0}
