@@ -161,6 +161,22 @@ class JITRemoteCodegen(codegen.JITCPUCodegen):
         # See https://github.com/xnd-project/rbc/issues/45
         remove_features = {
             (12, 12): [], (11, 11): [], (10, 10): [], (9, 9): [], (8, 8): [],
+            (14, 14): ['avx512pf', 'tsxldtrk', 'cx16', 'sahf', 'tbm',
+                       'avx512ifma', 'sha', 'crc32', 'fma4', 'vpclmulqdq',
+                       'prfchw', 'bmi2', 'cldemote', 'fsgsbase', 'ptwrite',
+                       'amxtile', 'uintr', 'gfni', 'popcnt', 'widekl', 'aes',
+                       'avx512bitalg', 'movdiri', 'xsaves', 'avx512er', 'avxvnni',
+                       'avx512fp16', 'avx512vnni', 'amxbf16', 'avx512vpopcntdq',
+                       'pconfig', 'clwb', 'avx512f', 'xsavec', 'clzero', 'pku',
+                       'mmx', 'lwp', 'rdpid', 'xop', 'rdseed', 'waitpkg', 'kl',
+                       'movdir64b', 'sse4a', 'avx512bw', 'clflushopt', 'xsave',
+                       'avx512vbmi2', '64bit', 'avx512vl', 'serialize', 'hreset',
+                       'invpcid', 'avx512cd', 'avx', 'vaes', 'avx512bf16', 'cx8',
+                       'fma', 'rtm', 'bmi', 'enqcmd', 'rdrnd', 'mwaitx', 'sse4.1',
+                       'sse4.2', 'avx2', 'fxsr', 'wbnoinvd', 'sse', 'lzcnt', 'pclmul',
+                       'prefetchwt1', 'f16c', 'ssse3', 'sgx', 'shstk', 'cmov',
+                       'avx512vbmi', 'amxint8', 'movbe', 'avx512vp2intersect',
+                       'xsaveopt', 'avx512dq', 'sse2', 'adx', 'sse3'],
             (11, 8): ['tsxldtrk', 'amx-tile', 'amx-bf16', 'serialize', 'amx-int8',
                       'avx512vp2intersect', 'tsxldtrk', 'amx-tile', 'amx-bf16',
                       'serialize', 'amx-int8', 'avx512vp2intersect', 'tsxldtrk',
@@ -239,7 +255,6 @@ class JITRemoteTargetContext(cpu.CPUContext):
 
 # ---------------------------------------------------------------------------
 # Code generation methods
-
 
 @contextmanager
 def replace_numba_internals_hack():

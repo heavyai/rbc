@@ -287,6 +287,7 @@ class LLVMIntrinsics(Library):
     experimental.vector.reduce.smin.* experimental.vector.reduce.umax.*
     experimental.vector.reduce.umin.* experimental.vector.reduce.fmax.*
     experimental.vector.reduce.fmin.*
+    experimental.noalias.scope.decl
     flt.rounds var.annotation ptr.annotation annotation
     codeview.annotation trap debugtrap stackprotector stackguard
     objectsize expect expect.with.probability assume ssa_copy

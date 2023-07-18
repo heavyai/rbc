@@ -3,17 +3,20 @@
 
 __all__ = ['RemoteJIT', 'Signature', 'Caller']
 
-import os
-import inspect
-import warnings
 import ctypes
+import inspect
+import os
+import warnings
 from collections import defaultdict
+
+import llvmlite.binding as llvm
+
 from . import irtools, config
 from .errors import UnsupportedError
-from .typesystem import Type, get_signature
-from .thrift import Server, Dispatcher, dispatchermethod, Data, Client
-from .utils import get_local_ip, UNSPECIFIED, validate_devices
 from .targetinfo import TargetInfo
+from .thrift import Client, Data, Dispatcher, Server, dispatchermethod
+from .typesystem import Type, get_signature
+from .utils import UNSPECIFIED, get_local_ip, validate_devices
 
 
 def isfunctionlike(obj):
@@ -990,6 +993,7 @@ class DispatcherRJIT(Dispatcher):
         target_info = TargetInfo.host()
         target_info.set('has_numba', True)
         target_info.set('has_cpython', True)
+        target_info.set('llvm_version', llvm.llvm_version_info)
         return dict(cpu=target_info.tojson())
 
     @dispatchermethod

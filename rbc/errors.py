@@ -3,8 +3,9 @@ rbc-specific errors and warnings.
 """
 
 
-from rbc.utils import get_version
 from numba.core.errors import TypingError
+
+from rbc.utils import get_version
 
 
 class HeavyDBServerError(Exception):

@@ -1,10 +1,11 @@
-import os
 import itertools
-import pytest
-import numpy as np
+import os
 
-from rbc.errors import UnsupportedError, HeavyDBServerError
-from rbc.tests import heavydb_fixture, assert_equal
+import numpy as np
+import pytest
+
+from rbc.errors import HeavyDBServerError, UnsupportedError
+from rbc.tests import assert_equal, heavydb_fixture
 from rbc.typesystem import Type
 from rbc.stdlib import array_api
 

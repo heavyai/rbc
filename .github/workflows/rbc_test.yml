@@ -109,11 +109,19 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.10', '3.9', '3.8']
-        numba-version: ['0.56', '0.55']
+        python-version: ['3.10', '3.9']
+        numba-version: ['0.56']
         heavydb-version: ['6.2', '6.1', '6.0']
+        llvm-version: ['11.1']
         heavydb-from: [conda]
-        # include:
+        include:
+          - os: ubuntu-latest
+            python-version: '3.11'
+            numba-version: '0.57'
+            llvm-version: '14'
+            heavydb-version: '7.0'
+            docker-image: heavyai/heavyai-ee-cpu:7.0.0
+            heavydb-from: docker
         #   - os: ubuntu-latest
         #     python-version: '3.10'
         #     numba-version: '0.56'
@@ -141,8 +149,8 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: ${{ matrix.python-version }}
-          channel-priority: strict
-          channels: conda-forge
+          channel-priority: flexible
+          channels: conda-forge,numba
 
       - name: Install mamba
         shell: bash -l {0}
@@ -198,6 +206,9 @@ jobs:
           cat environment.yml > rbc_test.yaml
           echo "  - numba=${{ matrix.numba-version }}" >> rbc_test.yaml
           echo "  - python=${{ matrix.python-version }}" >> rbc_test.yaml
+          echo "  - clang=${{ matrix.llvm-version }}" >> rbc_test.yaml
+          echo "  - clangxx=${{ matrix.llvm-version }}" >> rbc_test.yaml
+
           mamba env create --file=rbc_test.yaml -n rbc
 
       - name: rbc conda config
@@ -228,9 +239,9 @@ jobs:
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
 
-      - name: Run rbc tests
+      - name: Run rbc tests [conda]
         shell: bash -l {0}
-        if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.heavydb-from == 'docker' ) }}
+        if: matrix.heavydb-from == 'conda'
         env:
           HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
           EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -305,11 +316,11 @@ jobs:
         - name: Set up Python
           uses: actions/setup-python@v2
           with:
-            python-version: 3.8
+            python-version: '3.10'
 
         - uses: conda-incubator/setup-miniconda@v2
           with:
-            python-version: 3.8
+            python-version: '3.10'
             channel-priority: strict
             channels: conda-forge
             environment-file: environment.yml

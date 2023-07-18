@@ -49,12 +49,11 @@ class ArrayPointer(BufferPointer):
         ptr_type = self.dtype.members[0]
         element_size = int64_t(ptr_type.dtype.bitwidth // 8)
 
-        struct_load = builder.load(val, name='struct_load')
-        src = builder.extract_value(struct_load, 0, name='array_buff_ptr')
-        element_count = builder.extract_value(struct_load, 1, name='array_size')
-        is_null = builder.extract_value(struct_load, 2, name='array_is_null')
-
         zero, one, two = int32_t(0), int32_t(1), int32_t(2)
+        src = builder.load(builder.gep(val, [zero, zero]), name='array_buff_ptr')
+        element_count = builder.load(builder.gep(val, [zero, one]), name='array_size')
+        is_null = builder.load(builder.gep(val, [zero, two]), name='array_is_null')
+
         with builder.if_else(cgutils.is_true(builder, is_null)) as (then, otherwise):
             with then:
                 nullptr = cgutils.get_null_value(src.type)
