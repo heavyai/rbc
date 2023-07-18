@@ -501,6 +501,35 @@ def _impl_ufunc_cos(x):
     ...     return array_api.cos(x)
     >>> array_api_cos(np.array([0, np.pi/2, np.pi])).execute()
     array([ 1.000000e+00,  6.123234e-17, -1.000000e+00], dtype=float32)
+
+    """
+    pass
+
+
+@unary_expose.implements(np.cosh, func_name="cosh")
+def _impl_ufunc_cosh(x):
+    """Calculates an implementation-dependent approximation to the hyperbolic cosine, having
+    domain.
+
+    [-infinity, +infinity] and codomain [-infinity, +infinity], for each
+    element x_i in the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double)')
+    ... def array_api_cosh(x):
+    ...     return array_api.cosh(x)
+    >>> array_api_cosh(0.0).execute()
+    1.0
+
     """
     pass
 
@@ -774,6 +803,23 @@ def _impl_ufunc_less(x1, x2):
     """
     Computes the truth value of x1_i < x2_i for each element x1_i of the input array x1 with the
     respective element x2_i of the input array x2.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('bool[](int64[], int64[])')
+    ... def array_api_less(x1, x2):
+    ...     return array_api.less(x1, x2)
+    >>> array_api_less([4, 2, 1], [2, 2, 2]).execute()
+    array([False, False,  True])
+
     """
     pass
 
@@ -785,6 +831,23 @@ def _impl_ufunc_less_equal(x1, x2):
     """
     Computes the truth value of x1_i <= x2_i for each element x1_i of the input array x1 with the
     respective element x2_i of the input array x2.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('bool[](int64[], int64[])')
+    ... def array_api_less_equal(x1, x2):
+    ...     return array_api.less_equal(x1, x2)
+    >>> array_api_less_equal([4, 2, 1], [2, 2, 2]).execute()
+    array([False,  True,  True])
+
     """
     pass
 
@@ -795,6 +858,23 @@ def _impl_ufunc_log(x):
     Calculates an implementation-dependent approximation to the natural (base e) logarithm, having
     domain [0, +infinity] and codomain [-infinity, +infinity], for each element x_i of the input
     array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_log(x):
+    ...     return array_api.log(x)
+    >>> array_api_log([1.0, np.e, np.e**2, 0.0]).execute()
+    array([  0.,   1.,   2., -inf], dtype=float32)
+
     """
     pass
 
@@ -805,6 +885,23 @@ def _impl_ufunc_log1p(x):
     Calculates an implementation-dependent approximation to log(1+x), where log refers to the
     natural (base e) logarithm, having domain [-1, +infinity] and codomain [-infinity, +infinity],
     for each element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_log1p(x):
+    ...     return array_api.log1p(x)
+    >>> array_api_log1p([np.e, 8.0]).execute()
+    array([1.3132616, 2.1972246], dtype=float32)
+
     """
     pass
 
@@ -814,6 +911,23 @@ def _impl_ufunc_log2(x):
     """Calculates an implementation-dependent approximation to the base 2 logarithm, having
     domain. [0, +infinity] and codomain [-infinity, +infinity], for each element x_i
     of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_log2(x):
+    ...     return array_api.log2(x)
+    >>> array_api_log2([np.e, 8.0]).execute()
+    array([1.442695, 3.      ], dtype=float32)
+
     """
     pass
 
@@ -823,6 +937,23 @@ def _impl_ufunc_log10(x):
     """Calculates an implementation-dependent approximation to the base 10 logarithm, having
     domain. [0, +infinity] and codomain [-infinity, +infinity], for each element x_i
     of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_log10(x):
+    ...     return array_api.log10(x)
+    >>> array_api_log10([0.01, -3.0]).execute()
+    array([-2., nan], dtype=float32)
+
     """
     pass
 
@@ -832,6 +963,36 @@ def _impl_ufunc_logaddexp(x1, x2):
     """
     Calculates the logarithm of the sum of exponentiations ``log(exp(x1) + exp(x2))`` for each
     element x1_i of the input array x1 with the respective element x2_i of the input array x2.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double, double)')
+    ... def array_api_logaddexp(x1, x2):
+    ...     return array_api.logaddexp(x1, x2)
+    >>> prob1 = np.log(1e-50)
+    >>> prob2 = np.log(2.5e-50)
+    >>> array_api_logaddexp(prob1, prob2).execute()
+    -113.876495
+
+    """
+    pass
+
+
+@binary_expose.implements(
+    np.logical_and, func_name="logical_and", dtype=typesystem.boolean8
+)
+def _impl_ufunc_logical_and(x1, x2):
+    """
+    Computes the logical AND for each element x1_i of the input array x1 with the respective
+    element x2_i of the input array x2.
     """
     pass
 
@@ -858,11 +1019,36 @@ def _impl_ufunc_logical_xor(x1, x2):
     pass
 
 
+@unary_expose.implements(np.logical_not, dtype=typesystem.boolean8)
+def _impl_ufunc_logical_not(x):
+    """
+    Computes the logical NOT for each element x_i of the input array x.
+    """
+    pass
+
+
 @binary_expose.implements(np.multiply, func_name="multiply")
 def _impl_ufunc_multiply(x1, x2):
     """
     Calculates the product for each element x1_i of the input array x1 with the respective element
     x2_i of the input array x2.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double, double)')
+    ... def array_api_multiply(x1, x2):
+    ...     return array_api.multiply(x1, x2)
+    >>> array_api_multiply(2.0, 4.0).execute()
+    8.0
+
     """
     pass
 
@@ -870,7 +1056,25 @@ def _impl_ufunc_multiply(x1, x2):
 @unary_expose.implements(np.negative, func_name="negative")
 def _impl_ufunc_negative(x):
     """Computes the numerical negative of each element x_i (i.e., y_i = -x_i) of the
-    input array x."""
+    input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_negative(x):
+    ...     return array_api.negative(x)
+    >>> array_api_negative([1., -1.]).execute()
+    array([-1.,  1.], dtype=float32)
+
+    """
     pass
 
 
@@ -888,7 +1092,25 @@ def _impl_ufunc_not_equal(x1, x2):
 @unary_expose.implements(np.positive, func_name="positive")
 def _impl_ufunc_positive(x):
     """Computes the numerical positive of each element x_i (i.e., y_i = +x_i) of the
-    input array x."""
+    input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_positive(x):
+    ...     return array_api.positive(x)
+    >>> array_api_positive([1., -1.]).execute()
+    array([ 1., -1.], dtype=float32)
+
+    """
     pass
 
 
@@ -898,6 +1120,24 @@ def _impl_ufunc_pow(x1, x2):
     Calculates an implementation-dependent approximation of exponentiation by raising each element
     x1_i (the base) of the input array x1 to the power of x2_i (the exponent), where x2_i is the
     corresponding element of the input array x2.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int64[](int64[], int64)')
+    ... def array_api_pow(x1, x2):
+    ...     return array_api.pow(x1, x2)
+    >>> x1 = np.arange(6)
+    >>> array_api_pow(x1, 3).execute()
+    array([  0,   1,   8,  27,  64, 125])
+
     """
     pass
 
@@ -916,14 +1156,48 @@ def _impl_ufunc_remainder(x1, x2):
     """
     Returns the remainder of division for each element x1_i of the input array x1 and the
     respective element x2_i of the input array x2.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int64[](int64[], int64[])')
+    ... def array_api_remainder(x1, x2):
+    ...     return array_api.remainder(x1, x2)
+    >>> array_api_remainder([4, 7], [2, 3]).execute()
+    array([0, 1])
+
     """
     pass
 
 
-@unary_expose.implements(np.around, func_name="round")
+@unary_expose.implements(np.round, func_name="round")
 def _impl_ufunc_round(x):
     """
     Rounds each element x_i of the input array x to the nearest integer-valued number.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_round(x):
+    ...     return array_api.round(x)
+    >>> array_api_round([0.37, 1.64]).execute()
+    array([0., 2.], dtype=float32)
+
     """
     pass
 
@@ -932,6 +1206,23 @@ def _impl_ufunc_round(x):
 def _impl_ufunc_sign(x):
     """
     Returns an indication of the sign of a number for each element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_sign(x):
+    ...     return array_api.sign(x)
+    >>> array_api_sign([-5., 4.5]).execute()
+    array([-1.,  1.], dtype=float32)
+
     """
     pass
 
@@ -941,6 +1232,23 @@ def _impl_ufunc_sin(x):
     """
     Calculates an implementation-dependent approximation to the sine for each
     element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double)')
+    ... def array_api_sin(x):
+    ...     return array_api.sin(x)
+    >>> array_api_sin(np.pi/2.).execute()
+    1.0
+
     """
     pass
 
@@ -950,6 +1258,25 @@ def _impl_ufunc_sinh(x):
     """
     Calculates an implementation-dependent approximation to the hyperbolic sine
     for each element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double)')
+    ... def array_api_sinh(x):
+    ...     return array_api.sinh(x)
+    >>> array_api_sinh(0).execute()
+    0.0
+    >>> array_api_sinh(np.pi).execute()
+    11.548739
+
     """
     pass
 
@@ -958,6 +1285,23 @@ def _impl_ufunc_sinh(x):
 def _impl_ufunc_square(x):
     """
     Squares (x_i * x_i) each element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double)')
+    ... def array_api_square(x):
+    ...     return array_api.square(x)
+    >>> array_api_square(4.0).execute()
+    16.0
+
     """
     pass
 
@@ -967,6 +1311,23 @@ def _impl_ufunc_sqrt(x):
     """
     Calculates the principal square root for each element x_i of the input
     array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double)')
+    ... def array_api_sqrt(x):
+    ...     return array_api.sqrt(x)
+    >>> array_api_sqrt(4.0).execute()
+    2.0
+
     """
     pass
 
@@ -976,6 +1337,23 @@ def _impl_ufunc_subtract(x1, x2):
     """
     Calculates the difference for each element x1_i of the input array x1 with
     the respective element x2_i of the input array x2
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int64(int64, int64)')
+    ... def array_api_subtract(x1, x2):
+    ...     return array_api.subtract(x1, x2)
+    >>> array_api_subtract(5, 3).execute()
+    2
+
     """
     pass
 
@@ -985,6 +1363,23 @@ def _impl_ufunc_tan(x):
     """
     Calculates an implementation-dependent approximation to the tangent for
     each element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_tan(x):
+    ...     return array_api.tan(x)
+    >>> array_api_tan([-np.pi, np.pi/2, np.pi]).execute()
+    array([ 1.2246469e-16,  1.6331239e+16, -1.2246469e-16], dtype=float32)
+
     """
     pass
 
@@ -994,6 +1389,23 @@ def _impl_ufunc_tanh(x):
     """
     Calculates an implementation-dependent approximation to the hyperbolic
     tangent for each element x_i of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double[](double[])')
+    ... def array_api_tanh(x):
+    ...     return array_api.tanh(x)
+    >>> array_api_tanh([0.0, np.pi/2, np.pi]).execute()
+    array([0.        , 0.91715235, 0.9962721 ], dtype=float32)
+
     """
     pass
 
@@ -1003,6 +1415,23 @@ def _impl_ufunc_trunc(x):
     """
     Rounds each element x_i of the input array x to the nearest integer-valued
     number that is closer to zero than x_i.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('double(double)')
+    ... def array_api_trunc(x):
+    ...     return array_api.trunc(x)
+    >>> array_api_trunc(np.pi).execute()
+    3.0
+
     """
     pass
 
@@ -1083,18 +1512,6 @@ def _impl_ufunc_hypot(x1, x2):
 
 
 # Comparison functions
-
-
-@binary_expose.implements(
-    np.logical_and, func_name="logical_and", dtype=typesystem.boolean8
-)
-def _impl_ufunc_logical_and(x1, x2):
-    """
-    Computes the logical AND for each element x1_i of the input array x1 with the respective
-    element x2_i of the input array x2.
-    """
-    pass
-
 
 @binary_expose.implements(np.maximum, api=API.NUMPY_API)
 def _impl_ufunc_maximum(x1, x2):
@@ -1185,18 +1602,6 @@ def _impl_ufunc_arctan(x):
     pass
 
 
-@unary_expose.implements(np.cosh, func_name="cosh")
-def _impl_ufunc_cosh(x):
-    """Calculates an implementation-dependent approximation to the hyperbolic cosine, having
-    domain.
-
-    [-infinity, +infinity] and codomain [-infinity, +infinity], for each
-    element x_i in the input array x.
-
-    """
-    pass
-
-
 @unary_expose.implements(np.arcsinh, api=API.NUMPY_API)
 def _impl_ufunc_arcsinh(x):
     pass
@@ -1232,15 +1637,6 @@ def _impl_ufunc_rad2deg(x):
     pass
 
 
-# Comparison functions
-@unary_expose.implements(np.logical_not, dtype=typesystem.boolean8)
-def _impl_ufunc_logical_not(x):
-    """
-    Computes the logical NOT for each element x_i of the input array x.
-    """
-    pass
-
-
 # Floating functions
 
 
@@ -1251,7 +1647,7 @@ def _impl_ufunc_fabs(x):
 
 # not supported?
 # @unary_expose.implements(np.isnat, dtype=types.int8)
-@unary_expose.not_implemented("isnat")
+@unary_expose.not_implemented("isnat", api=API.NUMPY_API)
 def _impl_ufunc_isnat(x):
     pass
 
