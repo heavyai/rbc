@@ -7,10 +7,6 @@ on:
     branches:
       - main
 
-env:
-  NUMBA_LOOP_VECTORIZE: 0
-  NUMBA_SLP_VECTORIZE: 0
-
 
 # kill any previous running job on a new commit
 concurrency:
@@ -231,8 +227,6 @@ jobs:
           RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
-          pkill -f heavydb
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
       - name: Run rbc tests
         shell: bash -l {0}
@@ -245,8 +239,13 @@ jobs:
           RBC_TESTS_FULL: TRUE
         run: |
           mamba run -n rbc pytest -sv -r A rbc/tests/heavydb/ -x
-          pkill -f heavydb
-          mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
+
+      - name: Run doctests
+        shell: bash -l {0}
+        # requires HeavyDB 6.4 or newer
+        if: ${{ false }}
+        run: |
+          mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest-modules -x
 
       - name: Show Heavydb conda logs on failure [conda]
         shell: bash -l {0}
@@ -270,6 +269,17 @@ jobs:
         run: |
           mamba run -n heavydb-env killall heavydb
           sleep 5
+
+      - name: Run Non-HeavyDB tests
+        shell: bash -l {0}
+        env:
+          HEAVYDB_SOURCE: ${{ matrix.heavydb-from }}
+          EXPECTED_PYTHON_VERSION: ${{ matrix.python-version }}
+          EXPECTED_HEAVYDB_VERSION: ${{ matrix.heavydb-version }}
+          EXPECTED_NUMBA_VERSION: ${{ matrix.numba-version }}
+          RBC_TESTS_FULL: TRUE
+        run: |
+          mamba run -n rbc pytest -sv -r A rbc/tests/ -x --ignore rbc/tests/heavydb
 
       - name: Show Heavydb server output [conda]
         shell: bash -l {0}

@@ -1,13 +1,12 @@
+import textwrap
 import functools
 from enum import Enum
 from numba.core import extending
 from rbc.heavydb import Array, ArrayPointer
 from rbc import typesystem, errors
 
-
-ARRAY_API_ADDRESS = ("https://data-apis.org/array-api/latest/API_specification"
-                     "/generated/signatures.{0}.{1}.html"
-                     "#signatures.{0}.{1}")
+ARRAY_API_ADDRESS = ("https://data-apis.org/array-api/latest/API_specification/"
+                     "generated/array_api.{0}.html#array_api.{0}")
 NUMPY_API_ADDRESS = ("https://numpy.org/doc/stable/reference/generated/numpy.{0}.html")
 ADDRESS = ARRAY_API_ADDRESS
 
@@ -37,6 +36,7 @@ def determine_input_type(argty):
 class Expose:
     def __init__(self, globals, module_name):
         self._globals = globals
+        # XXX: remove module_name as it is not used
         self.module_name = module_name
 
     def create_function(self, func_name):
@@ -56,10 +56,10 @@ class Expose:
             # Array API
             link = (
                 f"`Array-API '{func_name}' "
-                f"doc <{ARRAY_API_ADDRESS.format(self.module_name, func_name)}>`_")
+                f"doc <{ARRAY_API_ADDRESS.format(func_name)}>`_")
 
         if original_docstring is not None:
-            new_doctring = f"{original_docstring}\n\n{link}"
+            new_doctring = f"{textwrap.dedent(original_docstring)}\n\n{link}"
         else:
             new_doctring = link
         return new_doctring
@@ -95,12 +95,12 @@ class Expose:
 
 class BinaryUfuncExpose(Expose):
 
-    def implements(self, ufunc, ufunc_name=None, dtype=None, api=API.ARRAY_API):
+    def implements(self, ufunc, func_name=None, dtype=None, api=API.ARRAY_API):
         """
         Wrapper for binary ufuncs that returns an array
         """
-        if ufunc_name is None:
-            ufunc_name = ufunc.__name__
+        if func_name is None:
+            func_name = ufunc.__name__
 
         def binary_ufunc_impl(a, b):
             typA = determine_input_type(a)
@@ -154,10 +154,10 @@ class BinaryUfuncExpose(Expose):
                     return nb_dtype(ufunc(cast_a, cast_b))
                 return impl
 
-        fn = self.create_function(ufunc_name)
+        fn = self.create_function(func_name)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name, api)
+            overload_func.__doc__ = self.format_docstring(overload_func, func_name, api)
             functools.update_wrapper(fn, overload_func)
 
             decorate = extending.overload(fn)
@@ -168,12 +168,12 @@ class BinaryUfuncExpose(Expose):
 
 class UnaryUfuncExpose(BinaryUfuncExpose):
 
-    def implements(self, ufunc, ufunc_name=None, dtype=None, api=API.ARRAY_API):
+    def implements(self, ufunc, func_name=None, dtype=None, api=API.ARRAY_API):
         """
         Wrapper for unary ufuncs that returns an array
         """
-        if ufunc_name is None:
-            ufunc_name = ufunc.__name__
+        if func_name is None:
+            func_name = ufunc.__name__
 
         def unary_ufunc_impl(a):
             nb_dtype = determine_dtype(a, dtype)
@@ -196,10 +196,10 @@ class UnaryUfuncExpose(BinaryUfuncExpose):
                     return nb_dtype(ufunc(cast))
                 return impl
 
-        fn = self.create_function(ufunc_name)
+        fn = self.create_function(func_name)
 
         def wrapper(overload_func):
-            overload_func.__doc__ = self.format_docstring(overload_func, ufunc_name, api)
+            overload_func.__doc__ = self.format_docstring(overload_func, func_name, api)
             functools.update_wrapper(fn, overload_func)
 
             decorate = extending.overload(fn)
