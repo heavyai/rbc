@@ -242,6 +242,8 @@ jobs:
 
       - name: Run doctests
         shell: bash -l {0}
+        # requires HeavyDB 6.4 or newer
+        if: ${{ false }}
         run: |
           mamba run -n rbc pytest -sv -r A rbc/stdlib/ --doctest-modules -x
 
