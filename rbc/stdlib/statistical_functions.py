@@ -220,17 +220,74 @@ def _impl_array_mean(x):
         return impl
 
 
-@expose.not_implemented('std')
+@expose.implements('std')
 def _impl_array_std(x, axis=None, correction=0.0, keepdims=False):
     """
     Calculates the standard deviation of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('float64(int64[])')
+    ... def rbc_std(X):
+    ...     return array_api.std(X)
+    >>> rbc_std([1, 2, 3]).execute()
+    0.8164966
+
     """
-    pass
+
+    from rbc.stdlib import array_api
+
+    def impl(x, axis=None, correction=0.0, keepdims=False):
+        # std(X) = sqrt(var(X))
+        var = array_api.var(x)
+        std = array_api.sqrt(var)
+        return std
+
+    return impl
 
 
-@expose.not_implemented('var')
+@expose.implements('var')
 def _impl_array_var(x, axis=None, correction=0.0, keepdims=False):
     """
     Calculates the variance of the input array x.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('float64(int64[])')
+    ... def rbc_var(X):
+    ...     return array_api.var(X)
+    >>> rbc_var([1, 2, 3]).execute()
+    0.6666667
     """
-    pass
+    from rbc.stdlib import array_api
+
+    def impl(x, axis=None, correction=0.0, keepdims=False):
+        # let
+        #  + M be len(X)
+        #  + mu be mean(X)
+        # var(X) = sum( (X - mu)^2 ) / M
+        M = len(x)
+        mean = array_api.mean(x)
+        A = array_api.subtract(x, mean)
+        B = array_api.power(A, 2)
+        C = array_api.sum(B)
+        D = C / M
+        return D
+
+    return impl
