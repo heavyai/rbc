@@ -189,6 +189,25 @@ class _arraynullTestTable(_arrayTestTable):
         }
 
 
+class _arraynullRepeatTestTable(_arrayTestTable):
+
+    @classmethod
+    def suffix(cls):
+        return "arraynullrepeat"
+
+    @property
+    def values(self):
+        return {
+            'f4': [None, [0, 1, 0, 1, 2, 1, 3], None, [None, 0, 4, 1, 0, 5, None, 4, 5], None],
+            'f8': [[], None, [None, 3, 2, 0, 0, 3, 3], None, [4, None, 4, 0, 6, 0, 7, None, 6, 7]],
+            'i1': [None, [None], None, [3, 1, 0, 2, 1, 4, 4, 4, None, 4, 5], None],
+            'i2': [[], None, [2, 0, 0, None], None, [7, 0, 0, 0, 4, 5, 5, 0, 0, 2, 1, None, 7]],
+            'i4': [None, [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], None, [3, 4, 7, 4, 4, 2, 1, 3, 7, None], None],
+            'i8': [[], None, [2, 3, 0, 0, 0, 4, 1, 2, 0, 3, 2, 3, 4, 3], None, [None, None, 5, 0, 6, 5, 6, 5, 6, None]],
+            'b': [None, [False, False, False, False], None, [None, True, True, True, False, True, False], None],
+        }
+
+
 class _TimestampTestTable(_TestTable):
 
     @classmethod
@@ -401,8 +420,8 @@ class _MultiPolygonTestTable(_TestTable):
 
 
 test_classes = (_DefaultTestTable, _10TestTable, _nullTestTable, _arrayTestTable,
-                _arraynullTestTable, _TextTestTable, _TimestampTestTable,
-                _PointTestTable, _MultiPointTestTable,
+                _arraynullTestTable, _arraynullRepeatTestTable, _TextTestTable,
+                _TimestampTestTable, _PointTestTable, _MultiPointTestTable,
                 _LineStringTestTable, _MultiLineStringTestTable,
                 _PolygonTestTable, _MultiPolygonTestTable)
 
@@ -444,6 +463,10 @@ def heavydb_fixture(caller_globals, minimal_version=(0, 0),
     f'{heavydb.table_name}arraynull' - contains arrays f8, f4, i8, i4, i2,
                                        i1, b with row size 5, contains null
                                        values.
+
+    f'{heavydb.table_name}arraynullrepeat' - contains arrays f8, f4, i8, i4, i2,
+                                             i1, b with row size 5, contains
+                                             repeated elements and null values.
 
     f'{heavydb.table_name}text' - contains text t4, t2, t1, s, n
                                   where 't' prefix is for text encoding dict
