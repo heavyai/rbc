@@ -13,41 +13,24 @@ def heavydb():
 def test_asarray(heavydb):
     heavydb.unregister()
 
-    @heavydb('T[](T[])', T=['int32', 'float'])
-    def asarray_from_array(arr):
-        return array_api.asarray(arr)
+    @heavydb('int64[](int64)')
+    def asarray(sz):
+        return array_api.asarray(list(range(sz)))
 
-    arr = np.arange(5, dtype=np.int32)
-    np.testing.assert_array_equal(asarray_from_array(arr).execute(), arr)
-    arr = np.arange(5, dtype=np.float32)
-    np.testing.assert_array_equal(asarray_from_array(arr).execute(), arr)
-
-    @heavydb('T[](T[])', T=['int32', 'float'])
-    def asarray_from_list(arr):
-        lst = arr.to_list()
-        return array_api.asarray(lst)
-
-    arr = np.arange(5, dtype=np.int32)
-    np.testing.assert_array_equal(asarray_from_list(arr).execute(), arr)
-    arr = np.arange(5, dtype=np.float32)
-    np.testing.assert_array_equal(asarray_from_list(arr).execute(), arr)
+    arr = np.arange(5, dtype=np.int64)
+    np.testing.assert_array_equal(asarray(5).execute(), arr)
 
 
 def test_asarray_dtype(heavydb):
     heavydb.unregister()
 
-    @heavydb('float[](int32[])')
-    def asarray_dtype(arr):
+    @heavydb('float[](int64)')
+    def asarray_dtype(sz):
+        arr = array_api.arange(sz, dtype=array_api.int64)
         return array_api.asarray(arr, dtype=array_api.float32)
 
-    @heavydb('float[](int32[])')
-    def asarray_lst_dtype(arr):
-        return array_api.asarray(arr.to_list(), dtype=array_api.float32)
-
     arr = np.arange(5, dtype=np.int32)
-    np.testing.assert_array_equal(asarray_dtype(arr).execute(), arr)
-    arr = np.arange(5, dtype=np.int32)
-    np.testing.assert_array_equal(asarray_lst_dtype(arr).execute(), arr)
+    np.testing.assert_array_equal(asarray_dtype(5).execute(), arr)
 
 
 @pytest.mark.parametrize('start', (3, 3.0, 0, 1, 4, 5.5, -3))

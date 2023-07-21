@@ -167,7 +167,7 @@ def _array_api_asarray(obj, dtype=None, device=None, copy=None):
             sz = len(obj)
             arr = Array(sz, nb_dtype)
             for i in range(sz):
-                arr[i] = obj[i]
+                arr[i] = nb_dtype(obj[i])
             return arr
         return impl
 
