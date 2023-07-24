@@ -12,8 +12,6 @@ def heavydb():
 
 
 unsupported_functions = [
-    # statistical_function
-    'std', 'var',
     # manipulation_functions
     "concat", "expand_dims", "flip", "permute_dims", "reshape", "roll", "squeeze", "stack",
     # utility_functions
@@ -21,17 +19,17 @@ unsupported_functions = [
     # sorting_functions
     "argsort", "sort",
     # searching_functions
-    "argmax", "argmin", "nonzero", "where",
+    "where",
     # elementwise_functions
     'float_power', 'divmod', 'cbrt', 'isnat',
     # set_functions
-    "unique_all", "unique_counts", "unique_inverse", "unique_values",
+    "unique_all", "unique_counts", "unique_inverse",
     # linear_algebra_functions
     "matmul", "matrix_transpose", "tensordot", "vecdot",
     # data_type_functions
     "astype", "broadcast_arrays", "broadcast_to", "can_cast", "finfo", "iinfo", "result_type",
     # creation_functions
-    'arange', 'asarray', 'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu',
+    'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu',
 ]
 
 

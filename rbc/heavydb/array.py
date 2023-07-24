@@ -247,3 +247,16 @@ def ol_to_list(arr):
             lst.append(arr[i])
         return lst
     return impl
+
+
+@extending.overload_method(ArrayPointer, 'drop_null')
+def ol_drop_null(arr):
+    from rbc.stdlib import array_api
+
+    def impl(arr):
+        lst = []
+        for i in range(len(arr)):
+            if not arr.is_null(i):
+                lst.append(arr[i])
+        return array_api.asarray(lst)
+    return impl

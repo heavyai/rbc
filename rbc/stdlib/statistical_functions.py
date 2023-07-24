@@ -55,6 +55,8 @@ def _impl_array_max(x):
     3.0
 
     """
+    from rbc.stdlib import array_api
+
     if isinstance(x, ArrayPointer):
         # the array api standard says this is implementation specific
         limits = _get_type_limits(x.eltype)
@@ -70,10 +72,12 @@ def _impl_array_max(x):
             if len(x) <= 0:
                 printf("impl_array_max: cannot find max of zero-sized array")  # noqa: E501
                 return min_value
-            m = x[0]
+            m = min_value
             for i in range(len(x)):
+                if x.is_null(i):
+                    continue
                 v = x[i]
-                if v > m:
+                if array_api.greater(v, m):
                     m = v
             return m
         return impl
@@ -103,6 +107,8 @@ def _impl_array_min(x):
     1.0
 
     """
+    from rbc.stdlib import array_api
+
     if isinstance(x, ArrayPointer):
         max_value = _get_type_limits(x.eltype).max
 
@@ -110,10 +116,12 @@ def _impl_array_min(x):
             if len(x) <= 0:
                 printf("impl_array_min: cannot find min of zero-sized array")  # noqa: E501
                 return max_value
-            m = x[0]
+            m = max_value
             for i in range(len(x)):
+                if x.is_null(i):
+                    continue
                 v = x[i]
-                if v < m:
+                if array_api.less(v, m):
                     m = v
             return m
         return impl
@@ -148,7 +156,8 @@ def _impl_np_sum(a):
             s = 0
             n = len(a)
             for i in range(n):
-                s += a[i]
+                if not a.is_null(i):
+                    s += a[i]
             return s
         return impl
 
@@ -178,10 +187,11 @@ def _impl_np_prod(a):
     """
     if isinstance(a, ArrayPointer):
         def impl(a):
-            s = 1
+            s = a.dtype(1)
             n = len(a)
             for i in range(n):
-                s *= a[i]
+                if not a.is_null(i):
+                    s *= a[i]
             return s
         return impl
 
@@ -213,10 +223,11 @@ def _impl_array_mean(x):
 
     if isinstance(x, ArrayPointer):
         def impl(x):
-            if len(x) == 0:
+            y = x.drop_null()
+            if len(y) == 0:
                 printf("Mean of empty array\n")
                 return zero_value
-            return sum(x) / len(x)
+            return sum(y) / len(y)
         return impl
 
 
@@ -282,9 +293,12 @@ def _impl_array_var(x, axis=None, correction=0.0, keepdims=False):
         #  + M be len(X)
         #  + mu be mean(X)
         # var(X) = sum( (X - mu)^2 ) / M
-        M = len(x)
-        mean = array_api.mean(x)
-        A = array_api.subtract(x, mean)
+        X = x.drop_null()
+        M = len(X)
+        if M == 0:
+            return array_api.nan
+        mean = array_api.mean(X)
+        A = array_api.subtract(X, mean)
         B = array_api.power(A, 2)
         C = array_api.sum(B)
         D = C / M

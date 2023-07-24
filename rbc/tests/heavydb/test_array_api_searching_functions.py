@@ -12,22 +12,23 @@ def heavydb():
 
 
 def define(heavydb):
-    @heavydb('int64[](T[])', T=['double', 'int64'])
+    T = ['double', 'float', 'int64', 'int32', 'int16', 'int8']
+
+    @heavydb('int64[](T[])', T=T)
     def nonzero(arr):
         return array_api.nonzero(arr)
 
-    @heavydb('int64[](T[])', T=['double', 'int64'])
+    @heavydb('int64[](T[])', T=T)
     def argmin(arr):
         return array_api.argmin(arr)
 
-    @heavydb('int64[](T[])', T=['double', 'int64'])
+    @heavydb('int64[](T[])', T=T)
     def argmax(arr):
         return array_api.argmax(arr)
 
 
-# @pytest.mark.xfail
 @pytest.mark.parametrize('fn', ('nonzero', 'argmin', 'argmax'))
-@pytest.mark.parametrize('col', ('f8', 'i8'))
+@pytest.mark.parametrize('col', ('f8', 'f4', 'i8', 'i4', 'i2'))
 def test_nonzero_argmin_argmax(heavydb, fn, col):
 
     table = heavydb.table_name + 'arraynullrepeat'
@@ -38,12 +39,14 @@ def test_nonzero_argmin_argmax(heavydb, fn, col):
             assert got is None
         else:
             x = np.asarray(val)
-            x = x[x != None]  # noqa: E711
             if fn == 'nonzero':
+                x[x == None] = 0  # noqa: E711
                 expected = x.nonzero()[0]
             elif fn == 'argmin':
+                x[x == None] = 1234  # noqa: E711
                 expected = x.argmin()
             else:
+                x[x == None] = -123  # noqa: E711
                 expected = x.argmax()
 
             np.testing.assert_array_equal(expected, got)

@@ -23,8 +23,9 @@ def _array_api_argmax(x, *, axis=None, keepdims=False):
             argmax = array_api.max(x)
             lst = []
             for i in range(len(x)):
-                if array_api.equal(x[i], argmax):
+                if not x.is_null(i) and array_api.equal(x[i], argmax):
                     lst.append(i)
+                    break
             return Array(lst)
         return impl
 
@@ -41,8 +42,12 @@ def _array_api_argmin(x, *, axis=None, keepdims=False):
             argmin = array_api.min(x)
             lst = []
             for i in range(len(x)):
+                if x.is_null(i):
+                    continue
+
                 if array_api.equal(x[i], argmin):
                     lst.append(i)
+                    break
             return Array(lst)
         return impl
 
