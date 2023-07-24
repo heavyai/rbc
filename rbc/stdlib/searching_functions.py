@@ -29,7 +29,6 @@ def _array_api_argmax(x, *, axis=None, keepdims=False):
         return impl
 
 
-
 @expose.implements("argmin")
 def _array_api_argmin(x, *, axis=None, keepdims=False):
     """

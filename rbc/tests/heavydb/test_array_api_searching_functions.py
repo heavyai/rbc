@@ -38,7 +38,7 @@ def test_nonzero_argmin_argmax(heavydb, fn, col):
             assert got is None
         else:
             x = np.asarray(val)
-            x = x[x != None]
+            x = x[x != None]  # noqa: E711
             if fn == 'nonzero':
                 expected = x.nonzero()[0]
             elif fn == 'argmin':

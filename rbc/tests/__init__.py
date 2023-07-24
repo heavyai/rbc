@@ -202,9 +202,9 @@ class _arraynullRepeatTestTable(_arrayTestTable):
             'f8': [[], None, [None, 3, 2, 0, 0, 3, 3], None, [4, None, 4, 0, 6, 0, 7, None, 6, 7]],
             'i1': [None, [None], None, [3, 1, 0, 2, 1, 4, 4, 4, None, 4, 5], None],
             'i2': [[], None, [2, 0, 0, None], None, [7, 0, 0, 0, 4, 5, 5, 0, 0, 2, 1, None, 7]],
-            'i4': [None, [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], None, [3, 4, 7, 4, 4, 2, 1, 3, 7, None], None],
-            'i8': [[], None, [2, 3, 0, 0, 0, 4, 1, 2, 0, 3, 2, 3, 4, 3], None, [None, None, 5, 0, 6, 5, 6, 5, 6, None]],
-            'b': [None, [False, False, False, False], None, [None, True, True, True, False, True, False], None],
+            'i4': [None, [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], None, [3, 4, 7, 4, 4, 2, 1, 3, 7, None], None],  # noqa: E501
+            'i8': [[], None, [2, 3, 0, 0, 0, 4, 1, 2, 0, 3, 2, 3, 4, 3], None, [None, None, 5, 0, 6, 5, 6, 5, 6, None]],  # noqa: E501
+            'b': [None, [False, False, False, False], None, [None, True, True, True, False, True, False], None],  # noqa: E501
         }
 
 
