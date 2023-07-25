@@ -19,6 +19,7 @@ __all__ = [
     "can_cast",
     "finfo",
     "iinfo",
+    "isdtype",
     "result_type",
 ]
 
@@ -221,6 +222,26 @@ def _array_api_result_type(*arrays_and_dtypes):
     Returns the dtype that results from applying the type promotion
     rules (see `Type Promotion Rules <https://data-apis.org/array-api/latest/API_specification/type_promotion.html#type-promotion>`_)
     to the arguments.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('TextEncodingNone(int16[], float32[])')
+    ... def array_api_result_type(a, b):
+    ...     t = array_api.result_type(a, b)
+    ...     return TextEncodingNone(str(t))
+    >>> a = np.arange(5, dtype=np.int16)
+    >>> b = np.arange(5, dtype=np.float32)
+    >>> array_api_result_type(a, b).execute()
+    'float32'
+
     """
     dts = []
     for arg in arrays_and_dtypes:

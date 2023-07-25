@@ -27,7 +27,7 @@ unsupported_functions = [
     # linear_algebra_functions
     "matmul", "matrix_transpose", "tensordot", "vecdot",
     # data_type_functions
-    "astype", "broadcast_arrays", "broadcast_to", "can_cast", "finfo", "iinfo", "result_type",
+    "broadcast_arrays", "broadcast_to", "isdtype",
     # creation_functions
     'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu',
 ]
