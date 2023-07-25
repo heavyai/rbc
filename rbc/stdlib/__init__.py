@@ -28,11 +28,11 @@ def determine_input_type(argty):
         return argty
 
 
-def result_type(*args):
-    typs = []
-    for arg in args:
-        if arg is not None:
-            typs.append(np.bool if arg == typesystem.boolean8 else as_dtype(arg))
+def result_type(*args, dtype=None):
+    if dtype:
+        return dtype
+
+    typs = [np.bool if arg == typesystem.boolean8 else as_dtype(arg) for arg in args]
     return from_dtype(np.result_type(*typs))
 
 
@@ -115,9 +115,9 @@ class BinaryUfuncExpose(Expose):
                 sz = len(a)
                 x = Array(sz, nb_dtype)
                 for i in range(sz):
-                    cast_a = nb_dtype(a[i])
-                    cast_b = nb_dtype(b[i])
-                    x[i] = ufunc(cast_a, cast_b)
+                    cast_a = typA(a[i])
+                    cast_b = typB(b[i])
+                    x[i] = nb_dtype(ufunc(cast_a, cast_b))
                 return x
 
             @extending.register_jitable(_nrt=False)
@@ -127,13 +127,13 @@ class BinaryUfuncExpose(Expose):
                 return b
 
             if isinstance(a, ArrayPointer) and isinstance(b, ArrayPointer):
-                nb_dtype = result_type(a.eltype, b.eltype, dtype)
+                nb_dtype = result_type(a.eltype, b.eltype, dtype=dtype)
 
                 def impl(a, b):
                     return binary_impl(a, b, nb_dtype)
                 return impl
             elif isinstance(a, ArrayPointer):
-                nb_dtype = result_type(a.eltype, b, dtype)
+                nb_dtype = result_type(a.eltype, b, dtype=dtype)
                 other_dtype = b
 
                 def impl(a, b):
@@ -141,7 +141,7 @@ class BinaryUfuncExpose(Expose):
                     return binary_impl(a, b, nb_dtype)
                 return impl
             elif isinstance(b, ArrayPointer):
-                nb_dtype = result_type(a, b.eltype, dtype)
+                nb_dtype = result_type(a, b.eltype, dtype=dtype)
                 other_dtype = a
 
                 def impl(a, b):
@@ -149,7 +149,7 @@ class BinaryUfuncExpose(Expose):
                     return binary_impl(a, b, nb_dtype)
                 return impl
             else:
-                nb_dtype = result_type(a, b, dtype)
+                nb_dtype = result_type(a, b, dtype=dtype)
 
                 def impl(a, b):
                     cast_a = typA(a)
@@ -182,7 +182,7 @@ class UnaryUfuncExpose(BinaryUfuncExpose):
             typ = determine_input_type(a)
 
             if isinstance(a, ArrayPointer):
-                nb_dtype = result_type(a.eltype, dtype)
+                nb_dtype = result_type(a.eltype, dtype=dtype)
 
                 def impl(a):
                     sz = len(a)
@@ -194,7 +194,7 @@ class UnaryUfuncExpose(BinaryUfuncExpose):
                     return x
                 return impl
             else:
-                nb_dtype = result_type(a, dtype)
+                nb_dtype = result_type(a, dtype=dtype)
 
                 def impl(a):
                     # Convert the value to type typ
