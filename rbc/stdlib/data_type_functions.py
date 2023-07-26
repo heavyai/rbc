@@ -3,10 +3,12 @@ Array API specification for data type functions.
 
 https://data-apis.org/array-api/latest/API_specification/data_type_functions.html
 """
-import numpy as np
 from typing import NamedTuple
-from numba.core import types, extending
+
+import numpy as np
+from numba.core import extending, types
 from numba.np.numpy_support import as_dtype, from_dtype
+
 from rbc.errors import NumbaTypeError
 from rbc.heavydb import ArrayPointer
 from rbc.stdlib import Expose

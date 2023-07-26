@@ -3,8 +3,8 @@ Array API specification for utility functions.
 
 https://data-apis.org/array-api/latest/API_specification/utility_functions.html
 """
-from rbc.stdlib import Expose
 from rbc.heavydb import ArrayPointer
+from rbc.stdlib import Expose
 
 __all__ = ["all", "any"]
 

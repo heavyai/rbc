@@ -3,8 +3,8 @@ Array API specification for searching functions.
 
 https://data-apis.org/array-api/latest/API_specification/searching_functions.html
 """
-from rbc.stdlib import Expose
 from rbc.heavydb import Array, ArrayPointer, type_can_asarray
+from rbc.stdlib import Expose
 
 __all__ = ["argmax", "argmin", "nonzero", "where"]
 

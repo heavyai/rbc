@@ -17,8 +17,6 @@ unsupported_functions = [
     "expand_dims", "flip", "permute_dims", "reshape", "roll", "squeeze", "stack",
     # sorting_functions
     "argsort", "sort",
-    # searching_functions
-    "where",
     # elementwise_functions
     'float_power', 'divmod', 'cbrt', 'isnat',
     # set_functions

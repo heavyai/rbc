@@ -3,14 +3,14 @@ Array API specification for statistical functions.
 
 https://data-apis.org/array-api/latest/API_specification/statistical_functions.html
 """
-from rbc.externals.stdio import printf
+import numpy as np
+from numba.core import errors, extending, types
+from numba.np import numpy_support
+
 from rbc import typesystem
+from rbc.externals.stdio import printf
 from rbc.heavydb import ArrayPointer
 from rbc.stdlib import Expose
-from numba.core import extending, types, errors
-from numba.np import numpy_support
-import numpy as np
-
 
 __all__ = [
     'min', 'max', 'mean', 'prod', 'sum', 'std', 'var'

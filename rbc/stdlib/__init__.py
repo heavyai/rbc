@@ -1,11 +1,13 @@
-import textwrap
 import functools
-import numpy as np
+import textwrap
 from enum import Enum
+
+import numpy as np
 from numba.core import extending
 from numba.np.numpy_support import as_dtype, from_dtype
+
+from rbc import errors, typesystem
 from rbc.heavydb import Array, ArrayPointer
-from rbc import typesystem, errors
 
 ARRAY_API_ADDRESS = ("https://data-apis.org/array-api/latest/API_specification/"
                      "generated/array_api.{0}.html#array_api.{0}")

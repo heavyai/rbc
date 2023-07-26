@@ -3,10 +3,11 @@ Array API specification for manipulation functions.
 
 https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html
 """
-from rbc.stdlib import Expose
-from rbc.heavydb import ArrayPointer
-from rbc.errors import NumbaTypeError
 from numba import literal_unroll
+
+from rbc.errors import NumbaTypeError
+from rbc.heavydb import ArrayPointer
+from rbc.stdlib import Expose
 
 __all__ = [
     "concat",

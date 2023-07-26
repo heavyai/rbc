@@ -3,9 +3,10 @@ Array API specification for set functions.
 
 https://data-apis.org/array-api/latest/API_specification/set_functions.html
 """
-from rbc.stdlib import Expose
-from rbc.heavydb import Array, ArrayPointer
 from numba.core import types
+
+from rbc.heavydb import Array, ArrayPointer
+from rbc.stdlib import Expose
 
 __all__ = ["unique_all", "unique_counts", "unique_inverse", "unique_values"]
 
