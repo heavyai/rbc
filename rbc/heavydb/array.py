@@ -1,7 +1,7 @@
 """Implement HeavyDB Array type support
 """
 
-__all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType']
+__all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType', 'type_can_asarray']
 
 from typing import Optional, Union
 
@@ -222,6 +222,11 @@ def type_heavydb_array_lst(context):
             dtype = lst.dtype
             return HeavyDBArrayType((dtype,)).tonumba()
     return typer
+
+
+def type_can_asarray(typ):
+    supported = (ArrayPointer, nb_types.List)
+    return isinstance(typ, supported)
 
 
 @extending.overload_attribute(ArrayPointer, 'ndim')
