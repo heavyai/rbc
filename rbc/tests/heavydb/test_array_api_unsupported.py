@@ -14,7 +14,7 @@ def heavydb():
 
 unsupported_functions = [
     # manipulation_functions
-    "expand_dims", "flip", "permute_dims", "reshape", "roll", "squeeze", "stack",
+    "expand_dims", "permute_dims", "reshape", "roll", "squeeze", "stack",
     # sorting_functions
     "argsort", "sort",
     # elementwise_functions
