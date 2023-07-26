@@ -9,10 +9,32 @@ from rbc.stdlib import array_api
 @pytest.fixture(scope='module')
 def heavydb():
     for o in heavydb_fixture(globals(), suffices=['arraynullrepeat']):
+        define(o)
         yield o
 
 
 dtypes = ('bool', 'int8', 'int16', 'int32', 'int64', 'float32', 'float64')
+
+
+def define(heavydb):
+    @heavydb('T[](T[])', T=list(dtypes))
+    def flip(x):
+        return array_api.flip(x)
+
+
+@pytest.mark.parametrize('dtype', dtypes)
+def test_flip(heavydb, dtype):
+    table = heavydb.table_name + 'arraynullrepeat'
+    col = dict(float64='f8', float32='f4', int64='i8', int32='i4',
+               int16='i2', int8='i1', bool='b')[dtype]
+    query = f'select {col}, flip({col}) from {table}'
+    _, r = heavydb.sql_execute(query)
+
+    for val, got in r:
+        if val == [] or val is None:
+            assert got is None
+        else:
+            np.testing.assert_array_equal(np.flip(val), got)
 
 
 @pytest.mark.parametrize('args', itertools.combinations(dtypes, r=3))

@@ -83,12 +83,48 @@ def _array_api_expand_dims(x, *, axis=0):
     pass
 
 
-@expose.not_implemented("flip")
-def _array_api_flip(x, *, axis=None):
+@expose.implements("flip")
+def _array_api_flip(x):
     """
     Reverses the order of elements in an array along the given axis.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> import numpy as np
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int16[](int16[])')
+    ... def flip(x):
+    ...     return array_api.flip(x)
+    >>> a = np.arange(4, dtype=np.int16)
+    >>> flip(a).execute()
+    array([3, 2, 1, 0], dtype=int16)
+
+    >>> b = np.arange(1, dtype=np.int16)
+    >>> flip(b).execute()
+    array([0], dtype=int16)
+
+
     """
-    pass
+    from rbc.stdlib import array_api
+
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            r = array_api.empty_like(x)
+            sz = len(x)
+            for i in range(sz):
+                if x.is_null(sz-i-1):
+                    r.set_null(i)
+                else:
+                    r[i] = x[sz-i-1]
+            return r
+        return impl
 
 
 @expose.not_implemented("permute_dims")
