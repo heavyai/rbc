@@ -1,7 +1,8 @@
 import pytest
+from numba import TypingError
+
 from rbc.stdlib import array_api
 from rbc.tests import heavydb_fixture
-from numba import TypingError
 
 
 @pytest.fixture(scope="module")

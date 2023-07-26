@@ -1,7 +1,8 @@
-import pytest
 import numpy as np
-from rbc.tests import heavydb_fixture
+import pytest
+
 from rbc.stdlib import array_api
+from rbc.tests import heavydb_fixture
 
 
 @pytest.fixture(scope='module')

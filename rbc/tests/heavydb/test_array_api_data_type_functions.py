@@ -1,9 +1,11 @@
-import pytest
-import textwrap
-import numpy as np
 import itertools
-from rbc.tests import heavydb_fixture
+import textwrap
+
+import numpy as np
+import pytest
+
 from rbc.stdlib import array_api
+from rbc.tests import heavydb_fixture
 
 
 @pytest.fixture(scope='module')
