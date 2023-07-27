@@ -110,8 +110,6 @@ def _array_api_flip(x):
     >>> b = np.arange(1, dtype=np.int16)
     >>> flip(b).execute()
     array([0], dtype=int16)
-
-
     """
     from rbc.stdlib import array_api
 

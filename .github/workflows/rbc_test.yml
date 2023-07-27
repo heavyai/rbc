@@ -104,7 +104,7 @@ jobs:
   heavydb:
     name: Heavydb ${{ matrix.heavydb-version }} - ${{ matrix.os }} - Numba v${{matrix.numba-version}} - Python v${{ matrix.python-version }} [${{ matrix.heavydb-from }}]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
