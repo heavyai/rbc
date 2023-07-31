@@ -119,7 +119,7 @@ class TargetInfo(object):
     def set_compile_target(self, target_name):
         """Set target function name being compiled.
         """
-        assert target_name is None or self._compile_target is None,\
+        assert target_name is None or self._compile_target is None, \
             (target_name, self._compile_target)
         self._compile_target = target_name
 
