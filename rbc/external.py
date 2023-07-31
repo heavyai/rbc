@@ -111,7 +111,7 @@ class External:
 
         satypes = ", ".join(map(str, atypes))
         raise TypeError(
-            f"{compile_target=}: found no matching function type to the given argument types"
+            f"compile_target={compile_target}: found no matching function type to the given argument types"
             f" `{satypes}` and device `{device}` while processing `{self.name}`."
             f" Available function type is `{this_type}`."
         )
