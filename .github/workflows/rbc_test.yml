@@ -114,11 +114,6 @@ jobs:
         heavydb-version: ['6.2', '6.1', '6.0']
         heavydb-from: [conda]
         # include:
-          # - os: ubuntu-latest
-          #   python-version: '3.10'
-          #   numba-version: '0.56'
-          #   heavydb-version: 6.1
-          #   heavydb-from: conda
         #   - os: ubuntu-latest
         #     python-version: '3.10'
         #     numba-version: '0.56'
@@ -132,7 +127,7 @@ jobs:
         #     docker-image: heavyai/core-os-cpu-dev:latest
         #     heavydb-from: docker
 
-    # needs: lint
+    needs: lint
 
     steps:
       - name: Checkout code
