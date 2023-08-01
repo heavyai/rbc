@@ -207,7 +207,7 @@ def test_getitem_float(heavydb):
     desrc, result = heavydb.sql_execute(query)
     for a, item in result:
         assert a[2] == item
-        assert type(a[2]) == type(item)
+        assert type(a[2]) is type(item)
 
     @heavydb('float(float[], int64)')
     def array_getitem_float(x, i):
@@ -217,7 +217,7 @@ def test_getitem_float(heavydb):
     desrc, result = heavydb.sql_execute(query)
     for a, item in result:
         assert a[2] == item
-        assert type(a[2]) == type(item)
+        assert type(a[2]) is type(item)
 
 
 def test_sum(heavydb):
