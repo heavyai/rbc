@@ -104,7 +104,7 @@ jobs:
   heavydb:
     name: Heavydb ${{ matrix.heavydb-version }} - ${{ matrix.os }} - Numba v${{matrix.numba-version}} - Python v${{ matrix.python-version }} [${{ matrix.heavydb-from }}]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -114,6 +114,11 @@ jobs:
         heavydb-version: ['6.2', '6.1', '6.0']
         heavydb-from: [conda]
         # include:
+          # - os: ubuntu-latest
+          #   python-version: '3.10'
+          #   numba-version: '0.56'
+          #   heavydb-version: 6.1
+          #   heavydb-from: conda
         #   - os: ubuntu-latest
         #     python-version: '3.10'
         #     numba-version: '0.56'
@@ -127,7 +132,7 @@ jobs:
         #     docker-image: heavyai/core-os-cpu-dev:latest
         #     heavydb-from: docker
 
-    needs: lint
+    # needs: lint
 
     steps:
       - name: Checkout code

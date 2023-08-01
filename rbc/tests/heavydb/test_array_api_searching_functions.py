@@ -67,6 +67,9 @@ dtypes = ('bool', 'int8', 'int16', 'int32', 'int64', 'float32', 'float64')
 
 @pytest.mark.parametrize('typ', dtypes)
 def test_where(heavydb, typ):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Test requires HeavyDB 6.2 or newer')
+
     table = heavydb.table_name + 'arraynullrepeat'
     c = dict(float64='f8', float32='f4', int64='i8', int32='i4',
              int16='i2', int8='i1', bool='b')[typ]
@@ -92,6 +95,9 @@ def test_where(heavydb, typ):
     ('int64', 'float64'),
 ])
 def test_where_diff(heavydb, dtypes):
+    if heavydb.version[:2] < (6, 2):
+        pytest.skip('Test requires HeavyDB 6.2 or newer')
+
     heavydb.unregister()
 
     d = dict(float64='f8', float32='f4', int64='i8', int32='i4',

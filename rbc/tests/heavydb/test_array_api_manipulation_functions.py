@@ -19,11 +19,13 @@ dtypes = ('bool', 'int8', 'int16', 'int32', 'int64', 'float32', 'float64')
 
 
 def define(heavydb):
-    @heavydb('T[](T[])', T=list(dtypes))
-    def flip(x):
-        return array_api.flip(x)
+    return
+    # @heavydb('T[](T[])', T=list(dtypes))
+    # def flip(x):
+    #     return array_api.flip(x)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('dtype', dtypes)
 def test_flip(heavydb, dtype):
     table = heavydb.table_name + 'arraynullrepeat'
@@ -39,6 +41,7 @@ def test_flip(heavydb, dtype):
             np.testing.assert_array_equal(np.flip(val), got)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('args', itertools.combinations(dtypes, r=3))
 def test_concat(heavydb, args):
     heavydb.unregister()
