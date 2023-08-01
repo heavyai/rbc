@@ -1,7 +1,7 @@
 """Implement HeavyDB Array type support
 """
 
-__all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType']
+__all__ = ['ArrayPointer', 'Array', 'HeavyDBArrayType', 'type_can_asarray']
 
 from typing import Optional, Union
 
@@ -224,6 +224,11 @@ def type_heavydb_array_lst(context):
     return typer
 
 
+def type_can_asarray(typ):
+    supported = (ArrayPointer, nb_types.List)
+    return isinstance(typ, supported)
+
+
 @extending.overload_attribute(ArrayPointer, 'ndim')
 def get_ndim(arr):
     def impl(arr):
@@ -246,4 +251,17 @@ def ol_to_list(arr):
         for i in range(sz):
             lst.append(arr[i])
         return lst
+    return impl
+
+
+@extending.overload_method(ArrayPointer, 'drop_null')
+def ol_drop_null(arr):
+    from rbc.stdlib import array_api
+
+    def impl(arr):
+        lst = []
+        for i in range(len(arr)):
+            if not arr.is_null(i):
+                lst.append(arr[i])
+        return array_api.asarray(lst)
     return impl

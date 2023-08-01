@@ -1,7 +1,8 @@
 import pytest
+from numba import TypingError
+
 from rbc.stdlib import array_api
 from rbc.tests import heavydb_fixture
-from numba import TypingError
 
 
 @pytest.fixture(scope="module")
@@ -12,26 +13,20 @@ def heavydb():
 
 
 unsupported_functions = [
-    # statistical_function
-    'std', 'var',
     # manipulation_functions
-    "concat", "expand_dims", "flip", "permute_dims", "reshape", "roll", "squeeze", "stack",
-    # utility_functions
-    "all", "any",
+    "expand_dims", "permute_dims", "reshape", "roll", "squeeze", "stack",
     # sorting_functions
     "argsort", "sort",
-    # searching_functions
-    "argmax", "argmin", "nonzero", "where",
     # elementwise_functions
     'float_power', 'divmod', 'cbrt', 'isnat',
     # set_functions
-    "unique_all", "unique_counts", "unique_inverse", "unique_values",
+    "unique_all", "unique_counts", "unique_inverse",
     # linear_algebra_functions
     "matmul", "matrix_transpose", "tensordot", "vecdot",
     # data_type_functions
-    "astype", "broadcast_arrays", "broadcast_to", "can_cast", "finfo", "iinfo", "result_type",
+    "broadcast_arrays", "broadcast_to", "isdtype",
     # creation_functions
-    'arange', 'asarray', 'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu',
+    'eye', 'from_dlpack', 'linspace', 'meshgrid', 'tril', 'triu',
 ]
 
 

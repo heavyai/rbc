@@ -4,18 +4,13 @@ Array API specification for element-wise functions.
 https://data-apis.org/array-api/latest/API_specification/elementwise_functions.html.
 """
 
-from rbc.stdlib import (
-    Expose,
-    BinaryUfuncExpose,
-    UnaryUfuncExpose,
-    API,
-    determine_input_type,
-)
 import numpy as np
-from rbc import typesystem
-from rbc.heavydb import ArrayPointer, Array
 from numba.core import types
 
+from rbc import typesystem
+from rbc.heavydb import Array, ArrayPointer
+from rbc.stdlib import (API, BinaryUfuncExpose, Expose, UnaryUfuncExpose,
+                        determine_input_type)
 
 __all__ = [
     'add', 'subtract', 'multiply', 'divide', 'logaddexp', 'logaddexp2',

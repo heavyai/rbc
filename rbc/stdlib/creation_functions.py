@@ -4,12 +4,13 @@ Array API specification for creation functions.
 https://data-apis.org/array-api/latest/API_specification/creation_functions.html
 """
 
-from rbc import typesystem, errors
-from rbc.heavydb import Array, ArrayPointer
-from rbc.stdlib import Expose, API
-from numba.core import extending, types
 from numba import TypingError
+from numba.core import cgutils, extending, types
 from numba.core.typing import asnumbatype
+
+from rbc import errors, typesystem
+from rbc.heavydb import Array, ArrayPointer
+from rbc.stdlib import API, Expose
 
 __all__ = [
     'full', 'full_like', 'empty_like', 'empty', 'zeros', 'zeros_like',
@@ -41,20 +42,135 @@ def _determine_dtype(dtype, fill_value):
             return typesystem.Type.fromobject(dtype).tonumba()
 
 
-@expose.not_implemented('arange')
+@expose.implements('arange')
 def _array_api_arange(start, stop=None, step=1, dtype=None, device=None):
     """
     Return evenly spaced values within a given interval.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int64[](int64)')
+    ... def rbc_arange(start):
+    ...     return array_api.arange(start)
+    >>> rbc_arange(5).execute()
+    array([0, 1, 2, 3, 4])
+
+    >>> @heavydb('double[](int64, float, float)')
+    ... def rbc_arange3(start, stop, step):
+    ...     return array_api.arange(start, stop, step)
+    >>> rbc_arange3(0, 1.0, 0.2).execute()
+    array([0. , 0.2, 0.4, 0.6, 0.8], dtype=float32)
+
+    >>> @heavydb('int8[](int64, int64)')
+    ... def rbc_arange3(start, stop):
+    ...     return array_api.arange(start, stop, dtype=array_api.int8)
+    >>> rbc_arange3(2, 5).execute()
+    array([2, 3, 4], dtype=int8)
+
     """
-    pass
+
+    # Code based on Numba implementation of "np.arange(...)"
+
+    def _arange_dtype(*args):
+        """
+        If dtype is None, the output array data type must be inferred from
+        start, stop and step. If those are all integers, the output array dtype
+        must be the default integer dtype; if one or more have type float, then
+        the output array dtype must be the default real-valued floating-point
+        data type.
+        """
+        if any(isinstance(a, types.Float) for a in args):
+            return types.float64
+        else:
+            return types.int64
+
+    if not isinstance(start, types.Number):
+        raise errors.NumbaTypeError('"start" must be a number')
+
+    if not cgutils.is_nonelike(stop) and not isinstance(stop, types.Number):
+        raise errors.NumbaTypeError('"stop" must be a number')
+
+    if cgutils.is_nonelike(dtype):
+        true_dtype = _arange_dtype(start, stop, step)
+    elif isinstance(dtype, types.DTypeSpec):
+        true_dtype = dtype.dtype
+    elif isinstance(dtype, types.StringLiteral):
+        true_dtype = dtype.literal_value
+    else:
+        msg = f'If specified, "dtype" must be a DTypeSpec. Got {dtype}'
+        raise errors.NumbaTypeError(msg)
+
+    from rbc.stdlib import array_api
+
+    def impl(start, stop=None, step=1, dtype=None, device=None):
+        if stop is None:
+            _start, _stop = 0, start
+        else:
+            _start, _stop = start, stop
+
+        _step = step
+
+        if _step == 0:
+            raise ValueError("Maximum allowed size exceeded")
+
+        nitems_c = (_stop - _start) / _step
+        nitems_r = int(array_api.ceil(nitems_c))
+
+        nitems = max(nitems_r, 0)
+        arr = Array(nitems, true_dtype)
+        if nitems == 0:
+            arr.set_null()
+            return arr
+        val = _start
+        for i in range(nitems):
+            arr[i] = val + (i * _step)
+        return arr
+    return impl
 
 
-@expose.not_implemented('asarray')
+@expose.implements('asarray')
 def _array_api_asarray(obj, dtype=None, device=None, copy=None):
     """
     Convert the input to an array.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('float[](int64[])')
+    ... def rbc_asarray(arr):
+    ...     return array_api.asarray(arr, dtype=array_api.float32)
+    >>> rbc_asarray([1, 2, 3]).execute()
+    array([1., 2., 3.], dtype=float32)
+
     """
-    pass
+    if isinstance(obj, (ArrayPointer, types.List)):
+        if isinstance(obj, ArrayPointer):
+            nb_dtype = obj.eltype if dtype is None else dtype.dtype
+        else:
+            nb_dtype = obj.dtype if dtype is None else dtype.dtype
+
+        def impl(obj, dtype=None, device=None, copy=None):
+            sz = len(obj)
+            arr = Array(sz, nb_dtype)
+            for i in range(sz):
+                arr[i] = nb_dtype(obj[i])
+            return arr
+        return impl
 
 
 @expose.not_implemented('eye')

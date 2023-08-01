@@ -3,6 +3,10 @@ Array API specification for manipulation functions.
 
 https://data-apis.org/array-api/latest/API_specification/manipulation_functions.html
 """
+from numba import literal_unroll
+
+from rbc.errors import NumbaTypeError
+from rbc.heavydb import ArrayPointer
 from rbc.stdlib import Expose
 
 __all__ = [
@@ -19,12 +23,56 @@ __all__ = [
 expose = Expose(globals(), "manipulation_functions")
 
 
-@expose.not_implemented("concat")
-def _array_api_concat(arrays, *, axis=0):
+@expose.implements("concat")
+def _array_api_concat(*arrays):
     """
     Joins a sequence of arrays along an existing axis.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> import numpy as np
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('float32[](int16[], float32[])')
+    ... def concat(a, b):
+    ...     return array_api.concat(a, b)
+    >>> a = np.arange(3, dtype=np.int16)
+    >>> b = np.arange(2, dtype=np.float32)
+    >>> concat(a, b).execute()
+    array([0., 1., 2., 0., 1.], dtype=float32)
+
     """
-    pass
+    from rbc.stdlib import array_api
+
+    for arr in arrays:
+        if not isinstance(arr, ArrayPointer):
+            msg = f'Expect array type in "array_api.concat". Got {arr}'
+            raise NumbaTypeError(msg)
+
+    def impl(*arrays):
+        sz = 0
+        for arr in literal_unroll(arrays):
+            sz += len(arr)
+
+        dtype = array_api.result_type(*arrays)
+        r = array_api.zeros(sz, dtype)
+
+        idx = 0
+        for a in literal_unroll(arrays):
+            for j in range(len(a)):
+                if a.is_null(j):
+                    r.set_null(idx)
+                else:
+                    r[idx] = a[j]
+                idx += 1
+        return r
+    return impl
 
 
 @expose.not_implemented("expand_dims")
@@ -36,12 +84,46 @@ def _array_api_expand_dims(x, *, axis=0):
     pass
 
 
-@expose.not_implemented("flip")
-def _array_api_flip(x, *, axis=None):
+@expose.implements("flip")
+def _array_api_flip(x):
     """
     Reverses the order of elements in an array along the given axis.
+
+    Examples
+    --------
+    IGNORE:
+    >>> from rbc.heavydb import global_heavydb_singleton
+    >>> heavydb = next(global_heavydb_singleton)
+    >>> heavydb.unregister()
+
+    IGNORE
+
+    >>> import numpy as np
+    >>> from rbc.stdlib import array_api
+    >>> @heavydb('int16[](int16[])')
+    ... def flip(x):
+    ...     return array_api.flip(x)
+    >>> a = np.arange(4, dtype=np.int16)
+    >>> flip(a).execute()
+    array([3, 2, 1, 0], dtype=int16)
+
+    >>> b = np.arange(1, dtype=np.int16)
+    >>> flip(b).execute()
+    array([0], dtype=int16)
     """
-    pass
+    from rbc.stdlib import array_api
+
+    if isinstance(x, ArrayPointer):
+        def impl(x):
+            r = array_api.empty_like(x)
+            sz = len(x)
+            for i in range(sz):
+                if x.is_null(sz-i-1):
+                    r.set_null(i)
+                else:
+                    r[i] = x[sz-i-1]
+            return r
+        return impl
 
 
 @expose.not_implemented("permute_dims")

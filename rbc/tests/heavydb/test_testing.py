@@ -66,6 +66,22 @@ def test_table_load(suffix):
                            None, [None, 1, 0]),
                           (None, [4.0, None, 6.0, 7.0], None, [4, 5, None, 7], None,
                            [None, 5, 6, None], None)]
+    elif suffix == 'arraynullrepeat':
+        assert colnames == ['f4', 'f8', 'i1', 'i2', 'i4', 'i8', 'b']
+        assert result == [(None, [], None, [], None, [], None),
+                          ([0.0, 1.0, 0.0, 1.0, 2.0, 1.0, 3.0], None, [None],
+                           None, [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+                           None, [0, 0, 0, 0]),
+                          (None, [None, 3.0, 2.0, 0.0, 0.0, 3.0, 3.0], None,
+                           [2, 0, 0, None], None,
+                           [2, 3, 0, 0, 0, 4, 1, 2, 0, 3, 2, 3, 4, 3], None),
+                          ([None, 0.0, 4.0, 1.0, 0.0, 5.0, None, 4.0, 5.0],
+                           None, [3, 1, 0, 2, 1, 4, 4, 4, None, 4, 5], None,
+                           [3, 4, 7, 4, 4, 2, 1, 3, 7, None], None,
+                          [None, 1, 1, 1, 0, 1, 0]),
+                          (None, [4.0, None, 4.0, 0.0, 6.0, 0.0, 7.0, None, 6.0, 7.0],
+                           None, [7, 0, 0, 0, 4, 5, 5, 0, 0, 2, 1, None, 7],
+                           None, [None, None, 5, 0, 6, 5, 6, 5, 6, None], None)]
     elif suffix == 'text':
         assert colnames == ['t4', 't2', 't1', 's', 'n', 'n2']
         assert result == [('foofoo', 'foofoo', 'fun', ['foo', 'bar'], 'fun', '1'),
