@@ -246,6 +246,8 @@ def test_remote_udf_overload(heavydb):
 
 def test_remote_call_bool(heavydb):
     # RBC issue 575
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
 
     @heavydb('bool(bool)')
     def inverse_bool(b):
