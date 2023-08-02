@@ -3,8 +3,9 @@ rbc-specific errors and warnings.
 """
 
 
-from rbc.utils import get_version
-from numba.core.errors import TypingError
+from numba.core.errors import NumbaTypeError, NumbaNotImplementedError, \
+                              RequireLiteralValue, TypingError, \
+                              DeprecationError  # noqa: F401
 
 
 class HeavyDBServerError(Exception):
@@ -43,17 +44,3 @@ class ForbiddenIntrinsicError(Exception):
     https://github.com/xnd-project/rbc/issues/207
     """
     pass
-
-
-if get_version('numba') < (0, 55):
-    class NumbaTypeError(TypingError):
-        pass
-
-    class NumbaNotImplementedError(TypingError):
-        pass
-
-    class RequireLiteralValue(TypingError):
-        pass
-else:
-    from numba.core.errors import NumbaTypeError, NumbaNotImplementedError, \
-                                  RequireLiteralValue  # noqa: F401

@@ -1,6 +1,7 @@
 import pytest
 from rbc.tests import heavydb_fixture
 from rbc.external import external
+from rbc.errors import DeprecationError
 from numba import types
 
 
@@ -59,3 +60,9 @@ def test_require_target_info(heavydb):
     _, result = heavydb.sql_execute("select test_log2(8.0)")
 
     assert list(result) == [(3.0,)]
+
+
+def test_deprecated_device_annotation():
+    msg = r".* uses deprecated device annotation .*"
+    with pytest.raises(DeprecationError, match=msg):
+        _ = external('float64 cos(float64)|CPU')

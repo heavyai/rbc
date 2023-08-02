@@ -2,12 +2,11 @@
 """
 
 # This code has heavily inspired in the numba.extending.intrisic code
-import warnings
 from typing import List, Union
 from numba.core import extending, funcdesc, types, typing
 from rbc.typesystem import Type
 from rbc.targetinfo import TargetInfo
-from rbc.errors import UnsupportedError
+from rbc.errors import UnsupportedError, DeprecationError
 from rbc.utils import validate_devices
 
 
@@ -44,7 +43,7 @@ class External:
         annotation_devices = validate_devices([d for d in t.annotation()
                                                if d.upper() in {'CPU', 'GPU'}])
         for d in annotation_devices:
-            warnings.warn(
+            raise DeprecationError(
                 f'Signature {signature} uses deprecated device annotation (`|{d}`).'
                 ' Use `devices` kw argument to specify the supported devices of the'
                 f' external function `{name}`')
