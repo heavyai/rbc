@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from numpy.testing import assert_array_equal
 from rbc.externals.heavydb import set_output_row_size
 from rbc.heavydb import TextEncodingNone
 from rbc.tests import heavydb_fixture, assert_equal
@@ -241,3 +242,29 @@ def test_remote_udf_overload(heavydb):
 
     assert incr_ol(1).execute() == 2
     assert incr_ol(1, 2).execute() == 3
+
+
+def test_remote_call_bool(heavydb):
+    # RBC issue 575
+    if heavydb.version[:2] < (7, 0):
+        pytest.skip('Test requires HeavyDB 7.0 or newer')
+
+    @heavydb('bool(bool)')
+    def inverse_bool(b):
+        return False if b else True
+
+    assert inverse_bool(True).execute() == False  # noqa: E712
+    assert inverse_bool(False).execute() == True  # noqa: E712
+
+    from rbc.stdlib import array_api
+
+    @heavydb('bool[](bool[])')
+    def inv_bool_arr(arr):
+        sz = len(arr)
+        r = array_api.zeros_like(arr)
+        for i in range(sz):
+            r[i] = False if arr[i] else True
+        return r
+
+    assert_array_equal(inv_bool_arr([False, True]).execute(), [True, False])
+    assert_array_equal(inv_bool_arr([True, True]).execute(), [False, False])

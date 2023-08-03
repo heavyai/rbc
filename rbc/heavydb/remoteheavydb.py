@@ -289,6 +289,7 @@ def type_to_type_name(typ: typesystem.Type):
     """
     styp = typ.tostring(use_annotation=False, use_name=False)
     type_name = dict(
+        bool8='BOOLEAN',
         int8='TINYINT',
         int16='SMALLINT',
         int32='INT',

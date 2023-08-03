@@ -440,9 +440,9 @@ class RemoteDispatcher:
             if device is not UNSPECIFIED and device != device_:
                 continue
             with target_info:
-                atypes = self.remotejit.get_types(*arguments)
-                for caller_id, caller in enumerate(self.callers):
-                    with Type.alias(**self.remotejit.typesystem_aliases):
+                with Type.alias(**self.remotejit.typesystem_aliases):
+                    atypes = self.remotejit.get_types(*arguments)
+                    for caller_id, caller in enumerate(self.callers):
                         ftype, penalty = caller.signature.best_match(caller.func, atypes)
                         if ftype is None:
                             continue

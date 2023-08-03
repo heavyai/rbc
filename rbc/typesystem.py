@@ -255,7 +255,7 @@ for v in set(np.sctypeDict.values()):
 
 # python_imap values must be processed with Type.fromstring
 _python_imap = {int: 'int64', float: 'float64', complex: 'complex128',
-                str: 'string', bytes: 'char*'}
+                str: 'string', bytes: 'char*', bool: 'bool'}
 
 # Data for the mangling algorithm, see mangle/demangle methods.
 #
