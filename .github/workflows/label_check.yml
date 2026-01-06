@@ -8,7 +8,7 @@ jobs:
   check-pr-label-and-comment:
     runs-on: ubuntu-latest
     steps:
-      - uses: yashhy/pr-label-check-and-comment-action@master
+      - uses: yashhy/pr-label-check-and-comment-action@135ccb75611ae2838bb58c842dd0e797ca35424c
         with:
           required_labels: 'deprecation, enhancement, bug, documentation, tests, notebook, code quality, maintenance'
           GITHUB_TOKEN: '${{secrets.GITHUB_TOKEN}}'
