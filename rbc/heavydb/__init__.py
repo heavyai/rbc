@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 from .array import *  # noqa: F401, F403
 from .allocator import *  # noqa: F401, F403
 from .column import *  # noqa: F401, F403

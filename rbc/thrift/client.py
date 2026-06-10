@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """Client implements API for calling methods defined in multiplex
 thrift server. The clients thrift configuration will be downloaded
 from the server (the server has to implement a service `info` with a

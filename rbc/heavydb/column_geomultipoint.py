@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """Implement Heavydb Column<GeoMultiPoint> type support
 
 Heavydb Column<GeoMultiPoint> type is the type of input/output column arguments in
