@@ -2,21 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 repos:
-  # Remove any leftover legacy HEAVY.AI/OmniSci/MapD header BEFORE verify-copyright runs.
-  - repo: local
-    hooks:
-      - id: strip-legacy-license-header
-        name: strip legacy HEAVY.AI/OmniSci/MapD license headers
-        entry: python3 scripts/strip_legacy_license_header.py
-        language: system
-        files: &license_files |
-          (?x)
-            [.](py|sh)$
-
   # Insert/maintain the NVIDIA SPDX header.
   - repo: https://github.com/rapidsai/pre-commit-hooks
     rev: v1.5.1
     hooks:
       - id: verify-copyright
         args: [--fix, --spdx]
-        files: *license_files
+        files: |
+          (?x)
+            [.](py|sh)$
+
