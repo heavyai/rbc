@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+>
+> As of 05/27/2026 this project has been deprecated. ibis-heavyai is not maintained anymore.
+
+
 # RBC - Remote Backend Compiler
 
 [![GitHub Actions](https://github.com/xnd-project/rbc/actions/workflows/rbc_test.yml/badge.svg)](https://github.com/xnd-project/rbc/actions) [![Documentation Status](https://readthedocs.org/projects/rbc/badge/?version=latest)](https://rbc.readthedocs.io/en/latest/?badge=latest)
