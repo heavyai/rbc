@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """RBC FlatBuffer_TextEncodingNone type that corresponds to HeavyDB type
 flatbuffer::TextEncodingNone.
 """

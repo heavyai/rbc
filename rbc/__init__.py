@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 import os
 os.environ["NUMBA_CAPTURED_ERRORS"] = "new_style"
 os.environ["NUMBA_LOOP_VECTORIZE"] = "0"
