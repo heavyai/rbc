@@ -77,7 +77,7 @@ jobs:
 
       - name: "Build Changelog"
         id: github_release
-        uses: mikepenz/release-changelog-builder-action@main
+        uses: mikepenz/release-changelog-builder-action@7f7d0e70a31cc84a14b5d9f586cd46d3fc9cf6a5
         with:
           configuration: "changelog_config.json"
         env:
